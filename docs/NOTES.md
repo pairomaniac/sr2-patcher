@@ -10,13 +10,31 @@ has been traced on a running game yet.
 
 ## Patches
 
-| Patch | Offset | Change |
-| --- | --- | --- |
-| **No disc required** | `0x267c0` | `mov eax,[esp+4]` → `xor eax,eax; ret` - the disc check returns 0, "found" |
+| Patch | File | Offsets | Change |
+| --- | --- | --- | --- |
+| **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
+| **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
+| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
-Offsets are file offsets in the Pentium III `SEGA RALLY 2.exe`. The
-executable is not relocated and has no overlay, so an offset maps to a
-virtual address as `.text`: VA = offset − 0x400 + 0x401000.
+Offsets are file offsets. Neither file is relocated or has an overlay: in
+the exe, VA = offset − 0x400 + 0x401000 inside `.text`; in `MGameD3D.dll`,
+VA = offset + 0x10000000.
+
+### Z-buffer detach
+
+`MGameD3D` keeps the back buffer at `0x10012554` and the Z-buffer at
+`0x1001255c`. Before it creates the Z-buffer (two init paths, `0x10002b25`
+and `0x10002d05`), when it releases it (`0x10002920`) and at teardown
+(`0x100037df`) it calls the back buffer's `DeleteAttachedSurface(0, NULL)`
+with a literal null and ignores the result. DirectX 6 answers with an error
+code; Wine's ddraw does the same; the ddraw in Proton (Proton-CachyOS at
+least) dereferences the null and the process dies in the SEH handler, seen
+as an immediate exit with no window. The four calls become `add esp, 0xc`,
+which leaves the stack as the stdcall would have. Under plain Wine the
+call was already a no-op with an error code, so nothing changes there. If
+real DirectX treated the null as "detach everything", the difference is a
+Z-buffer that stays attached until the back buffer goes - a leak at exit,
+not a fault.
 
 ## The executable
 
@@ -127,8 +145,12 @@ No registry reads in the exe. At startup:
    `SR2_MSG.dll` (id 2 or 3, depending on whether `SR2.CFG` was found) and
    retry, or give up. Returns 0 for found. This is the nodisc site.
 
-`SR2.CFG` is 100 bytes: the string `display`, then at `0x20` five DWORDs
-`2, 2, 1, 1, 2` as shipped. Written by `LAUNCH.EXE`; meanings not traced.
+`SR2.CFG` is 100 bytes and is read straight into the settings block at
+`[0x50afe0]` (`0x427740`): the string `display`, then at `0x20` five
+DWORDs `2, 2, 1, 1, 2` as shipped, written by `LAUNCH.EXE`, meanings not
+traced. Two fields are overwritten after the read: `+0x5c` the disc flag
+(below) and `+0x60` the language from `GetUserDefaultLangID` (`0x4272b0`,
+1 English, 2 French, 3 German, 4 Italian, 5 Spanish, 6 Japanese).
 The loader switches to the `BINDATA\800x600\` asset set when
 `[[0x50afdc]+0x50] == 1` (`0x476512`), so one of them is the 640x480 /
 800x600 choice.
@@ -147,9 +169,22 @@ empty if not found.
 3. `<disc>BINDATA\<dir>.CAB` - the cabinet on the play disc
 
 Cabinets are read through `cabinet.dll` FDI. Local files win, so a full
-install never opens the disc for data; the startup check is the only
-dependency, and once it is patched out the loader's own scan simply finds
-nothing.
+install never opens the disc for data.
+
+### The disc flag
+
+The mode select dims everything but MULTI-PLAYER, OPTIONS and EXIT when
+`settings+0x5c` is 0. It is set at `0x42775f` (after `SR2.CFG` is read)
+and `0x426ef8` as `isalpha(*root)`, where `root` is the loader's disc
+root at `+4` (`0x476ef0` returns its first byte). So the disc dependency
+is two-fold: the startup check at `0x4273c0` for the dialog, and the
+loader's own scan for the menu. The nodisc patch handles both: the check
+returns "found", and the constructor copies the exe directory into the
+root slot. The root's first character then is a drive letter, the flag is
+1, and the loader's third fallback looks for cabinets in the install
+folder. A UNC install path (`\\server\...`) would still read as no disc.
+The same drive letter is formatted into `%c:\AUTORUN.EXE` at `0x4277d0`;
+nothing in the exe reads that buffer.
 
 ### RallyDebug.ini
 
@@ -158,6 +193,48 @@ Read with `GetPrivateProfileStringA`: `[DebugSettings]` with `DebugInfo`,
 `Total:%5dKB Used:%5dKB Free:%5dKB Quality:%s FPS:%2d TPF:%5d` and a
 `DebugDLL.DLL` hook. Not investigated further; it is the game's own
 equivalent of an extras menu.
+
+### Music
+
+`MGAudio.dll` is the only user of `winmm`: `mciSendCommandA` for the CD,
+`mixer*` for its volume. It opens the device by type ID
+(`MCI_OPEN_TYPE|MCI_OPEN_TYPE_ID`, `MCI_DEVTYPE_CD_AUDIO`, at `0x10003100`),
+sets TMSF, plays with `MCI_FROM` (track N+1 in the low byte, `0x10003160`),
+seeks to a TMSF it computes from milliseconds (`0x100032f0`), pauses,
+resumes, stops, closes, and polls `MCI_STATUS` for position, track count
+and per-track length (`0x10003220`–`0x100032df`). The `MCI_NOTIFY` flag it
+sets on play goes nowhere: nothing in the game handles `MM_MCINOTIFY`.
+Position is polled against `GetTickCount` bookkeeping around `0x100023cf`,
+which is presumably how a course loops.
+
+The open routine (`0x10003100`) does not call through the slot; it loads
+it into `esi` and calls `esi` twice, for the open and the time-format set.
+The first cut of the patch rewrote only the eleven `FF 15` calls, so the
+open still reached the real driver, Wine's `mcicda` answered the first
+status with `MCIERR_UNSUPPORTED_FUNCTION` and MGAudio closed the device:
+the game ran silent with the track table full. The load is now rewritten
+too, to a thunk that returns the hook's address.
+
+MGAudio calls MCI from threads it creates per action (`CreateThread` and
+`TerminateThread` are among its imports): in one run the play came from
+thread `01a4`, the stop from `01b4`, the next play from `01b8`. Wine's
+`winmm` refuses commands to a device from any thread but the one that
+opened it (`MCIERR_INVALID_DEVICE_NAME`, `0x107`), so a `waveaudio` device
+opened by the hook on the first play was unreachable afterwards: the first
+track played and nothing ever changed it. The hook therefore runs all its
+string commands on a worker thread of its own.
+
+The rewritten call sites were `FF 15 <slot>`, each with a `.reloc` entry
+for the absolute slot address at `site+2`. Writing `E8 rel32 90` over them
+without dropping those entries left the loader adding the relocation
+delta to the middle of the displacement whenever the DLL moved - which it
+always does - and the first MCI call jumped to `0xDEDDF000`. `apply_music`
+turns the eleven entries into padding; `tools/musictest.py` relocates the
+image before running it, so a left-over entry fails the check.
+
+The play disc's audio: tracks 2–14, each in its own bin in the Redump
+dump with a 150-sector pregap at `INDEX 00`. The ripper starts each track
+at `INDEX 01` and stops at the end of its file.
 
 ## The install disc
 
@@ -244,7 +321,9 @@ not needed by a full install.
 
 ## What is not done
 
-- The manifests have not been tried on Windows.
+- The manifests work under Wine and Proton; Windows has not been tried.
+- The music patch is verified under Unicorn, not yet in the game; the
+  BGM volume slider does not reach the WAV playback.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
 - Frame timing, input, resolution: nothing traced yet. The renderer is

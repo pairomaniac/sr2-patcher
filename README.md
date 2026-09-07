@@ -15,6 +15,7 @@ and the disc check; see [Status](#status).
   <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
   <a href="#installing-from-the-disc">Installing</a> &nbsp;·&nbsp;
   <a href="#what-the-patches-do">Patches</a> &nbsp;·&nbsp;
+  <a href="#music">Music</a> &nbsp;·&nbsp;
   <a href="#builds">Builds</a> &nbsp;·&nbsp;
   <a href="#status">Status</a>
 </h4>
@@ -26,20 +27,24 @@ line needs nothing beyond the standard library).
 
 1. **Disc 1 image** - the `.cue` of your install disc dump (Disc 1); the
    `.bin` sits beside it. A plain `.iso`, a mounted disc folder or
-   `data1.cab` itself work too. The play disc (Disc 2) is not needed at all.
-2. **Install to** - an empty folder. The install is about 580 MB.
-3. **Language** - which manual, help pages and message DLL to install.
-4. **Install** - extracts the game, writes the files that replace the
-   installer's registry work, and applies the patches.
+   `data1.cab` itself work too.
+2. **Disc 2 cue** - the `.cue` of the play disc dump, for the music.
+3. **Install to** - an empty folder. The install is about 580 MB, the
+   music 230 MB more.
+4. **Language** - which manual, help pages and message DLL to install.
+5. **Install** - extracts the game, writes the files that replace the
+   installer's registry work, and applies the patches. Then **Rip
+   soundtrack**. See [Music](#music).
 
-**Patch** does the last step alone on a game already installed this way,
+**Patch** does the patching alone on a game already installed this way,
 or by the original installer as a Pentium III install. **Restore original**
-puts the unpatched executable back from the backup.
+puts the unpatched files back from the backups.
 
 The same from a terminal:
 
 ```
 python3 sr2-patcher.py --install "SEGA RALLY 2 (Disc 1).cue" ~/games/sr2 English
+python3 sr2-patcher.py --rip "SEGA RALLY 2 (Disc 2).cue" ~/games/sr2
 python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
@@ -73,7 +78,26 @@ itself; see [docs/NOTES.md](docs/NOTES.md), *The install disc*.
 
 | Patch | What it fixes |
 | --- | --- |
-| **No disc required** | The startup check scans CD-ROM drives for a disc labelled `SEGARALLY2` and refuses to start without one. It now answers "found" without looking. |
+| **No disc required** | The game scans CD-ROM drives for a disc labelled `SEGARALLY2` twice: once to put up an "insert disc" dialog, once to decide whether the menu offers the full game or multiplayer only. The first now answers "found"; the second is given the install folder as the disc. |
+| **Z-buffer detach crash** | The renderer detaches a Z-buffer that does not exist yet, passing DirectDraw a null surface and ignoring the answer. Wine's ddraw in Proton dereferences the null and the game dies before its window appears; plain Wine and DirectX 6 return an error. The four calls are removed. |
+| **Music from files** | The course music is CD audio on the play disc, asked for over MCI. A routine added to `MUSASHI\MGAudio.dll` answers those requests from `music\trackNN.wav` instead. With no such files it stays out of the way and the game reads a disc as before. |
+
+## Music
+
+Disc 2 carries thirteen audio tracks (2-14) after its data track. **Rip
+soundtrack** reads them from the play disc's bin/cue into
+`music\track02.wav` … `track14.wav` beside the exe, 230 MB of plain
+44.1 kHz stereo WAV, pregaps dropped. The music patch, always applied,
+plays those in place of the disc; it is the same approach as
+v-on-patcher's, ported into the DLL that owns the CD here.
+
+What it does not do: the in-game BGM volume slider drives the CD line of
+the Windows mixer, which the WAV playback does not follow. Set it at the
+system level for now.
+
+The ripper takes a cue sheet with its bins - the Redump one-file-per-track
+form as well as a single bin. A `.iso` has no audio tracks, so it cannot
+be a source for the music.
 
 The processor check (`miscdll.dll!CheckKatmai`) tests for CPUID, the
 MMX/FXSR/SSE feature bits and a live SSE instruction, and passes on any
@@ -102,24 +126,29 @@ The base and AMD executables are known (`65e7537e…`, 1470976 bytes, and
 
 ### What gets written
 
-`SEGA RALLY 2.exe.bak` is the untouched executable; **Patch** always
-starts from it, so patching twice is the same as patching once, and
+Three files are patched: `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` and
+`MUSASHI\MGAudio.dll`. Each gets a `.bak` beside it, the untouched
+original; **Patch** always
+starts from those, so patching twice is the same as patching once, and
 **Restore original** is a rename. Nothing else in the folder is changed
 by patching.
 
 ## Status
 
-Written, and checked against a real `data1.cab` and a real Pentium III
-install, but not yet run on Windows:
+The game installs and runs under Wine and under Proton (umu, Faugus). Not
+yet run on Windows.
 
 - The cabinet reader lists all 5,725 files and extracts them byte-identical
   to what the installer wrote, from a cue/bin, an iso, a folder or the cab.
-- The disc-check patch changes three bytes at a verified site.
-- The registration-free COM manifests are untested. If the game fails at
-  its first `CoCreateInstance`, that is where to look; the fallback is
-  copying the ten Musashi DLLs beside the exe.
-- The window has not been opened - the machine this was written on has no
-  tkinter.
+- The registration-free COM manifests work under Wine and Proton; Windows
+  is untested. If the game fails at its first `CoCreateInstance` there,
+  that is where to look; the fallback is copying the ten Musashi DLLs
+  beside the exe.
+- The music patch has run under an emulator against the command sequence
+  MGAudio sends, not yet in the game. The ripper has run on synthetic
+  discs in the Redump layout, not yet on a real dump.
+- The window has not been opened by the author of the script - the
+  machine it was written on has no tkinter.
 
 Nothing has been done yet about resolution, input, frame rate or anything
 else on the modernisation list. The ground work for those is in
@@ -133,8 +162,8 @@ folder to run the disc and cabinet check too. `sh tools/setup-dev.sh` says what 
 
 ## AI Disclaimer
 
-LLMs are part of the toolchain here, alongside pefile, capstone and
-unshield on the game's files. The scope, the disc dumps, the testing and
+LLMs are part of the toolchain here, alongside pefile, capstone, unshield
+and Unicorn on the game's files. The scope, the disc dumps, the testing and
 the debugging are human. Every change is read before it goes in. Offsets
 and bytes are verified against the original before anything is written,
 and the patcher refuses any file that is not an unmodified build it has

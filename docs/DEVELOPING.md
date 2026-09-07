@@ -10,15 +10,16 @@ sh tools/setup-dev.sh          # says what is missing and the install line
 ```
 
 Everything comes from the distribution - no venv, nothing from pip.
-`python3-pyflakes` is the `lint` check; `tkinter` is the window. Neither is
-needed to run the patcher from the command line.
+`python3-pyflakes` is the `lint` check, `nasm` rebuilds `asm/` and is the
+`asm` check, `python3-unicorn` runs the music hook in the `music` check,
+`tkinter` is the window. None is needed to run the patcher.
 
 ## The loop
 
 ```
-vim sr2-patcher.py
-python3 tools/check.py                              # tables, lint
-python3 tools/check.py data1.head ~/games/sr2       # and the cabinet reader
+vim sr2-patcher.py                                  # or asm/music.asm, then asm/build.py
+python3 tools/check.py                              # tables, asm, lint
+python3 tools/check.py data1.head ~/games/sr2       # and the cabinet reader, the music hook
 python3 tools/check.py disc1.cue ~/games/sr2        # through a disc image
 ```
 
@@ -41,23 +42,31 @@ every push, tag and pull request:
 | Check | Catches |
 | --- | --- |
 | `tables` | a patch site outside the file, two patches on one byte, a replacement longer than the original |
+| `asm` | `asm/` edited without `asm/build.py` being run: the hex in the patcher would install last week's code |
 | `lint` | pyflakes: unused and undefined names |
 
-`cab` needs an image or a `data1.cab`, neither in the repository, so CI
-skips it. Run it locally before tagging.
+`cab` and `music` need an image or `data1.cab` and an install folder,
+none in the repository, so CI skips them. Run them locally before tagging.
 
 ## Adding a patch
 
-A patch is a key in `PATCHES` with one or more `(file offset, original
-bytes, replacement)` sites in the Pentium III exe. `patch()` verifies the
-original bytes before writing, and `--selfcheck` catches the structural
-mistakes at import time. Document it in NOTES.md's table and MAP.md's
-*Sites by patch*.
+A patch is a key in `PATCHES` naming a file and one or more `(file
+offset, original bytes, replacement)` sites in it. The file needs an
+entry in `PATCHED_FILES` with the original's size and MD5. `patch()`
+verifies the original bytes before writing, and `--selfcheck` catches the
+structural mistakes at import time. Document it in NOTES.md's table and
+MAP.md's *Sites by patch*.
 
-There is no `asm/` yet; the one patch so far is three hand-written bytes.
-When a patch needs more than that, the plan is v-on-patcher's: sources in
-`asm/`, assembled by a build script into hex strings in the patcher,
-checked by CI against the committed bytes.
+`tools/sr2-run.sh debug` runs the game under umu or wine with the Wine
+log in `logs/`; `~/.sr2-test` holds the paths. Reading a log: the last
+`loaddll` before the exit names the DLL whose init failed, `err:actctx`
+and `80040154` are the manifests, `seh:dispatch_exception` with its `eip`
+is a crash and the module it lands in.
+
+A patch that is code rather than bytes goes in `asm/` and gets an apply
+function in the patcher instead of a site list; `music` is the model.
+`asm/build.py` puts the assembled bytes into the GENERATED region of the
+patcher, and the `asm` check keeps the two in step.
 
 ## Not there yet
 

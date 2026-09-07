@@ -8,6 +8,7 @@ patches do, builds. Everything here is for working on the patcher.
 | [NOTES.md](NOTES.md) | how the game works: the executable and its DLLs, the three CPU builds, the processor check, Musashi and the manifests, the startup and loader logic, both discs and the `data1.cab` format |
 | [MAP.md](MAP.md) | where things are: the repository, the regions of `sr2-patcher.py`, the exe's sections and every address mapped so far |
 | [DEVELOPING.md](DEVELOPING.md) | setup, the checks and what each catches, adding a patch, what is not there yet |
+| [../asm/README.md](../asm/README.md) | the assembly source of the music patch, how it is built into the patcher, and what the hook answers |
 
 Where something lives, by question:
 

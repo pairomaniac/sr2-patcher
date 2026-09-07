@@ -7,10 +7,14 @@
 
 tables  a patch site outside the file, two patches on one byte, a
         replacement longer than the original
+asm     asm/ edited without asm/build.py being run; skipped without nasm
 lint    pyflakes: unused and undefined names
 cab     the IS5 reader misreading a real data1.cab; skipped without one
+music   the music hook under Unicorn, driven the way MGAudio drives it;
+        needs GAMEDIR and python3-unicorn, skipped without
 """
 import os
+import shutil
 import subprocess
 import sys
 
@@ -28,11 +32,20 @@ def run(name, cmd):
 
 def main(argv):
     ok = run('tables', [PY, 'sr2-patcher.py', '--selfcheck'])
-    ok &= run('lint', [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'tools/check.py', 'tools/cabtest.py', 'tools/iso2bin.py'])
+    if shutil.which('nasm'):
+        ok &= run('asm', [PY, 'asm/build.py', '--check'])
+    else:
+        print('== asm\n   skipped: nasm not installed')
+    ok &= run('lint', [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py',
+                       'tools/cabtest.py', 'tools/iso2bin.py', 'tools/musictest.py'])
     if len(argv) > 1:
         ok &= run('cab', [PY, 'tools/cabtest.py'] + argv[1:])
     else:
         print('== cab\n   skipped: no data1.cab given')
+    if len(argv) > 2:
+        ok &= run('music', [PY, 'tools/musictest.py', argv[2]])
+    else:
+        print('== music\n   skipped: no game folder given')
     return 0 if ok else 1
 
 
