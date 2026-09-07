@@ -1,0 +1,24 @@
+name: "Build"
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The same runner used locally. It skips the cabinet check, which needs
+  # a data1.cab that is not in the repository.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyflakes
+      - run: python3 tools/check.py
