@@ -13,7 +13,7 @@
 ;                         import into esi and calls through it
 ;
 ; The DLL is relocated at load, so nothing here is absolute: the blob finds
-; its own base (call/pop) and reaches everything as [ebx + offset]. The four
+; its own base (call/pop) and reaches everything as [ebx + offset]. The five
 ; MAGIC_ placeholders are offsets from the blob to things in the DLL, filled
 ; by the patcher; they are the same wherever the DLL lands.
 ;
@@ -262,7 +262,7 @@ trackpath:
         call    scat
         ret
 
-; Opens track eax as vocdbgm. eax = 0 or MCIERROR.
+; Opens track eax as sr2bgm. eax = 0 or MCIERROR.
 opentrack:
         mov     [ebx + D_CUR], eax
         push    eax
@@ -685,17 +685,17 @@ S_SETEVENT  db 'SetEvent', 0
 S_WAIT      db 'WaitForSingleObject', 0
 S_TRACK     db 'music\track', 0
 S_WAV       db '.wav', 0
-S_CLOSE     db 'close vocdbgm', 0
+S_CLOSE     db 'close sr2bgm', 0
 S_OPEN      db 'open "', 0
-S_OPEN2     db '" type waveaudio alias vocdbgm', 0
-S_SETMS     db 'set vocdbgm time format milliseconds', 0
-S_PLAY      db 'play vocdbgm', 0
+S_OPEN2     db '" type waveaudio alias sr2bgm', 0
+S_SETMS     db 'set sr2bgm time format milliseconds', 0
+S_PLAY      db 'play sr2bgm', 0
 S_FROM      db ' from ', 0
-S_SEEK      db 'seek vocdbgm to ', 0
-S_STOP      db 'stop vocdbgm', 0
-S_PAUSE     db 'pause vocdbgm', 0
-S_RESUME    db 'resume vocdbgm', 0
-S_POS       db 'status vocdbgm position', 0
+S_SEEK      db 'seek sr2bgm to ', 0
+S_STOP      db 'stop sr2bgm', 0
+S_PAUSE     db 'pause sr2bgm', 0
+S_RESUME    db 'resume sr2bgm', 0
+S_POS       db 'status sr2bgm position', 0
 
 ; Last, at known offsets from the end, so the check can find them:
 ; D_CMD at -(CMDLEN+RETLEN+4), D_RET at -(RETLEN+4), D_RESULT at -4.

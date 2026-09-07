@@ -48,8 +48,9 @@ PATCHED_FILES = {
     'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
 }
 
-# Patch table: key -> (file, sites); a site is (file offset, original,
-# replacement), applied in this order.
+# Patch table: key -> (file, sites, transform). A site is (file offset,
+# original, replacement); the transform, if any, runs on the file after its
+# sites and may grow it. Applied in this order.
 # nodisc:  two sites. The startup check that scans CD-ROM drives for the
 #          play disc (0x4273c0) returns 0, "found", at once; and the loader
 #          constructor (0x47632e) copies the exe's directory into the
@@ -59,20 +60,19 @@ PATCHED_FILES = {
 #          on the back buffer before creating, releasing or tearing down the
 #          Z-buffer, and ignores the result. Some ddraw builds dereference the
 #          NULL (Proton). The call becomes `add esp, 0xc`.
-# music:   not a site list; apply_music appends a section to MGAudio.dll
-#          holding asm/music.asm, rewrites its 11 mciSendCommandA calls to
-#          call the hook and its one load of the import into esi to fetch
-#          the hook's address, and repoints the entry point at the setup
-#          thunk.
+# music:   a transform: apply_music appends a section to MGAudio.dll holding
+#          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
+#          hook and its one load of the import into esi to fetch the hook's
+#          address, and repoints the entry point at the setup thunk.
 PATCHES = {
     'nodisc': (EXE, (
         (0x267c0, bytes.fromhex('8b442404'), bytes.fromhex('31c0c3')),
         (0x7572e, bytes.fromhex('8d4c2420516880000000ff15985149008a44242084c0'),
-         bytes.fromhex('8d8608010000508d460450ff15f4504900e9cf000000')))),
+         bytes.fromhex('8d8608010000508d460450ff15f4504900e9cf000000'))), None),
     'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
         (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
-        for off in (0x2930, 0x2b31, 0x2d11, 0x37f4))),
-    'music': ('MUSASHI\\MGAudio.dll', ()),
+        for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
+    'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
 }
 
 # The mciSendCommandA sites in MGAudio.dll: 11 `call dword [slot]`, and
@@ -122,38 +122,38 @@ MUSIC_BLOB = bytes.fromhex(
     'de5bc3acaa84c075fa4fc331d2b90a000000f7f10430aa88d00430aac353b90a'
     '00000031db31d2f7f1524385c075f6580430aa4b75f9c607005bc331c031c98a'
     '0e80e93080f90977086bc00a01c846ebeec3ffb3fc060000ff93f40600006aff'
-    'ffb300070000ff93f80600008b83180d0000c3e874ffffff6affffb3fc060000'
-    'ff93f80600006a006a208d83f80c0000508d83f80a000050ff93dc0600008983'
-    '180d0000ffb300070000ff93f4060000ebc689c1c1e9080fb6d16bd23cc1e908'
+    'ffb300070000ff93f80600008b83100d0000c3e874ffffff6affffb3fc060000'
+    'ff93f80600006a006a208d83f00c0000508d83f00a000050ff93dc0600008983'
+    '100d0000ffb300070000ff93f4060000ebc689c1c1e9080fb6d16bd23cc1e908'
     '0fb6f101f269d2e8030000c1e9086bc928505289c831d2b903000000f7f15a01'
     'd0599125ff000000c35389cb31d2b9e8030000f7f16bd24b5089d031d2f7f189'
     'c158c1e11831d251b93c000000f7f159c1e21009d1c1e00809c109d989c85bc3'
     '31d2b94b000000f7f189d1c1e11031d251b93c000000f7f159c1e20809d009c8'
     'c38dbb9408000003bbd8060000e8b9feffff8db3310a0000e8a6feffffc38983'
-    'cc060000508dbbf80a00008db3360a0000e88dfeffffe8d7feffffc783d00600'
-    '000000000058e8b6ffffff8dbbf80a00008db3440a0000e867feffff8db39408'
-    '0000e85cfeffff8db34b0a0000e851feffffe89bfeffff85c075228dbbf80a00'
-    '008db36a0a0000e837feffffe881feffffc783d00600000100000031c0c35589'
+    'cc060000508dbbf00a00008db3360a0000e88dfeffffe8d7feffffc783d00600'
+    '000000000058e8b6ffffff8dbbf00a00008db3430a0000e867feffff8db39408'
+    '0000e85cfeffff8db34a0a0000e851feffffe89bfeffff85c075228dbbf00a00'
+    '008db3680a0000e837feffffe881feffffc783d00600000100000031c0c35589'
     'e5535657e803feffff8b450c3d03080000753e83bbc8060000000f8469020000'
     '8b4d1081e10030000081f9003000000f85540200008b5514817a08040200000f'
     '8544020000c74204cefa0000e92f020000817d08cefa00000f852b0200003d04'
     '08000074373d06080000747a3d070800000f84f90000003d0808000074383d09'
     '08000074413d55080000744a3d140800000f8435010000e9e40100008db3360a'
-    '0000e8c8010000c783d006000000000000e9ca0100008db3b40a0000e8ae0100'
-    '00e9ba0100008db3c10a0000e89e010000e9aa0100008db3cf0a0000e88e0100'
+    '0000e8c8010000c783d006000000000000e9ca0100008db3af0a0000e8ae0100'
+    '00e9ba0100008db3bb0a0000e89e010000e9aa0100008db3c80a0000e88e0100'
     '00e99a0100008b8bd40600008b83cc060000f7451004000000740b8b55148b42'
     '04e8ccfdffffc783d40600000000000085c074523b83c8060000774a83bc8304'
-    '07000000744051e852feffff5985c00f854d0100008dbbf80a00008db38f0a00'
-    '00e8ddfcffff85c974128db39c0a0000e8cefcffff89c8e8e1fcffffe811fdff'
+    '07000000744051e852feffff5985c00f854d0100008dbbf00a00008db38c0a00'
+    '00e8ddfcffff85c974128db3980a0000e8cefcffff89c8e8e1fcffffe811fdff'
     'ffe91c010000b812010000e912010000f74510080000000f84030100008b5514'
     '8b4204e84afdffff898bd406000083bbd006000000742a3b83cc06000075228d'
-    'bbf80a00008db3a30a0000e873fcffff89c8e886fcffffe8b6fcffffe9bf0000'
+    'bbf00a00008db39f0a0000e873fcffff89c8e886fcffffe8b6fcffffe9bf0000'
     '008983cc060000e9b40000008b5514c7420400000000f74510000100000f849d'
     '0000008b420883f803740f83f801741583f8027435e9860000008b83c8060000'
     '894204eb7bf745101000000074728b420c83f863776a8b848304070000e81efd'
-    'ffff8b5514894204eb568b8bcc06000031c083bbd00600000074278dbbf80a00'
-    '008db3de0a0000e8d7fbffffe821fcffff8db3f80c0000e8fffbffff8b8bcc06'
-    '0000e8a2fcffff8b5514894204eb118dbbf80a0000e8a9fbffffe8f3fbffffc3'
+    'ffff8b5514894204eb568b8bcc06000031c083bbd00600000074278dbbf00a00'
+    '008db3d60a0000e8d7fbffffe821fcffff8db3f00c0000e8fffbffff8b8bcc06'
+    '0000e8a2fcffff8b5514894204eb118dbbf00a0000e8a9fbffffe8f3fbffffc3'
     '31c05f5e5b5dc210008b83e2e2e2e25f5e5b5dffe0837c2408010f8514020000'
     '60e866fbffff83bbc4060000000f8500020000c783c4060000010000008d83a4'
     '09000050ff93e3e3e3e385c00f84e10100008d8bae0900005150ff93e4e4e4e4'
@@ -199,13 +199,13 @@ MUSIC_BLOB = bytes.fromhex(
     '6e656c33322e646c6c0043726561746546696c65410047657446696c6553697a'
     '6500436c6f736548616e646c6500437265617465546872656164004372656174'
     '654576656e7441005365744576656e740057616974466f7253696e676c654f62'
-    '6a656374006d757369635c747261636b002e77617600636c6f736520766f6364'
-    '62676d006f70656e2022002220747970652077617665617564696f20616c6961'
-    '7320766f636462676d0073657420766f636462676d2074696d6520666f726d61'
-    '74206d696c6c697365636f6e647300706c617920766f636462676d002066726f'
-    '6d20007365656b20766f636462676d20746f200073746f7020766f636462676d'
-    '00706175736520766f636462676d00726573756d6520766f636462676d007374'
-    '6174757320766f636462676d20706f736974696f6e0090900000000000000000'
+    '6a656374006d757369635c747261636b002e77617600636c6f73652073723262'
+    '676d006f70656e2022002220747970652077617665617564696f20616c696173'
+    '2073723262676d007365742073723262676d2074696d6520666f726d6174206d'
+    '696c6c697365636f6e647300706c61792073723262676d002066726f6d200073'
+    '65656b2073723262676d20746f200073746f702073723262676d007061757365'
+    '2073723262676d00726573756d652073723262676d0073746174757320737232'
+    '62676d20706f736974696f6e0090909000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -222,9 +222,15 @@ MUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '00000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000'
 )
-MUSIC_MAGICS = {'MAGIC_ORIGENTRY': 3789677025, 'MAGIC_IATMCI': 3806520034, 'MAGIC_LOADLIB': 3823363043, 'MAGIC_GETPROC': 3840206052, 'MAGIC_GETMODFN': 3857049061}
+MUSIC_MAGICS = {
+    'MAGIC_ORIGENTRY': 0xE1E1E1E1,
+    'MAGIC_IATMCI': 0xE2E2E2E2,
+    'MAGIC_LOADLIB': 0xE3E3E3E3,
+    'MAGIC_GETPROC': 0xE4E4E4E4,
+    'MAGIC_GETMODFN': 0xE5E5E5E5,
+}
 # --- GENERATED by asm/build.py: END ---
 
 
@@ -248,7 +254,7 @@ _MSF = re.compile(r'^(\d+):(\d+):(\d+)$')
 
 
 class DiscError(Exception):
-    """The image cannot be read as the install disc. Shown as it is."""
+    """The image cannot be used. The message is shown as it is."""
 
 
 def _cue_file(base, line):
@@ -635,8 +641,8 @@ def install(src, dest, lang='English', log=print):
             for e in cab.groups[g]:
                 out = os.path.join(dest, *e.path.split('\\'))
                 os.makedirs(os.path.dirname(out), exist_ok=True)
-                with open(out, 'wb') as fh:
-                    fh.write(cab.read(e))
+                with open(out, 'wb') as dst:
+                    dst.write(cab.read(e))
             log('install: %s, %d files' % (g, len(cab.groups[g])))
     finally:
         close()
@@ -661,10 +667,9 @@ def append_section(buf, name, data, chars=0xE0000060):
     file_align = struct.unpack_from('<I', buf, opt + 36)[0]
     headers = struct.unpack_from('<I', buf, opt + 60)[0]
     table = opt + opt_size
-    last = table + (nsec - 1) * 40
     if table + (nsec + 1) * 40 > headers:
         raise ValueError('no room in the section table')
-    last_va, last_vsize = struct.unpack_from('<II', buf, last + 12)[::-1]
+    last_vsize, last_va = struct.unpack_from('<II', buf, table + (nsec - 1) * 40 + 8)
     rva = _align(last_va + last_vsize, sect_align)
     raw = _align(len(buf), file_align)
     raw_size = _align(len(data), file_align)
@@ -687,7 +692,7 @@ def _rva_to_off(buf, rva):
     raise ValueError('rva 0x%x is in no section' % rva)
 
 
-def _iat_slot(buf, base, dll, func):
+def _iat_slot(buf, dll, func):
     """RVA of the import slot for dll!func."""
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     opt = pe_off + 24
@@ -739,17 +744,17 @@ def _drop_relocations(buf, rvas):
 
 
 def apply_music(buf):
-    """Returns the grown DLL image."""
-    base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
+    """The music patch. Returns the grown DLL image."""
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     opt = pe_off + 24
     entry = struct.unpack_from('<I', buf, opt + 16)[0]
-    slot = _iat_slot(buf, base, 'winmm.dll', 'mciSendCommandA')
+    base = struct.unpack_from('<I', buf, opt + 28)[0]
+    slot = _iat_slot(buf, 'winmm.dll', 'mciSendCommandA')
     values = {
         'MAGIC_IATMCI': slot,
-        'MAGIC_LOADLIB': _iat_slot(buf, base, 'kernel32.dll', 'LoadLibraryA'),
-        'MAGIC_GETPROC': _iat_slot(buf, base, 'kernel32.dll', 'GetProcAddress'),
-        'MAGIC_GETMODFN': _iat_slot(buf, base, 'kernel32.dll', 'GetModuleFileNameA'),
+        'MAGIC_LOADLIB': _iat_slot(buf, 'kernel32.dll', 'LoadLibraryA'),
+        'MAGIC_GETPROC': _iat_slot(buf, 'kernel32.dll', 'GetProcAddress'),
+        'MAGIC_GETMODFN': _iat_slot(buf, 'kernel32.dll', 'GetModuleFileNameA'),
         'MAGIC_ORIGENTRY': entry,
     }
     # The sites, before anything moves: `FF 15 <slot VA>` calls and the
@@ -807,8 +812,10 @@ def patch(dest, log=print, keys=tuple(PATCHES)):
     backup, written on the first run, so patching twice is patching once."""
     check_build(dest)
     for name, (size, digest) in PATCHED_FILES.items():
-        sites = [site for key in keys if PATCHES[key][0] == name for site in PATCHES[key][1]]
-        if not sites and not ('music' in keys and PATCHES['music'][0] == name):
+        wanted = [PATCHES[key] for key in keys if PATCHES[key][0] == name]
+        sites = [site for _f, ss, _t in wanted for site in ss]
+        transforms = [globals()[t] for _f, _s, t in wanted if t]
+        if not sites and not transforms:
             continue
         path = os.path.join(dest, *name.split('\\'))
         bak = path + '.bak'
@@ -825,8 +832,8 @@ def patch(dest, log=print, keys=tuple(PATCHES)):
             if buf[off:off + len(old)] != old:
                 raise ValueError('%s: unexpected bytes at 0x%x' % (name, off))
             buf[off:off + len(new)] = new
-        if 'music' in keys and PATCHES['music'][0] == name:
-            buf = apply_music(buf)
+        for transform in transforms:
+            buf = transform(buf)
         with open(path, 'wb') as fh:
             fh.write(buf)
         log('patch: %s written, %s' % (name, ', '.join(k for k in keys if PATCHES[k][0] == name)))
@@ -973,9 +980,11 @@ def selfcheck():
     inside the file, no two patches on one byte, replacement no longer
     than what it replaces."""
     taken = {}
-    for key, (name, sites) in PATCHES.items():
+    for key, (name, sites, transform) in PATCHES.items():
         if name not in PATCHED_FILES:
             raise ValueError('%s: no fingerprint for %s' % (key, name))
+        if transform and transform not in globals():
+            raise ValueError('%s: no transform named %s' % (key, transform))
         size = PATCHED_FILES[name][0]
         for off, old, new in sites:
             if len(new) > len(old):

@@ -110,8 +110,8 @@ def main(argv):
     for n in names:
         mu.mem_write(addr[n], b'\xc2' + struct.pack('<H', argc[n] * 4))
     for n in ('LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA'):
-        mu.mem_write(BASE + patcher._iat_slot(image, BASE, 'kernel32.dll', n), struct.pack('<I', addr[n]))
-    mu.mem_write(BASE + patcher._iat_slot(image, BASE, 'winmm.dll', 'mciSendCommandA'),
+        mu.mem_write(BASE + patcher._iat_slot(image, 'kernel32.dll', n), struct.pack('<I', addr[n]))
+    mu.mem_write(BASE + patcher._iat_slot(image, 'winmm.dll', 'mciSendCommandA'),
                  struct.pack('<I', addr['mciSendCommandA']))
 
     log = {'strings': [], 'forwarded': [], 'opened': [], 'thread': None, 'events': 0, 'waits': []}
@@ -147,7 +147,7 @@ def main(argv):
         elif name == 'mciSendStringA':
             cmd = cstr(args[0])
             log['strings'].append(cmd)
-            if cmd == 'status vocdbgm position':
+            if cmd == 'status sr2bgm position':
                 mu.mem_write(args[1], b'62500\0')
         elif name == 'CreateThread':
             log['thread'] = args[2]
@@ -160,7 +160,7 @@ def main(argv):
                 # what the worker would do with the request
                 cmd = cstr(D_CMD)
                 log['strings'].append(cmd)
-                mu.mem_write(D_RET, b'62500\0' if cmd == 'status vocdbgm position' else b'\0')
+                mu.mem_write(D_RET, b'62500\0' if cmd == 'status sr2bgm position' else b'\0')
                 mu.mem_write(D_RESULT, struct.pack('<I', 0))
             ret = 1
         elif name == 'WaitForSingleObject':
@@ -191,7 +191,7 @@ def main(argv):
     assert log['opened'] == ['S:\\Sega Rally 2\\music\\track%02d.wav' % n for n in range(2, 100)], log['opened'][:3]
     assert log['thread'] and log['events'] == 2, 'no worker thread or events'
     # the worker body, one round: wait for a request, send D_CMD, answer
-    mu.mem_write(D_CMD, b'stop vocdbgm\0')
+    mu.mem_write(D_CMD, b'stop sr2bgm\0')
     log['strings'] = []
     log['waits'] = []
     rounds = []
@@ -206,7 +206,7 @@ def main(argv):
     mu.mem_write(STACK + 0x40000, struct.pack('<II', 0xDEAD0000, 0))
     mu.emu_start(log['thread'], 0xDEAD0000, count=100000)
     mu.hook_del(h)
-    assert log['waits'][:1] == [HREQ] and log['strings'] == ['stop vocdbgm'], (log['waits'], log['strings'])
+    assert log['waits'][:1] == [HREQ] and log['strings'] == ['stop sr2bgm'], (log['waits'], log['strings'])
     assert len(rounds) == 2, 'worker did not loop'
     log['strings'] = []
     # a second attach must not rebuild
@@ -245,10 +245,10 @@ def main(argv):
     mu.mem_write(P, struct.pack('<III', 0, tmsf(5, 0, 1, 0), 0))
     log['strings'] = []
     assert call(hook, 0xFACE, 0x806, 5, P) == 0
-    assert log['strings'] == ['close vocdbgm',
-                              'open "S:\\Sega Rally 2\\music\\track05.wav" type waveaudio alias vocdbgm',
-                              'set vocdbgm time format milliseconds',
-                              'play vocdbgm from 1000'], log['strings']
+    assert log['strings'] == ['close sr2bgm',
+                              'open "S:\\Sega Rally 2\\music\\track05.wav" type waveaudio alias sr2bgm',
+                              'set sr2bgm time format milliseconds',
+                              'play sr2bgm from 1000'], log['strings']
     assert log['waits'].count(HDONE) >= 4, 'hook did not wait for the worker'
     log['waits'] = []
     # play a track with no file -> out of range, nothing sent
@@ -262,12 +262,12 @@ def main(argv):
     # seek within the open track
     log['strings'] = []
     mu.mem_write(P, struct.pack('<II', 0, tmsf(5, 2, 0, 15)))
-    assert call(hook, 0xFACE, 0x807, 8, P) == 0 and log['strings'] == ['seek vocdbgm to 120200'], log['strings']
+    assert call(hook, 0xFACE, 0x807, 8, P) == 0 and log['strings'] == ['seek sr2bgm to 120200'], log['strings']
     # pause, resume, stop, close
     log['strings'] = []
     for msg in (0x809, 0x855, 0x808, 0x804):
         assert call(hook, 0xFACE, msg, 0, P) == 0
-    assert log['strings'] == ['pause vocdbgm', 'resume vocdbgm', 'stop vocdbgm', 'close vocdbgm'], log['strings']
+    assert log['strings'] == ['pause sr2bgm', 'resume sr2bgm', 'stop sr2bgm', 'close sr2bgm'], log['strings']
     # position when closed: track 5, 0:00
     mu.mem_write(P, struct.pack('<IIII', 0, 0, 2, 0))
     assert call(hook, 0xFACE, 0x814, 0x100, P) == 0
@@ -278,7 +278,7 @@ def main(argv):
     assert call(hook, 0xFACE, 0x807, 8, P) == 0 and log['strings'] == []
     mu.mem_write(P, struct.pack('<III', 0, 0, 0))
     assert call(hook, 0xFACE, 0x806, 0, P) == 0
-    assert log['strings'][-1] == 'play vocdbgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
+    assert log['strings'][-1] == 'play sr2bgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
     assert log['waits'] and set(log['waits']) == {HDONE}, 'the hook waits only on the done event'
     print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding')
     return 0

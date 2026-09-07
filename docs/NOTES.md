@@ -4,9 +4,9 @@ How the game works and what the patcher does about it, rather than how to
 use it. For using the patcher see [README.md](../README.md); for addresses
 and file offsets see [MAP.md](MAP.md).
 
-Everything below was read off the retail English release (disc stamps
-20-21 Oct 1999, VC6 linker 6.0) with pefile, capstone and unshield. Nothing
-has been traced on a running game yet.
+Everything below is read off the retail European release (files stamped
+20-21 Oct 1999, VC6 linker 6.0) with pefile, capstone and unshield, and
+checked on the game running under Wine and Proton.
 
 ## Patches
 
@@ -26,15 +26,13 @@ VA = offset + 0x10000000.
 `0x1001255c`. Before it creates the Z-buffer (two init paths, `0x10002b25`
 and `0x10002d05`), when it releases it (`0x10002920`) and at teardown
 (`0x100037df`) it calls the back buffer's `DeleteAttachedSurface(0, NULL)`
-with a literal null and ignores the result. DirectX 6 answers with an error
-code; Wine's ddraw does the same; the ddraw in Proton (Proton-CachyOS at
-least) dereferences the null and the process dies in the SEH handler, seen
-as an immediate exit with no window. The four calls become `add esp, 0xc`,
-which leaves the stack as the stdcall would have. Under plain Wine the
-call was already a no-op with an error code, so nothing changes there. If
-real DirectX treated the null as "detach everything", the difference is a
-Z-buffer that stays attached until the back buffer goes - a leak at exit,
-not a fault.
+with a literal null and ignores the result. DirectX 6 and Wine's ddraw
+answer with an error code; Proton's ddraw dereferences the null and the
+process dies in the SEH handler before its window appears. The four calls
+become `add esp, 0xc`, which leaves the stack as the stdcall would have.
+Where the call returned an error nothing changes. If DirectX treated the
+null as "detach everything", the difference is a Z-buffer that stays
+attached until the back buffer goes - a leak at exit, not a fault.
 
 ## The executable
 
@@ -104,7 +102,7 @@ created internally:
 | `{452593F0-F878-11D2-ADB9-00A0C9A0FB23}` | `MGLBackground.dll` | - | background/sky renderer |
 | `{5784B940-F4BC-11D1-A496-0000C02DB0F3}` | `MGInput.dll` | `DINPUT.dll` | input |
 | `{6177AF40-D601-11D1-A496-0000C02DB0F3}` | `MGSound.dll` | `DSOUND.dll` | sound; also created by every screen DLL |
-| `{ACEF8F00-D517-11D1-A496-0000C02DB0F3}` | `MGAudio.dll` | `WINMM.dll` | audio playback |
+| `{ACEF8F00-D517-11D1-A496-0000C02DB0F3}` | `MGAudio.dll` | `WINMM.dll` | CD audio over MCI, its volume over the mixer |
 | `{0D5837F0-3E3C-11D2-924E-00A0C9697E45}` | `MGNetWk.dll` | `DPLAYX.dll` | DirectPlay networking |
 | `{EE799FC0-D56F-11D2-8D16-00105A6B7166}` | `MGameReg.dll` | `ADVAPI32` | registry (`Software\%s\%s`) |
 | `{F8743DC0-627C-11D2-BD4E-0000C02DB0F3}` | `MEvent.dll` | - | internal |
@@ -121,20 +119,32 @@ Two consequences:
 - Without registration every `CoCreateInstance` fails. The installer ran
   `LAUNCH.exe -musashi` to register. The patcher instead writes an
   application manifest beside the exe that depends on assembly `MUSASHI`,
-  and `MUSASHI\MUSASHI.manifest` with a `comClass` per DLL. Windows
-  honours an external `.exe.manifest` because the exe embeds none.
-  Untested on Windows as of this writing.
+  and `MUSASHI\MUSASHI.manifest` with a `comClass` per DLL. An external
+  `.exe.manifest` is honoured because the exe embeds none. Works under
+  Wine and Proton; untested on Windows.
 
-`MGameReg.dll` writes to the registry at runtime. Whether it also expects
-something the installer seeded is not known; nothing in `setup.ins` writes
-under `Software\` except the DirectPlay lobby key
+### The registry
+
+The exe imports no registry function. `MGameReg.dll` is the registry: its
+Open (`0x10001420`) is `RegCreateKeyExA(HKEY_LOCAL_MACHINE, "Software\%s\%s",
+KEY_ALL_ACCESS)`, called from the exe (`0x47ef5e`) with `"SEGA"` and
+`"SEGA RALLY 2"`, and the resulting object is handed to `MGInput`'s init
+(`0x47ef9e`): the controller configuration lived under that key, written
+by `SR2_CPL.cpl`, the "Controller Settings" Control Panel item the
+installer added. The game only reads it and runs on its defaults when it
+is empty. `HKEY_LOCAL_MACHINE` is pushed at three sites in `MGameReg.dll`
+(file `0x1476`, `0x1942`, `0x1b46`); which of them serve the
+`App Paths` lookup has not been checked, so none is redirected to
+`HKEY_CURRENT_USER` yet. Under Wine the key is writable as it is. Nothing
+in `setup.ins` writes under `Software\` except the DirectPlay lobby key
 `Software\Microsoft\DirectPlay\Applications\SEGA RALLY 2`.
 
 ## Startup and files
 
 ### The install contract
 
-No registry reads in the exe. At startup:
+The exe itself touches no registry; that is `MGameReg`'s, above. At
+startup:
 
 1. `0x427450`: `GetModuleFileNameA`, open `SR2.CFG` beside the exe. Must
    exist.
@@ -143,7 +153,8 @@ No registry reads in the exe. At startup:
    `X:\DISKID.2`. Returns the drive index or −1.
 3. `0x4273c0` wraps 2: on −1, `MessageBox` with a "insert disc" string from
    `SR2_MSG.dll` (id 2 or 3, depending on whether `SR2.CFG` was found) and
-   retry, or give up. Returns 0 for found. This is the nodisc site.
+   retry, or give up. Returns 0 for found. This is nodisc's first site;
+   the second is in the loader, below.
 
 `SR2.CFG` is 100 bytes and is read straight into the settings block at
 `[0x50afe0]` (`0x427740`): the string `display`, then at `0x20` five
@@ -207,30 +218,26 @@ sets on play goes nowhere: nothing in the game handles `MM_MCINOTIFY`.
 Position is polled against `GetTickCount` bookkeeping around `0x100023cf`,
 which is presumably how a course loops.
 
-The open routine (`0x10003100`) does not call through the slot; it loads
-it into `esi` and calls `esi` twice, for the open and the time-format set.
-The first cut of the patch rewrote only the eleven `FF 15` calls, so the
-open still reached the real driver, Wine's `mcicda` answered the first
-status with `MCIERR_UNSUPPORTED_FUNCTION` and MGAudio closed the device:
-the game ran silent with the track table full. The load is now rewritten
-too, to a thunk that returns the hook's address.
+Three properties of the DLL shape the patch:
 
-MGAudio calls MCI from threads it creates per action (`CreateThread` and
-`TerminateThread` are among its imports): in one run the play came from
-thread `01a4`, the stop from `01b4`, the next play from `01b8`. Wine's
-`winmm` refuses commands to a device from any thread but the one that
-opened it (`MCIERR_INVALID_DEVICE_NAME`, `0x107`), so a `waveaudio` device
-opened by the hook on the first play was unreachable afterwards: the first
-track played and nothing ever changed it. The hook therefore runs all its
-string commands on a worker thread of its own.
-
-The rewritten call sites were `FF 15 <slot>`, each with a `.reloc` entry
-for the absolute slot address at `site+2`. Writing `E8 rel32 90` over them
-without dropping those entries left the loader adding the relocation
-delta to the middle of the displacement whenever the DLL moved - which it
-always does - and the first MCI call jumped to `0xDEDDF000`. `apply_music`
-turns the eleven entries into padding; `tools/musictest.py` relocates the
-image before running it, so a left-over entry fails the check.
+- The open routine (`0x10003100`) does not call through the import slot;
+  it loads the slot into `esi` and calls `esi` twice, for the open and the
+  time-format set. So there are twelve sites to rewrite, not eleven: the
+  calls go to the hook, the load to a thunk that returns the hook's
+  address. A load left in place sends the open to the real driver, and
+  the first status it answers with `MCIERR_UNSUPPORTED_FUNCTION` makes
+  MGAudio close the device.
+- MGAudio issues its MCI commands from threads it creates per action
+  (`CreateThread`, `TerminateThread`), and Wine's `winmm` refuses commands
+  to a device from any thread but the one that opened it
+  (`MCIERR_INVALID_DEVICE_NAME`, `0x107`). The hook therefore sends every
+  string command from one worker thread of its own.
+- The DLL is relocated on every load (`SR2_MSG.DLL` holds its preferred
+  base). Each rewritten site carried a `.reloc` entry for its absolute
+  slot address at `site+2`; `apply_music` drops those, or the loader
+  would add the relocation delta into the new relative displacement.
+  `tools/musictest.py` relocates the image before running it for that
+  reason.
 
 The play disc's audio: tracks 2–14, each in its own bin in the Redump
 dump with a 150-sector pregap at `INDEX 00`. The ripper starts each track
@@ -283,9 +290,9 @@ Read by `Cabinet` in the script. Layout, all little-endian:
   is one raw deflate stream - no zlib header, and no final-block marker,
   so the stream is read to the expected size and not to EOF.
 
-Checked against unshield's listing (identical, 5,725 files in 25 groups)
-and against a Pentium III install (every extracted file identical), from
-the cab directly and through a MODE1/2352 image built around it.
+Checked against unshield's listing (5,725 files in 25 groups) and against
+a Pentium III install (every extracted file identical), from the cab
+directly and through a disc image.
 
 ### Groups
 
@@ -321,12 +328,14 @@ not needed by a full install.
 
 ## What is not done
 
-- The manifests work under Wine and Proton; Windows has not been tried.
-- The music patch is verified under Unicorn, not yet in the game; the
-  BGM volume slider does not reach the WAV playback.
+- Windows has not been tried; Wine and Proton have.
+- The in-game BGM volume slider drives the mixer's CD line, which the WAV
+  playback does not follow.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
 - Frame timing, input, resolution: nothing traced yet. The renderer is
   `MGameGL.dll` + `MGameD3D.dll`, so resolution work lives there rather
   than in the exe.
-- Whether `MGameReg.dll` needs anything seeded.
+- The controller configuration: what `SR2_CPL.cpl` wrote under the
+  registry key, and what replaces it. `MGameReg.dll` to `HKEY_CURRENT_USER`
+  for Windows without administrator rights.

@@ -50,28 +50,33 @@ none in the repository, so CI skips them. Run them locally before tagging.
 
 ## Adding a patch
 
-A patch is a key in `PATCHES` naming a file and one or more `(file
-offset, original bytes, replacement)` sites in it. The file needs an
-entry in `PATCHED_FILES` with the original's size and MD5. `patch()`
-verifies the original bytes before writing, and `--selfcheck` catches the
-structural mistakes at import time. Document it in NOTES.md's table and
-MAP.md's *Sites by patch*.
+A patch is a key in `PATCHES`: the file it writes, its `(file offset,
+original bytes, replacement)` sites, and the name of a transform function
+or `None`. The file needs an entry in `PATCHED_FILES` with the original's
+size and MD5. `patch()` verifies the original bytes before writing sites,
+then runs the transform, which may grow the file; `--selfcheck` catches
+the structural mistakes at import time. Document it in NOTES.md's table
+and MAP.md's *Sites by patch*.
 
-`tools/sr2-run.sh debug` runs the game under umu or wine with the Wine
-log in `logs/`; `~/.sr2-test` holds the paths. Reading a log: the last
-`loaddll` before the exit names the DLL whose init failed, `err:actctx`
-and `80040154` are the manifests, `seh:dispatch_exception` with its `eip`
-is a crash and the module it lands in.
+A patch that is code rather than bytes goes in `asm/` and is a transform;
+`music` is the model. `asm/build.py` puts the assembled bytes into the
+GENERATED region of the patcher, and the `asm` check keeps the two in
+step.
 
-A patch that is code rather than bytes goes in `asm/` and gets an apply
-function in the patcher instead of a site list; `music` is the model.
-`asm/build.py` puts the assembled bytes into the GENERATED region of the
-patcher, and the `asm` check keeps the two in step.
+## Running the game
+
+`tools/sr2-run.sh` runs the installed game under umu (Proton) or plain
+wine, with the Wine log in `logs/`; `~/.sr2-test` holds the paths, see the
+script's header. `debug` adds `+seh,+loaddll,+mci`; edit the line for
+other channels. Reading a log: the last `loaddll` before the exit names
+the DLL whose init failed, `err:actctx` and `80040154` are the manifests,
+`seh:dispatch_exception` with its `eip` is a crash and the module it lands
+in, `mciSendStringW (L"…")` lines are the music hook's commands and the
+thread id in front of them should be the same on every one.
 
 ## Not there yet
 
-- A Windows build (PyInstaller spec and the release job). Copy from
-  v-on-patcher when the first release is near.
+- A Windows build (PyInstaller spec and the release job).
 - A `gui` check under xvfb.
-- An `offsets` check against a real install, once there is more than one
-  site to check.
+- An `offsets` check that applies every patch to a real install and
+  compares the result against a known MD5.

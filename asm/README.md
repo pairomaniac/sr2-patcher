@@ -1,8 +1,8 @@
 # asm
 
 Source for the machine code the patches install. `sr2-patcher.py` carries the
-finished bytes between GENERATED markers, so nobody running the patcher
-needs nasm; only someone editing this directory does.
+finished bytes between GENERATED markers, so running the patcher needs no
+nasm; only editing this directory does.
 
 ```
 vim asm/music.asm
@@ -60,12 +60,12 @@ What MGAudio sends, and the answer:
 | Command | Answer |
 | --- | --- |
 | `MCI_SET` time format | ok; TMSF is assumed |
-| `MCI_PLAY` `MCI_FROM` TMSF | `close`, `open "<dir>music\trackNN.wav" type waveaudio alias vocdbgm`, `set … milliseconds`, `play vocdbgm [from ms]`; `MCIERR_OUTOFRANGE` for a track with no file |
-| `MCI_SEEK` `MCI_TO` TMSF | `seek vocdbgm to ms` if that track is open, else remembered for the next play |
-| `MCI_PAUSE`, `MCI_RESUME`, `MCI_STOP`, `MCI_CLOSE` | the same word to `vocdbgm` |
+| `MCI_PLAY` `MCI_FROM` TMSF | `close`, `open "<dir>music\trackNN.wav" type waveaudio alias sr2bgm`, `set … milliseconds`, `play sr2bgm [from ms]`; `MCIERR_OUTOFRANGE` for a track with no file |
+| `MCI_SEEK` `MCI_TO` TMSF | `seek sr2bgm to ms` if that track is open, else remembered for the next play |
+| `MCI_PAUSE`, `MCI_RESUME`, `MCI_STOP`, `MCI_CLOSE` | the same word to `sr2bgm` |
 | `MCI_STATUS` number of tracks | the highest track with a file |
 | `MCI_STATUS` length of track N | from the file size, as MSF |
-| `MCI_STATUS` position | `status vocdbgm position`, converted to TMSF on the current track |
+| `MCI_STATUS` position | `status sr2bgm position`, converted to TMSF on the current track |
 
 **One thread for MCI.** MGAudio issues its commands from short-lived
 threads of its own, and Wine's `winmm` keeps an MCI device private to the
@@ -77,9 +77,9 @@ answers. Every `waveaudio` command comes from that one thread. Calls are
 not serialised against each other beyond that; MGAudio does not issue two
 at once.
 
-Nothing here runs on its own beyond that worker: the game's own polling
-drives everything. `tools/musictest.py` runs this session under Unicorn,
-including one round of the worker.
+The worker only ever waits; the game's own polling drives everything.
+`tools/musictest.py` runs this session under Unicorn, including one round
+of the worker.
 
 **Known gap.** In-game BGM volume goes through the mixer's CD line, which a
 `waveaudio` stream does not follow.

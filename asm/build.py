@@ -56,7 +56,7 @@ def generated():
             if struct.pack('<I', value) not in raw:
                 raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
         out.append(hexblob(name, raw))
-    out.append('MUSIC_MAGICS = %r\n' % MAGICS)
+    out.append('MUSIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in MAGICS.items()))
     out.append(END)
     return ''.join(out)
 

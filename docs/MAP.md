@@ -12,6 +12,7 @@ says where to look.
 | `asm/` | `music.asm`, the source of the music hook; `build.py` assembles it into `sr2-patcher.py` |
 | `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check, `tools/musictest.py` the music hook under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
+| `tools/sr2-run.sh` | runs the installed game under umu or wine with the log in `logs/`; paths in `~/.sr2-test` |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
 | `.github/workflows/build.yml` | CI: the checks |
@@ -22,12 +23,12 @@ In file order:
 
 | Region | Starts with |
 | --- | --- |
-| Constants | `VERSION`; `P3_FILES` the six fingerprints; `PATCHED_FILES` and `PATCHES` the site table; `MUSASHI` the CLSID table; the two manifest templates |
+| Constants | `VERSION`; `P3_FILES` the six fingerprints; `PATCHED_FILES` and `PATCHES` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
 | Generated | `MUSIC_BLOB`, `MUSIC_MAGICS`, written by `asm/build.py` |
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |
-| Music patch | `append_section`, `_rva_to_off`, `_iat_slot`, `apply_music` |
+| Music patch | `append_section`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |

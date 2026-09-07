@@ -8,8 +8,7 @@ the play disc.
 This is the successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher)
 in spirit and design: one Python script, no dependencies, byte edits
 verified against the original before anything is written, and a backup
-the patcher restores from. It is early. What works today is the install
-and the disc check; see [Status](#status).
+the patcher restores from. See [Status](#status) for how far it goes.
 
 <h4 align="center">
   <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
@@ -82,14 +81,17 @@ itself; see [docs/NOTES.md](docs/NOTES.md), *The install disc*.
 | **Z-buffer detach crash** | The renderer detaches a Z-buffer that does not exist yet, passing DirectDraw a null surface and ignoring the answer. Wine's ddraw in Proton dereferences the null and the game dies before its window appears; plain Wine and DirectX 6 return an error. The four calls are removed. |
 | **Music from files** | The course music is CD audio on the play disc, asked for over MCI. A routine added to `MUSASHI\MGAudio.dll` answers those requests from `music\trackNN.wav` instead. With no such files it stays out of the way and the game reads a disc as before. |
 
+Not patched: the processor check (`miscdll.dll!CheckKatmai`) tests for
+CPUID, the MMX/FXSR/SSE feature bits and a live SSE instruction, and passes
+on any current CPU.
+
 ## Music
 
 Disc 2 carries thirteen audio tracks (2-14) after its data track. **Rip
 soundtrack** reads them from the play disc's bin/cue into
 `music\track02.wav` … `track14.wav` beside the exe, 230 MB of plain
 44.1 kHz stereo WAV, pregaps dropped. The music patch, always applied,
-plays those in place of the disc; it is the same approach as
-v-on-patcher's, ported into the DLL that owns the CD here.
+plays those in place of the disc, from inside the DLL that owns the CD.
 
 What it does not do: the in-game BGM volume slider drives the CD line of
 the Windows mixer, which the WAV playback does not follow. Set it at the
@@ -98,10 +100,6 @@ system level for now.
 The ripper takes a cue sheet with its bins - the Redump one-file-per-track
 form as well as a single bin. A `.iso` has no audio tracks, so it cannot
 be a source for the music.
-
-The processor check (`miscdll.dll!CheckKatmai`) tests for CPUID, the
-MMX/FXSR/SSE feature bits and a live SSE instruction, and passes on any
-current CPU, so it is left alone.
 
 ## Builds
 
@@ -135,24 +133,14 @@ by patching.
 
 ## Status
 
-The game installs and runs under Wine and under Proton (umu, Faugus). Not
-yet run on Windows.
+Installs from the disc image, starts, plays with music, under Wine and
+under Proton (umu, Faugus). Windows is untested; the one thing specific to
+it is the registration-free COM manifest, and if the game fails at its
+first `CoCreateInstance` there, that is where to look - the fallback is
+copying the ten Musashi DLLs beside the exe.
 
-- The cabinet reader lists all 5,725 files and extracts them byte-identical
-  to what the installer wrote, from a cue/bin, an iso, a folder or the cab.
-- The registration-free COM manifests work under Wine and Proton; Windows
-  is untested. If the game fails at its first `CoCreateInstance` there,
-  that is where to look; the fallback is copying the ten Musashi DLLs
-  beside the exe.
-- The music patch has run under an emulator against the command sequence
-  MGAudio sends, not yet in the game. The ripper has run on synthetic
-  discs in the Redump layout, not yet on a real dump.
-- The window has not been opened by the author of the script - the
-  machine it was written on has no tkinter.
-
-Nothing has been done yet about resolution, input, frame rate or anything
-else on the modernisation list. The ground work for those is in
-[docs/NOTES.md](docs/NOTES.md).
+Nothing has been done yet about resolution, input or frame timing. The
+ground work for those is in [docs/NOTES.md](docs/NOTES.md).
 
 ## Working on the patcher
 
@@ -163,12 +151,13 @@ folder to run the disc and cabinet check too. `sh tools/setup-dev.sh` says what 
 ## AI Disclaimer
 
 LLMs are part of the toolchain here, alongside pefile, capstone, unshield
-and Unicorn on the game's files. The scope, the disc dumps, the testing and
-the debugging are human. Every change is read before it goes in. Offsets
-and bytes are verified against the original before anything is written,
-and the patcher refuses any file that is not an unmodified build it has
-tables for. It is still a hobby project poking at a 27-year-old binary, so
-expect bugs.
+and Unicorn on the game's files, and Wine's own tracing on the running
+game. The scope, the disc dumps, the testing and the debugging are human.
+Every change is read before it goes in and played before it ships.
+Offsets and bytes are verified against the original before anything is
+written, and the patcher refuses any file that is not an unmodified build
+it has tables for. It is still a hobby project poking at a 27-year-old
+binary, so expect bugs.
 
 ## Credits and licence
 
