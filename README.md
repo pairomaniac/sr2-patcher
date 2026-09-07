@@ -1,153 +1,105 @@
 # SR2 Patcher
 
-Gets *SEGA RALLY 2* (PC, 1999) running on a modern system. It installs the
-game from a disc image of the install disc without the original installer -
-no InstallShield, no registry, no mounting - and patches it to run without
-the play disc.
+Gets *SEGA RALLY 2* (PC, 1999) running on a modern system from your own
+disc dumps. No original installer, no registry, no disc in the drive: one
+folder with the game in it, the music included, and a handful of fixes so
+it starts, survives ALT+TAB and plays its soundtrack.
 
-This is the successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher)
-in spirit and design: one Python script, no dependencies, byte edits
-verified against the original before anything is written, and a backup
-the patcher restores from. See [Status](#status) for how far it goes.
+Runs under Wine and Proton today; Windows is untested. See [Status](#status).
 
 <h4 align="center">
   <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
-  <a href="#installing-from-the-disc">Installing</a> &nbsp;·&nbsp;
-  <a href="#what-the-patches-do">Patches</a> &nbsp;·&nbsp;
+  <a href="#what-you-need">What you need</a> &nbsp;·&nbsp;
+  <a href="#what-the-patcher-fixes">Fixes</a> &nbsp;·&nbsp;
   <a href="#music">Music</a> &nbsp;·&nbsp;
-  <a href="#builds">Builds</a> &nbsp;·&nbsp;
   <a href="#status">Status</a>
 </h4>
 
 ## Quick start
 
-Run `sr2-patcher.py` with Python 3 (tkinter for the window; the command
-line needs nothing beyond the standard library).
+Run `sr2-patcher.py` with Python 3. A window opens; fill it in from the
+top:
 
-1. **Disc 1 image** - the `.cue` of your install disc dump (Disc 1); the
-   `.bin` sits beside it. A plain `.iso`, a mounted disc folder or
-   `data1.cab` itself work too.
-2. **Disc 2 cue** - the `.cue` of the play disc dump, for the music.
-3. **Install to** - an empty folder. The install is about 580 MB, the
-   music 230 MB more.
-4. **Language** - which manual, help pages and message DLL to install.
-5. **Install** - extracts the game, writes the files that replace the
-   installer's registry work, and applies the patches. Then **Rip
-   soundtrack**. See [Music](#music).
+1. **Disc 1 image** - the `.cue` of your install disc dump.
+2. **Disc 2 cue** - the `.cue` of your play disc dump.
+3. **Install to** - an empty folder. About 800 MB with the music.
+4. **Language** - which manual, help pages and in-game messages to
+   install.
+5. **Install**, then **Rip soundtrack**.
 
-**Patch** does the patching alone on a game already installed this way,
-or by the original installer as a Pentium III install. **Restore original**
-puts the unpatched files back from the backups.
+Then run `SEGA RALLY 2.exe` from that folder. Under Wine or Proton, point
+your launcher at it as you would any other game.
+
+If you already have the game installed - by the patcher, or by the
+original installer as a Pentium III install - **Patch** applies the fixes
+to that folder, and **Restore original** takes them back out.
 
 The same from a terminal:
 
 ```
-python3 sr2-patcher.py --install "SEGA RALLY 2 (Disc 1).cue" ~/games/sr2 English
-python3 sr2-patcher.py --rip "SEGA RALLY 2 (Disc 2).cue" ~/games/sr2
+python3 sr2-patcher.py --install "Sega Rally 2 (Disc 1).cue" ~/games/sr2 English
+python3 sr2-patcher.py --rip "Sega Rally 2 (Disc 2).cue" ~/games/sr2
 python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
-## Installing from the disc
+## What you need
 
-The image is read directly - the ISO9660 filesystem out of the data track,
-`data1.cab` out of that, and the game's files out of the cabinet - with
-nothing mounted and nothing written outside the install folder. The
-original installer did four things: copy files out of `data1.cab`, choose
-one of three CPU builds, register the game's own COM middleware
-(`LAUNCH.exe -musashi`), and write `SR2.CFG`. The patcher does the same.
+- **Both discs as bin/cue.** The install disc for the game, the play disc
+  for the music. Redump-style dumps with one bin per track are fine; so is
+  a single bin. A plain `.iso` works for the install disc, but not for the
+  play disc, since an ISO has no audio tracks.
+- **Python 3**, with tkinter for the window. The command line needs
+  nothing else.
 
-- **Files.** Everything a *Full* install copies: the executables, the
-  Pentium III modules over the base ones, one language, all four `BINDATA`
-  tiers, the region-specific HUD textures and the car-profile narration.
-  The play disc holds the same assets as MS cabinets and nothing else
-  the game needs, so with a full install it is only ever asked for at the
-  startup disc check - which the patch removes.
-- **Musashi.** The game is built on Sega's Musashi middleware, ten COM
-  servers under `MUSASHI\`. Instead of registering them, the patcher writes
-  `SEGA RALLY 2.exe.manifest` and `MUSASHI\MUSASHI.manifest`: registration-free
-  COM, per folder, nothing in the registry.
-- **`SR2.CFG`** comes out of the cabinet as shipped; the launcher and the
-  control-panel applet that used to write it are not needed.
+The patcher reads the images directly: nothing is mounted, and nothing is
+written outside the folder you choose. It installs the Pentium III build
+of the game, which every CPU made since can run, and refuses anything
+that is not an unmodified copy of it.
 
-Reading the image and `data1.cab` (InstallShield 5) is done by the script
-itself; see [docs/NOTES.md](docs/NOTES.md), *The install disc*.
+## What the patcher fixes
 
-## What the patches do
-
-| Patch | What it fixes |
+| Fix | What you'd see without it |
 | --- | --- |
-| **No disc required** | The game scans CD-ROM drives for a disc labelled `SEGARALLY2` twice: once to put up an "insert disc" dialog, once to decide whether the menu offers the full game or multiplayer only. The first now answers "found"; the second is given the install folder as the disc. |
-| **Z-buffer detach crash** | The renderer detaches a Z-buffer that does not exist yet, passing DirectDraw a null surface and ignoring the answer. Wine's ddraw in Proton dereferences the null and the game dies before its window appears; plain Wine and DirectX 6 return an error. The four calls are removed. |
-| **Survive ALT+TAB** | Switching away marks the DirectDraw surfaces lost, and the game never restores them - it comes back to a blank screen. Three changes: the window procedure now calls the renderer's restore routine when the game regains focus; that routine restores every surface instead of three; and the textures are created as managed, so DirectDraw keeps its own copy and they are never lost in the first place. |
-| **Music from files** | The course music is CD audio on the play disc, asked for over MCI. A routine added to `MUSASHI\MGAudio.dll` answers those requests from `music\trackNN.wav` instead. With no such files it stays out of the way and the game reads a disc as before. |
+| **No disc required** | An "insert the play disc" box at startup, and a menu with everything but multiplayer greyed out. The game now finds everything in its own folder. |
+| **Startup crash** | Under Proton the game closes before its window appears. A renderer bug that Proton's DirectDraw does not forgive. |
+| **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |
+| **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. |
 
-Not patched: the processor check (`miscdll.dll!CheckKatmai`) tests for
-CPUID, the MMX/FXSR/SSE feature bits and a live SSE instruction, and passes
-on any current CPU.
+Everything else is the game as it shipped. Resolution, controls and
+frame rate are on the list; see [Status](#status).
 
 ## Music
 
-Disc 2 carries thirteen audio tracks (2-14) after its data track. **Rip
-soundtrack** reads them from the play disc's bin/cue into
-`music\track02.wav` … `track14.wav` beside the exe, 230 MB of plain
-44.1 kHz stereo WAV, pregaps dropped. The music patch, always applied,
-plays those in place of the disc, from inside the DLL that owns the CD.
+**Rip soundtrack** copies the thirteen audio tracks off the play disc dump
+into `music\` beside the game, as plain WAV files (230 MB). The game plays
+them wherever it used to play the disc. Without that folder it behaves as
+it did with no disc: silent, but otherwise fine.
 
-What it does not do: the in-game BGM volume slider drives the CD line of
-the Windows mixer, which the WAV playback does not follow. Set it at the
-system level for now.
-
-The ripper takes a cue sheet with its bins - the Redump one-file-per-track
-form as well as a single bin. A `.iso` has no audio tracks, so it cannot
-be a source for the music.
-
-## Builds
-
-The installer shipped three variants of the game and picked one by CPU:
-base (x87), Pentium III (SSE) and AMD (3DNow!). Each swaps six files:
-`SEGA RALLY 2.exe`, `AdvTelop.dll`, `Champagn.dll`, `MSelect.dll`,
-`MUSASHI\MGameGL.dll` and `MUSASHI\MGLBackground.dll`. The patcher installs
-and patches the **Pentium III** build only - every CPU since has SSE - and
-refuses the other two by size and MD5.
-
-| File | Size | MD5 |
-| --- | --- | --- |
-| `SEGA RALLY 2.exe` | 1469952 | `51b3da97c3c73611d3516b65bb684cb5` |
-| `AdvTelop.dll` | 636928 | `977dd8801a281e987c4503c9fb2f8778` |
-| `Champagn.dll` | 699392 | `b8dbfe718eef561f12c99223ba7b9ec4` |
-| `MSelect.dll` | 1137152 | `1e6f713c39efb1558c79b795754d6e3a` |
-| `MUSASHI\MGameGL.dll` | 601600 | `3d095385ece996088381dd77a0f5f954` |
-| `MUSASHI\MGLBackground.dll` | 579584 | `e7cc2a9f084a39c6f119fa1a1d769e30` |
-
-The base and AMD executables are known (`65e7537e…`, 1470976 bytes, and
-1467392 bytes) but have no patch tables.
-
-### What gets written
-
-Three files are patched: `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` and
-`MUSASHI\MGAudio.dll`; the exe and `MGAudio.dll` grow by a section. Each gets a `.bak` beside it, the untouched
-original; **Patch** always
-starts from those, so patching twice is the same as patching once, and
-**Restore original** is a rename. Nothing else in the folder is changed
-by patching.
+One thing does not carry over: the in-game BGM volume slider drove the CD
+volume on old sound cards and has no effect on the files. Set the volume
+in the system mixer.
 
 ## Status
 
-Installs from the disc image, starts, plays with music, under Wine and
-under Proton (umu, Faugus). Windows is untested; the one thing specific to
-it is the registration-free COM manifest, and if the game fails at its
-first `CoCreateInstance` there, that is where to look - the fallback is
-copying the ten Musashi DLLs beside the exe.
+Installs, starts, plays with music, survives ALT+TAB - under Wine and
+under Proton (via umu, e.g. Faugus). Windows has not been tried; the
+patched game should run there as well, and if it does not, an issue with
+what happens is welcome.
 
-Nothing has been done yet about resolution, input or frame timing. The
-ground work for those is in [docs/NOTES.md](docs/NOTES.md).
+Not done yet: resolution above 640x480, controller configuration (the
+original Control Panel item is gone, the game runs on its defaults), and
+frame timing. The controls can still be set in the game's own Options.
+
+Supported: the European release, Pentium III build - the one the original
+installer picked on any Pentium III or later. The exact files it expects
+are listed in [docs/NOTES.md](docs/NOTES.md), *Builds*. Other releases
+would need their own tables; a disc dump of one is the way to get there.
 
 ## Working on the patcher
 
-`docs/README.md` is the index. `tools/check.py` runs the checks; give it a
-disc image (or `data1.cab`, or the first 16 MB of one) and an install
-folder to run the disc and cabinet check too. `sh tools/setup-dev.sh` says what is missing.
+Everything about how the game works inside and how the patches are made
+is under [docs/](docs/README.md). `tools/check.py` runs the checks.
 
 ## AI Disclaimer
 
@@ -162,9 +114,10 @@ binary, so expect bugs.
 
 ## Credits and licence
 
-Rights to the game belong to SEGA. `LICENSE` (MIT) covers the patcher,
-its tools and its documentation - not the game and not the bytes quoted
-from it.
+Successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher),
+in spirit and design. Rights to the game belong to SEGA. `LICENSE` (MIT)
+covers the patcher, its tools and its documentation - not the game and
+not the bytes quoted from it.
 
 Bug reports and patches are welcome as issues and pull requests. For
 anything else - a disc image of a build the patcher does not know, or a

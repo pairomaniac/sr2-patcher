@@ -61,7 +61,9 @@ and MAP.md's *Sites by patch*.
 
 A patch that is code rather than bytes goes in `asm/` and is a transform;
 `music`, `altab` and `restoreall` are the models: appended to a relocated
-DLL, appended to the fixed exe, written in place over a DLL routine. A site with
+DLL, appended to the fixed exe, written in place over a DLL routine.
+`managed` is the fourth shape: plain sites, with a transform only to
+drop the relocation entry of an absolute address the sites removed. A site with
 `None` for its replacement is verified before the transform runs and
 written by it. `asm/build.py` puts the assembled bytes into the
 GENERATED region of the patcher, and the `asm` check keeps the two in

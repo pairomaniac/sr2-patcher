@@ -12,7 +12,8 @@ lint    pyflakes: unused and undefined names
 cab     the IS5 reader misreading a real data1.cab; skipped without one
 music   the music hook under Unicorn, driven the way MGAudio drives it;
         needs GAMEDIR and python3-unicorn, skipped without
-altab   the alt-tab stub under Unicorn, same requirements
+altab   the alt-tab stub and the rewritten restore routine under Unicorn,
+        same requirements
 """
 import os
 import shutil

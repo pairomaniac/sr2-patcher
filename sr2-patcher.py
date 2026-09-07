@@ -54,8 +54,9 @@ RESTORE_LEN = 0x7c
 RESTORE_RELOCS = 10
 
 # Patch table: key -> (file, sites, transform). A site is (file offset,
-# original, replacement); the transform, if any, runs on the file after its
-# sites and may grow it. Applied in this order.
+# original, replacement); a replacement of None means the bytes are only
+# verified, the transform writes them. The transform, if any, runs on the
+# file after its sites and may grow it. Applied in this order.
 # nodisc:  two sites. The startup check that scans CD-ROM drives for the
 #          play disc (0x4273c0) returns 0, "found", at once; and the loader
 #          constructor (0x47632e) copies the exe's directory into the
@@ -80,7 +81,8 @@ RESTORE_RELOCS = 10
 #          relocation entry.
 # restoreall: a transform: apply_restore writes asm/restore.asm over
 #          MGameD3D's restore-surfaces routine (0x10007710), so it restores
-#          every surface - the textures included - and not just three.
+#          every surface and not just three. Managed textures are not
+#          lost and need none of it; the rest of what DirectDraw owns does.
 # music:   a transform: apply_music appends a section to MGAudio.dll holding
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's

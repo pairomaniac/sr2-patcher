@@ -17,9 +17,12 @@ checked on the game running under Wine and Proton.
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
-Offsets are file offsets. Neither file is relocated or has an overlay: in
-the exe, VA = offset − 0x400 + 0x401000 inside `.text`; in `MGameD3D.dll`,
-VA = offset + 0x10000000.
+Offsets are file offsets. In the exe, which is never relocated, VA =
+offset − 0x400 + 0x401000 inside `.text`. In the two DLLs raw and virtual
+layouts coincide, so VA = offset + 0x10000000 at the preferred base; both
+are relocated at load, which is why every patch that lands in them is
+position-independent and drops the relocation entries of the bytes it
+replaces.
 
 ### Z-buffer detach
 
@@ -97,11 +100,29 @@ Sections: `.text`, `.rdata`, `.data`, `STATUSDA`, `METERDAT`, `MYDATA`,
 `ALIGN16D`, `MGAMEMAT` (P3 only, 512 KB writable, the SSE scratch),
 `.rsrc` (icon, accelerators, version - no manifest).
 
-### Three CPU builds
+### Builds
 
-`data1.cab` carries the base build and two overlay groups, *PentiumIII
-Modules* and *AMD Modules*, each replacing the same six files (README,
-*Builds*). The P3 exe carries about eighty SSE instructions (`movups`,
+`data1.cab` carries the base build (x87) and two overlay groups,
+*PentiumIII Modules* (SSE) and *AMD Modules* (3DNow!), each replacing the
+same six files. The patcher installs and patches the Pentium III build
+only, and refuses the other two by size and MD5:
+
+| File | Size | MD5 |
+| --- | --- | --- |
+| `SEGA RALLY 2.exe` | 1469952 | `51b3da97c3c73611d3516b65bb684cb5` |
+| `AdvTelop.dll` | 636928 | `977dd8801a281e987c4503c9fb2f8778` |
+| `Champagn.dll` | 699392 | `b8dbfe718eef561f12c99223ba7b9ec4` |
+| `MSelect.dll` | 1137152 | `1e6f713c39efb1558c79b795754d6e3a` |
+| `MUSASHI\MGameGL.dll` | 601600 | `3d095385ece996088381dd77a0f5f954` |
+| `MUSASHI\MGLBackground.dll` | 579584 | `e7cc2a9f084a39c6f119fa1a1d769e30` |
+
+The base and AMD executables are known (`65e7537e…`, 1470976 bytes, and
+1467392 bytes) but have no patch tables. Three files are patched:
+`SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` (86016, `201a9cc6…`) and
+`MUSASHI\MGAudio.dll` (57344, `b05b9c8e…`); the exe and `MGAudio.dll` grow
+by a section. Each gets a `.bak` beside it, the untouched original; the
+patcher always starts from those, so patching twice is patching once, and
+restoring is a rename. The P3 exe carries about eighty SSE instructions (`movups`,
 `mulps`, `addps`, `shufps`) in its vector paths; `MGameGL.dll` is where
 the rest of the SIMD math lives, which is why the Musashi renderer is
 among the six. The three builds compute physics differently, so netplay
