@@ -7,7 +7,8 @@
 sr2-patcher.py carries the assembled bytes because it ships as one file that
 runs from a fresh checkout with nothing installed. Never edit the hex by
 hand; this overwrites it. The placeholders the patcher fills at apply time
-are listed in MAGICS, and each must appear in the blob at least once.
+are listed in MAGICS, and each must appear in the music blob at least
+once; the other blobs have none.
 """
 import os
 import re
@@ -20,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 TARGET = os.path.join(ROOT, 'sr2-patcher.py')
 
-BLOBS = [('MUSIC_BLOB', 'music.asm')]
+BLOBS = [('MUSIC_BLOB', 'music.asm'), ('ACTIVATE_BLOB', 'activate.asm'), ('RESTORE_BLOB', 'restore.asm')]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -52,9 +53,10 @@ def generated():
     out = [BEGIN]
     for name, src in BLOBS:
         raw = assemble(src)
-        for magic, value in MAGICS.items():
-            if struct.pack('<I', value) not in raw:
-                raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
+        if name == 'MUSIC_BLOB':
+            for magic, value in MAGICS.items():
+                if struct.pack('<I', value) not in raw:
+                    raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
         out.append(hexblob(name, raw))
     out.append('MUSIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in MAGICS.items()))
     out.append(END)

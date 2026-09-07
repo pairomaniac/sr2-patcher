@@ -48,6 +48,11 @@ PATCHED_FILES = {
     'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
 }
 
+# The restore-surfaces routine in MGameD3D.dll: RVA == file offset there.
+RESTORE_SITE = 0x7710
+RESTORE_LEN = 0x7c
+RESTORE_RELOCS = 10
+
 # Patch table: key -> (file, sites, transform). A site is (file offset,
 # original, replacement); the transform, if any, runs on the file after its
 # sites and may grow it. Applied in this order.
@@ -60,6 +65,22 @@ PATCHED_FILES = {
 #          on the back buffer before creating, releasing or tearing down the
 #          Z-buffer, and ignores the result. Some ddraw builds dereference the
 #          NULL (Proton). The call becomes `add esp, 0xc`.
+# altab:   a transform: apply_activate appends a section to the exe holding
+#          asm/activate.asm and points the WM_ACTIVATEAPP handler's resume
+#          call (0x426bf7) at it, so the DirectDraw surfaces are restored
+#          when the game regains focus.
+# managed: MGameD3D creates its video-memory textures ALLOCONLOAD|TEXTURE|
+#          VIDEOMEMORY (0x10003e91) and fills them from system-memory twins
+#          with IDirect3DTexture2::Load. Video-memory surfaces are what a
+#          switch away loses and a restore wipes. They become managed
+#          (dwCaps TEXTURE, dwCaps2 TEXTUREMANAGE): DirectDraw keeps the
+#          copy and re-uploads, and never marks them lost. The AGP variant
+#          at 0x10003eb7 goes with it. The one absolute address in the
+#          stretch (0x1001253c, the hardware flag) leaves with its
+#          relocation entry.
+# restoreall: a transform: apply_restore writes asm/restore.asm over
+#          MGameD3D's restore-surfaces routine (0x10007710), so it restores
+#          every surface - the textures included - and not just three.
 # music:   a transform: apply_music appends a section to MGAudio.dll holding
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's
@@ -69,9 +90,16 @@ PATCHES = {
         (0x267c0, bytes.fromhex('8b442404'), bytes.fromhex('31c0c3')),
         (0x7572e, bytes.fromhex('8d4c2420516880000000ff15985149008a44242084c0'),
          bytes.fromhex('8d8608010000508d460450ff15f4504900e9cf000000'))), None),
+    'altab': (EXE, ((0x25ff7, bytes.fromhex('e864760400'), None),), 'apply_activate'),
     'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
         (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
         for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
+    'managed': ('MUSASHI\\MGameD3D.dll', (
+        (0x3e91, bytes.fromhex('c74068001000048b153c250110f7da1bd281e20038000081c200180004895068'),
+         bytes.fromhex('c7406800100000c7406c10000000') + b'\x90' * 18),
+        (0x3eb7, bytes.fromhex('81486800400020'), b'\x90' * 7)), 'apply_managed'),
+    'restoreall': ('MUSASHI\\MGameD3D.dll', ((RESTORE_SITE, bytes.fromhex(
+        'a15025011085c0741e8b0850ff516085c07414a1502501108b1050ff526c85c0a3c41f01107c55a15425011085c0741e8b0850ff516085c07414a1542501108b1050ff526c85c0a3c41f01107c2ea15c25011085c0741e8b0850ff516085c07414a15c2501108b1050ff526c85c0a3c41f01107c0733c0a3c41f0110'), None),), 'apply_restore'),
     'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
 }
 
@@ -80,6 +108,7 @@ PATCHES = {
 MCI_CALL_SITES = 11
 MCI_LOAD_SITES = 1
 MUSIC_SECTION = b'.sr2m'
+ACTIVATE_SECTION = b'.sr2a'
 
 
 LANGUAGES = ('English', 'French', 'German', 'Italian', 'Spanish', 'Japanese')
@@ -223,6 +252,13 @@ MUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000'
+)
+ACTIVATE_BLOB = bytes.fromhex(
+    '51a118b1500085c074068b1050ff5240596860e24600c3'
+)
+RESTORE_BLOB = bytes.fromhex(
+    'e800000000598b8137ae000085c074118b105150ff5264598981afa80000c204'
+    '0031c08981afa80000c20400'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -787,6 +823,42 @@ def apply_music(buf):
     return out
 
 
+# The managed-textures patch: sites, plus one relocation entry to drop
+
+def apply_managed(buf):
+    """The sites are written by patch(); this drops the relocation entry of
+    the absolute address they removed."""
+    if _drop_relocations(buf, {0x3e9a}) != 1:
+        raise ValueError('relocation entry of the hardware flag not found')
+    return buf
+
+
+# The restore-all patch: MGameD3D's routine rewritten in place
+
+def apply_restore(buf):
+    """Returns the DLL with the routine replaced."""
+    if len(RESTORE_BLOB) > RESTORE_LEN:
+        raise ValueError('restore blob does not fit')
+    rvas = set(range(RESTORE_SITE, RESTORE_SITE + RESTORE_LEN))
+    if _drop_relocations(buf, rvas) != RESTORE_RELOCS:
+        raise ValueError('relocation entries of the restore routine not all found')
+    buf[RESTORE_SITE:RESTORE_SITE + RESTORE_LEN] = RESTORE_BLOB.ljust(RESTORE_LEN, b'\xcc')
+    return buf
+
+
+# The activation patch: a section appended to the exe
+
+ACTIVATE_SITE = 0x25ff7                 # file offset of `call 0x46e260` at 0x426bf7
+
+
+def apply_activate(buf):
+    """The alt-tab patch. Returns the grown exe image."""
+    out, rva = append_section(buf, ACTIVATE_SECTION, ACTIVATE_BLOB, chars=0x60000020)
+    site_rva = 0x1000 + ACTIVATE_SITE - _rva_to_off(out, 0x1000)
+    out[ACTIVATE_SITE:ACTIVATE_SITE + 5] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5))
+    return out
+
+
 # Patch
 
 def md5(path):
@@ -831,7 +903,8 @@ def patch(dest, log=print, keys=tuple(PATCHES)):
         for off, old, new in sites:
             if buf[off:off + len(old)] != old:
                 raise ValueError('%s: unexpected bytes at 0x%x' % (name, off))
-            buf[off:off + len(new)] = new
+            if new is not None:
+                buf[off:off + len(new)] = new
         for transform in transforms:
             buf = transform(buf)
         with open(path, 'wb') as fh:
@@ -987,7 +1060,7 @@ def selfcheck():
             raise ValueError('%s: no transform named %s' % (key, transform))
         size = PATCHED_FILES[name][0]
         for off, old, new in sites:
-            if len(new) > len(old):
+            if new is not None and len(new) > len(old):
                 raise ValueError('%s: replacement longer than original at 0x%x' % (key, off))
             if off + len(old) > size:
                 raise ValueError('%s: site 0x%x past the end of %s' % (key, off, name))

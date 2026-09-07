@@ -15,7 +15,9 @@ Never edit the hex by hand; the next build overwrites it.
 | File | What it holds |
 | --- | --- |
 | `music.asm` | CD audio from files: the DllMain thunk that builds the track table, and the `mciSendCommandA` hook |
-| `build.py` | assembles the above and splices it into the patcher; `MAGICS` lists the placeholders the patcher fills |
+| `activate.asm` | calls the renderer's restore when the game regains focus |
+| `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
+| `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob |
 
 ## music.asm
 
@@ -83,3 +85,28 @@ of the worker.
 
 **Known gap.** In-game BGM volume goes through the mixer's CD line, which a
 `waveaudio` stream does not follow.
+
+## activate.asm
+
+Twenty-three bytes in a `.sr2a` section appended to the exe. The window
+procedure's `WM_ACTIVATEAPP` case resumes the sound object on activation
+with a `call 0x46e260`; that call is pointed here. The stub saves `ecx`
+(the sound object, a `thiscall` argument), calls slot 16 of the MGameD3D
+interface at `0x50b118` - `IsLost`/`Restore` on the primary, the back
+buffer and the Z-buffer - restores `ecx`, and continues to the resume
+with `push`/`ret`, so the stack is what the original call left. With no
+MGameD3D object yet it skips straight to the resume. The exe is never
+relocated, so the addresses are absolute and nothing is filled at apply
+time. `tools/activatetest.py` runs it under Unicorn.
+
+## restore.asm
+
+Forty-four bytes written over MGameD3D's restore routine at `0x10007710`,
+which had 124 and restored only the primary, the back buffer and the
+Z-buffer - textures are DirectDraw surfaces as well and stayed lost. The
+replacement calls `IDirectDraw4::RestoreAllSurfaces` on the object at
+`0x1001254c` and stores the result where the original did, with the same
+stdcall shape. It finds its two globals relative to itself (the DLL is
+relocated on every load), so the ten relocation entries the original
+routine carried are dropped by the patcher. `tools/activatetest.py` runs
+it relocated.

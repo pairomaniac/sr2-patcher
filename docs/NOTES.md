@@ -13,6 +13,7 @@ checked on the game running under Wine and Proton.
 | Patch | File | Offsets | Change |
 | --- | --- | --- | --- |
 | **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
+| **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
@@ -33,6 +34,36 @@ become `add esp, 0xc`, which leaves the stack as the stdcall would have.
 Where the call returned an error nothing changes. If DirectX treated the
 null as "detach everything", the difference is a Z-buffer that stays
 attached until the back buffer goes - a leak at exit, not a fault.
+
+### Activation
+
+The window procedure (`0x426b80`, registered at `0x426af0`) handles
+`WM_ACTIVATEAPP` at `0x426bc5`: with the sound object at `0x50b12c`, it
+calls `0x46e260` on activation and `0x46e210` on deactivation, resume and
+pause of the sound (`thiscall`, `ecx` = the object). Nothing restores the
+DirectDraw surfaces. `MGameD3D` has the routine - slot 16 (`+0x40`) of its
+interface, at `0x10007710`: `IsLost`/`Restore` on the primary, the back
+buffer and the Z-buffer - and no code in the game calls it; the exe holds
+the interface at `0x50b118`. So after a switch away every flip fails and
+the screen stays blank. Three patches:
+
+- the resume call goes through a stub that calls the restore method
+  first;
+- the method itself is rewritten as `IDirectDraw4::RestoreAllSurfaces`
+  on the object at `0x1001254c`, since the original restores three
+  surfaces and everything else DirectDraw owns stays lost;
+- the textures are created managed. `MGameD3D` builds each texture as a
+  system-memory surface (`0x10004530`, caps `0x1800`) and a video-memory
+  twin (`0x10003ff2`; descriptor from `0x10003e70`, caps
+  `ALLOCONLOAD|TEXTURE|VIDEOMEMORY`, `NONLOCALVIDMEM` for AGP when the
+  hardware flag at `0x1001253c` says so), filled with
+  `IDirect3DTexture2::Load`. A lost video-memory surface comes back
+  empty from `Restore` - DirectX's contract, and Wine keeps to it - so
+  restoring them gives geometry with blank textures, and the startup
+  activation wipes the ones already loaded. With `dwCaps2`
+  `DDSCAPS2_TEXTUREMANAGE` DirectDraw holds the copy and re-uploads on
+  its own, and neither Windows nor Wine ever marks the surface lost.
+  `Load` into a managed texture works as before.
 
 ## The executable
 

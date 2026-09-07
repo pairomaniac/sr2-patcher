@@ -9,8 +9,8 @@ says where to look.
 | Path | What |
 | --- | --- |
 | `sr2-patcher.py` | the patcher: tables, the disc image and IS5 cabinet readers, installer, manifests, patch and restore, window, CLI |
-| `asm/` | `music.asm`, the source of the music hook; `build.py` assembles it into `sr2-patcher.py` |
-| `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check, `tools/musictest.py` the music hook under Unicorn |
+| `asm/` | `music.asm` the music hook, `activate.asm` the alt-tab stub, `restore.asm` the restore-all routine; `build.py` assembles them into `sr2-patcher.py` |
+| `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check, `tools/musictest.py` and `tools/activatetest.py` the two blobs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
 | `tools/sr2-run.sh` | runs the installed game under umu or wine with the log in `logs/`; paths in `~/.sr2-test` |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
@@ -24,11 +24,14 @@ In file order:
 | Region | Starts with |
 | --- | --- |
 | Constants | `VERSION`; `P3_FILES` the six fingerprints; `PATCHED_FILES` and `PATCHES` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
-| Generated | `MUSIC_BLOB`, `MUSIC_MAGICS`, written by `asm/build.py` |
+| Generated | `MUSIC_BLOB`, `ACTIVATE_BLOB`, `RESTORE_BLOB`, `MUSIC_MAGICS`, written by `asm/build.py` |
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |
 | Music patch | `append_section`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
+| Managed textures | `apply_managed` |
+| Restore-all patch | `apply_restore` |
+| Activation patch | `apply_activate` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |
@@ -60,12 +63,14 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | Address | What | Touched by |
 | --- | --- | --- |
 | `0x421399`–`0x484b84` | the nine `CoCreateInstance` sites, one per Musashi server (NOTES.md, *Musashi*) | manifests |
-| `0x4272c0`–`0x427340` | reads `SR2.CFG`, picks a value 1–6 | - |
+| `0x426af0` | `RegisterClassA`; `0x426b80` the window procedure; `0x426bc5` its `WM_ACTIVATEAPP` case; `0x426bf7` the resume call | altab |
+| `0x4272b0` | language from `GetUserDefaultLangID`, 1–6 | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
 | `0x427450` | `SR2.CFG` exists beside the exe | - |
 | `0x4274e0` | drive scan: CD-ROM, label `SEGARALLY2`, `DISKID.2` | - |
 | `0x427600` | main init; `0x427657` constructs the loader | - |
 | `0x444be0` | processor check via `miscdll.dll!CheckKatmai` | - |
+| `0x46e210`, `0x46e260` | pause and resume of the sound object at `0x50b12c` | - |
 | `0x476260` | loader constructor: exe dir at `+0x108`, disc root at `+0x4`; `0x47632e` the drive scan | nodisc |
 | `0x476ef0` | first byte of the disc root; `0x476f00` the exe dir | - |
 | `0x427740` | reads `SR2.CFG` into the settings block, sets the disc flag at `+0x5c` | - |
@@ -85,6 +90,8 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x4b69b8` | `CPU Version error`, `CheckKatmai`, `MISCDLL.DLL` |
 | `0x50afdc` | pointer to the settings block; `+0x50 == 1` selects `800x600` assets |
 | `0x50afe0` | the settings block (`SR2.CFG` image): `+0x5c` disc flag, `+0x60` language |
+| `0x50b118` | the MGameD3D interface; `0x50b12c` the sound object |
+| `.sr2a` at `0x63b000` | the alt-tab stub |
 | `0x54d188` | the loader object |
 | `0x50b108` | pointer to the current-race block (`+0x38` mode, `+0x54`/`+0x58` course indices) |
 
@@ -94,6 +101,11 @@ Image base `0x10000000`; file offset = VA − `0x10000000`.
 
 | Address | What |
 | --- | --- |
+| `0x10003e70` | fills the video-memory texture descriptor; caps at `0x10003e91`, AGP variant at `0x10003eb7`. Patched by managed |
+| `0x10003ff2` | creates the video-memory texture and `Load`s it from its system-memory twin |
+| `0x10004530` | creates the system-memory texture (and palette) |
+| `0x10007710` | restore surfaces: `IsLost`/`Restore` on primary, back buffer, Z-buffer; interface slot 16 (`+0x40`) and 93. Rewritten by restoreall |
+| `0x1001254c` | the `IDirectDraw4`; `0x10012560` the `IDirect3D3`; `0x10012564` the device; `0x1001253c` the hardware flag; `0x10012580` the texture table |
 | `0x10002920` | release the Z-buffer: detach from the back buffer, release |
 | `0x10002970` | pick a Z-buffer format: `EnumZBufferFormats` against the four preferred at `0x100111dc` |
 | `0x10002ae0`–`0x10002b7e` | create the Z-buffer (init path 1): pick, detach, create at `0x10003500`, `AddAttachedSurface` |
@@ -121,5 +133,8 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | Patch | Sites | Where |
 | --- | --- | --- |
 | nodisc | 2 | exe `0x4273c0` (file `0x267c0`), `0x47632e` (file `0x7572e`) |
+| altab | 1 + section | exe `0x426bf7` (file `0x25ff7`), the appended `.sr2a` |
 | zdetach | 4 | `MGameD3D.dll` `0x10002930`, `0x10002b31`, `0x10002d11`, `0x100037f4` (file offsets the same minus the base) |
+| managed | 2 | `MGameD3D.dll` `0x10003e91` (32 bytes), `0x10003eb7` (7 bytes), one relocation entry dropped |
+| restoreall | 1 | `MGameD3D.dll` `0x10007710`–`0x1000778c` (file `0x7710`), 44 bytes over 124 |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |

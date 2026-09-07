@@ -79,6 +79,7 @@ itself; see [docs/NOTES.md](docs/NOTES.md), *The install disc*.
 | --- | --- |
 | **No disc required** | The game scans CD-ROM drives for a disc labelled `SEGARALLY2` twice: once to put up an "insert disc" dialog, once to decide whether the menu offers the full game or multiplayer only. The first now answers "found"; the second is given the install folder as the disc. |
 | **Z-buffer detach crash** | The renderer detaches a Z-buffer that does not exist yet, passing DirectDraw a null surface and ignoring the answer. Wine's ddraw in Proton dereferences the null and the game dies before its window appears; plain Wine and DirectX 6 return an error. The four calls are removed. |
+| **Survive ALT+TAB** | Switching away marks the DirectDraw surfaces lost, and the game never restores them - it comes back to a blank screen. Three changes: the window procedure now calls the renderer's restore routine when the game regains focus; that routine restores every surface instead of three; and the textures are created as managed, so DirectDraw keeps its own copy and they are never lost in the first place. |
 | **Music from files** | The course music is CD audio on the play disc, asked for over MCI. A routine added to `MUSASHI\MGAudio.dll` answers those requests from `music\trackNN.wav` instead. With no such files it stays out of the way and the game reads a disc as before. |
 
 Not patched: the processor check (`miscdll.dll!CheckKatmai`) tests for
@@ -125,7 +126,7 @@ The base and AMD executables are known (`65e7537e…`, 1470976 bytes, and
 ### What gets written
 
 Three files are patched: `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` and
-`MUSASHI\MGAudio.dll`. Each gets a `.bak` beside it, the untouched
+`MUSASHI\MGAudio.dll`; the exe and `MGAudio.dll` grow by a section. Each gets a `.bak` beside it, the untouched
 original; **Patch** always
 starts from those, so patching twice is the same as patching once, and
 **Restore original** is a rename. Nothing else in the folder is changed

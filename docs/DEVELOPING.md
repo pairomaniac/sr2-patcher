@@ -45,8 +45,9 @@ every push, tag and pull request:
 | `asm` | `asm/` edited without `asm/build.py` being run: the hex in the patcher would install last week's code |
 | `lint` | pyflakes: unused and undefined names |
 
-`cab` and `music` need an image or `data1.cab` and an install folder,
-none in the repository, so CI skips them. Run them locally before tagging.
+`cab`, `music` and `altab` need an image or `data1.cab` and an install
+folder, none in the repository, so CI skips them. Run them locally before
+tagging.
 
 ## Adding a patch
 
@@ -59,7 +60,10 @@ the structural mistakes at import time. Document it in NOTES.md's table
 and MAP.md's *Sites by patch*.
 
 A patch that is code rather than bytes goes in `asm/` and is a transform;
-`music` is the model. `asm/build.py` puts the assembled bytes into the
+`music`, `altab` and `restoreall` are the models: appended to a relocated
+DLL, appended to the fixed exe, written in place over a DLL routine. A site with
+`None` for its replacement is verified before the transform runs and
+written by it. `asm/build.py` puts the assembled bytes into the
 GENERATED region of the patcher, and the `asm` check keeps the two in
 step.
 
