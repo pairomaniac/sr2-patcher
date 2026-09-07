@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Exercise the IS5 reader against a real data1.cab.
+"""Exercise the disc and cabinet readers against a real install disc.
 
-    python3 tools/cabtest.py data1.cab            list groups, extract what fits
-    python3 tools/cabtest.py data1.cab GAMEDIR    and compare with an installed game
+    python3 tools/cabtest.py SOURCE            list groups, extract what fits
+    python3 tools/cabtest.py SOURCE GAMEDIR    and compare with an installed game
+
+SOURCE is what the patcher accepts: a .cue, an .iso or .bin, a mounted
+disc folder, or data1.cab itself.
 
 A truncated copy works too (head -c 16M data1.cab > data1.head): the file
 table is at the front, and only files whose bytes fall inside the copy are
@@ -25,8 +28,9 @@ def main(argv):
     if not 2 <= len(argv) <= 3:
         print(__doc__.strip())
         return 2
-    cab = patcher.Cabinet(argv[1])
-    size = os.path.getsize(argv[1])
+    fh, close = patcher.open_source(argv[1])
+    cab = patcher.Cabinet(fh)
+    size = fh.seek(0, 2)
     game = argv[2] if len(argv) == 3 else None
     print('%d files, %d groups' % (len(cab.entries), len(cab.groups)))
     for name, entries in cab.groups.items():
@@ -56,6 +60,7 @@ def main(argv):
                         differ += 1
                         if e.group != 'Program Executable Files':
                             print('differs: %s\\%s' % (e.group, e.path))
+    close()
     print('extracted %d files' % read)
     if game:
         print('compared with %s: %d identical, %d differ' % (game, same, differ))

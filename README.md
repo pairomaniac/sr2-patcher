@@ -1,8 +1,8 @@
 # SR2 Patcher
 
 Gets *SEGA RALLY 2* (PC, 1999) running on a modern system. It installs the
-game from the install disc without the original installer - no
-InstallShield, no registry, no CD-ROM drive - and patches it to run without
+game from a disc image of the install disc without the original installer -
+no InstallShield, no registry, no mounting - and patches it to run without
 the play disc.
 
 This is the successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher)
@@ -24,8 +24,9 @@ and the disc check; see [Status](#status).
 Run `sr2-patcher.py` with Python 3 (tkinter for the window; the command
 line needs nothing beyond the standard library).
 
-1. **data1.cab** - browse to `data1.cab` on the install disc (Disc 1). A
-   mounted image is fine; the play disc (Disc 2) is not needed at all.
+1. **Disc 1 image** - the `.cue` of your install disc dump (Disc 1); the
+   `.bin` sits beside it. A plain `.iso`, a mounted disc folder or
+   `data1.cab` itself work too. The play disc (Disc 2) is not needed at all.
 2. **Install to** - an empty folder. The install is about 580 MB.
 3. **Language** - which manual, help pages and message DLL to install.
 4. **Install** - extracts the game, writes the files that replace the
@@ -38,17 +39,19 @@ puts the unpatched executable back from the backup.
 The same from a terminal:
 
 ```
-python3 sr2-patcher.py --install /path/to/data1.cab ~/games/sr2 English
+python3 sr2-patcher.py --install "SEGA RALLY 2 (Disc 1).cue" ~/games/sr2 English
 python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
 ## Installing from the disc
 
-The original installer did four things: copy files out of `data1.cab`,
-choose one of three CPU builds, register the game's own COM middleware
-(`LAUNCH.exe -musashi`), and write `SR2.CFG`. The patcher does the same
-without touching anything outside the game folder.
+The image is read directly - the ISO9660 filesystem out of the data track,
+`data1.cab` out of that, and the game's files out of the cabinet - with
+nothing mounted and nothing written outside the install folder. The
+original installer did four things: copy files out of `data1.cab`, choose
+one of three CPU builds, register the game's own COM middleware
+(`LAUNCH.exe -musashi`), and write `SR2.CFG`. The patcher does the same.
 
 - **Files.** Everything a *Full* install copies: the executables, the
   Pentium III modules over the base ones, one language, all four `BINDATA`
@@ -63,8 +66,8 @@ without touching anything outside the game folder.
 - **`SR2.CFG`** comes out of the cabinet as shipped; the launcher and the
   control-panel applet that used to write it are not needed.
 
-Reading `data1.cab` (InstallShield 5) is done by the script itself; see
-[docs/NOTES.md](docs/NOTES.md), *The install disc*.
+Reading the image and `data1.cab` (InstallShield 5) is done by the script
+itself; see [docs/NOTES.md](docs/NOTES.md), *The install disc*.
 
 ## What the patches do
 
@@ -110,7 +113,7 @@ Written, and checked against a real `data1.cab` and a real Pentium III
 install, but not yet run on Windows:
 
 - The cabinet reader lists all 5,725 files and extracts them byte-identical
-  to what the installer wrote.
+  to what the installer wrote, from a cue/bin, an iso, a folder or the cab.
 - The disc-check patch changes three bytes at a verified site.
 - The registration-free COM manifests are untested. If the game fails at
   its first `CoCreateInstance`, that is where to look; the fallback is
@@ -125,8 +128,8 @@ else on the modernisation list. The ground work for those is in
 ## Working on the patcher
 
 `docs/README.md` is the index. `tools/check.py` runs the checks; give it a
-`data1.cab` (or the first 16 MB of one) and an install folder to run the
-cabinet check too. `sh tools/setup-dev.sh` says what is missing.
+disc image (or `data1.cab`, or the first 16 MB of one) and an install
+folder to run the disc and cabinet check too. `sh tools/setup-dev.sh` says what is missing.
 
 ## AI Disclaimer
 

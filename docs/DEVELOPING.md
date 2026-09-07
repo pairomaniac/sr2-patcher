@@ -19,11 +19,19 @@ needed to run the patcher from the command line.
 vim sr2-patcher.py
 python3 tools/check.py                              # tables, lint
 python3 tools/check.py data1.head ~/games/sr2       # and the cabinet reader
+python3 tools/check.py disc1.cue ~/games/sr2        # through a disc image
 ```
 
 `data1.head` is the first 16 MB of `data1.cab` (`head -c 16M`): enough for
 the file table and the executables, small enough to keep around. The real
-cabinet works the same and checks everything.
+cabinet or a real dump works the same and checks everything. To exercise
+the disc reader without a dump, wrap the head in an image:
+
+```
+genisoimage -o sr2.iso -graft-points DATA1.CAB=data1.head
+python3 tools/iso2bin.py sr2.iso sr2.bin            # writes sr2.bin and sr2.cue
+python3 tools/check.py sr2.cue ~/games/sr2
+```
 
 ## What CI checks
 
@@ -35,8 +43,8 @@ every push, tag and pull request:
 | `tables` | a patch site outside the file, two patches on one byte, a replacement longer than the original |
 | `lint` | pyflakes: unused and undefined names |
 
-`cab` needs a `data1.cab`, which is not in the repository, so CI skips it.
-Run it locally before tagging.
+`cab` needs an image or a `data1.cab`, neither in the repository, so CI
+skips it. Run it locally before tagging.
 
 ## Adding a patch
 

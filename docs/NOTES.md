@@ -172,6 +172,19 @@ a *PentiumIII Files* component gated on `CheckKatmai`, `LAUNCH.exe -musashi`
 for COM registration, `SR2_CPL.cpl` to the system folder, the DirectPlay
 lobby key, and HEAT (Sega's online service) shortcuts.
 
+### Reading the image
+
+`open_source` takes a `.cue` (the first data track of the bin it names,
+found beside the sheet whatever path the sheet carries), an `.iso` or a
+bare `.bin`, a mounted folder, or `data1.cab`. `DataTrack` finds the sector
+form by looking for `CD001` at sector 16 under each of MODE1/2352,
+MODE2/2352, MODE1/2048 and MODE2/2336, so a cue sheet naming the wrong
+mode still works. `iso_root`/`iso_entries` walk ISO9660 directory records
+(no Joliet, no Rock Ridge - names are the `8.3;1` ones, lowercased).
+`DiscFile` presents one extent as a file object, and `Cabinet` reads
+`data1.cab` through it without extracting the 370 MB first. Multi-extent
+files are refused; `data1.cab` is well under the 4 GB extent limit.
+
 ### `data1.cab` (InstallShield 5)
 
 Read by `Cabinet` in the script. Layout, all little-endian:
@@ -194,7 +207,8 @@ Read by `Cabinet` in the script. Layout, all little-endian:
   so the stream is read to the expected size and not to EOF.
 
 Checked against unshield's listing (identical, 5,725 files in 25 groups)
-and against a Pentium III install (every extracted file identical).
+and against a Pentium III install (every extracted file identical), from
+the cab directly and through a MODE1/2352 image built around it.
 
 ### Groups
 

@@ -28,7 +28,7 @@ def run(name, cmd):
 
 def main(argv):
     ok = run('tables', [PY, 'sr2-patcher.py', '--selfcheck'])
-    ok &= run('lint', [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'tools/check.py', 'tools/cabtest.py'])
+    ok &= run('lint', [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'tools/check.py', 'tools/cabtest.py', 'tools/iso2bin.py'])
     if len(argv) > 1:
         ok &= run('cab', [PY, 'tools/cabtest.py'] + argv[1:])
     else:

@@ -8,8 +8,9 @@ says where to look.
 
 | Path | What |
 | --- | --- |
-| `sr2-patcher.py` | the patcher: tables, the IS5 cabinet reader, installer, manifests, patch and restore, window, CLI |
-| `tools/check.py` | runs every check; `tools/cabtest.py` is the cabinet check it calls |
+| `sr2-patcher.py` | the patcher: tables, the disc image and IS5 cabinet readers, installer, manifests, patch and restore, window, CLI |
+| `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check it calls |
+| `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
 | `.github/workflows/build.yml` | CI: the checks |
@@ -21,8 +22,9 @@ In file order:
 | Region | Starts with |
 | --- | --- |
 | Constants | `VERSION`; `P3_FILES` the six fingerprints; `PATCHES` the site table; `MUSASHI` the CLSID table; the two manifest templates |
+| Disc image | `parse_cue`, `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
-| Install | `install_groups`, `find_cab`, `write_manifests`, `install` |
+| Install | `install_groups`, `write_manifests`, `install` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |

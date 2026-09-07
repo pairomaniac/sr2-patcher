@@ -13,5 +13,5 @@ Where something lives, by question:
 
 - *What does the game do at startup, and why is the disc check where it is?* NOTES.md, *Startup and files*.
 - *What is at this address?* MAP.md.
-- *What is in `data1.cab` and how is it read?* NOTES.md, *The install disc*.
+- *How is the image read, and what is in `data1.cab`?* NOTES.md, *The install disc*.
 - *Why manifests instead of registration?* NOTES.md, *Musashi*.

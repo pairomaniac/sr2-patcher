@@ -2,7 +2,7 @@
 """SEGA RALLY 2 (PC, 1999) patcher. See README.md.
 
     python3 sr2-patcher.py                          the window
-    python3 sr2-patcher.py --install SRC DIR [LANG] install from data1.cab or the disc folder
+    python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab
     python3 sr2-patcher.py --patch DIR              patch an installed game
     python3 sr2-patcher.py --restore DIR            put the original exe back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -15,6 +15,7 @@ https://github.com/pairomaniac/sr2-patcher
 import hashlib
 import os
 import queue
+import re
 import struct
 import sys
 import threading
@@ -80,6 +81,195 @@ ASM_MANIFEST_HEAD = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 '''
 
 
+# Disc image
+# The install disc is read directly, no mounting: a cue sheet with its bin,
+# a plain .iso, or the raw bin on its own. Only the data track matters.
+
+LOGICAL = 2048                  # user bytes in a sector, whatever its form
+PRIMARY_VD = 16                 # where the descriptors start, by the standard
+
+# Sector layouts, walked in order; the one whose sector 16 holds an ISO9660
+# descriptor wins, so a cue sheet naming the wrong mode still works.
+SECTOR_FORMS = (
+    ('MODE1/2352', 2352, 16),
+    ('MODE2/2352', 2352, 24),
+    ('MODE1/2048', 2048, 0),
+    ('MODE2/2336', 2336, 8),
+)
+
+_MSF = re.compile(r'^(\d+):(\d+):(\d+)$')
+
+
+class DiscError(Exception):
+    """The image cannot be read as the install disc. Shown as it is."""
+
+
+def _cue_file(base, line):
+    """Where a FILE line points: the bin sits beside the cue whatever path
+    the sheet carries, so the name is what matters."""
+    if '"' in line:
+        name = line.split('"')[1]
+    else:
+        parts = line.split()
+        name = ' '.join(parts[1:-1]) if len(parts) > 2 else parts[-1]
+    plain = name.replace('\\', '/').rstrip('/').rsplit('/', 1)[-1]
+    for candidate in (name, plain):
+        here = os.path.join(base, candidate)
+        if os.path.exists(here):
+            return here
+    for entry in os.listdir(base):
+        if entry.lower() == plain.lower():
+            return os.path.join(base, entry)
+    raise DiscError('%s, named by the cue sheet, is not beside it.' % plain)
+
+
+def parse_cue(path):
+    """(bin path, first sector) of the first data track."""
+    base = os.path.dirname(os.path.abspath(path))
+    curbin, tracks, cur = None, [], None
+    with open(path, 'r', encoding='utf-8-sig', errors='replace') as fh:
+        for line in fh:
+            line = line.strip()
+            up = line.upper()
+            if up.startswith('FILE'):
+                curbin = _cue_file(base, line)
+            elif up.startswith('TRACK'):
+                cur = {'mode': line.split()[2].upper(), 'bin': curbin, 'start': 0}
+                tracks.append(cur)
+            elif up.startswith('INDEX') and cur is not None:
+                parts = line.split()
+                stamp = _MSF.match(parts[2])
+                if parts[1] == '01' and stamp:
+                    m, sec, f = (int(x) for x in stamp.groups())
+                    cur['start'] = (m * 60 + sec) * 75 + f
+    data = [t for t in tracks if 'AUDIO' not in t['mode'] and t['bin']]
+    if not data:
+        raise DiscError('No data track in %s.' % os.path.basename(path))
+    return data[0]['bin'], data[0]['start']
+
+
+class DataTrack:
+    """2048-byte logical sectors out of an image's data track."""
+
+    def __init__(self, path, start=0):
+        self.start = start
+        self.fh = open(path, 'rb')
+        size = os.path.getsize(path)
+        for name, stride, offset in SECTOR_FORMS:
+            at = (start + PRIMARY_VD) * stride + offset
+            if at + 6 <= size:
+                self.fh.seek(at)
+                if self.fh.read(6)[1:6] == b'CD001':
+                    self.form, self.stride, self.offset = name, stride, offset
+                    return
+        self.fh.close()
+        raise DiscError('No filesystem in %s. The image is damaged, or the '
+                        'cue sheet names the wrong file for track 1.'
+                        % os.path.basename(path))
+
+    def close(self):
+        self.fh.close()
+
+    def sector(self, lba):
+        self.fh.seek((self.start + lba) * self.stride + self.offset)
+        data = self.fh.read(LOGICAL)
+        if len(data) != LOGICAL:
+            raise DiscError('The image ends early: truncated, or a bin file is missing.')
+        return data
+
+    def read(self, lba, length):
+        out = bytearray()
+        while len(out) < length:
+            out += self.sector(lba + len(out) // LOGICAL)
+        return bytes(out[:length])
+
+
+def iso_entries(track, lba, size):
+    """{lowercased name: (is_dir, lba, size)} for one directory."""
+    out, data, at = {}, track.read(lba, size), 0
+    while at < len(data):
+        length = data[at]
+        if length == 0:                     # records never straddle a sector
+            at = (at // LOGICAL + 1) * LOGICAL
+            continue
+        rec = data[at:at + length]
+        at += length
+        if len(rec) < 34:
+            continue
+        flags, name_len = rec[25], rec[32]
+        raw = rec[33:33 + name_len]
+        if name_len == 1 and raw in (b'\x00', b'\x01'):
+            continue
+        if flags & 0x80:
+            raise DiscError('This image uses multi-extent files, which the patcher cannot read.')
+        name = raw.decode('latin-1').split(';')[0].rstrip('.')
+        out[name.lower()] = (bool(flags & 0x02),
+                             int.from_bytes(rec[2:6], 'little'),
+                             int.from_bytes(rec[10:14], 'little'))
+    return out
+
+
+def iso_root(track):
+    pvd = track.sector(PRIMARY_VD)
+    if pvd[0] != 1:
+        raise DiscError('Sector %d of this image is not a volume descriptor.' % PRIMARY_VD)
+    root = pvd[156:190]
+    return iso_entries(track, int.from_bytes(root[2:6], 'little'),
+                       int.from_bytes(root[10:14], 'little'))
+
+
+class DiscFile:
+    """One file on the disc, as a read-only file object: what Cabinet needs."""
+
+    def __init__(self, track, lba, size):
+        self.track, self.lba, self.size, self.pos = track, lba, size, 0
+
+    def seek(self, pos, whence=0):
+        self.pos = pos if whence == 0 else self.pos + pos if whence == 1 else self.size + pos
+        return self.pos
+
+    def tell(self):
+        return self.pos
+
+    def read(self, n=-1):
+        if n < 0 or self.pos + n > self.size:
+            n = self.size - self.pos
+        if n <= 0:
+            return b''
+        first, skip = divmod(self.pos, LOGICAL)
+        data = self.track.read(self.lba + first, skip + n)[skip:]
+        self.pos += n
+        return data
+
+    def close(self):
+        pass
+
+
+def open_source(src):
+    """A file object on data1.cab and a closer, from whatever the user
+    gave: a .cue, an .iso or .bin, a mounted disc folder, or the cab."""
+    low = src.lower()
+    if os.path.isdir(src):
+        for name in os.listdir(src):
+            if name.lower() == CAB:
+                fh = open(os.path.join(src, name), 'rb')
+                return fh, fh.close
+        raise DiscError('No %s in %s.' % (CAB, src))
+    if low.endswith('.cab'):
+        fh = open(src, 'rb')
+        return fh, fh.close
+    if low.endswith('.cue'):
+        path, start = parse_cue(src)
+    else:
+        path, start = src, 0
+    track = DataTrack(path, start)
+    entry = iso_root(track).get(CAB)
+    if not entry or entry[0]:
+        track.close()
+        raise DiscError('No %s in the root of this image, so it is not the install disc.' % CAB)
+    return DiscFile(track, entry[1], entry[2]), track.close
+
+
 # InstallShield 5 cabinet
 
 IS_SIGNATURE = 0x28635349
@@ -98,10 +288,11 @@ class Entry:
 
 
 class Cabinet:
-    """data1.cab: the file table and the bytes of any one file."""
+    """data1.cab: the file table and the bytes of any one file. Takes a
+    file object; close() is the caller's."""
 
-    def __init__(self, path):
-        self.fh = open(path, 'rb')
+    def __init__(self, fh):
+        self.fh = fh
         sig, _ver, _vol, desc_off, desc_size = struct.unpack('<5I', self.fh.read(0x14))
         if sig != IS_SIGNATURE:
             raise ValueError('not an InstallShield cabinet')
@@ -141,9 +332,6 @@ class Cabinet:
                 for e in self.groups[name]:
                     e.group = name
 
-    def close(self):
-        self.fh.close()
-
     def read(self, entry):
         if entry.flags & IS_SPLIT:
             raise ValueError('%s spans volumes' % entry.path)
@@ -169,15 +357,6 @@ def install_groups(lang):
             region + ' Binary', 'Carprofile ' + region]
 
 
-def find_cab(src):
-    if os.path.isfile(src):
-        return src
-    for name in os.listdir(src):
-        if name.lower() == CAB:
-            return os.path.join(src, name)
-    raise FileNotFoundError('no %s in %s' % (CAB, src))
-
-
 def write_manifests(dest):
     with open(os.path.join(dest, EXE + '.manifest'), 'w', newline='\n') as fh:
         fh.write(APP_MANIFEST)
@@ -193,8 +372,9 @@ def write_manifests(dest):
 def install(src, dest, lang='English', log=print):
     if lang not in LANGUAGES:
         raise ValueError('unknown language %s' % lang)
-    cab = Cabinet(find_cab(src))
+    fh, close = open_source(src)
     try:
+        cab = Cabinet(fh)
         groups = install_groups(lang)
         missing = [g for g in groups if g not in cab.groups]
         if missing:
@@ -209,7 +389,7 @@ def install(src, dest, lang='English', log=print):
                     fh.write(cab.read(e))
             log('install: %s, %d files' % (g, len(cab.groups[g])))
     finally:
-        cab.close()
+        close()
     write_manifests(dest)
     log('install: manifests written')
     patch(dest, log)
@@ -286,8 +466,9 @@ def gui():
     lang = tk.StringVar(value=LANGUAGES[0])
 
     def browse_src():
-        p = filedialog.askopenfilename(title='data1.cab on the install disc',
-                                       filetypes=[('data1.cab', 'data1.cab'), ('All', '*')])
+        p = filedialog.askopenfilename(
+            title='Install disc image',
+            filetypes=[('Disc image', '*.cue *.iso *.bin'), ('data1.cab', 'data1.cab'), ('All', '*')])
         if p:
             src.set(p)
 
@@ -314,7 +495,7 @@ def gui():
 
     def do_install():
         if not src.get() or not dest.get():
-            messagebox.showwarning(LABEL, 'Pick data1.cab and an install folder.')
+            messagebox.showwarning(LABEL, 'Pick the install disc image and an install folder.')
             return
         run(install, src.get(), dest.get(), lang.get(), log)
 
@@ -335,7 +516,7 @@ def gui():
     root.columnconfigure(0, weight=1)
     frame.columnconfigure(1, weight=1)
 
-    ttk.Label(frame, text='data1.cab').grid(row=0, column=0, sticky='w')
+    ttk.Label(frame, text='Disc 1 image').grid(row=0, column=0, sticky='w')
     ttk.Entry(frame, textvariable=src, width=60).grid(row=0, column=1, sticky='ew', padx=4)
     ttk.Button(frame, text='Browse', command=browse_src).grid(row=0, column=2)
     ttk.Label(frame, text='Install to').grid(row=1, column=0, sticky='w')
