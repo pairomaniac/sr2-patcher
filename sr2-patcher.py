@@ -54,11 +54,6 @@ RESTORE_SITE = 0x7710
 RESTORE_LEN = 0x7c
 RESTORE_RELOCS = 10
 
-# Patch table: key -> (file, sites, transform). A site is (file offset,
-# original, replacement); a replacement of None means the bytes are only
-# verified, the transform writes them. The transform, if any, runs on the
-# file after its sites and may grow it. Applied in this order.
-#
 # The SetTextColor sites in the exe, file offsets: `ff15` call [slot],
 # `8b35` mov esi, [slot]. Every one is followed by the slot 0x495028.
 TEXTCOLOR_SITES = (
@@ -66,6 +61,11 @@ TEXTCOLOR_SITES = (
     (0x3485f, 'ff15'), (0x34b2a, 'ff15'), (0x34efc, 'ff15'), (0x35533, 'ff15'),
     (0x360c3, 'ff15'), (0x3a6c0, 'ff15'), (0x3cef4, 'ff15'), (0x3da96, 'ff15'),
 )
+
+# Patch table: key -> (file, sites, transform). A site is (file offset,
+# original, replacement); a replacement of None means the bytes are only
+# verified, the transform writes them. The transform, if any, runs on the
+# file after its sites and may grow it. Applied in this order.
 #
 # nodisc:  two sites. The startup check that scans CD-ROM drives for the
 #          play disc (0x4273c0) returns 0, "found", at once; and the loader
@@ -169,12 +169,17 @@ PATCHES = {
 # one `mov esi, dword [slot]` in the open routine, which then calls esi.
 MCI_CALL_SITES = 11
 MCI_LOAD_SITES = 1
+
+# The section each transform appends, one per patch so any one can be
+# left out. Code that keeps no data of its own is read-only.
 MUSIC_SECTION = b'.sr2m'
 ACTIVATE_SECTION = b'.sr2a'
 TEXTCOLOR_SECTION = b'.sr2c'
-WINDOWED_SECTION = b'.sr2w'
+BGROW_SECTION = b'.sr2w'
+TITLEROW_SECTION = b'.sr2t'
 FULLWIN_SECTION = b'.sr2f'
 ALTENTER_SECTION = b'.sr2k'
+CODE_SECTION = 0x60000020               # IMAGE_SCN_CNT_CODE | MEM_EXECUTE | MEM_READ
 
 
 LANGUAGES = ('English', 'French', 'German', 'Italian', 'Spanish', 'Japanese')
@@ -818,7 +823,7 @@ def _align(n, a):
     return (n + a - 1) // a * a
 
 
-def append_section(buf, name, data, chars=0xE0000060):
+def append_section(buf, name, data, chars=CODE_SECTION | 0x80000040):
     """Append a section to a PE image in buf. Returns (buffer, section RVA)."""
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     nsec = struct.unpack_from('<H', buf, pe_off + 6)[0]
@@ -971,98 +976,81 @@ def apply_restore(buf):
     return buf
 
 
-# The activation patch: a section appended to the exe
+# Patches that append a blob and point sites at it
 
-ACTIVATE_SITE = 0x25ff7                 # file offset of `call 0x46e260` at 0x426bf7
+def _branch(buf, off, target_rva, length=5, op=b'\xe8'):
+    """A near call (or jump, op e9) at file offset off to target_rva, padded
+    with nops to the length of what it replaces. The site's own RVA comes
+    from the section table, since .text need not start at its file offset."""
+    site_rva = 0x1000 + off - _rva_to_off(buf, 0x1000)
+    buf[off:off + length] = (op + struct.pack('<i', target_rva - (site_rva + 5))).ljust(length, b'\x90')
+
+
+ACTIVATE_SITE = 0x25ff7                 # exe, `call 0x46e260` at 0x426bf7
+BGROW_SITE, BGROW_LEN = 0x14671, 20     # exe, the .bg row copy at 0x415271
+ALTENTER_SITE = 0x260bc                 # exe, `call 0x41fe20` at 0x426cbc
+TITLEROW_SITE, TITLEROW_LEN = 0x8ba, 22  # Title.dll, the row copy at 0x100014ba
+PRESENT_SITE = 0x4d7b                   # MGameD3D, the windowed present's first instruction
+SIZE_SITE = 0x26be                      # MGameD3D, `call [__imp__MoveWindow]` in the windowed init
+# HIGHLOW entries inside the replaced present (absolute addresses, now dead
+# code) and the one under the MoveWindow call.
+FULLWIN_RELOCS = {0x4d7d, 0x4d8a, 0x4d8f, 0x4d95, 0x4da3, 0x4db1, 0x4db6, 0x4dc4, 0x4dd3, 0x26c0}
 
 
 def apply_activate(buf):
-    """The alt-tab patch. Returns the grown exe image."""
-    out, rva = append_section(buf, ACTIVATE_SECTION, ACTIVATE_BLOB, chars=0x60000020)
-    site_rva = 0x1000 + ACTIVATE_SITE - _rva_to_off(out, 0x1000)
-    out[ACTIVATE_SITE:ACTIVATE_SITE + 5] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5))
+    """The alt-tab stub in the exe, called from the WM_ACTIVATEAPP case."""
+    out, rva = append_section(buf, ACTIVATE_SECTION, ACTIVATE_BLOB, chars=CODE_SECTION)
+    _branch(out, ACTIVATE_SITE, rva)
     return out
 
 
-# The text-colour patch: a section appended to the exe
-
 def apply_textcolor(buf):
-    """The lobby text patch. Returns the grown exe image."""
-    out, rva = append_section(buf, TEXTCOLOR_SECTION, TEXTCOLOR_BLOB, chars=0x60000020)
+    """The SetTextColor stub in the exe; the eight calls and two loads of
+    the import slot become a call to it and a load of its address."""
+    out, rva = append_section(buf, TEXTCOLOR_SECTION, TEXTCOLOR_BLOB, chars=CODE_SECTION)
     base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
     for off, op in TEXTCOLOR_SITES:
-        site_rva = 0x1000 + off - _rva_to_off(out, 0x1000)
         if op == 'ff15':
-            out[off:off + 6] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5)) + b'\x90'
+            _branch(out, off, rva, 6)
         else:
             out[off:off + 6] = b'\xbe' + struct.pack('<I', base + rva) + b'\x90'
     return out
 
 
-# The windowed patch: a section appended to the exe
-
-BGROW_SITE = 0x14671                   # file offset of the row copy at 0x415271
-BGROW_LEN = 20
-
-
 def apply_windowed(buf):
-    """The windowed-mode patch. Returns the grown exe image."""
-    out, rva = append_section(buf, WINDOWED_SECTION, BGROW_BLOB, chars=0x60000020)
-    site_rva = 0x1000 + BGROW_SITE - _rva_to_off(out, 0x1000)
-    out[BGROW_SITE:BGROW_SITE + BGROW_LEN] = (
-        b'\xe8' + struct.pack('<i', rva - (site_rva + 5))).ljust(BGROW_LEN, b'\x90')
+    """The .bg row copy in the exe through bgrow.asm."""
+    out, rva = append_section(buf, BGROW_SECTION, BGROW_BLOB, chars=CODE_SECTION)
+    _branch(out, BGROW_SITE, rva, BGROW_LEN)
     return out
-
-
-# The ALT+ENTER patch: a section appended to the exe
-
-ALTENTER_SITE = 0x260bc                # file offset of `call 0x41fe20` at 0x426cbc
 
 
 def apply_altenter(buf):
-    """The ALT+ENTER patch. Returns the grown exe image. The section keeps
-    the resolved user32 entry points, so it stays writable."""
+    """altenter.asm in front of the window procedure's default handler.
+    The section keeps the user32 entry points it resolves, so it is writable."""
     out, rva = append_section(buf, ALTENTER_SECTION, ALTENTER_BLOB)
-    site_rva = 0x1000 + ALTENTER_SITE - _rva_to_off(out, 0x1000)
-    out[ALTENTER_SITE:ALTENTER_SITE + 5] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5))
+    _branch(out, ALTENTER_SITE, rva)
     return out
-
-
-# The title picture patch: a section appended to Title.dll
-
-TITLEROW_SITE = 0x8ba                  # file offset of the row copy at 0x100014ba
-TITLEROW_LEN = 22
 
 
 def apply_titlebg(buf):
-    """Title.dll's own .bg row copy through the stub. Returns the grown image.
-    The site holds no absolute address, so no relocation entry goes."""
-    out, rva = append_section(buf, FULLWIN_SECTION, TITLEROW_BLOB, chars=0x60000020)
-    site_rva = 0x1000 + TITLEROW_SITE - _rva_to_off(out, 0x1000)
-    out[TITLEROW_SITE:TITLEROW_SITE + TITLEROW_LEN] = (
-        b'\xe8' + struct.pack('<i', rva - (site_rva + 5))).ljust(TITLEROW_LEN, b'\x90')
+    """Title.dll's own .bg row copy through bgrow.asm's TITLE build. The
+    site holds no absolute address, so no relocation entry goes."""
+    out, rva = append_section(buf, TITLEROW_SECTION, TITLEROW_BLOB, chars=CODE_SECTION)
+    _branch(out, TITLEROW_SITE, rva, TITLEROW_LEN)
     return out
 
 
-# The borderless patch: a section appended to MGameD3D.dll
-
-PRESENT_SITE = 0x4d7b                  # the windowed present, from its first instruction
-SIZE_SITE = 0x26be                     # `call [__imp__MoveWindow]` in the windowed init
-# HIGHLOW entries inside the replaced present (its absolute addresses, now
-# dead code) and the one under the MoveWindow call.
-FULLWIN_RELOCS = {0x4d7d, 0x4d8a, 0x4d8f, 0x4d95, 0x4da3, 0x4db1, 0x4db6, 0x4dc4, 0x4dd3, 0x26c0}
-
-
 def apply_fullwin(buf):
-    """The borderless patch. Returns the grown DLL image."""
+    """fullwin.asm in MGameD3D: the windowed present jumps to its first
+    thunk, the window sizing calls its second."""
     if _drop_relocations(buf, FULLWIN_RELOCS) != len(FULLWIN_RELOCS):
         raise ValueError('relocation entries for the present not all found')
-    out, rva = append_section(buf, FULLWIN_SECTION, FULLWIN_BLOB)
-    blob = FULLWIN_BLOB.replace(struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    out, rva = append_section(buf, FULLWIN_SECTION, FULLWIN_BLOB, chars=CODE_SECTION)
     start = _rva_to_off(out, rva)
-    out[start:start + len(blob)] = blob
-    for site, thunk, op in ((PRESENT_SITE, 0, b'\xe9'), (SIZE_SITE, 5, b'\xe8')):
-        out[site:site + 6] = op + struct.pack('<i', rva + thunk - (site + 5)) + b'\x90'
+    out[start:start + len(FULLWIN_BLOB)] = FULLWIN_BLOB.replace(
+        struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    _branch(out, PRESENT_SITE, rva, 6, op=b'\xe9')
+    _branch(out, SIZE_SITE, rva + 5, 6)
     return out
 
 

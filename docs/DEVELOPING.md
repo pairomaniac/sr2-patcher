@@ -59,16 +59,21 @@ then runs the transform, which may grow the file; `--selfcheck` catches
 the structural mistakes at import time. Document it in NOTES.md's table
 and MAP.md's *Sites by patch*.
 
-A patch that is code rather than bytes goes in `asm/` and is a transform;
-`music`, `altab` and `restoreall` are the models: appended to a relocated
-DLL, appended to the fixed exe, written in place over a DLL routine;
-`textcolor` is `altab` with ten sites, `windowed` the same shape with a
-plain site beside it, `borderless` the `music` shape with one placeholder, `altenter` a section
-with data of its own, hence writable.
-`managed` is the fourth shape: plain sites, with a transform only to
-drop the relocation entry of an absolute address the sites removed. A site with
-`None` for its replacement is verified before the transform runs and
-written by it. `asm/build.py` puts the assembled bytes into the
+A patch that is code rather than bytes goes in `asm/` and is a transform.
+The shapes there are:
+
+- a section appended to the fixed exe, sites pointed at it with `_branch`:
+  `altab`, `textcolor`, `windowed`, `altenter`; `titlebg` the same in
+  `Title.dll`, which nothing in the site made position-dependent;
+- a section appended to a relocated DLL, the blob finding its own base and
+  a placeholder filled at apply time: `music`, `borderless`;
+- a routine rewritten in place: `restoreall`;
+- plain sites with a transform only to drop the relocation entry of an
+  absolute address they removed: `managed`.
+
+Each transform appends its own section, so any patch can be left out
+without moving another's. A site with `None` for its replacement is
+verified before the transform runs and written by it. `asm/build.py` puts the assembled bytes into the
 GENERATED region of the patcher, and the `asm` check keeps the two in
 step.
 

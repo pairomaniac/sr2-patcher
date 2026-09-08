@@ -168,6 +168,6 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | altenter | 1 + section | exe `0x426cbc` (file `0x260bc`), the appended `.sr2k` |
 | windowed | 2 + section | exe `0x427fe6` (file `0x273e6`), `0x415271` (file `0x14671`, 20 bytes), the appended `.sr2w` |
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
-| titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2f` |
+| titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2t` |
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
