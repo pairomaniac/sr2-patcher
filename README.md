@@ -64,6 +64,7 @@ that is not an unmodified copy of it.
 | **No disc required** | An "insert the play disc" box at startup, and a menu with everything but multiplayer greyed out. The game now finds everything in its own folder. |
 | **Startup crash** | Under Proton the game closes before its window appears. A renderer bug that Proton's DirectDraw does not forgive. |
 | **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |
+| **Missing lettering** | The SELECT GAME and SELECT CAR headings, and other black text on the 2D screens, drawn as hollow outlines. Black in those textures read as transparent on modern DirectX and Wine. |
 | **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. |
 
 Everything else is the game as it shipped. Resolution, controls and

@@ -103,7 +103,9 @@ Image base `0x10000000`; file offset = VA − `0x10000000`.
 | --- | --- |
 | `0x10003e70` | fills the video-memory texture descriptor; caps at `0x10003e91`, AGP variant at `0x10003eb7`. Patched by managed |
 | `0x10003ff2` | creates the video-memory texture and `Load`s it from its system-memory twin |
-| `0x10004530` | creates the system-memory texture (and palette) |
+| `0x10004530` | creates the system-memory texture (and palette); colour key `{0,0}` at `0x10012734` set at `0x100046ce` and `0x100043d1` |
+| `0x10003cf0` | `EnumTextureFormats` callback: slots at `0x10012594`, 32 bytes each (0 P8, 1 X1R5G5B5, 2 R5G6B5, 3 A1R5G5B5, 4 A4R4G4B4, 5 P4, 6-10 DXT); the default picked from the list at `0x1000f79c`, chosen index in `0x10012740`, "not 565" flag `0x1001273c`. Patched by texfmt |
+| `0x10004af0`, `0x10004bb0` | 16-bit texture copy: as is for 555, expanded for 565 |
 | `0x10007710` | restore surfaces: `IsLost`/`Restore` on primary, back buffer, Z-buffer; interface slot 16 (`+0x40`) and 93. Rewritten by restoreall |
 | `0x1001254c` | the `IDirectDraw4`; `0x10012560` the `IDirect3D3`; `0x10012564` the device; `0x1001253c` the hardware flag; `0x10012580` the texture table |
 | `0x10002920` | release the Z-buffer: detach from the back buffer, release |
@@ -137,4 +139,5 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | zdetach | 4 | `MGameD3D.dll` `0x10002930`, `0x10002b31`, `0x10002d11`, `0x100037f4` (file offsets the same minus the base) |
 | managed | 2 | `MGameD3D.dll` `0x10003e91` (32 bytes), `0x10003eb7` (7 bytes), one relocation entry dropped |
 | restoreall | 1 | `MGameD3D.dll` `0x10007710`–`0x1000778c` (file `0x7710`), 44 bytes over 124 |
+| texfmt | 1 | `MGameD3D.dll` `0x1000f79c` (file `0xf79c`), 12 bytes |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |

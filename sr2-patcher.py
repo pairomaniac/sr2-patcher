@@ -83,6 +83,14 @@ RESTORE_RELOCS = 10
 #          MGameD3D's restore-surfaces routine (0x10007710), so it restores
 #          every surface and not just three. Managed textures are not
 #          lost and need none of it; the rest of what DirectDraw owns does.
+# texfmt:  MGameD3D picks its 16-bit texture format from a preference list
+#          (0x1000f79c): X1R5G5B5, then R5G6B5, then A1R5G5B5. Its texture
+#          data is 1555 with the alpha bit set on opaque pixels and is
+#          copied in as is, and every texture is colour-keyed on 0. Opaque
+#          black is 0x8000: 1999 drivers compared the raw texel and drew it,
+#          modern DirectX and wined3d mask the X bit first and key it out,
+#          so black lettering on the 2D screens vanished. The list becomes
+#          A1R5G5B5 first, where bit 15 is alpha and the key stays exact.
 # music:   a transform: apply_music appends a section to MGAudio.dll holding
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's
@@ -102,6 +110,8 @@ PATCHES = {
         (0x3eb7, bytes.fromhex('81486800400020'), b'\x90' * 7)), 'apply_managed'),
     'restoreall': ('MUSASHI\\MGameD3D.dll', ((RESTORE_SITE, bytes.fromhex(
         'a15025011085c0741e8b0850ff516085c07414a1502501108b1050ff526c85c0a3c41f01107c55a15425011085c0741e8b0850ff516085c07414a1542501108b1050ff526c85c0a3c41f01107c2ea15c25011085c0741e8b0850ff516085c07414a15c2501108b1050ff526c85c0a3c41f01107c0733c0a3c41f0110'), None),), 'apply_restore'),
+    'texfmt': ('MUSASHI\\MGameD3D.dll', ((0xf79c, bytes.fromhex('010000000200000003000000'),
+                                            bytes.fromhex('030000000100000002000000')),), None),
     'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
 }
 

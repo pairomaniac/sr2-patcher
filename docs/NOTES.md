@@ -24,6 +24,25 @@ are relocated at load, which is why every patch that lands in them is
 position-independent and drops the relocation entries of the bytes it
 replaces.
 
+### Texture formats
+
+`MGameD3D` enumerates the device's texture formats at `0x10003cf0` into
+slots at `0x10012594` (0 P8, 1 X1R5G5B5, 2 R5G6B5, 3 A1R5G5B5, 4 A4R4G4B4,
+5 P4, 6-10 DXT) and picks the default 16-bit one from the list at
+`0x1000f79c`, first slot present wins. Texture data is 1555 with bit 15
+set on opaque pixels; for a 555 target it is copied as is (`0x10004af0`),
+for 565 expanded with bit 15 dropped (`0x10004bb0`). Every texture gets
+`SetColorKey(DDCKEY_SRCBLT, {0, 0})` (`0x100046ce`, `0x100043d1`).
+
+Opaque black is therefore `0x8000` in an X1R5G5B5 texture. Drivers of the
+day compared the raw texel against the key and drew it; modern DirectX and
+wined3d mask the X bit before comparing, so it matches 0 and is dropped.
+The visible result: the black lettering on the mode-select and car-select
+headings gone, leaving the white plate and a dashed grey anti-aliasing
+edge. A1R5G5B5 first makes bit 15 alpha, which is what the data is, and
+leaves the key exact. The copy path is unchanged: `0x1001273c` ("not
+565") stays set.
+
 ### Z-buffer detach
 
 `MGameD3D` keeps the back buffer at `0x10012554` and the Z-buffer at
