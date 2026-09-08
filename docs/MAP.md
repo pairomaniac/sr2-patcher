@@ -34,6 +34,8 @@ In file order:
 | Activation patch | `apply_activate` |
 | Text-colour patch | `TEXTCOLOR_SITES`, `apply_textcolor` |
 | Windowed patch | `BGROW_SITE`, `apply_windowed` |
+| Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
+| Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |
@@ -112,8 +114,8 @@ Image base `0x10000000`; file offset = VA − `0x10000000`.
 | `0x10004530` | creates the system-memory texture (and palette); colour key `{0,0}` at `0x10012734` set at `0x100046ce` and `0x100043d1` |
 | `0x10003cf0` | `EnumTextureFormats` callback: slots at `0x10012594`, 32 bytes each (0 P8, 1 X1R5G5B5, 2 R5G6B5, 3 A1R5G5B5, 4 A4R4G4B4, 5 P4, 6-10 DXT); the default picked from the list at `0x1000f79c`, chosen index in `0x10012740`, "not 565" flag `0x1001273c`. Patched by texfmt |
 | `0x10004af0`, `0x10004bb0` | 16-bit texture copy: as is for 555, expanded for 565 |
-| `0x100025d0` | cooperative level and mode: fullscreen path to `0x1000263c`, windowed after; the desktop-depth check at `0x1000271e`. Patched by anydepth |
-| `0x10004d50` | present: `Flip` when fullscreen, `Blt` to the client rect when windowed |
+| `0x100025d0` | cooperative level and mode: fullscreen path to `0x1000263c`, windowed after; the desktop-depth check at `0x1000271e`; the window sized at `0x100026be`. Patched by anydepth, borderless |
+| `0x10004d50` | present: `Flip` when fullscreen, `Blt` to the client rect when windowed, from `0x10004d7b`. Patched by borderless |
 | `0x1001240c` | the fullscreen flag; `0x100123f8`–`0x10012408` hwnd, width, height, bpp, refresh |
 | `0x10007710` | restore surfaces: `IsLost`/`Restore` on primary, back buffer, Z-buffer; interface slot 16 (`+0x40`) and 93. Rewritten by restoreall |
 | `0x1001254c` | the `IDirectDraw4`; `0x10012560` the `IDirect3D3`; `0x10012564` the device; `0x1001253c` the hardware flag; `0x10012580` the texture table |
@@ -126,7 +128,18 @@ Image base `0x10000000`; file offset = VA − `0x10000000`.
 | `0x1001255c` | the Z-buffer |
 | `0x10011fc4` | last HRESULT |
 
-## 5. `MUSASHI\MGAudio.dll`
+## 5. `Title.dll`
+
+Image base `0x10000000`; `.text` at RVA `0x1000`, file offset `0x400`, so
+file offset = VA − `0x10000c00` there.
+
+| Address | What |
+| --- | --- |
+| `0x100010e0` | loads `TITLE640.BG` (`0x100040a0`), locks the back buffer, converts 565→555 in place if the mask says so (`0x100011d0`) |
+| `0x10001450` | copies the picture into the locked back buffer each frame; row copy at `0x100014ba`. Patched by titlebg |
+| `0x1012892c` | the MGameD3D interface, from the exe |
+
+## 6. `MUSASHI\MGAudio.dll`
 
 Image base `0x10000000`, relocated at load (`.reloc` present).
 
@@ -152,4 +165,6 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | textcolor | 10 + section | exe `0x420fc7`, `0x421166` (`mov esi`), `0x43545f`, `0x43572a`, `0x435afc`, `0x436133`, `0x436cc3`, `0x43b2c0`, `0x43daf4`, `0x43e696` (`call`), the appended `.sr2c` |
 | windowed | 2 + section | exe `0x427fe6` (file `0x273e6`), `0x415271` (file `0x14671`, 20 bytes), the appended `.sr2w` |
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
+| titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2f` |
+| borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |

@@ -16,11 +16,18 @@
 ; row) and edx (destination row) untouched; ecx, esi, edi and ebp are
 ; scratch there, the game reloads them after.
 ;
-; The exe is never relocated, so the address is absolute.
+; Title.dll has its own copy of the same loop (0x100014ba, 22 bytes, with
+; the source advanced at the end), its lock description on the stack:
+; assembled with -DTITLE it reads the depth from there and advances ebx.
+; Neither variant holds an absolute address of its own.
 
 bits 32
 
+%ifdef TITLE
+%define BITCOUNT    esp + 0x70          ; the lock description's dwRGBBitCount, past the return address
+%else
 %define BITCOUNT    0x4e68cc            ; ddpfPixelFormat.dwRGBBitCount of the lock
+%endif
 
         cmp     dword [BITCOUNT], 32
         je      .expand
@@ -33,6 +40,9 @@ bits 32
         mov     ecx, ebp
         and     ecx, 3
         rep movsb
+%ifdef TITLE
+        add     ebx, eax
+%endif
         ret
 
 .expand:
@@ -75,4 +85,7 @@ bits 32
         pop     edx
         pop     ebx
         pop     eax
+%ifdef TITLE
+        add     ebx, eax
+%endif
         ret

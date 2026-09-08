@@ -18,6 +18,8 @@ checked on the game running under Wine and Proton.
 | **Invisible lobby text** | `SEGA RALLY 2.exe` | appended `.sr2c` section; `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96` | the eight `call [__imp__SetTextColor]` → `call stub; nop`, the two `mov esi, [__imp__SetTextColor]` → `mov esi, stub; nop`; the stub masks the colour to RGB; see [asm/README.md](../asm/README.md) |
 | **Windowed** | `SEGA RALLY 2.exe` | `0x273e6`; `0x14671` and appended `.sr2w` section | the fullscreen flag pushed at `0x427fe5` → 0; the .bg row copy at `0x415271` → `call` asm/bgrow.asm; see *Windowed mode* |
 | **Any desktop depth** | `MUSASHI\MGameD3D.dll` | `0x271e` | `je` → `jmp`: the windowed path's "desktop must be 16-bit" check skipped |
+| **Title picture** | `Title.dll` | `0x8ba` and appended `.sr2f` section | the DLL's own .bg row copy at `0x100014ba` → `call` asm/bgrow.asm assembled for its stack |
+| **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
 Offsets are file offsets. In the exe, which is never relocated, VA =
@@ -95,8 +97,29 @@ row by row (`0x415271`, `rep movsd`; the loader at `0x415180` converts
 mask also does). On a 32-bit desktop that put two pixels' bytes into
 each pixel: the picture at half width. The copy is now `bgrow.asm`,
 which reads the lock's `dwRGBBitCount` (`0x4e68cc`) and expands 565 to
-XRGB8888 when it is 32. Nothing else writes raw pixels to the back
-buffer: the lobby goes through GDI, the rest through Direct3D.
+XRGB8888 when it is 32. `Title.dll` carries its own copy of the same
+loop for `TITLE640.BG` (`0x100014ba`, the lock description on its stack,
+the source advanced at the end), and gets the same stub assembled for
+that. No other screen DLL locks the back buffer and copies; the lobby
+goes through GDI, the rest through Direct3D.
+
+### Borderless
+
+The windowed path sizes the window to the picture (`MoveWindow` at
+`0x100026be`, after `AdjustWindowRectEx`) and presents by blitting the
+back buffer to the client rect, which DirectDraw stretches. `fullwin.asm`
+replaces both ends: the `MoveWindow` call goes to a thunk that moves the
+window to the monitor under the cursor (`GetCursorPos`,
+`MonitorFromPoint`, `GetMonitorInfoA`, resolved through the DLL's
+`LoadLibraryA`/`GetProcAddress` since it imports none of them; the
+window as asked if any of that fails), and the present from `0x10004d7b`
+on is replaced by one that fits the back buffer's aspect into the client
+rect, fills the bars with `DDBLT_COLORFILL` and blits the picture into
+the middle. A `WS_POPUP` window the size of its monitor is what Wine
+reports to the compositor as fullscreen, with no display mode behind it
+to restore on activation. The picture is still 640x480, point-sampled up.
+The 96 bytes of the old present carry nine relocation entries and the
+call one; all go, since the bytes are dead or relative.
 
 Alt-tab keeps its three patches. `DDSCL_NORMAL` surfaces can still be
 lost - another exclusive application, a locked screen - and the restore
@@ -463,9 +486,6 @@ not needed by a full install.
   playback does not follow.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
-- A window sized to the monitor: the engine stretches the picture to the
-  client rect, so it is a `MoveWindow` away - the DLL's own, at
-  `0x100026be`, sizes the window to 640x480.
 - Frame timing, input, resolution: nothing traced yet. The renderer is
   `MGameGL.dll` + `MGameD3D.dll`, so resolution work lives there rather
   than in the exe.

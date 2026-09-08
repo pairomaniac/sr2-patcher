@@ -17,7 +17,8 @@ Never edit the hex by hand; the next build overwrites it.
 | `music.asm` | CD audio from files: the DllMain thunk that builds the track table, and the `mciSendCommandA` hook |
 | `activate.asm` | calls the renderer's restore when the game regains focus |
 | `textcolor.asm` | `SetTextColor` with the colour masked to RGB, for the lobby's `-1` |
-| `bgrow.asm` | one row of a .bg picture into the back buffer, expanded to 32 bits when the buffer is |
+| `bgrow.asm` | one row of a .bg picture into the back buffer, expanded to 32 bits when the buffer is; built twice, for the exe and for `Title.dll` |
+| `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob |
 
@@ -119,8 +120,33 @@ replacing the twenty-byte row copy at `0x415271` that puts the 16-bit
 `.bg` pictures into the locked back buffer. It reads the lock's bit depth
 from the description at `0x4e6878` and either runs the original copy or
 expands each 565 pixel to XRGB8888. `eax`, `ebx` and `edx` come out as
-they went in; the rest were scratch at the site. `tools/bgrowtest.py`
-runs it at both depths under Unicorn.
+they went in; the rest were scratch at the site. Assembled again with
+`-DTITLE` for `Title.dll`'s copy of the loop (`0x100014ba`), which keeps
+its lock description on the stack and advances the source itself:
+that build reads the depth at `[esp+0x70]` and adds the row to `ebx`.
+`tools/bgrowtest.py` runs both at both depths under Unicorn.
+
+## fullwin.asm
+
+Two thunks in a `.sr2f` section appended to `MGameD3D.dll`. It is
+relocated on every load, so the blob takes its own address with a
+call/pop, subtracts its RVA (filled in over `MAGIC_SELFRVA` by the
+patcher) for the image base, and reaches the DLL's globals and import
+slots as RVAs from there.
+
+`present` (+0) is jumped to from the first instruction of the windowed
+present, inside the 16-byte frame that routine had made, and leaves
+through that frame's `ret 4`. It takes the client rect in screen
+coordinates, fits the back buffer's aspect into it, fills whichever bars
+have area with `Blt(DDBLT_COLORFILL)` and blits the back buffer into the
+middle, storing the result where the original did.
+
+`sizewindow` (+5) has `MoveWindow`'s stdcall shape and is called in its
+place from the windowed init. It moves the window to the monitor under
+the cursor - `GetCursorPos`, `MonitorFromPoint`, `GetMonitorInfoA`,
+resolved through the DLL's own `LoadLibraryA` and `GetProcAddress` - or
+where the game asked if any step fails. `tools/fullwintest.py` runs both
+under Unicorn with those calls recorded.
 
 ## restore.asm
 

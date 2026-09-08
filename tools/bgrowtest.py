@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Run the .bg row copy of the windowed patch under Unicorn.
+"""Run the .bg row copies of the windowed and title patches under Unicorn.
 
     python3 tools/bgrowtest.py
 
-BGROW_BLOB is called with a row of 565 pixels as the game calls the copy it
-replaces: eax the row's byte count, ebx the source, edx the destination.
-With the lock description saying 16 bits the row must come out byte for
-byte; with 32 it must come out as XRGB8888 with the low bits replicated;
-eax, ebx and edx must survive either way. Needs python3-unicorn; exits 0
+BGROW_BLOB and TITLEROW_BLOB are called with a row of 565 pixels as the
+game calls the copies they replace: eax the row's byte count, ebx the
+source, edx the destination. With the lock description saying 16 bits the
+row must come out byte for byte; with 32 it must come out as XRGB8888
+with the low bits replicated; eax and edx must survive, and ebx too for
+the exe's, advanced by a row for Title.dll's, which reads the depth from
+the stack rather than the exe's global. Needs python3-unicorn; exits 0
 with a note when it is missing.
 """
 import importlib.util
@@ -37,8 +39,8 @@ def expand(p):
     return ((r << 3 | r >> 2) << 16) | ((g << 2 | g >> 4) << 8) | (b << 3 | b >> 2)
 
 
-def run(bpp):
-    blob = patcher.BGROW_BLOB
+def run(bpp, title=False):
+    blob = patcher.TITLEROW_BLOB if title else patcher.BGROW_BLOB
     src = b''.join(p.to_bytes(2, 'little') for p in PIXELS)
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     for addr in (CODE, DESC):
@@ -47,6 +49,7 @@ def run(bpp):
     mu.mem_map(STACK, 0x10000)
     mu.mem_write(CODE, blob)
     mu.mem_write(BITCOUNT, bpp.to_bytes(4, 'little'))
+    mu.mem_write(STACK + 0x8000 + 0x70, bpp.to_bytes(4, 'little'))    # Title.dll's, past the return
     mu.mem_write(SRC, src)
     end = CODE + len(blob)
     mu.mem_write(STACK + 0x8000, end.to_bytes(4, 'little'))
@@ -56,20 +59,22 @@ def run(bpp):
     mu.reg_write(UC_X86_REG_EDX, DST)
     mu.emu_start(CODE, end)
     regs = tuple(mu.reg_read(r) for r in (UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_EDX))
-    if regs != (len(src), SRC, DST):
-        raise SystemExit('bgrowtest: registers clobbered at %d bpp: %r' % (bpp, regs))
+    if regs != (len(src), SRC + (len(src) if title else 0), DST):
+        raise SystemExit('bgrowtest: registers wrong at %d bpp%s: %r'
+                         % (bpp, ', title' if title else '', regs))
     width = 4 if bpp == 32 else 2
     out = bytes(mu.mem_read(DST, len(PIXELS) * width))
     return [int.from_bytes(out[i:i + width], 'little') for i in range(0, len(out), width)]
 
 
 def main():
-    if run(16) != list(PIXELS):
-        raise SystemExit('bgrowtest: 16-bit row not copied as is')
-    got, want = run(32), [expand(p) for p in PIXELS]
-    if got != want:
-        raise SystemExit('bgrowtest: 32-bit row wrong: %s' % ' '.join('%06x' % x for x in got))
-    print('bgrow: 16-bit copy and 32-bit expand OK')
+    for title in (False, True):
+        if run(16, title) != list(PIXELS):
+            raise SystemExit('bgrowtest: 16-bit row not copied as is')
+        got, want = run(32, title), [expand(p) for p in PIXELS]
+        if got != want:
+            raise SystemExit('bgrowtest: 32-bit row wrong: %s' % ' '.join('%06x' % x for x in got))
+    print('bgrow: 16-bit copy and 32-bit expand OK, exe and Title.dll')
     return 0
 
 

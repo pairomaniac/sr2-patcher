@@ -14,8 +14,9 @@ music   the music hook under Unicorn, driven the way MGAudio drives it;
         needs GAMEDIR and python3-unicorn, skipped without
 altab   the alt-tab stub and the rewritten restore routine under Unicorn,
         same requirements
-bgrow   the .bg row copy under Unicorn at 16 and 32 bits; needs
+bgrow   the .bg row copies under Unicorn at 16 and 32 bits; needs
         python3-unicorn, skipped without
+fullwin the borderless present and window sizing under Unicorn, same
 """
 import os
 import shutil
@@ -42,8 +43,9 @@ def main(argv):
         print('== asm\n   skipped: nasm not installed')
     ok &= run('lint', [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py',
                        'tools/cabtest.py', 'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py',
-                       'tools/bgrowtest.py'])
+                       'tools/bgrowtest.py', 'tools/fullwintest.py'])
     ok &= run('bgrow', [PY, 'tools/bgrowtest.py'])
+    ok &= run('fullwin', [PY, 'tools/fullwintest.py'])
     if len(argv) > 1:
         ok &= run('cab', [PY, 'tools/cabtest.py'] + argv[1:])
     else:
