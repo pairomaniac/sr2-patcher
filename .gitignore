@@ -15,3 +15,7 @@ logs/
 game/
 data1.cab
 data1.head
+
+# The kit for working on the game: the installed files minus BINDATA,
+# data1.head, Not the repository's to distribute.
+tools/sr2-files.tar.gz
