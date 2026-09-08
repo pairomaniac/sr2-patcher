@@ -66,6 +66,7 @@ that is not an unmodified copy of it.
 | **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |
 | **Missing lettering** | The SELECT GAME and SELECT CAR headings, and other black text on the 2D screens, drawn as hollow outlines. Black in those textures read as transparent on modern DirectX and Wine. |
 | **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear - only the caret. The game asks for white in a way only Windows 95 understood; everything since draws black on black. |
+| **Windowed** | The game took the display over at 640x480, and under Wine or Proton came back from ALT+TAB on the wrong screen. It now runs in a plain 640x480 borderless window on the desktop, no mode change: the engine's own windowed mode, which the shipped game never used. |
 | **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. |
 
 Everything else is the game as it shipped. Resolution, controls and
@@ -89,7 +90,8 @@ under Proton (via umu, e.g. Faugus). Windows has not been tried; the
 patched game should run there as well, and if it does not, an issue with
 what happens is welcome.
 
-Not done yet: resolution above 640x480, controller configuration (the
+Not done yet: a window larger than 640x480 (the engine scales its
+picture to the window, so this is the next step), resolution above 640x480, controller configuration (the
 original Control Panel item is gone, the game runs on its defaults), and
 frame timing. The controls can still be set in the game's own Options.
 

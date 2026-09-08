@@ -22,7 +22,8 @@ ROOT = os.path.dirname(HERE)
 TARGET = os.path.join(ROOT, 'sr2-patcher.py')
 
 BLOBS = [('MUSIC_BLOB', 'music.asm'), ('ACTIVATE_BLOB', 'activate.asm'), ('RESTORE_BLOB', 'restore.asm'),
-         ('TEXTCOLOR_BLOB', 'textcolor.asm')]
+         ('TEXTCOLOR_BLOB', 'textcolor.asm'),
+         ('BGROW_BLOB', 'bgrow.asm')]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,

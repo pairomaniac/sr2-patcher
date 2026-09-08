@@ -105,6 +105,16 @@ TEXTCOLOR_SITES = (
 #          of the lobby at it. They pass the colour as -1; NT and Wine read
 #          that as PALETTEINDEX and draw black, the colour key. The stub
 #          masks the colour to RGB and continues into the import.
+# windowed: the fullscreen flag the exe passes to MGameD3D's init (0x427fe5,
+#          `push 1`) becomes 0, which selects the engine's own windowed
+#          path: DDSCL_NORMAL, no display mode change, a clipper on the
+#          window, Blt to present. The back buffer is then the desktop's
+#          depth, so the row copy that puts the 16-bit .bg pictures into it
+#          (0x415271) goes through asm/bgrow.asm, which expands to 32 bits
+#          when it has to; apply_windowed appends it as a section.
+# anydepth: MGameD3D's windowed path refuses a desktop that is not the
+#          16 bits it was asked for (0x1000271e). The check is skipped;
+#          everything after it takes its format from the primary.
 # music:   a transform: apply_music appends a section to MGAudio.dll holding
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's
@@ -129,6 +139,10 @@ PATCHES = {
     'textcolor': (EXE, tuple(
         (off, bytes.fromhex(op) + bytes.fromhex('28504900'), None)
         for off, op in TEXTCOLOR_SITES), 'apply_textcolor'),
+    'windowed': (EXE, (
+        (0x273e6, b'\x01', b'\x00'),
+        (0x14671, bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None)), 'apply_windowed'),
+    'anydepth': ('MUSASHI\\MGameD3D.dll', ((0x271e, b'\x74', b'\xeb'),), None),
     'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
 }
 
@@ -139,6 +153,7 @@ MCI_LOAD_SITES = 1
 MUSIC_SECTION = b'.sr2m'
 ACTIVATE_SECTION = b'.sr2a'
 TEXTCOLOR_SECTION = b'.sr2c'
+WINDOWED_SECTION = b'.sr2w'
 
 
 LANGUAGES = ('English', 'French', 'German', 'Italian', 'Spanish', 'Japanese')
@@ -292,6 +307,12 @@ RESTORE_BLOB = bytes.fromhex(
 )
 TEXTCOLOR_BLOB = bytes.fromhex(
     '81642408ffffff00ff2528504900'
+)
+BGROW_BLOB = bytes.fromhex(
+    '833dcc684e0020741589c189cdc1e90289de89d7f3a589e983e103f3a4c35053'
+    '5289c1d1e9744e89de89d70fb70683c60289c389c281e300f8000081e2e00700'
+    '0083e01f89ddc1e308c1e50381e50000070009eb89d5c1e205d1ed81e5000300'
+    '0009ea89c5c1e003c1ed0209e809d809d0ab4975b65a5b58c3'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -904,6 +925,21 @@ def apply_textcolor(buf):
             out[off:off + 6] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5)) + b'\x90'
         else:
             out[off:off + 6] = b'\xbe' + struct.pack('<I', base + rva) + b'\x90'
+    return out
+
+
+# The windowed patch: a section appended to the exe
+
+BGROW_SITE = 0x14671                   # file offset of the row copy at 0x415271
+BGROW_LEN = 20
+
+
+def apply_windowed(buf):
+    """The windowed-mode patch. Returns the grown exe image."""
+    out, rva = append_section(buf, WINDOWED_SECTION, BGROW_BLOB, chars=0x60000020)
+    site_rva = 0x1000 + BGROW_SITE - _rva_to_off(out, 0x1000)
+    out[BGROW_SITE:BGROW_SITE + BGROW_LEN] = (
+        b'\xe8' + struct.pack('<i', rva - (site_rva + 5))).ljust(BGROW_LEN, b'\x90')
     return out
 
 

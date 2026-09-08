@@ -16,6 +16,8 @@ checked on the game running under Wine and Proton.
 | **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
 | **Invisible lobby text** | `SEGA RALLY 2.exe` | appended `.sr2c` section; `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96` | the eight `call [__imp__SetTextColor]` → `call stub; nop`, the two `mov esi, [__imp__SetTextColor]` → `mov esi, stub; nop`; the stub masks the colour to RGB; see [asm/README.md](../asm/README.md) |
+| **Windowed** | `SEGA RALLY 2.exe` | `0x273e6`; `0x14671` and appended `.sr2w` section | the fullscreen flag pushed at `0x427fe5` → 0; the .bg row copy at `0x415271` → `call` asm/bgrow.asm; see *Windowed mode* |
+| **Any desktop depth** | `MUSASHI\MGameD3D.dll` | `0x271e` | `je` → `jmp`: the windowed path's "desktop must be 16-bit" check skipped |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
 Offsets are file offsets. In the exe, which is never relocated, VA =
@@ -67,6 +69,38 @@ inversion, survives, and moves as the extent of the invisible text grows.
 The stub in `.sr2c` masks the colour and continues into the import, so
 the sites keep their shape; the IME path at `0x421166` pushes 0 and is
 unaffected.
+
+### Windowed mode
+
+MGameD3D's init struct (built at `0x4214f0`, at `0x4d5e18`) carries a
+fullscreen flag at `+0x2c`, copied to `0x1001240c`. The exe passes a
+literal 1 (`0x427fe5`). With 0 the DLL's own windowed path runs
+(`0x1000263c`): `AdjustWindowRectEx` + `MoveWindow` to a 640x480 client
+area, `SetCooperativeLevel(NORMAL|FPUSETUP)`, a primary in the desktop's
+format with a clipper on the window, an offscreen 3D back buffer (init
+path 2), and the present at `0x10004d50` becomes a `Blt` of the back
+buffer to the window's client rect - a stretch when the window is
+larger. Fullscreen is `EXCLUSIVE|FULLSCREEN|ALLOWREBOOT|FPUSETUP`,
+`SetDisplayMode(640, 480, 16)` and `Flip`. The window class is `WS_POPUP`
+(`0x426b25`), so the window has no frame.
+
+Two things stood in the way. The windowed path calls `GetDisplayMode`
+and refuses a desktop whose depth is not the 16 bits it was asked for
+(`0x1000271e`, `E_FAIL` → "Failed to initialize"); nothing after the check
+depends on it, every surface takes the primary's format. And the
+full-screen pictures - title, loading, game over, the course cards, all
+`.bg` files - are 16-bit 565, copied straight into the locked back buffer
+row by row (`0x415271`, `rep movsd`; the loader at `0x415180` converts
+565 to 555 in place when the lock's green mask says so, which a 32-bit
+mask also does). On a 32-bit desktop that put two pixels' bytes into
+each pixel: the picture at half width. The copy is now `bgrow.asm`,
+which reads the lock's `dwRGBBitCount` (`0x4e68cc`) and expands 565 to
+XRGB8888 when it is 32. Nothing else writes raw pixels to the back
+buffer: the lobby goes through GDI, the rest through Direct3D.
+
+Alt-tab keeps its three patches. `DDSCL_NORMAL` surfaces can still be
+lost - another exclusive application, a locked screen - and the restore
+on activation costs nothing when nothing is lost.
 
 ### Z-buffer detach
 
@@ -429,6 +463,9 @@ not needed by a full install.
   playback does not follow.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
+- A window sized to the monitor: the engine stretches the picture to the
+  client rect, so it is a `MoveWindow` away - the DLL's own, at
+  `0x100026be`, sizes the window to 640x480.
 - Frame timing, input, resolution: nothing traced yet. The renderer is
   `MGameGL.dll` + `MGameD3D.dll`, so resolution work lives there rather
   than in the exe.

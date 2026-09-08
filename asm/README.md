@@ -17,6 +17,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `music.asm` | CD audio from files: the DllMain thunk that builds the track table, and the `mciSendCommandA` hook |
 | `activate.asm` | calls the renderer's restore when the game regains focus |
 | `textcolor.asm` | `SetTextColor` with the colour masked to RGB, for the lobby's `-1` |
+| `bgrow.asm` | one row of a .bg picture into the back buffer, expanded to 32 bits when the buffer is |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob |
 
@@ -110,6 +111,16 @@ bytes and jumps through the import slot, so it has the import's stdcall
 shape and the sites keep theirs: the eight `call [slot]` become `call`
 here, the two `mov esi, [slot]` become `mov esi` of this address. No
 reference to the slot is left in the exe's code.
+
+## bgrow.asm
+
+A hundred and twenty-one bytes in a `.sr2w` section appended to the exe,
+replacing the twenty-byte row copy at `0x415271` that puts the 16-bit
+`.bg` pictures into the locked back buffer. It reads the lock's bit depth
+from the description at `0x4e6878` and either runs the original copy or
+expands each 565 pixel to XRGB8888. `eax`, `ebx` and `edx` come out as
+they went in; the rest were scratch at the site. `tools/bgrowtest.py`
+runs it at both depths under Unicorn.
 
 ## restore.asm
 

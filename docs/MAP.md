@@ -33,6 +33,7 @@ In file order:
 | Restore-all patch | `apply_restore` |
 | Activation patch | `apply_activate` |
 | Text-colour patch | `TEXTCOLOR_SITES`, `apply_textcolor` |
+| Windowed patch | `BGROW_SITE`, `apply_windowed` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |
@@ -67,6 +68,8 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x426af0` | `RegisterClassA`; `0x426b80` the window procedure; `0x426bc5` its `WM_ACTIVATEAPP` case; `0x426bf7` the resume call | altab |
 | `0x420fa0` | the lobby name entry: `TextOutA` of the buffer at `0x4d3d1c`, `DSTINVERT` caret; `0x41fe20` its `WM_CHAR` handler; `0x435400`, `0x4356f0`, `0x435ad0`, `0x436100`, `0x436c90` the list, status, timer, IP and chat text | textcolor |
 | `0x435df4`, `0x435e9b`, `0x435f33` | the three Courier New fonts (`0x4eacd8`, `0x4ea8c8`, `0x4e84c4`) | - |
+| `0x4214f0` | builds MGameD3D's init struct at `0x4d5e18`: hwnd, 640, 480, 16 bpp, 120 textures, format -1, "Direct3D HAL", fullscreen at `+0x2c`; `0x427fe5` pushes that flag | windowed |
+| `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | windowed |
 | `0x4272b0` | language from `GetUserDefaultLangID`, 1–6 | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
 | `0x427450` | `SR2.CFG` exists beside the exe | - |
@@ -109,6 +112,9 @@ Image base `0x10000000`; file offset = VA − `0x10000000`.
 | `0x10004530` | creates the system-memory texture (and palette); colour key `{0,0}` at `0x10012734` set at `0x100046ce` and `0x100043d1` |
 | `0x10003cf0` | `EnumTextureFormats` callback: slots at `0x10012594`, 32 bytes each (0 P8, 1 X1R5G5B5, 2 R5G6B5, 3 A1R5G5B5, 4 A4R4G4B4, 5 P4, 6-10 DXT); the default picked from the list at `0x1000f79c`, chosen index in `0x10012740`, "not 565" flag `0x1001273c`. Patched by texfmt |
 | `0x10004af0`, `0x10004bb0` | 16-bit texture copy: as is for 555, expanded for 565 |
+| `0x100025d0` | cooperative level and mode: fullscreen path to `0x1000263c`, windowed after; the desktop-depth check at `0x1000271e`. Patched by anydepth |
+| `0x10004d50` | present: `Flip` when fullscreen, `Blt` to the client rect when windowed |
+| `0x1001240c` | the fullscreen flag; `0x100123f8`–`0x10012408` hwnd, width, height, bpp, refresh |
 | `0x10007710` | restore surfaces: `IsLost`/`Restore` on primary, back buffer, Z-buffer; interface slot 16 (`+0x40`) and 93. Rewritten by restoreall |
 | `0x1001254c` | the `IDirectDraw4`; `0x10012560` the `IDirect3D3`; `0x10012564` the device; `0x1001253c` the hardware flag; `0x10012580` the texture table |
 | `0x10002920` | release the Z-buffer: detach from the back buffer, release |
@@ -144,4 +150,6 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | restoreall | 1 | `MGameD3D.dll` `0x10007710`–`0x1000778c` (file `0x7710`), 44 bytes over 124 |
 | texfmt | 1 | `MGameD3D.dll` `0x1000f79c` (file `0xf79c`), 12 bytes |
 | textcolor | 10 + section | exe `0x420fc7`, `0x421166` (`mov esi`), `0x43545f`, `0x43572a`, `0x435afc`, `0x436133`, `0x436cc3`, `0x43b2c0`, `0x43daf4`, `0x43e696` (`call`), the appended `.sr2c` |
+| windowed | 2 + section | exe `0x427fe6` (file `0x273e6`), `0x415271` (file `0x14671`, 20 bytes), the appended `.sr2w` |
+| anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
