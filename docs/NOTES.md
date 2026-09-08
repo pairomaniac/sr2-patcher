@@ -113,7 +113,11 @@ replaces both ends: the `MoveWindow` call goes to a thunk that moves the
 window to the monitor under the cursor (`GetCursorPos`,
 `MonitorFromPoint`, `GetMonitorInfoA`, resolved through the DLL's
 `LoadLibraryA`/`GetProcAddress` since it imports none of them; the
-window as asked if any of that fails), and the present from `0x10004d7b`
+window as asked if any of that fails; a framed window - ALT+ENTER - is
+left as the player has it, since the init, and with it this call, runs
+again on every screen change: the game tears the renderer down and
+brings it back up between screens, `SetClipper(NULL)`, `SetCooperativeLevel`,
+new primary, clipper and back buffer), and the present from `0x10004d7b`
 on is replaced by one that fits the back buffer's aspect into the client
 rect, fills the bars with `DDBLT_COLORFILL` and blits the picture into
 the middle. A `WS_POPUP` window the size of its monitor is what Wine

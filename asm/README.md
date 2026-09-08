@@ -143,8 +143,9 @@ have area with `Blt(DDBLT_COLORFILL)` and blits the back buffer into the
 middle, storing the result where the original did.
 
 `sizewindow` (+5) has `MoveWindow`'s stdcall shape and is called in its
-place from the windowed init. It moves the window to the monitor under
-the cursor - `GetCursorPos`, `MonitorFromPoint`, `GetMonitorInfoA`,
+place from the windowed init, which runs on every screen change. It
+leaves a framed window (ALT+ENTER) alone and moves a `WS_POPUP` one to
+the monitor under the cursor - `GetCursorPos`, `MonitorFromPoint`, `GetMonitorInfoA`,
 resolved through the DLL's own `LoadLibraryA` and `GetProcAddress` - or
 where the game asked if any step fails. `tools/fullwintest.py` runs both
 under Unicorn with those calls recorded.

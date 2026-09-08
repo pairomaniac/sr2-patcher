@@ -10,9 +10,12 @@
 ;                   into the middle. Jumped to from 0x10004d7b, which had
 ;                   already made its 16-byte frame; leaves through that
 ;                   frame's `ret 4`.
-;   +5  sizewindow  MoveWindow's stdcall shape: the window is moved to
-;                   cover the monitor under the cursor, or where the game
-;                   asked if user32 will not say. Called from 0x100026be.
+;   +5  sizewindow  MoveWindow's stdcall shape: a WS_POPUP window is moved
+;                   to cover the monitor under the cursor, or where the game
+;                   asked if user32 will not say; a framed one (ALT+ENTER,
+;                   asm/altenter.asm) is left as the player has it. Called
+;                   from 0x100026be - on every screen change, since the
+;                   game brings the renderer up again for each screen.
 ;
 ; The window class is WS_POPUP, so a window the size of its monitor is
 ; what Wine and Windows treat as fullscreen, with no display mode change
@@ -35,6 +38,7 @@ bits 32
 %define IAT_GETCLIENTRECT   0xf140
 %define IAT_CLIENTTOSCREEN  0xf13c
 %define IAT_MOVEWINDOW      0xf12c
+%define IAT_GETWINDOWLONG   0xf138
 %define IAT_LOADLIB         0xf114
 %define IAT_GETPROC         0xf0ac
 
@@ -42,6 +46,8 @@ bits 32
 %define DDBLT_COLORFILL 0x400
 %define DDBLT_WAIT      0x1000000
 %define MONITOR_DEFAULTTONEAREST 2
+%define GWL_STYLE       -16
+%define WS_POPUP        0x80000000
 
         jmp     near present            ; +0
         jmp     near sizewindow         ; +5
@@ -208,6 +214,11 @@ sizewindow:
         push    esi
         push    edi
         call    getbase
+        push    GWL_STYLE
+        push    dword [ebp + 8]
+        call    [ebx + IAT_GETWINDOWLONG]
+        test    eax, WS_POPUP
+        jz      .done                   ; framed: the player's window, left alone
         lea     eax, [esi + s_user32]
         push    eax
         call    [ebx + IAT_LOADLIB]

@@ -7,8 +7,9 @@ FULLWIN_BLOB is mapped as the patcher would place it, with user32 and the
 primary surface's Blt replaced by recording stubs. `present` must fill the
 bars and blit the picture into a rect of the back buffer's aspect, centred
 in the client rect, for 16:9, 16:10, 4:3 and a taller-than-4:3 window, and
-leave the stack as the routine it replaces did. `sizewindow` must move the
-window to the monitor under the cursor. Needs python3-unicorn; exits 0
+leave the stack as the routine it replaces did. `sizewindow` must move a
+WS_POPUP window to the monitor under the cursor and leave a framed one
+where it is. Needs python3-unicorn; exits 0
 with a note when it is missing.
 """
 import importlib.util
@@ -32,18 +33,19 @@ BASE, SELF, IMAGE = 0x10000000, 0x16000, 0x20000
 STACK, FAKE, RETURN = 0x30000000, 0x40000000, 0xdead0000
 HWND, PRIMARY, BACK, SRCRECT = 0x123f8, 0x12550, 0x12554, 0x12410
 SLOTS = {'GetClientRect': 0xf140, 'ClientToScreen': 0xf13c, 'MoveWindow': 0xf12c,
-         'LoadLibraryA': 0xf114, 'GetProcAddress': 0xf0ac}
+         'GetWindowLongA': 0xf138, 'LoadLibraryA': 0xf114, 'GetProcAddress': 0xf0ac}
 # Stubs and how many argument bytes each pops.
-STUBS = {'GetClientRect': 8, 'ClientToScreen': 8, 'MoveWindow': 24, 'LoadLibraryA': 4,
+STUBS = {'GetClientRect': 8, 'ClientToScreen': 8, 'MoveWindow': 24, 'GetWindowLongA': 8, 'LoadLibraryA': 4,
          'GetProcAddress': 8, 'Blt': 24, 'GetCursorPos': 4, 'MonitorFromPoint': 12,
          'GetMonitorInfoA': 8}
 DDBLT_COLORFILL, DDBLT_WAIT = 0x400, 0x1000000
 
 
 class Machine:
-    def __init__(self, client, monitor):
-        """client: (w, h) of the window's client area; monitor: (x, y, w, h)."""
-        self.client, self.monitor, self.calls = client, monitor, []
+    def __init__(self, client, monitor, style=0x90000000):
+        """client: (w, h) of the window's client area; monitor: (x, y, w, h);
+        style: what GetWindowLongA answers, WS_POPUP|WS_VISIBLE by default."""
+        self.client, self.monitor, self.style, self.calls = client, monitor, style, []
         blob = patcher.FULLWIN_BLOB.replace(struct.pack('<I', patcher.FULLWIN_MAGIC), struct.pack('<I', SELF))
         mu = self.mu = Uc(UC_ARCH_X86, UC_MODE_32)
         mu.mem_map(BASE, IMAGE)
@@ -80,6 +82,8 @@ class Machine:
         elif name == 'ClientToScreen':
             x, y = struct.unpack('<2i', mu.mem_read(self.arg(1), 8))
             mu.mem_write(self.arg(1), struct.pack('<2i', x + mx, y + my))
+        elif name == 'GetWindowLongA':
+            result = self.style
         elif name == 'LoadLibraryA':
             result = 0x77770000
         elif name == 'GetProcAddress':
@@ -140,7 +144,11 @@ def main():
     calls = Machine((640, 480), (2560, 0, 1920, 1080)).sizewindow()
     if calls != [('MonitorFromPoint', 2565, 5, 2), ('MoveWindow', 0x1234, 2560, 0, 1920, 1080, 1)]:
         raise SystemExit('fullwintest: sizewindow: %r' % calls)
-    print('fullwin: present letterboxes at four aspects, sizewindow covers the monitor')
+    calls = Machine((640, 480), (2560, 0, 1920, 1080), style=0x10cf0000).sizewindow()
+    if calls:
+        raise SystemExit('fullwintest: sizewindow moved a framed window: %r' % calls)
+    print('fullwin: present letterboxes at four aspects, sizewindow covers the monitor, '
+          'leaves a framed window alone')
     return 0
 
 
