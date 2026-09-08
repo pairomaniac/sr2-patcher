@@ -15,6 +15,7 @@ checked on the game running under Wine and Proton.
 | **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
 | **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
+| **Invisible lobby text** | `SEGA RALLY 2.exe` | appended `.sr2c` section; `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96` | the eight `call [__imp__SetTextColor]` → `call stub; nop`, the two `mov esi, [__imp__SetTextColor]` → `mov esi, stub; nop`; the stub masks the colour to RGB; see [asm/README.md](../asm/README.md) |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
 Offsets are file offsets. In the exe, which is never relocated, VA =
@@ -42,6 +43,30 @@ headings gone, leaving the white plate and a dashed grey anti-aliasing
 edge. A1R5G5B5 first makes bit 15 alpha, which is what the data is, and
 leaves the key exact. The copy path is unchanged: `0x1001273c` ("not
 565") stays set.
+
+### Lobby text
+
+Every mode DLL draws through MGameD3D; the only GDI text in the game is
+the exe's, and all of it is the multiplayer lobby: the name entry
+(`0x420fa0`), the team and chat list (`0x435400`), the status line, the
+timer and the IP list. One face, Courier New (MS Gothic on the Japanese
+build), three sizes, created at `0x435df4`, `0x435e9b` and `0x435f33`.
+
+The lobby chrome is BMPs (`CHAT_*.BMP`, `MENU_*.BMP`) loaded into 16-bit
+surfaces in the back buffer's format, and the text goes onto them
+through `IDirectDrawSurface4::GetDC`: blit a strip of the background into
+the surface, `TextOutA` the buffer, `BitBlt DSTINVERT` for the caret,
+`ReleaseDC`, then `Blt` the strip to the back buffer with
+`DDBLT_KEYSRC` and a key of black.
+
+Every site sets the colour with `SetTextColor(dc, -1)`. Windows 95 took
+the low three bytes and drew white. NT-family GDI and Wine read bit 24
+as `PALETTEINDEX`, look up entry 0xffff in the DC's palette, fail, and
+fall back to entry 0: black, which the keyed blit drops. The caret, an
+inversion, survives, and moves as the extent of the invisible text grows.
+The stub in `.sr2c` masks the colour and continues into the import, so
+the sites keep their shape; the IME path at `0x421166` pushes 0 and is
+unaffected.
 
 ### Z-buffer detach
 

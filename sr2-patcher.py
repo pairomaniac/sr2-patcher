@@ -57,6 +57,15 @@ RESTORE_RELOCS = 10
 # original, replacement); a replacement of None means the bytes are only
 # verified, the transform writes them. The transform, if any, runs on the
 # file after its sites and may grow it. Applied in this order.
+#
+# The SetTextColor sites in the exe, file offsets: `ff15` call [slot],
+# `8b35` mov esi, [slot]. Every one is followed by the slot 0x495028.
+TEXTCOLOR_SITES = (
+    (0x203c7, '8b35'), (0x20566, '8b35'),
+    (0x3485f, 'ff15'), (0x34b2a, 'ff15'), (0x34efc, 'ff15'), (0x35533, 'ff15'),
+    (0x360c3, 'ff15'), (0x3a6c0, 'ff15'), (0x3cef4, 'ff15'), (0x3da96, 'ff15'),
+)
+#
 # nodisc:  two sites. The startup check that scans CD-ROM drives for the
 #          play disc (0x4273c0) returns 0, "found", at once; and the loader
 #          constructor (0x47632e) copies the exe's directory into the
@@ -91,6 +100,11 @@ RESTORE_RELOCS = 10
 #          modern DirectX and wined3d mask the X bit first and key it out,
 #          so black lettering on the 2D screens vanished. The list becomes
 #          A1R5G5B5 first, where bit 15 is alpha and the key stays exact.
+# textcolor: a transform: apply_textcolor appends a section to the exe
+#          holding asm/textcolor.asm and points the ten SetTextColor sites
+#          of the lobby at it. They pass the colour as -1; NT and Wine read
+#          that as PALETTEINDEX and draw black, the colour key. The stub
+#          masks the colour to RGB and continues into the import.
 # music:   a transform: apply_music appends a section to MGAudio.dll holding
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's
@@ -112,6 +126,9 @@ PATCHES = {
         'a15025011085c0741e8b0850ff516085c07414a1502501108b1050ff526c85c0a3c41f01107c55a15425011085c0741e8b0850ff516085c07414a1542501108b1050ff526c85c0a3c41f01107c2ea15c25011085c0741e8b0850ff516085c07414a15c2501108b1050ff526c85c0a3c41f01107c0733c0a3c41f0110'), None),), 'apply_restore'),
     'texfmt': ('MUSASHI\\MGameD3D.dll', ((0xf79c, bytes.fromhex('010000000200000003000000'),
                                             bytes.fromhex('030000000100000002000000')),), None),
+    'textcolor': (EXE, tuple(
+        (off, bytes.fromhex(op) + bytes.fromhex('28504900'), None)
+        for off, op in TEXTCOLOR_SITES), 'apply_textcolor'),
     'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
 }
 
@@ -121,6 +138,7 @@ MCI_CALL_SITES = 11
 MCI_LOAD_SITES = 1
 MUSIC_SECTION = b'.sr2m'
 ACTIVATE_SECTION = b'.sr2a'
+TEXTCOLOR_SECTION = b'.sr2c'
 
 
 LANGUAGES = ('English', 'French', 'German', 'Italian', 'Spanish', 'Japanese')
@@ -271,6 +289,9 @@ ACTIVATE_BLOB = bytes.fromhex(
 RESTORE_BLOB = bytes.fromhex(
     'e800000000598b8137ae000085c074118b105150ff5264598981afa80000c204'
     '0031c08981afa80000c20400'
+)
+TEXTCOLOR_BLOB = bytes.fromhex(
+    '81642408ffffff00ff2528504900'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -868,6 +889,21 @@ def apply_activate(buf):
     out, rva = append_section(buf, ACTIVATE_SECTION, ACTIVATE_BLOB, chars=0x60000020)
     site_rva = 0x1000 + ACTIVATE_SITE - _rva_to_off(out, 0x1000)
     out[ACTIVATE_SITE:ACTIVATE_SITE + 5] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5))
+    return out
+
+
+# The text-colour patch: a section appended to the exe
+
+def apply_textcolor(buf):
+    """The lobby text patch. Returns the grown exe image."""
+    out, rva = append_section(buf, TEXTCOLOR_SECTION, TEXTCOLOR_BLOB, chars=0x60000020)
+    base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
+    for off, op in TEXTCOLOR_SITES:
+        site_rva = 0x1000 + off - _rva_to_off(out, 0x1000)
+        if op == 'ff15':
+            out[off:off + 6] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5)) + b'\x90'
+        else:
+            out[off:off + 6] = b'\xbe' + struct.pack('<I', base + rva) + b'\x90'
     return out
 
 

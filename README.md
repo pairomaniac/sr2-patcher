@@ -65,6 +65,7 @@ that is not an unmodified copy of it.
 | **Startup crash** | Under Proton the game closes before its window appears. A renderer bug that Proton's DirectDraw does not forgive. |
 | **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |
 | **Missing lettering** | The SELECT GAME and SELECT CAR headings, and other black text on the 2D screens, drawn as hollow outlines. Black in those textures read as transparent on modern DirectX and Wine. |
+| **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear - only the caret. The game asks for white in a way only Windows 95 understood; everything since draws black on black. |
 | **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. |
 
 Everything else is the game as it shipped. Resolution, controls and

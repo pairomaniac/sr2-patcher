@@ -32,6 +32,7 @@ In file order:
 | Managed textures | `apply_managed` |
 | Restore-all patch | `apply_restore` |
 | Activation patch | `apply_activate` |
+| Text-colour patch | `TEXTCOLOR_SITES`, `apply_textcolor` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |
@@ -64,6 +65,8 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | --- | --- | --- |
 | `0x421399`–`0x484b84` | the nine `CoCreateInstance` sites, one per Musashi server (NOTES.md, *Musashi*) | manifests |
 | `0x426af0` | `RegisterClassA`; `0x426b80` the window procedure; `0x426bc5` its `WM_ACTIVATEAPP` case; `0x426bf7` the resume call | altab |
+| `0x420fa0` | the lobby name entry: `TextOutA` of the buffer at `0x4d3d1c`, `DSTINVERT` caret; `0x41fe20` its `WM_CHAR` handler; `0x435400`, `0x4356f0`, `0x435ad0`, `0x436100`, `0x436c90` the list, status, timer, IP and chat text | textcolor |
+| `0x435df4`, `0x435e9b`, `0x435f33` | the three Courier New fonts (`0x4eacd8`, `0x4ea8c8`, `0x4e84c4`) | - |
 | `0x4272b0` | language from `GetUserDefaultLangID`, 1–6 | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
 | `0x427450` | `SR2.CFG` exists beside the exe | - |
@@ -140,4 +143,5 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | managed | 2 | `MGameD3D.dll` `0x10003e91` (32 bytes), `0x10003eb7` (7 bytes), one relocation entry dropped |
 | restoreall | 1 | `MGameD3D.dll` `0x10007710`–`0x1000778c` (file `0x7710`), 44 bytes over 124 |
 | texfmt | 1 | `MGameD3D.dll` `0x1000f79c` (file `0xf79c`), 12 bytes |
+| textcolor | 10 + section | exe `0x420fc7`, `0x421166` (`mov esi`), `0x43545f`, `0x43572a`, `0x435afc`, `0x436133`, `0x436cc3`, `0x43b2c0`, `0x43daf4`, `0x43e696` (`call`), the appended `.sr2c` |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
