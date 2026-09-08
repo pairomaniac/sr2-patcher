@@ -20,6 +20,7 @@ checked on the game running under Wine and Proton.
 | **Any desktop depth** | `MUSASHI\MGameD3D.dll` | `0x271e` | `je` → `jmp`: the windowed path's "desktop must be 16-bit" check skipped |
 | **Title picture** | `Title.dll` | `0x8ba` and appended `.sr2f` section | the DLL's own .bg row copy at `0x100014ba` → `call` asm/bgrow.asm assembled for its stack |
 | **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
+| **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
 Offsets are file offsets. In the exe, which is never relocated, VA =
@@ -120,6 +121,24 @@ reports to the compositor as fullscreen, with no display mode behind it
 to restore on activation. The picture is still 640x480, point-sampled up.
 The 96 bytes of the old present carry nine relocation entries and the
 call one; all go, since the bytes are dead or relative.
+
+### ALT+ENTER
+
+The window procedure has cases for a handful of messages and hands the
+rest to the text-input handler at `0x41fe20` (`call` at `0x426cbc`),
+whose -1 means "not handled" and goes on to `DefWindowProcA`. That call
+now goes through `altenter.asm`: `WM_SYSKEYDOWN` for `VK_RETURN` with
+bit 29 of lParam (ALT) set and bit 30 (a repeat) clear toggles the
+window and answers 0; everything else continues to the handler. The
+toggle sets the style with `SetWindowLongA` - `WS_OVERLAPPEDWINDOW`
+framed, `WS_POPUP` borderless, `WS_VISIBLE` kept - and places the window
+with `SetWindowPos(SWP_FRAMECHANGED)`: framed, a client area of the
+picture's size (from the init struct at `0x4d5e1c`) centred on the
+monitor the window is on; borderless, that monitor's rect. The present
+letterboxes into whatever client rect results, so the framed window can
+be resized or maximised. The five user32 entry points are resolved once
+through the exe's `LoadLibraryA`/`GetProcAddress` and kept in the
+section, which is therefore writable.
 
 Alt-tab keeps its three patches. `DDSCL_NORMAL` surfaces can still be
 lost - another exclusive application, a locked screen - and the restore

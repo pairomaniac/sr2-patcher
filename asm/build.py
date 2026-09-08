@@ -24,7 +24,7 @@ TARGET = os.path.join(ROOT, 'sr2-patcher.py')
 BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('RESTORE_BLOB', 'restore.asm', ()), ('TEXTCOLOR_BLOB', 'textcolor.asm', ()),
          ('BGROW_BLOB', 'bgrow.asm', ()), ('TITLEROW_BLOB', 'bgrow.asm', ('-DTITLE',)),
-         ('FULLWIN_BLOB', 'fullwin.asm', ())]
+         ('FULLWIN_BLOB', 'fullwin.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ())]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,

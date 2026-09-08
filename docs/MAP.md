@@ -34,6 +34,7 @@ In file order:
 | Activation patch | `apply_activate` |
 | Text-colour patch | `TEXTCOLOR_SITES`, `apply_textcolor` |
 | Windowed patch | `BGROW_SITE`, `apply_windowed` |
+| ALT+ENTER patch | `ALTENTER_SITE`, `apply_altenter` |
 | Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
 | Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
@@ -70,6 +71,7 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x426af0` | `RegisterClassA`; `0x426b80` the window procedure; `0x426bc5` its `WM_ACTIVATEAPP` case; `0x426bf7` the resume call | altab |
 | `0x420fa0` | the lobby name entry: `TextOutA` of the buffer at `0x4d3d1c`, `DSTINVERT` caret; `0x41fe20` its `WM_CHAR` handler; `0x435400`, `0x4356f0`, `0x435ad0`, `0x436100`, `0x436c90` the list, status, timer, IP and chat text | textcolor |
 | `0x435df4`, `0x435e9b`, `0x435f33` | the three Courier New fonts (`0x4eacd8`, `0x4ea8c8`, `0x4e84c4`) | - |
+| `0x426cbc` | the window procedure's call to the text-input handler `0x41fe20`, its default for every message without a case | altenter |
 | `0x4214f0` | builds MGameD3D's init struct at `0x4d5e18`: hwnd, 640, 480, 16 bpp, 120 textures, format -1, "Direct3D HAL", fullscreen at `+0x2c`; `0x427fe5` pushes that flag | windowed |
 | `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | windowed |
 | `0x4272b0` | language from `GetUserDefaultLangID`, 1–6 | - |
@@ -163,6 +165,7 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | restoreall | 1 | `MGameD3D.dll` `0x10007710`–`0x1000778c` (file `0x7710`), 44 bytes over 124 |
 | texfmt | 1 | `MGameD3D.dll` `0x1000f79c` (file `0xf79c`), 12 bytes |
 | textcolor | 10 + section | exe `0x420fc7`, `0x421166` (`mov esi`), `0x43545f`, `0x43572a`, `0x435afc`, `0x436133`, `0x436cc3`, `0x43b2c0`, `0x43daf4`, `0x43e696` (`call`), the appended `.sr2c` |
+| altenter | 1 + section | exe `0x426cbc` (file `0x260bc`), the appended `.sr2k` |
 | windowed | 2 + section | exe `0x427fe6` (file `0x273e6`), `0x415271` (file `0x14671`, 20 bytes), the appended `.sr2w` |
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
 | titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2f` |

@@ -63,7 +63,8 @@ A patch that is code rather than bytes goes in `asm/` and is a transform;
 `music`, `altab` and `restoreall` are the models: appended to a relocated
 DLL, appended to the fixed exe, written in place over a DLL routine;
 `textcolor` is `altab` with ten sites, `windowed` the same shape with a
-plain site beside it, `borderless` the `music` shape with one placeholder.
+plain site beside it, `borderless` the `music` shape with one placeholder, `altenter` a section
+with data of its own, hence writable.
 `managed` is the fourth shape: plain sites, with a transform only to
 drop the relocation entry of an absolute address the sites removed. A site with
 `None` for its replacement is verified before the transform runs and

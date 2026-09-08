@@ -124,6 +124,10 @@ TEXTCOLOR_SITES = (
 #          MGameD3D and points the windowed present (0x10004d7b) and the
 #          window sizing (0x100026be) at it: the window covers the
 #          monitor under the cursor, the picture is letterboxed into it.
+# altenter: a transform: apply_altenter appends asm/altenter.asm to the exe
+#          and points the window procedure's call to the text-input handler
+#          (0x426cbc) at it. ALT+ENTER switches the window between
+#          borderless over its monitor and framed at the picture's size.
 # music:   a transform: apply_music appends a section to MGAudio.dll holding
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's
@@ -152,6 +156,7 @@ PATCHES = {
         (0x273e6, b'\x01', b'\x00'),
         (0x14671, bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None)), 'apply_windowed'),
     'anydepth': ('MUSASHI\\MGameD3D.dll', ((0x271e, b'\x74', b'\xeb'),), None),
+    'altenter': (EXE, ((0x260bc, bytes.fromhex('e85f91ffff'), None),), 'apply_altenter'),
     'titlebg': ('Title.dll', ((0x8ba, bytes.fromhex('8bc88bf38be98bfac1e902f3a58bcd03d883e103f3a4'), None),),
                 'apply_titlebg'),
     'borderless': ('MUSASHI\\MGameD3D.dll', (
@@ -169,6 +174,7 @@ ACTIVATE_SECTION = b'.sr2a'
 TEXTCOLOR_SECTION = b'.sr2c'
 WINDOWED_SECTION = b'.sr2w'
 FULLWIN_SECTION = b'.sr2f'
+ALTENTER_SECTION = b'.sr2k'
 
 
 LANGUAGES = ('English', 'French', 'German', 'Italian', 'Spanish', 'Japanese')
@@ -358,6 +364,24 @@ FULLWIN_BLOB = bytes.fromhex(
     'ff7514ff7510ff750cff7508ff932cf100005f5e5b89ec5dc218007573657233'
     '322e646c6c00476574437572736f72506f73004d6f6e69746f7246726f6d506f'
     '696e74004765744d6f6e69746f72496e666f4100'
+)
+ALTENTER_BLOB = bytes.fromhex(
+    '8b4424083d040100007521837c240c0d751a8b442410a900000020740fa90000'
+    '00407505e81600000031c0c36820fe4100c3e8000000005b81eb37000000c353'
+    '56575589e583ec40e8e5ffffff83bbec01000000753f8d837a01000050ff1590'
+    '50490085c00f840801000089c631ff8b84bbd601000001d85056ff15f0504900'
+    '85c00f84eb0000008984bbec0100004783ff0572da8b3dac8850006a0257ff93'
+    'f801000085c00f84c7000000c745d8280000008d4dd85150ff93fc01000085c0'
+    '0f84ad00000080b3ea01000001f683ea010000017470680000cf106af057ff93'
+    'ec01000031c08945c08945c4a11c5e4d008945c8a1205e4d008945cc6a006a00'
+    '680000cf108d45c050ff93f40100008b75c82b75c08b55cc2b55c46a6452568b'
+    '45e82b45e029d0d1f80345e0508b45e42b45dc29f0d1f80345dc506a0057ff93'
+    'f0010000eb2d68000000906af057ff93ec0100006a648b45e82b45e0508b45e4'
+    '2b45dc50ff75e0ff75dc6a0057ff93f001000089ec5d5f5e5bc3757365723332'
+    '2e646c6c0053657457696e646f774c6f6e67410053657457696e646f77506f73'
+    '0041646a75737457696e646f77526563744578004d6f6e69746f7246726f6d57'
+    '696e646f77004765744d6f6e69746f72496e666f41008501000094010000a101'
+    '0000b4010000c601000000900000000000000000000000000000000000000000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -986,6 +1010,20 @@ def apply_windowed(buf):
     site_rva = 0x1000 + BGROW_SITE - _rva_to_off(out, 0x1000)
     out[BGROW_SITE:BGROW_SITE + BGROW_LEN] = (
         b'\xe8' + struct.pack('<i', rva - (site_rva + 5))).ljust(BGROW_LEN, b'\x90')
+    return out
+
+
+# The ALT+ENTER patch: a section appended to the exe
+
+ALTENTER_SITE = 0x260bc                # file offset of `call 0x41fe20` at 0x426cbc
+
+
+def apply_altenter(buf):
+    """The ALT+ENTER patch. Returns the grown exe image. The section keeps
+    the resolved user32 entry points, so it stays writable."""
+    out, rva = append_section(buf, ALTENTER_SECTION, ALTENTER_BLOB)
+    site_rva = 0x1000 + ALTENTER_SITE - _rva_to_off(out, 0x1000)
+    out[ALTENTER_SITE:ALTENTER_SITE + 5] = b'\xe8' + struct.pack('<i', rva - (site_rva + 5))
     return out
 
 

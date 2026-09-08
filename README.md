@@ -67,6 +67,7 @@ that is not an unmodified copy of it.
 | **Missing lettering** | The SELECT GAME and SELECT CAR headings, and other black text on the 2D screens, drawn as hollow outlines. Black in those textures read as transparent on modern DirectX and Wine. |
 | **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear - only the caret. The game asks for white in a way only Windows 95 understood; everything since draws black on black. |
 | **Borderless fullscreen** | The game took the display over at 640x480, and under Wine or Proton came back from ALT+TAB on the wrong screen. It now runs in a borderless window covering the monitor it starts on, no mode change, its 4:3 picture centred with black bars: the engine's own windowed mode, which the shipped game never used, with the window sized to the monitor. |
+| **ALT+ENTER** | Switches between that and an ordinary window with a frame, the picture's size, centred on the monitor; drag it, resize it, maximise it. ALT+ENTER again puts it back. |
 | **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. |
 
 Everything else is the game as it shipped. Resolution, controls and

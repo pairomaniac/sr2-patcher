@@ -19,6 +19,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `textcolor.asm` | `SetTextColor` with the colour masked to RGB, for the lobby's `-1` |
 | `bgrow.asm` | one row of a .bg picture into the back buffer, expanded to 32 bits when the buffer is; built twice, for the exe and for `Title.dll` |
 | `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
+| `altenter.asm` | ALT+ENTER between the borderless window and a framed one |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob |
 
@@ -147,6 +148,20 @@ the cursor - `GetCursorPos`, `MonitorFromPoint`, `GetMonitorInfoA`,
 resolved through the DLL's own `LoadLibraryA` and `GetProcAddress` - or
 where the game asked if any step fails. `tools/fullwintest.py` runs both
 under Unicorn with those calls recorded.
+
+## altenter.asm
+
+In a `.sr2k` section appended to the exe, in front of the text-input
+handler the window procedure calls for every message it has no case for
+(`0x426cbc` → `0x41fe20`, cdecl). ALT+ENTER - `WM_SYSKEYDOWN`,
+`VK_RETURN`, ALT bit set, repeat bit clear - toggles the window between
+`WS_POPUP` over its monitor and `WS_OVERLAPPEDWINDOW` with a client area
+of the picture's size, centred on that monitor, and answers 0; any other
+message goes on to the handler by `push`/`ret`, the stack untouched. The
+section keeps the five user32 entry points it resolves on first use, so
+it is writable, and reaches its own data from a call/pop base since its
+address is only known once appended. `tools/altentertest.py` runs it
+under Unicorn.
 
 ## restore.asm
 

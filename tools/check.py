@@ -17,6 +17,7 @@ altab   the alt-tab stub and the rewritten restore routine under Unicorn,
 bgrow   the .bg row copies under Unicorn at 16 and 32 bits; needs
         python3-unicorn, skipped without
 fullwin the borderless present and window sizing under Unicorn, same
+altenter the ALT+ENTER toggle under Unicorn, same
 """
 import os
 import shutil
@@ -43,9 +44,10 @@ def main(argv):
         print('== asm\n   skipped: nasm not installed')
     ok &= run('lint', [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py',
                        'tools/cabtest.py', 'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py',
-                       'tools/bgrowtest.py', 'tools/fullwintest.py'])
+                       'tools/bgrowtest.py', 'tools/fullwintest.py', 'tools/altentertest.py'])
     ok &= run('bgrow', [PY, 'tools/bgrowtest.py'])
     ok &= run('fullwin', [PY, 'tools/fullwintest.py'])
+    ok &= run('altenter', [PY, 'tools/altentertest.py'])
     if len(argv) > 1:
         ok &= run('cab', [PY, 'tools/cabtest.py'] + argv[1:])
     else:
