@@ -462,9 +462,13 @@ Read by `Cabinet` in the script. Layout, all little-endian:
 - File group node (offsets relative to the descriptor): name offset,
   descriptor offset, next. The group descriptor holds first and last
   file index at `+0x4c`. Groups are contiguous index ranges.
-- File data: at the data offset in `data1.cab` itself. A compressed file
-  is one raw deflate stream - no zlib header, and no final-block marker,
-  so the stream is read to the expected size and not to EOF.
+- File data: at the data offset in `data1.cab` itself. In the `0x01000004`
+  cabinet a compressed file is one raw deflate stream - no zlib header,
+  and no final-block marker, so the stream is read to the expected size
+  and not to EOF. The `0x01005100` cabinets on the other two pressings
+  store it as chunks, each a u16 length followed by a complete raw deflate
+  stream of 10240 bytes of output; the chunks are inflated in turn until
+  the expected size is reached.
 
 Checked against unshield's listing (5,725 files in 25 groups) and against
 a Pentium III install (every extracted file identical), from the cab

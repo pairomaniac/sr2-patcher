@@ -698,6 +698,7 @@ IS_SIGNATURE = 0x28635349
 IS_COMPRESSED = 0x04
 IS_INVALID = 0x08
 IS_SPLIT = 0x01
+IS_UNCHUNKED = 0x01000004
 IS_GROUP_SLOTS = 71
 
 
@@ -715,9 +716,13 @@ class Cabinet:
 
     def __init__(self, fh):
         self.fh = fh
-        sig, _ver, _vol, desc_off, desc_size = struct.unpack('<5I', self.fh.read(0x14))
+        sig, self.version, _vol, desc_off, desc_size = struct.unpack('<5I', self.fh.read(0x14))
         if sig != IS_SIGNATURE:
             raise ValueError('not an InstallShield cabinet')
+        # 0x01000004 (the European disc) stores a compressed file as one
+        # deflate stream; the later engine (0x01005100 on the other two)
+        # as chunks, each a u16 length and a stream of its own.
+        self.chunked = self.version != IS_UNCHUNKED
         self.fh.seek(desc_off)
         desc = self.fh.read(desc_size)
         ft_off, _x, ft_size, _y, dirs, _a, _b, files, _z = struct.unpack_from('<9I', desc, 0xc)
@@ -758,7 +763,14 @@ class Cabinet:
         if entry.flags & IS_SPLIT:
             raise ValueError('%s spans volumes' % entry.path)
         self.fh.seek(entry.offset)
-        if entry.flags & IS_COMPRESSED:
+        if entry.flags & IS_COMPRESSED and self.chunked:
+            raw, at, out = self.fh.read(entry.compressed), 0, []
+            while at + 2 <= len(raw) and sum(map(len, out)) < entry.size:
+                n = struct.unpack_from('<H', raw, at)[0]
+                out.append(zlib.decompressobj(-15).decompress(raw[at + 2:at + 2 + n]))
+                at += 2 + n
+            data = b''.join(out)
+        elif entry.flags & IS_COMPRESSED:
             # One raw deflate stream per file, without header or end marker.
             data = zlib.decompressobj(-15).decompress(self.fh.read(entry.compressed))
         else:
