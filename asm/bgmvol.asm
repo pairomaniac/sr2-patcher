@@ -6,15 +6,15 @@
 ; value, which it maps across the stream's own dB range. The effects
 ; and the announcer follow -36 dB + 4 dB a step; the streams did not,
 ; so the sliders meant different things. The mapping's last step
-; becomes a call here, which puts the step on the effects' curve less
-; OFFSET, 0 being off. The site tests the flags of the last instruction
+; becomes a call here, which puts the step on the effects' curve plus
+; OFFSET, capped at 0 dB, 0 being off. The site tests the flags of the last instruction
 ; here; ret keeps them. ebx is the value, kept; ecx is kept too.
 
 bits 32
 
-%define OFFSET          600             ; hundredths of a dB under the effects' curve
+%define OFFSET          400             ; hundredths of a dB above the effects' curve
 %define STEP            400
-%define BOTTOM          (-3600 - OFFSET)
+%define BOTTOM          (-3600 + OFFSET)
 
         push    ecx
         lea     eax, [ebx + 555]        ; the step the value was made from, rounded
@@ -30,6 +30,8 @@ bits 32
         jz      .off
         imul    edx, eax, STEP
         add     edx, BOTTOM
+        js      .out
+        xor     edx, edx                ; capped at 0 dB
         jmp     .out
 .off:   mov     edx, -10000
 .out:   mov     esi, edx
