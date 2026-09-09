@@ -1,11 +1,8 @@
 ; voltrace.asm - a diagnostic: every volume call the exe makes, reported.
 ;
-; Five entry points in the sound code get a jump here at their first
-; instruction; each thunk reports the call through OutputDebugStringA as
-; "sr2 vN this a1 a2 a3" in hex, runs the instructions the jump
-; displaced, and jumps back. WINEDEBUG=+debugstr shows the lines. Not a
-; patch for players; it is applied by hand while looking for where a
-; level is set.
+; Five entry points in the sound code get a jump here; each thunk reports
+; the call through OutputDebugStringA as "sr2 vN this a1 a2 a3" in hex,
+; runs the displaced instructions and jumps back. Applied by name only.
 ;
 ;   v1  0x46f2e0  the buffer volume wrapper (sound, min, value)
 ;   v2  0x470630  the stream volume (value)
@@ -13,8 +10,10 @@
 ;   v4  0x46f370  the second per-sound call after a volume (sound, 100)
 ;   v5  0x46ece0  play with parameters (sound, mode, param)
 ;
-; IAT_LOADLIB and IAT_GETPROC are the usual placeholders. Resolved on
-; every call; this is a trace.
+; IAT_LOADLIB and IAT_GETPROC are the usual placeholders, resolved on
+; every call. Each thunk ends in `jmp [abs]` through a placeholder
+; 0xE7E7E7En that the patcher points at a dword after the blob holding
+; the site's VA + the displaced length.
 
 bits 32
 

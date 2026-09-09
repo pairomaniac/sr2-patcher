@@ -3,7 +3,7 @@
 
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab
-    python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game; KEYS a comma list to apply only those (diagnostics only this way)
+    python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game, or only the patches KEYS names
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
     python3 sr2-patcher.py --restore DIR            put the original files back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -140,93 +140,28 @@ RESTORE_RELOCS = 10
 
 # Patch table: key -> (file, sites, transform). A site is (file offset,
 # original, replacement); a replacement of None means the bytes are only
-# verified, the transform writes them. The transform, if any, runs on the
-# file after its sites and may grow it. Applied in this order. Addresses
-# in the comments are the European build's.
+# verified, the transform writes them. The transform, if any, runs after
+# the sites and may grow the file. Applied in this order. Addresses are
+# the European build's; docs/NOTES.md has the account of each.
 #
-# mixerless: the Australian build only. Its MGAudio.dll fails Init when the
-#          mixer has no CD line (Wine has none) where the European returns
-#          S_FALSE; the failure branch goes to a stub that zeroes the
-#          control count and continues, so the object lives without a
-#          volume control, as the European does. apply_mixerless.
-# bgmvol:  the streamed BGM - menu loops, settings-menu and replay music
-#          - a few dB down: in MGSound.dll, where every path that sets a
-#          stream's level ends (the exe's and each screen DLL's copy of
-#          the same client code), the streaming buffer's SetVolume
-#          (0x10006940) finishes its value-to-dB mapping through a call
-#          to asm/bgmvol.asm in an appended section. apply_bgmvol.
-# win9x:   the Australian build only. Its startup checks GetVersionExA's
-#          dwPlatformId for Windows 9x (0x44bfb0) and refuses to run on
-#          anything else; the check returns 0, "fine", at once.
-# nodisc:  two sites. The startup check that scans CD-ROM drives for the
-#          play disc (0x4273c0) returns 0, "found", at once; and the loader
-#          constructor (0x47632e) copies the exe's directory into the
-#          disc-root slot instead of scanning drives, which is what the
-#          menu reads to decide between the full game and multiplayer only.
-# zdetach: MGameD3D calls IDirectDrawSurface4::DeleteAttachedSurface(0, NULL)
-#          on the back buffer before creating, releasing or tearing down the
-#          Z-buffer, and ignores the result. Some ddraw builds dereference the
-#          NULL (Proton). The call becomes `add esp, 0xc`.
-# altab:   a transform: apply_activate appends a section to the exe holding
-#          asm/activate.asm and points the WM_ACTIVATEAPP handler's resume
-#          call (0x426bf7) at it, so the DirectDraw surfaces are restored
-#          when the game regains focus.
-# managed: MGameD3D creates its video-memory textures ALLOCONLOAD|TEXTURE|
-#          VIDEOMEMORY (0x10003e91) and fills them from system-memory twins
-#          with IDirect3DTexture2::Load. Video-memory surfaces are what a
-#          switch away loses and a restore wipes. They become managed
-#          (dwCaps TEXTURE, dwCaps2 TEXTUREMANAGE): DirectDraw keeps the
-#          copy and re-uploads, and never marks them lost. The AGP variant
-#          at 0x10003eb7 goes with it. The one absolute address in the
-#          stretch (0x1001253c, the hardware flag) leaves with its
-#          relocation entry.
-# restoreall: a transform: apply_restore writes asm/restore.asm over
-#          MGameD3D's restore-surfaces routine (0x10007710), so it restores
-#          every surface and not just three. Managed textures are not
-#          lost and need none of it; the rest of what DirectDraw owns does.
-# texfmt:  MGameD3D picks its 16-bit texture format from a preference list
-#          (0x1000f79c): X1R5G5B5, then R5G6B5, then A1R5G5B5. Its texture
-#          data is 1555 with the alpha bit set on opaque pixels and is
-#          copied in as is, and every texture is colour-keyed on 0. Opaque
-#          black is 0x8000: 1999 drivers compared the raw texel and drew it,
-#          modern DirectX and wined3d mask the X bit first and key it out,
-#          so black lettering on the 2D screens vanished. The list becomes
-#          A1R5G5B5 first, where bit 15 is alpha and the key stays exact.
-# textcolor: a transform: apply_textcolor appends a section to the exe
-#          holding asm/textcolor.asm and points the ten SetTextColor sites
-#          of the lobby at it. They pass the colour as -1; NT and Wine read
-#          that as PALETTEINDEX and draw black, the colour key. The stub
-#          masks the colour to RGB and continues into the import.
-# windowed: the fullscreen flag the exe passes to MGameD3D's init (0x427fe5,
-#          `push 1`) becomes 0, which selects the engine's own windowed
-#          path: DDSCL_NORMAL, no display mode change, a clipper on the
-#          window, Blt to present. The back buffer is then the desktop's
-#          depth, so the row copy that puts the 16-bit .bg pictures into it
-#          (0x415271) goes through asm/bgrow.asm, which expands to 32 bits
-#          when it has to; apply_windowed appends it as a section.
-# anydepth: MGameD3D's windowed path refuses a desktop that is not the
-#          16 bits it was asked for (0x1000271e). The check is skipped;
-#          everything after it takes its format from the primary.
-# titlebg: Title.dll copies TITLE640.BG into the locked back buffer with
-#          its own copy of that row loop (0x100014ba); the same stub,
-#          assembled to read the depth from the DLL's stack, in an
-#          appended section.
-# borderless: a transform: apply_fullwin appends asm/fullwin.asm to
-#          MGameD3D and points the windowed present (0x10004d7b) and the
-#          window sizing (0x100026be) at it: the window covers the
-#          monitor under the cursor, the picture is letterboxed into it.
-# altenter: a transform: apply_altenter appends asm/altenter.asm to the exe
-#          and points the window procedure's call to the text-input handler
-#          (0x426cbc) at it. ALT+ENTER switches the window between
-#          borderless over its monitor and framed at the picture's size.
-# music:   two sites, the CD-volume methods' entries (0x10001db0 set,
-#          0x10001e40 get), which become jumps to the blob's setvolume and
-#          getvolume, so the BGM slider sets the wave volume the tracks
-#          play at; the rest is apply_music,
-#          which appends asm/music.asm as a section, rewrites the 11
-#          mciSendCommandA calls to call the hook and its one load of the
-#          import into esi to fetch the hook's address, and repoints the
-#          entry point at the setup thunk.
+#   mixerless   MGAudio Init without a mixer CD line (Australian)
+#   bgmvol      MGSound's streaming SetVolume, ATTEN dB down
+#   win9x       the Windows 9x check returns "fine" (Australian)
+#   nodisc      the disc check returns "found"; the loader takes the exe's directory
+#   zdetach     DeleteAttachedSurface(0, NULL) calls removed (Proton crash)
+#   altab       the resume call restores the DirectDraw surfaces first
+#   managed     video-memory textures become managed
+#   restoreall  the restore routine becomes RestoreAllSurfaces
+#   texfmt      A1R5G5B5 first in the texture-format preference list
+#   textcolor   the lobby's SetTextColor(-1) masked to RGB
+#   windowed    the fullscreen flag cleared; the .bg row copy expands to 32 bits
+#   anydepth    the windowed path's 16-bit desktop check skipped
+#   titlebg     Title.dll's own .bg row copy, the same stub
+#   borderless  the window covers its monitor, the present letterboxes
+#   altenter    ALT+ENTER toggles a framed window
+#   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
+#   voltrace    diagnostic, by name only: volume calls reported on +debugstr
+
 # The first bytes of the five volume entry points voltrace hooks.
 VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),
                   bytes.fromhex('558bec81ec88000000'), bytes.fromhex('558bec83ec0c'))

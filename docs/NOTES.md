@@ -24,8 +24,8 @@ Australian releases map onto it; *Builds* says how far.
 | **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
 | **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
 | **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init looks for a CD line on the mixer for the volume slider; without one the European DLL returns `S_FALSE`, the Australian `E_FAIL`, and Wine has none. The `jne fail` → a stub that zeroes the control count at `+0x84` (uninitialised until the search fills it) and eax, and jumps back to the allocation |
-| **Stream level** | `MUSASHI\MGSound.dll` | `0x6980` and appended `.sr2b` section | the menu loops, the settings-menu music and the replay music are streamed, and every path that sets a stream's level - the exe's, and the copy of the same client code in each screen DLL, `Options.dll` for the settings-menu music - ends in the streaming buffer's `SetVolume` (`0x10006940`): `min + (max−min) × value / 10000` in hundredths of a dB into the DirectSound buffer. The effects and the announcer have a `SetVolume` of their own and are created with a −40..0 dB range; the streams with a narrower, higher one, so the same slider value lands them louder, and scaling the value moves them only a few dB. The mapping's last step → `call` asm/bgmvol.asm, which takes `ATTEN` (600) off the result, floored at −10000 |
-| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the set-volume method's entry → `jmp setvolume`, which keeps the slider's 0..10000 as a `waveOutSetVolume` value, at 0.5 of full for the top of the slider, applied at once and by the worker after every play until the stream exists, to device 0 (Windows) and Wine's stream handles `0xFF00`, `0xFF01`, `0xC000`, and the get-volume method's → `jmp getvolume`, which reports it, since the exe divides that reading by 100 for its scale; see [asm/README.md](../asm/README.md) |
+| **Stream level** | `MUSASHI\MGSound.dll` | `0x6980` and appended `.sr2b` section | the menu, settings-screen and replay music are streamed; every path that sets a stream's level - the exe's, and each screen DLL's copy of the same client code - ends in the streaming buffer's `SetVolume` (`0x10006940`), `min + (max−min) × value / 10000` in hundredths of a dB. Streams are created with a narrower, higher range than the effects' −40..0, so the same slider value lands them louder. The mapping's last step → `call` asm/bgmvol.asm, which takes `ATTEN` (600) off the result, floored at −10000 |
+| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume`: the slider's 0..10000 becomes a `waveOutSetVolume` value (`GAIN` 0.5 at full), applied after each play once the stream exists; see [asm/README.md](../asm/README.md) |
 
 Offsets are the European build's file offsets; the other builds' are in
 `BUILDS` and under *Builds*. In the exe, which is never relocated, VA =
@@ -283,11 +283,10 @@ code; its `MGAudio.dll` has the same eleven calls and one load of
 different branch in Init, for which see *No mixer needed* in the table
 above.
 
-Three files are patched in every build - `SEGA RALLY 2.exe`,
-`MUSASHI\MGameD3D.dll`, `MUSASHI\MGAudio.dll` - and `Title.dll`; the exe
-and `MGAudio.dll` grow by a section. Each gets a `.bak` beside it, the
-untouched original; the patcher always starts from those, so patching
-twice is patching once, and restoring is a rename.
+Five files are patched: `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll`,
+`MUSASHI\MGAudio.dll`, `MUSASHI\MGSound.dll`, `Title.dll`. Each gets a
+`.bak` beside it, the untouched original; the patcher always starts from
+those, so patching twice is patching once and restoring is a rename.
 
 ### The processor check
 
@@ -451,11 +450,9 @@ Three properties of the DLL shape the patch:
   `tools/musictest.py` relocates the image before running it for that
   reason.
 
-At "Go!" the exe seeks the course track to 0:00 - with the track number
-one below the one its play used, in every build - and sends no play
-after it. On a drive that left the CD stopped on the wrong track for
-`MGAudio`'s poller to sort out; the hook takes it as a restart of the
-open track.
+At "Go!" the exe seeks the course track to 0:00 with a track number one
+below the one its play used, and sends no play after it; the hook takes
+a seek to the open track or the one below it as a restart.
 
 The play disc's audio: tracks 2–14, each in its own bin in the Redump
 dump with a 150-sector pregap at `INDEX 00`. The ripper starts each track
@@ -558,12 +555,10 @@ of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
-- Windows has not been tried; Wine and Proton have. To check there: the
-  stock game is said to crash on returning to the main menu after saving
-  a replay; it does not under Wine with only `nodisc` and `music` on, so
-  nothing here fixes it. And the volume patch's device-id
-  `waveOutSetVolume(0, …)` is the Windows path; only the Wine handles
-  have been seen to work.
+- Windows has not been tried. Two things to check there: the reported
+  crash on returning to the main menu after saving a replay, which Wine
+  does not show; and the music volume's `waveOutSetVolume(0, …)`, the
+  device-id form Windows takes and Wine does not.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
 - Frame timing, input, resolution: nothing traced yet. The renderer is

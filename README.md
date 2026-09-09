@@ -1,40 +1,22 @@
 # SR2 Patcher
 
-Gets *SEGA RALLY 2* (PC, 1999) running on a modern system from your own
-disc dumps. No original installer, no registry, no disc in the drive: one
-folder with the game in it, the music included, and a handful of fixes so
-it starts, survives ALT+TAB and plays its soundtrack.
-
-Runs under Wine and Proton today; Windows is untested. See [Status](#status).
-
-<h4 align="center">
-  <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
-  <a href="#what-you-need">What you need</a> &nbsp;·&nbsp;
-  <a href="#what-the-patcher-fixes">Fixes</a> &nbsp;·&nbsp;
-  <a href="#music">Music</a> &nbsp;·&nbsp;
-  <a href="#status">Status</a>
-</h4>
+Runs *SEGA RALLY 2* (PC, 1999) on a modern system from your own disc
+dumps: one folder with the game and its music in it, no installer, no
+registry, no disc in the drive. Works under Wine and Proton; Windows is
+untested.
 
 ## Quick start
 
-Run `sr2-patcher.py` with Python 3. A window opens; fill it in from the
-top:
+Run `sr2-patcher.py` with Python 3 and fill the window in from the top:
+the `.cue` of the install disc, the `.cue` of the play disc, an empty
+folder (about 800 MB), the language. **Install**, then **Rip
+soundtrack**, then run `SEGA RALLY 2.exe` from that folder.
 
-1. **Disc 1 image** - the `.cue` of your install disc dump.
-2. **Disc 2 cue** - the `.cue` of your play disc dump.
-3. **Install to** - an empty folder. About 800 MB with the music.
-4. **Language** - which manual, help pages and in-game messages to
-   install.
-5. **Install**, then **Rip soundtrack**.
+**Patch** applies the fixes to an existing install, the patcher's or the
+original installer's Pentium III one; **Restore original** takes them
+out.
 
-Then run `SEGA RALLY 2.exe` from that folder. Under Wine or Proton, point
-your launcher at it as you would any other game.
-
-If you already have the game installed - by the patcher, or by the
-original installer as a Pentium III install - **Patch** applies the fixes
-to that folder, and **Restore original** takes them back out.
-
-The same from a terminal:
+From a terminal:
 
 ```
 python3 sr2-patcher.py --install "Sega Rally 2 (Disc 1).cue" ~/games/sr2 English
@@ -45,93 +27,61 @@ python3 sr2-patcher.py --restore ~/games/sr2
 
 ## What you need
 
-- **Both discs as bin/cue.** The install disc for the game, the play disc
-  for the music. Redump-style dumps with one bin per track are fine; so is
-  a single bin. A plain `.iso` works for the install disc, but not for the
-  play disc, since an ISO has no audio tracks.
-- **Python 3**, with tkinter for the window. The command line needs
-  nothing else.
+- Both discs as bin/cue. One bin per track or a single bin; an `.iso`
+  does for the install disc but not the play disc, which is where the
+  audio tracks are.
+- Python 3, with tkinter for the window.
 
-The patcher reads the images directly: nothing is mounted, and nothing is
-written outside the folder you choose. It installs the Pentium III build
-of the game, which every CPU made since can run, and refuses anything
-that is not an unmodified copy of it.
+Nothing is mounted and nothing is written outside the folder you choose.
+The patcher installs the Pentium III build, which any CPU since can run,
+and refuses anything that is not an unmodified copy of it.
 
-## What the patcher fixes
+## Fixes
 
-| Fix | What you'd see without it |
+| Fix | Without it |
 | --- | --- |
-| **Windows 9x check** | The Australian release refuses to start on anything newer. |
-| **No disc required** | An "insert the play disc" box at startup, and a menu with everything but multiplayer greyed out. The game now finds everything in its own folder. |
-| **Startup crash** | Under Proton the game closes before its window appears. A renderer bug that Proton's DirectDraw does not forgive. |
-| **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |
-| **Missing lettering** | The SELECT GAME and SELECT CAR headings, and other black text on the 2D screens, drawn as hollow outlines. Black in those textures read as transparent on modern DirectX and Wine. |
-| **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear - only the caret. The game asks for white in a way only Windows 95 understood; everything since draws black on black. |
-| **Borderless fullscreen** | The game took the display over at 640x480, and under Wine or Proton came back from ALT+TAB on the wrong screen. It now runs in a borderless window covering the monitor it starts on, no mode change, its 4:3 picture centred with black bars: the engine's own windowed mode, which the shipped game never used, with the window sized to the monitor. |
-| **ALT+ENTER** | Switches between that and an ordinary window with a frame, the picture's size, centred on the monitor; drag it, resize it, maximise it. ALT+ENTER again puts it back. |
-| **Music, and the mix** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips, and the BGM slider controls it, at about half the wave output, where a CD line sat against the effects. The menu, settings-screen and replay music the game streams itself played a notch louder than the effects and the announcer at the same setting; it sits 6 dB lower now. The Australian release also wanted a CD volume control on the sound card before it would play at all; it no longer does. |
+| **Windows 9x check** | The Australian release refuses to start. |
+| **No disc required** | An "insert the play disc" box, and a menu with everything but multiplayer greyed out. |
+| **Startup crash** | Under Proton the game closes before its window appears. |
+| **ALT+TAB** | Switching away and back leaves a blank screen or a world with no textures. |
+| **Missing lettering** | The black lettering on the 2D screens - SELECT GAME, SELECT CAR - drawn as outlines. |
+| **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear. |
+| **Borderless fullscreen** | The game takes the display over at 640x480 and comes back from ALT+TAB on the wrong monitor. It now runs in a borderless window on the monitor it starts on, 4:3, black bars. |
+| **ALT+ENTER** | Toggles a framed window you can move, resize or maximise. |
+| **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there; the BGM slider controls them. The wave music the game streams itself - menus, settings screen, replays - is 6 dB lower, in line with the effects and the announcer. The Australian release no longer needs a CD volume control on the sound card. |
 
-Everything else is the game as it shipped; see [Status](#status) for
-what is planned.
-
-## Music
-
-**Rip soundtrack** copies the thirteen audio tracks off the play disc dump
-into `music\` beside the game, as plain WAV files (230 MB). The game plays
-them wherever it used to play the disc. Without that folder it behaves as
-it did with no disc: silent, but otherwise fine.
-
-The BGM slider in the game's Options sets the volume of that playback, as
-it once set the CD volume on the sound card. Full slider is 50% of the
-wave output, about where the CD line sat against the effects; the number
-is `GAIN` in `asm/music.asm` if it isn't right for you.
+Everything else is the game as it shipped.
 
 ## Status
 
-Work in progress; here be dragons. Installs, starts, plays with music,
-survives ALT+TAB - under Wine and under Proton (via umu, e.g. Faugus).
-Windows is untested; if the patched game misbehaves there, an issue with
-what happens is welcome.
+Work in progress. Installs, starts, plays with music, survives ALT+TAB,
+under Wine and Proton (via umu). Supported: the European, American and
+Australian releases, Pentium III build, told apart by the exe. The
+Japanese release has not been seen.
 
-Supported: the European, American and Australian releases, Pentium III
-build - the one the original installer picked on any Pentium III or
-later. The patcher tells them apart by the exe and refuses anything
-else; see [docs/NOTES.md](docs/NOTES.md), *Builds*. The Japanese release
-has not been seen; a disc dump of it is the way to get there.
+Planned: native widescreen with split-screen to match, controller
+configuration and XInput (the game runs on its defaults for now), online
+play with a lobby, frame timing, a Windows exe of the patcher.
 
-Planned, in no particular order:
+## Working on it
 
-- Native widescreen, with split-screen adjusted to match.
-- Controller configuration and XInput gamepad support. The original
-  Control Panel item is gone and the game's own Options has no controls
-  page, so it runs on its defaults for now.
-- Online play with a lobby.
-- Frame timing.
-- A Windows exe of the patcher, with the first release.
+[docs/](docs/README.md) covers how the game works and how the patches
+are made; `tools/check.py` runs the checks.
 
-## Working on the patcher
+## AI disclaimer
 
-Everything about how the game works inside and how the patches are made
-is under [docs/](docs/README.md). `tools/check.py` runs the checks.
-
-## AI Disclaimer
-
-LLMs are part of the toolchain here, alongside pefile, capstone, unshield
-and Unicorn on the game's files, and Wine's own tracing on the running
-game. The scope, the disc dumps, the testing and the debugging are human.
-Every change is read before it goes in and played before it ships.
-Offsets and bytes are verified against the original before anything is
-written, and the patcher refuses any file that is not an unmodified build
-it has tables for. It is still a hobby project poking at a 27-year-old
-binary, so expect bugs.
+LLMs are part of the toolchain, alongside pefile, capstone, unshield,
+Unicorn and Wine's tracing. Scope, testing and debugging are human; every
+change is read before it goes in and played before it ships. Offsets are
+verified against the originals before anything is written. A hobby
+project on a 27-year-old binary: expect bugs.
 
 ## Credits and licence
 
-Successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher),
-in spirit and design. Rights to the game belong to SEGA. `LICENSE` (MIT)
-covers the patcher, its tools and its documentation - not the game and
-not the bytes quoted from it.
+Successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher).
+The game is SEGA's. `LICENSE` (MIT) covers the patcher, its tools and
+its documentation, not the game or the bytes quoted from it.
 
-Bug reports and patches are welcome as issues and pull requests. For
-anything else - a disc image of a build the patcher does not know, or a
-question that does not fit an issue - write to pairo@segaonline.net.
+Issues and pull requests are welcome. For a disc image of a build the
+patcher does not know, or anything that does not fit an issue:
+pairo@segaonline.net.

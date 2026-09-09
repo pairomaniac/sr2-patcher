@@ -20,8 +20,8 @@ Never edit the hex by hand; the next build overwrites it.
 | `bgrow.asm` | one row of a .bg picture into the back buffer, expanded to 32 bits when the buffer is; built twice, for the exe and for `Title.dll` |
 | `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | ALT+ENTER between the borderless window and a framed one |
-| `voltrace.asm` | a diagnostic, applied by name: five volume entry points in the exe report their arguments through `OutputDebugStringA` |
-| `bgmvol.asm` | in `MGSound.dll`: the streamed BGM `ATTEN` hundredths of a dB below the level it is given, in the streaming buffer's `SetVolume` |
+| `voltrace.asm` | diagnostic, applied by name: five volume entry points in the exe report their arguments through `OutputDebugStringA` |
+| `bgmvol.asm` | in `MGSound.dll`: the streamed music `ATTEN` hundredths of a dB below the level given, in the streaming buffer's `SetVolume` |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | - | the `mixerless` stub is three instructions, written by `apply_mixerless` in the patcher rather than assembled here |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |
@@ -90,24 +90,21 @@ The worker only ever waits; the game's own polling drives everything.
 `tools/musictest.py` runs this session under Unicorn, including one round
 of the worker.
 
-**The volume.** The BGM slider reaches the DLL's set-volume method, and
-the exe's wrapper first asks the get-volume method for the current level
-and divides it by 100 for its scale; both return an error without a mixer
-handle. Both entries are pointed into the blob: `getvolume` reports the
-level the blob holds on the game's 0..10000 scale, `setvolume` keeps what
-arrives as a `waveOutSetVolume` value, scaled by `GAIN` (0.5 of full, so
-the top of the slider sits where a CD line used to against the effects)
-and applies it. `mciwave` opens the wave device on play, on its own
-thread, a moment after `play` returns, so after sending a play the worker
-retries the volume every 4 ms, up to 400, until a handle takes it.
-Windows takes a device id there, 0; Wine takes only handles it made,
-built from indices, `0xFF00` for the first mapper stream and `0xC000` for
-the first on device 0, so those are tried too and the unused ones fail.
+**The volume.** The BGM slider reaches the DLL's set-volume method; the
+exe first asks the get-volume method for the current level and divides
+it by 100 for its scale; both fail without a mixer. Both entries jump
+into the blob: `getvolume` reports the level the blob holds on the
+0..10000 scale, `setvolume` keeps what arrives as a `waveOutSetVolume`
+value scaled by `GAIN` (0.5 at full). `mciwave` opens the wave device
+on play, on its own thread, so after each play the worker retries the
+volume every 4 ms, up to 400 ms, until a handle takes it. Windows takes
+device id 0; Wine takes only the handles it builds from indices, `0xFF00`
+for the first mapper stream and `0xC000` for the first on device 0, so
+those are tried too.
 
-**Trace mode.** With an empty `music\trace` beside the tracks, the hook
-reports every command it receives to `OutputDebugStringA` as `sr2 <id>
-<msg> <flags> <p1> <p2> <p3>`. `+mci,+debugstr` then shows what the game
-asked as well as what the hook sent.
+**Trace mode.** An empty `music\trace` beside the tracks makes the hook
+report every command it receives to `OutputDebugStringA` as `sr2 <id>
+<msg> <flags> <p1> <p2> <p3>`.
 
 ## activate.asm
 
