@@ -32,9 +32,11 @@
 ; entries are pointed here: getvolume answers with the volume the blob
 ; holds, on the 0..10000 scale, and setvolume keeps what the game sends as
 ; a waveOut volume. mciwave opens the wave device on play, on its own
-; thread, and Wine takes a device-id waveOutSetVolume whether or not a
-; stream is open, so the volume is applied to device 0 on every position
-; poll the game makes while music plays.
+; thread, so the volume is applied on every position poll the game makes
+; while music plays. Windows takes a device id for that, 0; Wine takes
+; only the handles it made, built from indices - 0xFF00 for the first
+; mapper stream, 0xC000 for the first on device 0 - so the hook tries a
+; short list of both kinds, and a handle not in use just fails.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -306,14 +308,20 @@ opentrack:
 .out:
         ret
 
-; waveOutSetVolume(0, D_VOL), if it was resolved. Keeps every register.
+; waveOutSetVolume(h, D_VOL) for every h in S_HANDLES, if it was resolved.
+; Keeps every register.
 applyvol:
         cmp     dword [ebx + D_SETVOL], 0
         je      .none
         pushad
+        lea     esi, [ebx + S_HANDLES]
+.each:
         push    dword [ebx + D_VOL]
-        push    0
+        push    dword [esi]
         call    dword [ebx + D_SETVOL]
+        add     esi, 4
+        cmp     dword [esi], -1
+        jne     .each
         popad
 .none:
         ret
@@ -754,6 +762,10 @@ D_HDONE     dd 0
 D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
 D_VOL       dd 0xFFFFFFFF               ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
+S_HANDLES   dd 0                        ; Windows: device 0
+            dd 0xFF00, 0xFF01, 0xFF02, 0xFF03      ; Wine: mapper streams 0-3
+            dd 0xC000, 0xC001, 0xC002, 0xC003      ; Wine: device 0 streams 0-3
+            dd -1
 D_TOC       times (MAXTRACK + 1) dd 0   ; frames per track
 D_PATH      times PATHLEN db 0
 

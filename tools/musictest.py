@@ -290,11 +290,18 @@ def main(argv):
     assert log['strings'][-1] == 'play sr2bgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
     assert log['waits'] and set(log['waits']) == {HDONE}, 'the hook waits only on the done event'
 
-    # The volume: applied on every status poll, whatever it is; the slider's
-    # 0..10000 becomes a waveOut volume, and getvolume reads it back.
+    # The volume: applied on every status poll to each handle on the list;
+    # the slider's 0..10000 becomes a waveOut volume, and getvolume reads
+    # it back.
+    handles = [0, 0xFF00, 0xFF01, 0xFF02, 0xFF03, 0xC000, 0xC001, 0xC002, 0xC003]
+
+    def applied():
+        assert [h for h, _v in log['volume']] == handles * (len(log['volume']) // len(handles)), log['volume']
+        return [v for h, v in log['volume'] if h == 0xFF00]
+
     log['volume'] = []
     call(hook, 0xFACE, 0x814, 0x100, P)
-    assert log['volume'] == [(0, 0xFFFFFFFF)], log['volume']
+    assert applied() == [0xFFFFFFFF], log['volume']
     V = STACK + 0x300
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))
     assert call(hook + 20, 0x1234, V, 0x80000000) == 0
@@ -302,12 +309,12 @@ def main(argv):
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))        # the slider at half
     log['volume'] = []
     assert call(hook + 15, 0x1234, V, 0) == 0
-    assert log['volume'] == [(0, 0x7FFF7FFF)], log['volume']
+    assert applied() == [0x7FFF7FFF], log['volume']
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 12000, 12000))      # over the top clamps
     call(hook + 15, 0x1234, V, 0)
-    assert log['volume'][-1] == (0, 0xFFFFFFFF)
+    assert applied()[-1] == 0xFFFFFFFF
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))              # no channels: keeps it
-    assert call(hook + 15, 0x1234, V, 0) == 0 and log['volume'][-1] == (0, 0xFFFFFFFF)
+    assert call(hook + 15, 0x1234, V, 0) == 0 and applied()[-1] == 0xFFFFFFFF
     call(hook + 20, 0x1234, V, 0x80000000)
     assert struct.unpack_from('<III', mu.mem_read(V, 20), 8) == (2, 10000, 10000), 'getvolume after the clamp'
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 0, 0))
@@ -315,7 +322,7 @@ def main(argv):
     log['volume'] = []
     call(hook, 0xFACE, 0x814, 0x100, P)
     call(hook, 0xFACE, 0x814, 0x100, P)
-    assert log['volume'] == [(0, 0), (0, 0)], 'applied on every poll: %r' % log['volume']
+    assert applied() == [0, 0], 'applied on every poll: %r' % log['volume']
     print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding, volume')
     return 0
 

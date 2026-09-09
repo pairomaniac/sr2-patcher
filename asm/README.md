@@ -89,10 +89,12 @@ the exe's wrapper first asks the get-volume method for the current level
 and divides it by 100 for its scale; both return an error without a mixer
 handle. Both entries are pointed into the blob: `getvolume` reports the
 level the blob holds on the game's 0..10000 scale, `setvolume` keeps what
-arrives as a `waveOutSetVolume` value. `mciwave` opens wave device 0 on
-play, on its own thread, and Wine accepts a device-id `waveOutSetVolume`
-with or without a stream, so the hook applies the value on every position
-poll the game makes while music plays.
+arrives as a `waveOutSetVolume` value. `mciwave` opens the wave device on
+play, on its own thread, so the hook applies the value on every position
+poll the game makes while music plays. Windows takes a device id there,
+0; Wine takes only handles it made, built from indices, `0xFF00` for the
+first mapper stream and `0xC000` for the first on device 0, so the hook
+tries a short list of both kinds and lets the unused ones fail.
 
 The worker only ever waits; the game's own polling drives everything.
 `tools/musictest.py` runs this session under Unicorn, including one round
