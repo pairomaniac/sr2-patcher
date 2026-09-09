@@ -21,7 +21,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | ALT+ENTER between the borderless window and a framed one |
 | `voltrace.asm` | diagnostic, applied by name: five volume entry points in the exe report their arguments through `OutputDebugStringA` |
-| `mix.asm` | in `MGSound.dll`: every buffer's dB range remapped to −43..−8 in `SetRange`, every buffer level at its ceiling in `SetVolume`, and the streamed music on that curve plus `OFFSET` in the streaming buffer's `SetVolume` |
+| `mix.asm` | in `MGSound.dll`: every buffer's dB range remapped to −43..−8 in `SetRange`, and the streamed music on that curve plus `OFFSET` in the streaming buffer's `SetVolume` |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | - | the `mixerless` stub is three instructions, written by `apply_mixerless` in the patcher rather than assembled here |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |

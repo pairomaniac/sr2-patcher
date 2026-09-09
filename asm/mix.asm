@@ -10,12 +10,7 @@
 ;   +0   range   the buffer's SetRange (0x10004380) loads min and max
 ;                through here: each becomes 7/8 of itself less 8 dB, so
 ;                -40..0 is -43..-8 and a step is 3.5 dB, 9 being the old 7.
-;   +N   full    the buffer's SetVolume (0x100041c0) loads its value
-;                through here: any value but 0 becomes 10000, the ceiling.
-;                The later builds send 100% always; the Australian's
-;                copies of the sound manager - the exe's and each screen
-;                DLL's - send the slider again, and fades and ducks.
-;   +M   stream  the streaming buffer's SetVolume (0x10006940) finishes
+;   +N   stream  the streaming buffer's SetVolume (0x10006940) finishes
 ;                its value-to-dB mapping through here: the slider step
 ;                the value was made from, on that same curve plus OFFSET.
 ;
@@ -39,14 +34,7 @@ range:                                  ; +0: replaces mov ecx,[esp+0xc]; mov ed
         sub     edx, 800
         ret
 
-full:                                   ; +N: replaces mov ebx,[esp+0x110]
-        mov     ebx, [esp + 0x114]      ; the value, under the return address
-        test    ebx, ebx
-        jz      .z
-        mov     ebx, 10000
-.z:     ret
-
-stream:                                 ; +M: replaces add edx,esi; mov esi,edx; test esi,esi
+stream:                                 ; +N: replaces add edx,esi; mov esi,edx; test esi,esi
         push    ecx
         lea     eax, [ebx + 555]        ; the step the value was made from, rounded
         xor     edx, edx
