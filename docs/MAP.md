@@ -37,6 +37,7 @@ In file order:
 | Text-colour patch | `apply_textcolor` |
 | Windowed patch | `BGROW_LEN`, `apply_windowed` |
 | ALT+ENTER patch | `apply_altenter` |
+| No-mixer patch | `apply_mixerless` |
 | Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
 | Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |

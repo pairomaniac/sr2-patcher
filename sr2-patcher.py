@@ -100,7 +100,8 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
-                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0},
+                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
+                  'mixer': 0x2278},        # in MGAudio.dll, the one DLL site that is a build's own
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
@@ -131,6 +132,11 @@ RESTORE_RELOCS = 10
 # file after its sites and may grow it. Applied in this order. Addresses
 # in the comments are the European build's.
 #
+# mixerless: the Australian build only. Its MGAudio.dll fails Init when the
+#          mixer has no CD line (Wine has none) where the European returns
+#          S_FALSE; the failure branch goes to a stub that zeroes the
+#          control count and continues, so the object lives without a
+#          volume control, as the European does. apply_mixerless.
 # win9x:   the Australian build only. Its startup checks GetVersionExA's
 #          dwPlatformId for Windows 9x (0x44bfb0) and refuses to run on
 #          anything else; the check returns 0, "fine", at once.
@@ -244,6 +250,9 @@ def patches(build):
     }
     if 'oscheck' in site:
         table['win9x'] = (EXE, ((site['oscheck'], bytes.fromhex('81ec94000000'), bytes.fromhex('31c0c3')),), None)
+    if 'mixer' in site:
+        table['mixerless'] = ('MUSASHI\\MGAudio.dll', ((site['mixer'], bytes.fromhex('0f8530010000'), None),),
+                              'apply_mixerless')
     return table
 
 
@@ -264,6 +273,7 @@ BGROW_SECTION = b'.sr2w'
 TITLEROW_SECTION = b'.sr2t'
 FULLWIN_SECTION = b'.sr2f'
 ALTENTER_SECTION = b'.sr2k'
+MIXERLESS_SECTION = b'.sr2v'
 CODE_SECTION = 0x60000020               # IMAGE_SCN_CNT_CODE | MEM_EXECUTE | MEM_READ
 
 
@@ -1160,6 +1170,22 @@ def apply_altenter(buf, build):
     _check_call(buf, row['sites']['altenter'], row['addresses']['HANDLER'], 'the text-input handler')
     out, rva = append_section(buf, ALTENTER_SECTION, exe_blob(ALTENTER_BLOB, build))
     _branch(out, row['sites']['altenter'], rva)
+    return out
+
+
+def apply_mixerless(buf, build):
+    """MGAudio's Init, on finding no CD mixer line: `jne fail` becomes a
+    jump to a stub that zeroes the control count it is about to allocate
+    for (uninitialised when the search fails) and eax, the HeapAlloc
+    flags, then jumps back to that allocation. Nothing absolute, so no
+    relocation entries change."""
+    site = BUILDS[build]['sites']['mixer']
+    site_rva = 0x1000 + site - _rva_to_off(buf, 0x1000)
+    stub = bytes.fromhex('31c0') + bytes.fromhex('898684000000')      # xor eax,eax; mov [esi+0x84],eax
+    out, rva = append_section(buf, MIXERLESS_SECTION, stub + b'\xe9' + b'\0' * 4, chars=CODE_SECTION)
+    start = _rva_to_off(out, rva)
+    struct.pack_into('<i', out, start + len(stub) + 1, site_rva + 6 - (rva + len(stub) + 5))
+    out[site:site + 6] = b'\x0f\x85' + struct.pack('<i', rva - (site_rva + 6))
     return out
 
 

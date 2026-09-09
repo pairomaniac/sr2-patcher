@@ -23,6 +23,7 @@ Australian releases map onto it; *Builds* says how far.
 | **Title picture** | `Title.dll` | `0x8ba` and appended `.sr2t` section | the DLL's own .bg row copy at `0x100014ba` → `call` asm/bgrow.asm assembled for its stack |
 | **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
 | **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
+| **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init's `jne fail` after the CD-line search → a stub that zeroes the control count at `+0x84` and eax and jumps back to the allocation; the European DLL returns `S_FALSE` there, the Australian `E_FAIL`, and Wine has no CD line |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
 Offsets are the European build's file offsets; the other builds' are in
@@ -282,7 +283,14 @@ in its row. The Australian `Title.dll` differs in its picture and in code
 past the row copy, which sits in identical bytes at the same offset; its
 `MGAudio.dll` has the same eleven calls and one load of
 `mciSendCommandA`, 0x40-0x60 further on, which the music patch finds for
-itself.
+itself. That DLL's Init also differs in one branch: after opening the CD
+and reading the track table it looks for a CD line on the mixer
+(`MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC`, or one named `CD`) for the
+volume slider, and where the European DLL returns `S_FALSE` without one,
+the Australian returns `E_FAIL`, the exe's wrapper drops the object, and
+nothing plays; the *No mixer needed* patch is for that. Its mixer block
+at `+0x68` is left uninitialised by the constructor, which is why the
+patch is a stub and not a byte.
 
 Three files are patched in every build: `SEGA RALLY 2.exe`,
 `MUSASHI\MGameD3D.dll` and `MUSASHI\MGAudio.dll`, plus `Title.dll`; the
