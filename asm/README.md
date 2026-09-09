@@ -84,6 +84,10 @@ answers. Every `waveaudio` command comes from that one thread. Calls are
 not serialised against each other beyond that; MGAudio does not issue two
 at once.
 
+The worker only ever waits; the game's own polling drives everything.
+`tools/musictest.py` runs this session under Unicorn, including one round
+of the worker.
+
 **The volume.** The BGM slider reaches the DLL's set-volume method, and
 the exe's wrapper first asks the get-volume method for the current level
 and divides it by 100 for its scale; both return an error without a mixer
@@ -102,11 +106,6 @@ the first on device 0, so those are tried too and the unused ones fail.
 reports every command it receives to `OutputDebugStringA` as `sr2 <id>
 <msg> <flags> <p1> <p2> <p3>`. `+mci,+debugstr` then shows what the game
 asked as well as what the hook sent.
-
-The worker only ever waits; the game's own polling drives everything.
-`tools/musictest.py` runs this session under Unicorn, including one round
-of the worker.
-
 
 ## activate.asm
 

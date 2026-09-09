@@ -557,11 +557,15 @@ of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
-- Windows has not been tried; Wine and Proton have. One report to check
-  there: the stock game is said to crash on returning to the main menu
-  after saving a replay. It does not under Wine with only `nodisc` and
-  `music` applied, so nothing here fixes it and Wine's DirectDraw may
-  be tolerating what Windows does not.
+- Windows has not been tried; Wine and Proton have. To check there: the
+  stock game is said to crash on returning to the main menu after saving
+  a replay; it does not under Wine with only `nodisc` and `music` on, so
+  nothing here fixes it. And the volume patch's device-id
+  `waveOutSetVolume(0, …)` is the Windows path; only the Wine handles
+  have been seen to work.
+- The wave BGM the game plays itself through `MGSound` is balanced for a
+  CD line quieter than it, so at equal slider settings it is loud; a
+  factor in `MGSound`'s volume scaling would be the fix.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
 - Frame timing, input, resolution: nothing traced yet. The renderer is

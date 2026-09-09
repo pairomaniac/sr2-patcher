@@ -26,19 +26,9 @@
 ; Playback is not implemented here: a CD command becomes an MCI string
 ; command against waveaudio, and the same MCI subsystem does the work.
 ;
-; The BGM slider used to set the mixer's CD line, through a method that
-; gives up without a mixer handle; its sibling reads the line back, and
-; the exe divides that by 100 for the scale it sends the slider on. Both
-; entries are pointed here: getvolume answers with the volume the blob
-; holds, on the 0..10000 scale, and setvolume keeps what the game sends as
-; a waveOut volume, scaled by GAIN so full slider sits where a CD line
-; used to against the effects. mciwave opens the wave device on play, on
-; its own thread, a moment after play returns, so after sending a play the
-; worker retries the volume every few milliseconds until a handle takes
-; it. Windows takes a device id for that, 0; Wine takes only the handles
-; it made, built from indices - 0xFF00 for the first mapper stream,
-; 0xC000 for the first on device 0 - so those are tried too, and a handle
-; not in use fails.
+; The BGM slider's two methods are pointed here as well: getvolume and
+; setvolume, the volume applied to the wave stream by the worker after
+; each play. README.md has the account.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
