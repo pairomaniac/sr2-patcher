@@ -15,7 +15,9 @@ paths that differ or are missing on some.
 import hashlib
 import importlib.util
 import os
+import struct
 import sys
+import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 spec = importlib.util.spec_from_file_location('patcher', os.path.join(HERE, '..', 'sr2-patcher.py'))
@@ -23,38 +25,84 @@ patcher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(patcher)
 
 LIST_LIMIT = 40
+CPU_GROUPS = ('Program Executable Files', 'PentiumIII Modules', 'AMD Modules')
+
+
+def _inflate(data):
+    """(bytes out, error) for one raw deflate stream."""
+    d = zlib.decompressobj(-15)
+    try:
+        return d.decompress(data), None
+    except zlib.error as exc:
+        return b'', exc
+
+
+def _diagnose(fh, e, exc):
+    """What is at a file that did not inflate: its descriptor, the first
+    bytes, and whether the data is chunked (u16 length + deflate stream)."""
+    print('  cannot read %s\\%s: %s' % (e.group, e.path, exc))
+    print('    flags 0x%x size %d compressed %d offset 0x%x' % (e.flags, e.size, e.compressed, e.offset))
+    fh.seek(e.offset)
+    head = fh.read(min(e.compressed, 64))
+    print('    first bytes %s' % head[:16].hex())
+    chunk = struct.unpack_from('<H', head)[0]
+    fh.seek(e.offset + 2)
+    out, err = _inflate(fh.read(min(chunk, e.compressed - 2)))
+    print('    as a chunk: u16 length %d, inflates to %d bytes%s'
+          % (chunk, len(out), '' if err is None else ' (%s)' % err))
 
 
 def survey(src):
-    """{path: (group, size, md5)} for every valid file in the cab."""
+    """{(group, path): (size, md5)} for every valid file in the cab."""
     fh, close = patcher.open_source(src)
     try:
+        sig, ver = struct.unpack('<2I', fh.read(8))
+        fh.seek(0)
         cab = patcher.Cabinet(fh)
-        print('  %d files, %d groups' % (len(cab.entries), len(cab.groups)))
+        print('  %d files, %d groups, cabinet version 0x%08x' % (len(cab.entries), len(cab.groups), ver))
         for name, entries in cab.groups.items():
             print('    %-28s %5d files %8.1f MB' % (name, len(entries), sum(e.size for e in entries) / 1e6))
-        files = {}
+        files, failed = {}, 0
         for e in cab.entries:
-            if e.group:
-                files[e.path] = (e.group, e.size, hashlib.md5(cab.read(e)).hexdigest())
+            if not e.group:
+                continue
+            try:
+                files[e.group, e.path] = (e.size, hashlib.md5(cab.read(e)).hexdigest())
+            except (zlib.error, ValueError) as exc:
+                if not failed:
+                    _diagnose(fh, e, exc)
+                failed += 1
+                files[e.group, e.path] = (e.size, 'unreadable')
+        if failed:
+            print('  %d files unreadable' % failed)
     finally:
         close()
     return files
 
 
 def fingerprints(files):
-    """The patcher's known files against this cab's P3 and base copies."""
-    known = {n: (s, d) for n, s, d in patcher.P3_FILES}
-    known.update(patcher.PATCHED_FILES)
+    """The patcher's known files against this cab, and the three CPU
+    builds' copies of the six overlay files."""
+    known = dict(patcher.PATCHED_FILES)
+    for path, size, digest in patcher.P3_FILES:
+        known.pop(path, None)
+        print('    %-9s %s' % (_state(files.get(('PentiumIII Modules', path)), size, digest), path))
     for path, (size, digest) in sorted(known.items()):
-        got = files.get(path)
-        if got is None:
-            state = 'missing'
-        elif (got[1], got[2]) == (size, digest):
-            state = 'known'
-        else:
-            state = 'UNKNOWN %d %s' % (got[1], got[2])
-        print('    %-9s %s' % (state, path))
+        print('    %-9s %s' % (_state(files.get(('Program Executable Files', path)), size, digest), path))
+    print('  overlay files by build:')
+    for path, _s, _d in patcher.P3_FILES:
+        for group in CPU_GROUPS:
+            got = files.get((group, path))
+            if got:
+                print('    %-24s %8d %s %s' % (group, got[0], got[1], path))
+
+
+def _state(got, size, digest):
+    if got is None:
+        return 'missing'
+    if got == (size, digest):
+        return 'known'
+    return 'UNKNOWN %d %s' % got
 
 
 def main(argv):
@@ -76,17 +124,15 @@ def main(argv):
         return 0
 
     print('== across %d discs' % len(surveys))
-    paths = sorted(set().union(*surveys))
     groups = {}
-    for path in paths:
-        got = [s.get(path) for s in surveys]
-        group = next(g[0] for g in got if g)
-        same = all(g and g[1:] == got[0][1:] for g in got) if got[0] else False
+    for group, path in sorted(set().union(*surveys)):
+        got = [s.get((group, path)) for s in surveys]
+        same = got[0] is not None and all(g == got[0] for g in got)
         groups.setdefault(group, [0, []])
         if same:
             groups[group][0] += 1
         else:
-            tags = ['-' if g is None else '%d %s' % (g[1], g[2][:8]) for g in got]
+            tags = ['-' if g is None else '%d %s' % (g[0], g[1][:8]) for g in got]
             groups[group][1].append('%s: %s' % (path, ' | '.join(tags)))
     for group, (same, diffs) in sorted(groups.items()):
         print('  %-28s %5d identical, %5d differ or missing' % (group, same, len(diffs)))
