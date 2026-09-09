@@ -8,7 +8,7 @@
 #     tools/sr2.sh BUILD patch            patch the installed game
 #     tools/sr2.sh BUILD restore          put the original files back
 #     tools/sr2.sh BUILD run              run under umu the way Faugus does; the Wine log goes to logs/sr2.log
-#     tools/sr2.sh BUILD debug            and +seh,+loaddll,+mci (edit for more)
+#     tools/sr2.sh BUILD debug [CHANNELS] and WINEDEBUG=+seh,+loaddll,+mci, or the channels given
 #     tools/sr2.sh BUILD show             print the paths it would use and exit
 #
 # BUILD is eu, us or au. logs/ is in the repository root and gitignored.
@@ -71,7 +71,7 @@ esac
 [ -f "$GAME/$EXE" ] || die "no $EXE in $GAME; tools/sr2.sh ${BUILD,,} install first"
 [ -n "$PFX" ] || die "set SR2_PFX or $pfx_var in $CONF"
 debug=""
-[ "$mode" = debug ] && debug="+seh,+loaddll,+mci"
+[ "$mode" = debug ] && debug="${2:-+seh,+loaddll,+mci}"
 
 if [ "$mode" = show ]; then
     echo "  build:  $BUILD"

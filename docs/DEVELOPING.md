@@ -105,8 +105,8 @@ step.
 paths from `~/.sr2-test` (template: `tools/sr2-test.example`): `install`,
 `rip`, `patch` and `restore` call the patcher, `run` and `debug` start
 the game under umu (Proton) or plain wine with the Wine log in `logs/`,
-`show` prints the paths. `debug` adds `+seh,+loaddll,+mci`; edit the line for
-other channels. Reading a log: the last `loaddll` before the exit names
+`show` prints the paths. `debug` sets `WINEDEBUG=+seh,+loaddll,+mci`, or
+the channels given after it. Reading a log: the last `loaddll` before the exit names
 the DLL whose init failed, `err:actctx` and `80040154` are the manifests,
 `seh:dispatch_exception` with its `eip` is a crash and the module it lands
 in, `mciSendStringW (L"…")` lines are the music hook's commands and the
