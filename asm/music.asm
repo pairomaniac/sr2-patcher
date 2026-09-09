@@ -31,13 +31,14 @@
 ; the exe divides that by 100 for the scale it sends the slider on. Both
 ; entries are pointed here: getvolume answers with the volume the blob
 ; holds, on the 0..10000 scale, and setvolume keeps what the game sends as
-; a waveOut volume. mciwave opens the wave device on play, on its own
-; thread, a moment after play returns, so after sending a play the worker
-; retries the volume every few milliseconds until a handle takes it; the
-; hook also applies it on every position poll. Windows takes a device id
-; for that, 0; Wine takes only the handles it made, built from indices -
-; 0xFF00 for the first mapper stream, 0xC000 for the first on device 0 -
-; so a short list of both kinds is tried, and a handle not in use fails.
+; a waveOut volume, scaled by GAIN so full slider sits where a CD line
+; used to against the effects. mciwave opens the wave device on play, on
+; its own thread, a moment after play returns, so after sending a play the
+; worker retries the volume every few milliseconds until a handle takes
+; it. Windows takes a device id for that, 0; Wine takes only the handles
+; it made, built from indices - 0xFF00 for the first mapper stream,
+; 0xC000 for the first on device 0 - so those are tried too, and a handle
+; not in use fails.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -54,6 +55,7 @@ bits 32
 %define MAGIC_GETMODFN  0xE5E5E5E5      ; offset to the GetModuleFileNameA IAT slot
 
 %define FAKE_ID         0xFACE
+%define GAIN            32768           ; 0.5 of 65535: the level at full slider
 
 %define MCI_OPEN        0x803
 %define MCI_CLOSE       0x804
@@ -375,7 +377,7 @@ setvolume:
         mov     eax, 10000
 .scale:
         mov     [ebx + D_VOL10K], eax
-        imul    eax, eax, 65535
+        imul    eax, eax, GAIN
         xor     edx, edx
         mov     ecx, 10000
         div     ecx
@@ -526,7 +528,6 @@ hook:
         jmp     .ok
 
 .status:
-        call    applyvol                ; the game polls while music plays
         mov     edx, [ebp + 20]
         mov     dword [edx + 4], 0      ; dwReturn
         test    dword [ebp + 16], MCI_STATUS_ITEM
@@ -798,11 +799,11 @@ D_HDONE     dd 0
 D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
 D_SLEEP     dd 0                        ; Sleep
 D_PLAYED    dd 0                        ; a play was just sent: settle the volume
-D_VOL       dd 0xFFFFFFFF               ; the slider, as a waveOut volume; full until set
+D_VOL       dd GAIN | GAIN << 16        ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
 S_HANDLES   dd 0                        ; Windows: device 0
-            dd 0xFF00, 0xFF01, 0xFF02, 0xFF03      ; Wine: mapper streams 0-3
-            dd 0xC000, 0xC001, 0xC002, 0xC003      ; Wine: device 0 streams 0-3
+            dd 0xFF00, 0xFF01           ; Wine: mapper streams 0 and 1
+            dd 0xC000                   ; Wine: device 0 stream 0
             dd -1
 D_TOC       times (MAXTRACK + 1) dd 0   ; frames per track
 D_PATH      times PATHLEN db 0

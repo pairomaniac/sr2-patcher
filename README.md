@@ -82,7 +82,9 @@ them wherever it used to play the disc. Without that folder it behaves as
 it did with no disc: silent, but otherwise fine.
 
 The BGM slider in the game's Options sets the volume of that playback, as
-it once set the CD volume on the sound card.
+it once set the CD volume on the sound card. Full slider is 50% of the
+wave output, about where the CD line sat against the effects; the number
+is `GAIN` in `asm/music.asm` if it isn't right for you.
 
 ## Status
 

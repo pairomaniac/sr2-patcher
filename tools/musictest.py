@@ -296,18 +296,16 @@ def main(argv):
     assert log['strings'][-1] == 'play sr2bgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
     assert log['waits'] and set(log['waits']) == {HDONE}, 'the hook waits only on the done event'
 
-    # The volume: applied on every status poll to each handle on the list;
-    # the slider's 0..10000 becomes a waveOut volume, and getvolume reads
-    # it back.
-    handles = [0, 0xFF00, 0xFF01, 0xFF02, 0xFF03, 0xC000, 0xC001, 0xC002, 0xC003]
+    # The volume: the slider's 0..10000 becomes a waveOut volume, scaled
+    # by GAIN and applied to each handle on the list; getvolume reads the
+    # slider back.
+    handles = [0, 0xFF00, 0xFF01, 0xC000]
+    GAIN = 32768
 
     def applied():
         assert [h for h, _v in log['volume']] == handles * (len(log['volume']) // len(handles)), log['volume']
         return [v for h, v in log['volume'] if h == 0xFF00]
 
-    log['volume'] = []
-    call(hook, 0xFACE, 0x814, 0x100, P)
-    assert applied() == [0xFFFFFFFF], log['volume']
     V = STACK + 0x300
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))
     assert call(hook + 20, 0x1234, V, 0x80000000) == 0
@@ -315,20 +313,20 @@ def main(argv):
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))        # the slider at half
     log['volume'] = []
     assert call(hook + 15, 0x1234, V, 0) == 0
-    assert applied() == [0x7FFF7FFF], log['volume']
+    half = GAIN * 5000 // 10000
+    assert applied() == [half | half << 16], log['volume']
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 12000, 12000))      # over the top clamps
     call(hook + 15, 0x1234, V, 0)
-    assert applied()[-1] == 0xFFFFFFFF
+    assert applied()[-1] == GAIN | GAIN << 16
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))              # no channels: keeps it
-    assert call(hook + 15, 0x1234, V, 0) == 0 and applied()[-1] == 0xFFFFFFFF
+    assert call(hook + 15, 0x1234, V, 0) == 0 and applied()[-1] == GAIN | GAIN << 16
     call(hook + 20, 0x1234, V, 0x80000000)
     assert struct.unpack_from('<III', mu.mem_read(V, 20), 8) == (2, 10000, 10000), 'getvolume after the clamp'
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 0, 0))
     call(hook + 15, 0x1234, V, 0)
     log['volume'] = []
     call(hook, 0xFACE, 0x814, 0x100, P)
-    call(hook, 0xFACE, 0x814, 0x100, P)
-    assert applied() == [0, 0], 'applied on every poll: %r' % log['volume']
+    assert log['volume'] == [], 'a poll applied the volume: %r' % log['volume']
 
     # After a play, the worker settles the volume: retries with Sleep until
     # a handle takes it. Here the third try on 0xFF00 succeeds.
