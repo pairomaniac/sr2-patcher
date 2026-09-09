@@ -303,11 +303,14 @@ def main(argv):
     assert log['strings'][-1] == 'play sr2bgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
     assert log['waits'] and set(log['waits']) == {HDONE}, 'the hook waits only on the done event'
 
-    # The volume: the slider's 0..10000 becomes a waveOut volume, scaled
-    # by GAIN and applied to each handle on the list; getvolume reads the
-    # slider back.
+    # The volume: the slider's 0..10000 is a step 0..9 times 1111, mapped
+    # to a waveOut amplitude on the effects' dB curve and applied to each
+    # handle on the list; getvolume reads the slider back.
     handles = [0, 0xFF00, 0xFF01, 0xC000]
-    GAIN = 32768
+    CURVE = [0, 825, 1308, 2072, 3285, 5206, 8250, 13076, 20724, 32845]
+
+    def both(a):
+        return a | a << 16
 
     def applied():
         assert [h for h, _v in log['volume']] == handles * (len(log['volume']) // len(handles)), log['volume']
@@ -317,16 +320,18 @@ def main(argv):
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))
     assert call(hook + 20, 0x1234, V, 0x80000000) == 0
     assert struct.unpack_from('<III', mu.mem_read(V, 20), 8) == (2, 10000, 10000), 'getvolume before any set'
-    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))        # the slider at half
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 4444, 4444))        # step 4
     log['volume'] = []
     assert call(hook + 15, 0x1234, V, 0) == 0
-    half = GAIN * 5000 // 10000
-    assert applied() == [half | half << 16], log['volume']
+    assert applied() == [both(CURVE[4])], log['volume']
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))        # between steps: the nearer
+    call(hook + 15, 0x1234, V, 0)
+    assert applied()[-1] == both(CURVE[5])
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 12000, 12000))      # over the top clamps
     call(hook + 15, 0x1234, V, 0)
-    assert applied()[-1] == GAIN | GAIN << 16
+    assert applied()[-1] == both(CURVE[9])
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))              # no channels: keeps it
-    assert call(hook + 15, 0x1234, V, 0) == 0 and applied()[-1] == GAIN | GAIN << 16
+    assert call(hook + 15, 0x1234, V, 0) == 0 and applied()[-1] == both(CURVE[9])
     call(hook + 20, 0x1234, V, 0x80000000)
     assert struct.unpack_from('<III', mu.mem_read(V, 20), 8) == (2, 10000, 10000), 'getvolume after the clamp'
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 0, 0))

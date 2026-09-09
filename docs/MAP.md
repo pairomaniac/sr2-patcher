@@ -175,6 +175,7 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2t` |
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
 | bgmvol | 1 + section | `MGSound.dll` `0x10006980` (file `0x6980`, 6 bytes), the appended `.sr2b` |
+| sfxlevel | 3 | Australian exe `0x4b32cb`, `0x4b332e`, `0x4b3382` (files `0xb26cb`, `0xb272e`, `0xb2782`) |
 | win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |

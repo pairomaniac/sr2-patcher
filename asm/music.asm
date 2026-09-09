@@ -27,8 +27,9 @@
 ; command against waveaudio, and the same MCI subsystem does the work.
 ;
 ; The BGM slider's two methods are pointed here as well: getvolume and
-; setvolume, the volume applied to the wave stream by the worker after
-; each play. README.md has the account.
+; setvolume, the latter mapping the slider step to a waveOut amplitude on
+; the same dB curve the game uses for its effects, applied to the wave
+; stream by the worker after each play. README.md has the account.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -45,7 +46,6 @@ bits 32
 %define MAGIC_GETMODFN  0xE5E5E5E5      ; offset to the GetModuleFileNameA IAT slot
 
 %define FAKE_ID         0xFACE
-%define GAIN            32768           ; 0.5 of 65535: the level at full slider
 
 %define MCI_OPEN        0x803
 %define MCI_CLOSE       0x804
@@ -405,10 +405,15 @@ setvolume:
         mov     eax, 10000
 .scale:
         mov     [ebx + D_VOL10K], eax
-        imul    eax, eax, GAIN
+        add     eax, 555                ; the slider step, 0..9, the value was made from
         xor     edx, edx
-        mov     ecx, 10000
+        mov     ecx, 1111
         div     ecx
+        cmp     eax, 9
+        jbe     .step
+        mov     eax, 9
+.step:
+        movzx   eax, word [ebx + S_CURVE + eax * 2]
         mov     edx, eax
         shl     edx, 16
         or      eax, edx                ; both channels
@@ -873,8 +878,10 @@ D_ODS       dd 0                        ; OutputDebugStringA
 D_PLAYED    dd 0                        ; a play was just sent: settle the volume
 D_TRACE     dd 0                        ; music\trace exists: report every command
 D_TRC       times 96 db 0
-D_VOL       dd GAIN | GAIN << 16        ; the slider, as a waveOut volume; full until set
+D_VOL       dd 2152562765                  ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
+S_CURVE     dw 0, 825, 1308, 2072, 3285, 5206, 8250, 13076, 20724, 32845
+            ; waveOut amplitude per slider step: -42 dB + 4 dB a step, 0 off
 S_HANDLES   dd 0                        ; Windows: device 0
             dd 0xFF00, 0xFF01           ; Wine: mapper streams 0 and 1
             dd 0xC000                   ; Wine: device 0 stream 0

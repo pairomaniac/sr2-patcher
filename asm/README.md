@@ -21,7 +21,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | ALT+ENTER between the borderless window and a framed one |
 | `voltrace.asm` | diagnostic, applied by name: five volume entry points in the exe report their arguments through `OutputDebugStringA` |
-| `bgmvol.asm` | in `MGSound.dll`: the streamed music `ATTEN` hundredths of a dB below the level given, in the streaming buffer's `SetVolume` |
+| `bgmvol.asm` | in `MGSound.dll`: the streamed music on the effects' volume curve, `OFFSET` under it, in the streaming buffer's `SetVolume` |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | - | the `mixerless` stub is three instructions, written by `apply_mixerless` in the patcher rather than assembled here |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |
@@ -95,7 +95,7 @@ exe first asks the get-volume method for the current level and divides
 it by 100 for its scale; both fail without a mixer. Both entries jump
 into the blob: `getvolume` reports the level the blob holds on the
 0..10000 scale, `setvolume` keeps what arrives as a `waveOutSetVolume`
-value scaled by `GAIN` (0.5 at full). `mciwave` opens the wave device
+amplitude on the effects' dB curve less 6 dB, from `S_CURVE`, ten entries for the ten slider steps. `mciwave` opens the wave device
 on play, on its own thread, so after each play the worker retries the
 volume every 4 ms, up to 400 ms, until a handle takes it. Windows takes
 device id 0; Wine takes only the handles it builds from indices, `0xFF00`

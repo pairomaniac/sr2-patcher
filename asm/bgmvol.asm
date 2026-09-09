@@ -1,23 +1,37 @@
-; bgmvol.asm - the streamed music a few dB down, in MGSound.dll.
+; bgmvol.asm - the streamed music on the effects' volume curve, in MGSound.dll.
 ;
 ; Every path that sets a stream's level - the exe's, and each screen
 ; DLL's copy of the same client code - ends in the streaming buffer's
-; SetVolume (0x10006940): a 0..10000 value becomes min + (max-min) *
-; value / 10000 in hundredths of a dB, then goes to the DirectSound
-; buffer. Streams get a narrower, higher range than the effects, so the
-; same slider value lands them louder. The mapping's last step becomes
-; a call here, which takes ATTEN off the result, floored at -10000. The
-; site tests the flags of the last instruction here; ret keeps them.
+; SetVolume (0x10006940), with the slider step times 1111 as a 0..10000
+; value, which it maps across the stream's own dB range. The effects
+; and the announcer follow -36 dB + 4 dB a step; the streams did not,
+; so the sliders meant different things. The mapping's last step
+; becomes a call here, which puts the step on the effects' curve less
+; OFFSET, 0 being off. The site tests the flags of the last instruction
+; here; ret keeps them. ebx is the value, kept; ecx is kept too.
 
 bits 32
 
-%define ATTEN           600             ; hundredths of a dB below the level given
+%define OFFSET          600             ; hundredths of a dB under the effects' curve
+%define STEP            400
+%define BOTTOM          (-3600 - OFFSET)
 
-        add     edx, esi                ; the mapping's last step, displaced
-        sub     edx, ATTEN
-        cmp     edx, -10000
-        jge     .in
-        mov     edx, -10000
-.in:    mov     esi, edx
+        push    ecx
+        lea     eax, [ebx + 555]        ; the step the value was made from, rounded
+        xor     edx, edx
+        mov     ecx, 1111
+        div     ecx
+        pop     ecx
+        cmp     eax, 9
+        jbe     .step
+        mov     eax, 9
+.step:
+        test    eax, eax
+        jz      .off
+        imul    edx, eax, STEP
+        add     edx, BOTTOM
+        jmp     .out
+.off:   mov     edx, -10000
+.out:   mov     esi, edx
         test    esi, esi
         ret
