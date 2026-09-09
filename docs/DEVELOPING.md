@@ -67,7 +67,7 @@ Code goes in `asm/`, as a transform. The shapes:
 
 - a section appended, sites pointed at it with `_branch`: `altab`,
   `textcolor`, `windowed`, `altenter` in the exe; `titlebg` in
-  `Title.dll`, `mixerless` in `MGAudio.dll`, `bgmvol` in `MGSound.dll`.
+  `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll`.
   The European and Australian exes have room for exactly four appended
   sections, all taken; a further exe stub has to go in the slack at the
   end of `.text` (0x136 bytes European, 0x166 Australian);

@@ -56,10 +56,10 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
-                  'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc, 'mixrange': (0x72c50, 0x6e940),
+                  'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
-                  'bgmvol': 0x6980},        # in MGSound.dll: the streaming buffer's SetVolume
+                  'mix': (0x439f, 0x6980)},  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
         # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
@@ -83,8 +83,8 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
-                  'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c, 'mixrange': (0x73080, 0x6ed60),
-                  'volume': 0x1db0, 'getvolume': 0x1e40, 'bgmvol': 0x6980},
+                  'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
+                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
@@ -107,9 +107,9 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
-                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'mixrange': (0xb2270, 0xade70),
+                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
-                  'bgmvol': 0x6980,
+                  'mix': (0x439f, 0x6980),
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782)},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
@@ -146,8 +146,7 @@ RESTORE_RELOCS = 10
 # the European build's; docs/NOTES.md has the account of each.
 #
 #   mixerless   MGAudio Init without a mixer CD line (Australian)
-#   mixrange    the effects' dB range MIX_MIN..MIX_MAX, the sliders' 3.5 dB steps
-#   bgmvol      MGSound's streaming SetVolume on the effects' curve, OFFSET dB above
+#   mix         MGSound: every buffer's dB range remapped to -43..-8, the streams on the same curve
 #   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian)
 #   win9x       the Windows 9x check returns "fine" (Australian)
 #   nodisc      the disc check returns "found"; the loader takes the exe's directory
@@ -164,10 +163,6 @@ RESTORE_RELOCS = 10
 #   altenter    ALT+ENTER toggles a framed window
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
 #   voltrace    diagnostic, by name only: volume calls reported on +debugstr
-
-# The effects' dB range, hundredths: the sliders map (step+1)/10 of it.
-# The music curves in asm/ are derived from these two numbers.
-MIX_MIN, MIX_MAX = -4300, -800
 
 # The first bytes of the five volume entry points voltrace hooks.
 VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),
@@ -216,10 +211,8 @@ def patches(build):
         'borderless': ('MUSASHI\\MGameD3D.dll', (
             (0x4d7b, bytes.fromhex('8b0df8230110'), None),
             (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
-        'bgmvol': ('MUSASHI\\MGSound.dll', ((site['bgmvol'], bytes.fromhex('03d68bf285f6'), None),), 'apply_bgmvol'),
-        'mixrange': (EXE, ((site['mixrange'][0], bytes.fromhex('c7462c60f0ffff'), bytes.fromhex('c7462c') + struct.pack('<i', MIX_MIN)),
-                           (site['mixrange'][0] + 13, b'\x68' + struct.pack('<i', -4000), b'\x68' + struct.pack('<i', MIX_MIN)),
-                           (site['mixrange'][1], bytes.fromhex('558bec51894dfc'), b'\xb8' + struct.pack('<i', MIX_MAX) + b'\xc3\x90')), None),
+        'mix': ('MUSASHI\\MGSound.dll', ((site['mix'][0], bytes.fromhex('8b4c240c8b542410'), None),
+                                        (site['mix'][1], bytes.fromhex('03d68bf285f6'), None)), 'apply_mix'),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
     }
@@ -494,9 +487,10 @@ ALTENTER_BLOB = bytes.fromhex(
     '696e646f77004765744d6f6e69746f72496e666f41008501000094010000a101'
     '0000b4010000c601000000900000000000000000000000000000000000000000'
 )
-BGMVOL_BLOB = bytes.fromhex(
-    '518d832b02000031d2b957040000f7f15983f8097605b80900000085c0741269'
-    'd05e01000081c2bef1ffff780931d2eb05baf0d8ffff89d685f6c3'
+MIX_BLOB = bytes.fromhex(
+    '8b4c24108b5424146bc907c1f90381e9200300006bd207c1fa0381ea20030000'
+    'c3518d832b02000031d2b957040000f7f15983f8097605b80900000085c0740e'
+    '69d05e01000081c2bef1ffffeb05baf0d8ffff89d685f6c3'
 )
 VOLTRACE_BLOB = bytes.fromhex(
     'e9bb000000e9c9000000e9da000000e9e7000000e9f80000006083ec5089e7e8'
@@ -1224,16 +1218,19 @@ def apply_mixerless(buf, build):
     return out
 
 
-BGMVOL_SECTION = b'.sr2b'
+MIX_SECTION = b'.sr2b'
+MIX_STREAM = 33                                  # the second routine in mix.asm
 
 
-def apply_bgmvol(buf, build):
-    """bgmvol.asm in MGSound.dll: the 6 bytes that finish the dB mapping
-    in the streaming buffer's SetVolume, and set the flags the branch
-    after them tests, become a call to it, which maps the slider step
-    itself."""
-    out, rva = append_section(buf, BGMVOL_SECTION, BGMVOL_BLOB, chars=CODE_SECTION)
-    _branch(out, BUILDS[build]['sites']['bgmvol'], rva, 6)
+def apply_mix(buf, build):
+    """mix.asm in MGSound.dll: the buffer's SetRange loads min and max
+    through the first routine (8 bytes), the streaming buffer's SetVolume
+    finishes its mapping through the second (6 bytes, whose flags the
+    branch after them tests)."""
+    sites = BUILDS[build]['sites']['mix']
+    out, rva = append_section(buf, MIX_SECTION, MIX_BLOB, chars=CODE_SECTION)
+    _branch(out, sites[0], rva, 8)
+    _branch(out, sites[1], rva + MIX_STREAM, 6)
     return out
 
 
@@ -1511,6 +1508,8 @@ def selfcheck():
                         raise ValueError('%s and %s both write %s:0x%x' % (key, taken[(name, i)], name, i))
                     taken[(name, i)] = key
             sites += len(ss)
+        if MIX_BLOB[MIX_STREAM] != 0x51:               # `push ecx` opens the stream routine
+            raise ValueError('mix.asm: the stream routine is not at +%d' % MIX_STREAM)
         for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB, TEXTCOLOR_BLOB):
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
