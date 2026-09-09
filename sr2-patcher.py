@@ -100,7 +100,7 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
-                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2},
+                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
@@ -131,6 +131,9 @@ RESTORE_RELOCS = 10
 # file after its sites and may grow it. Applied in this order. Addresses
 # in the comments are the European build's.
 #
+# win9x:   the Australian build only. Its startup checks GetVersionExA's
+#          dwPlatformId for Windows 9x (0x44bfb0) and refuses to run on
+#          anything else; the check returns 0, "fine", at once.
 # nodisc:  two sites. The startup check that scans CD-ROM drives for the
 #          play disc (0x4273c0) returns 0, "found", at once; and the loader
 #          constructor (0x47632e) copies the exe's directory into the
@@ -206,7 +209,7 @@ def patches(build):
     def slot(name):
         return struct.pack('<I', row['slots'][name])
 
-    return {
+    table = {
         'nodisc': (EXE, (
             (site['check'], bytes.fromhex('8b442404'), bytes.fromhex('31c0c3')),
             (site['loader'],
@@ -239,9 +242,13 @@ def patches(build):
             (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
         'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
     }
+    if 'oscheck' in site:
+        table['win9x'] = (EXE, ((site['oscheck'], bytes.fromhex('81ec94000000'), bytes.fromhex('31c0c3')),), None)
+    return table
 
 
-PATCH_KEYS = tuple(patches('European'))
+# Every patch any build has, in table order.
+PATCH_KEYS = tuple(dict.fromkeys(k for b in BUILDS for k in patches(b)))
 
 # The mciSendCommandA sites in MGAudio.dll: 11 `call dword [slot]`, and
 # one `mov esi, dword [slot]` in the open routine, which then calls esi.
@@ -1219,7 +1226,7 @@ def patch(dest, log=print, keys=PATCH_KEYS):
     log('patch: %s build' % build)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
-        wanted = [table[key] for key in keys if table[key][0] == name]
+        wanted = [table[key] for key in keys if key in table and table[key][0] == name]
         sites = [site for _f, ss, _t in wanted for site in ss]
         transforms = [globals()[t] for _f, _s, t in wanted if t]
         if not sites and not transforms:
@@ -1244,7 +1251,7 @@ def patch(dest, log=print, keys=PATCH_KEYS):
             buf = transform(buf, build)
         with open(path, 'wb') as fh:
             fh.write(buf)
-        log('patch: %s written, %s' % (name, ', '.join(k for k in keys if table[k][0] == name)))
+        log('patch: %s written, %s' % (name, ', '.join(k for k in keys if k in table and table[k][0] == name)))
 
 
 def restore(dest, log=print):

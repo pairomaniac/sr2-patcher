@@ -61,6 +61,7 @@ that is not an unmodified copy of it.
 
 | Fix | What you'd see without it |
 | --- | --- |
+| **Windows 9x check** | The Australian release refuses to start with "Please run on Windows 9x." on anything newer. The other two never had the check. |
 | **No disc required** | An "insert the play disc" box at startup, and a menu with everything but multiplayer greyed out. The game now finds everything in its own folder. |
 | **Startup crash** | Under Proton the game closes before its window appears. A renderer bug that Proton's DirectDraw does not forgive. |
 | **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |

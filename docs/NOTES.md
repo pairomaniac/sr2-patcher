@@ -13,6 +13,7 @@ Australian releases map onto it; *Builds* says how far.
 
 | Patch | File | Offsets | Change |
 | --- | --- | --- | --- |
+| **Windows 9x check** (Australian only) | `SEGA RALLY 2.exe` | `0x4b3b0` | `0x44bfb0`, which puts up "Please run on Windows 9x." unless `GetVersionExA` reports `dwPlatformId` 1, returns 0 at once (`sub esp,0x94` → `xor eax,eax; ret`); the other builds have no such check and do not import `GetVersionExA` |
 | **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
 | **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
@@ -261,6 +262,7 @@ went into the table:
 | European | American | Australian | |
 | --- | --- | --- | --- |
 | `0x267c0` | `0x26a80` | `0x4b420` | the disc check |
+| - | - | `0x4b3b0` | the Windows 9x check, Australian only |
 | `0x7572e` | `0x75b5e` | `0xb4dbe` | the loader's drive scan; the epilogue is 0xcf past the jump in all three |
 | `0x25ff7` | `0x262a7` | `0x4abfd` | `call` resume in the window procedure |
 | `0x273e6` | `0x276a6` | `0x4c026` | the fullscreen flag |
