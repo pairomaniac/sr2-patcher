@@ -37,7 +37,7 @@ In file order:
 | Text-colour patch | `apply_textcolor` |
 | Windowed patch | `BGROW_LEN`, `apply_windowed` |
 | ALT+ENTER patch | `apply_altenter` |
-| Mix patch | `MIX_STREAM`, `apply_mix` |
+| Mix patch | `MIX_FULL`, `MIX_STREAM`, `apply_mix` |
 | No-mixer patch | `apply_mixerless` |
 | Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
 | Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
@@ -174,8 +174,7 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
 | titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2t` |
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
-| mix | 2 + section | `MGSound.dll` `0x1000439f` (file `0x439f`, 8 bytes), `0x10006980` (file `0x6980`, 6 bytes), the appended `.sr2b` |
-| sfxlevel | 3 | Australian exe `0x4b32cb`, `0x4b332e`, `0x4b3382` (files `0xb26cb`, `0xb272e`, `0xb2782`) |
+| mix | 3 + section | `MGSound.dll` `0x1000439f` (file `0x439f`, 8 bytes), `0x100041dc` (file `0x41dc`, 7 bytes), `0x10006980` (file `0x6980`, 6 bytes), the appended `.sr2b` |
 | win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
@@ -191,6 +190,6 @@ it, which is why a fix for the settings-menu music has to live here.
 |---|---|
 | `0x10006940` | the streaming buffer's `SetVolume(this, value)`: `min + (max−min) × value / 10000` in dB (`min` at `+0xdc`, `max` at `+0xe0`) into `IDirectSoundBuffer::SetVolume`; `0x6980` finishes the mapping, a `mix` site |
 | `0x10004380` | the buffer's `SetRange(this, min, max)`: stores them and re-applies the current level; `0x439f` loads them, a `mix` site |
-| `0x1000422e` region | the ordinary buffer's `SetVolume`, the effects and the announcer; untouched |
+| `0x100041c0` | the buffer's `SetVolume(this, value)`, the effects and the announcer: `min + (max−min) × value / 10000`; `0x41dc` loads the value, a `mix` site |
 | `0x10005d36` | the streaming buffer's `SetParameters`: bit 2 of the struct's `+4` is the volume, its value at `+0xc` |
 | `0x1001138e` | `CMGameSoundBuffer::SetVolume... volume overflow!` - the range check |

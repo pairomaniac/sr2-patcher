@@ -59,7 +59,7 @@ BUILDS = {
                   'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
-                  'mix': (0x439f, 0x6980)},  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
+                  'mix': (0x439f, 0x41dc, 0x6980)},  # in MGSound.dll: the buffer's SetRange and SetVolume, the stream's SetVolume
         # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
@@ -84,7 +84,7 @@ BUILDS = {
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
                   'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
-                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980)},
+                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x41dc, 0x6980)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
@@ -109,15 +109,14 @@ BUILDS = {
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
-                  'mix': (0x439f, 0x6980),
-                  'sfxlevel': (0xb26cb, 0xb272e, 0xb2782)},
+                  'mix': (0x439f, 0x41dc, 0x6980)},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
         'slots': {'SetTextColor': 0x4d402c, 'GetLogicalDriveStringsA': 0x4d4198, 'lstrcpyA': 0x4d40fc,
                   'LoadLibraryA': 0x4d4094, 'GetProcAddress': 0x4d40f8},
         'addresses': {'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
-                      'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc, 'SETTINGS': 0x5759ac},
+                      'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc},
     },
 }
 
@@ -146,8 +145,7 @@ RESTORE_RELOCS = 10
 # the European build's; docs/NOTES.md has the account of each.
 #
 #   mixerless   MGAudio Init without a mixer CD line (Australian)
-#   mix         MGSound: every buffer's dB range remapped to -43..-8, the streams on the same curve
-#   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian)
+#   mix         MGSound: every buffer's dB range remapped to -43..-8, every level at its ceiling, the streams on the same curve
 #   win9x       the Windows 9x check returns "fine" (Australian)
 #   nodisc      the disc check returns "found"; the loader takes the exe's directory
 #   zdetach     DeleteAttachedSurface(0, NULL) calls removed (Proton crash)
@@ -212,7 +210,8 @@ def patches(build):
             (0x4d7b, bytes.fromhex('8b0df8230110'), None),
             (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
         'mix': ('MUSASHI\\MGSound.dll', ((site['mix'][0], bytes.fromhex('8b4c240c8b542410'), None),
-                                        (site['mix'][1], bytes.fromhex('03d68bf285f6'), None)), 'apply_mix'),
+                                        (site['mix'][1], bytes.fromhex('8b9c2410010000'), None),
+                                        (site['mix'][2], bytes.fromhex('03d68bf285f6'), None)), 'apply_mix'),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
     }
@@ -221,11 +220,6 @@ def patches(build):
     if 'voltrace' in site:
         table['voltrace'] = (EXE, tuple((off, VOLTRACE_HEADS[i], None) for i, (off, _n) in enumerate(site['voltrace'])),
                              'apply_voltrace')
-    if 'sfxlevel' in site:
-        table['sfxlevel'] = (EXE, tuple(
-            (off, bytes.fromhex('8b15') + struct.pack('<I', row['addresses']['SETTINGS']) + bytes.fromhex('8b42' + ('68' if i == 1 else '64')),
-             bytes.fromhex('b809000000') + b'\x90' * 4)
-            for i, off in enumerate(site['sfxlevel'])), None)
     if 'mixer' in site:
         table['mixerless'] = ('MUSASHI\\MGAudio.dll', ((site['mixer'], bytes.fromhex('0f8530010000'), None),),
                               'apply_mixerless')
@@ -489,8 +483,9 @@ ALTENTER_BLOB = bytes.fromhex(
 )
 MIX_BLOB = bytes.fromhex(
     '8b4c24108b5424146bc907c1f90381e9200300006bd207c1fa0381ea20030000'
-    'c3518d832b02000031d2b957040000f7f15983f8097605b80900000085c0740e'
-    '69d05e01000081c25af1ffffeb05baf0d8ffff89d685f6c3'
+    'c38b9c241401000085db7405bb10270000c3518d832b02000031d2b957040000'
+    'f7f15983f8097605b80900000085c0740e69d05e01000081c25af1ffffeb05ba'
+    'f0d8ffff89d685f6c3'
 )
 VOLTRACE_BLOB = bytes.fromhex(
     'e9bb000000e9c9000000e9da000000e9e7000000e9f80000006083ec5089e7e8'
@@ -1219,18 +1214,20 @@ def apply_mixerless(buf, build):
 
 
 MIX_SECTION = b'.sr2b'
-MIX_STREAM = 33                                  # the second routine in mix.asm
+MIX_FULL, MIX_STREAM = 33, 50                    # the second and third routines in mix.asm
 
 
 def apply_mix(buf, build):
     """mix.asm in MGSound.dll: the buffer's SetRange loads min and max
-    through the first routine (8 bytes), the streaming buffer's SetVolume
-    finishes its mapping through the second (6 bytes, whose flags the
-    branch after them tests)."""
+    through the first routine (8 bytes), the buffer's SetVolume its value
+    through the second (7), and the streaming buffer's SetVolume finishes
+    its mapping through the third (6 bytes, whose flags the branch after
+    them tests)."""
     sites = BUILDS[build]['sites']['mix']
     out, rva = append_section(buf, MIX_SECTION, MIX_BLOB, chars=CODE_SECTION)
     _branch(out, sites[0], rva, 8)
-    _branch(out, sites[1], rva + MIX_STREAM, 6)
+    _branch(out, sites[1], rva + MIX_FULL, 7)
+    _branch(out, sites[2], rva + MIX_STREAM, 6)
     return out
 
 
@@ -1508,8 +1505,8 @@ def selfcheck():
                         raise ValueError('%s and %s both write %s:0x%x' % (key, taken[(name, i)], name, i))
                     taken[(name, i)] = key
             sites += len(ss)
-        if MIX_BLOB[MIX_STREAM] != 0x51:               # `push ecx` opens the stream routine
-            raise ValueError('mix.asm: the stream routine is not at +%d' % MIX_STREAM)
+        if MIX_BLOB[MIX_FULL:MIX_FULL + 2] != b'\x8b\x9c' or MIX_BLOB[MIX_STREAM] != 0x51:
+            raise ValueError('mix.asm: the routines are not at +%d and +%d' % (MIX_FULL, MIX_STREAM))
         for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB, TEXTCOLOR_BLOB):
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
