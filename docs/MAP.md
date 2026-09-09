@@ -30,7 +30,7 @@ In file order:
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |
-| Music patch | `append_section`, `append_text`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
+| Music patch | `append_section`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Managed textures | `apply_managed` |
 | Restore-all patch | `apply_restore` |
 | Activation patch | `exe_blob`, `_check_call`, `apply_activate` |

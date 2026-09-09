@@ -79,8 +79,8 @@ Code rather than bytes goes in `asm/` and is a transform. The shapes:
   `altab`, `textcolor`, `windowed`, `altenter`; `titlebg` the same in
   `Title.dll`, `mixerless` in `MGAudio.dll`, `bgmvol` in `MGSound.dll`.
   The European and Australian exes have room for exactly four appended
-  sections, all taken; a further small exe stub goes in the slack at the
-  end of `.text` with `append_text`;
+  sections, all taken; a further exe stub would have to go in the slack
+  at the end of `.text` (0x136 bytes European, 0x166 Australian);
 - a section appended to a relocated DLL, the blob finding its own base and
   a placeholder filled at apply time: `music`, `borderless`;
 - a routine rewritten in place: `restoreall`;

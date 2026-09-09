@@ -1045,23 +1045,6 @@ def append_section(buf, name, data, chars=CODE_SECTION | 0x80000040):
     return out, rva
 
 
-def append_text(buf, data):
-    """Place data in the slack at the end of .text - the bytes between its
-    virtual and raw sizes, mapped and executable but used by nothing - and
-    grow the virtual size over it. For a stub too small to spend one of
-    the four section-table slots the European and Australian headers
-    have. Returns (buffer, RVA)."""
-    pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
-    table = pe_off + 24 + struct.unpack_from('<H', buf, pe_off + 20)[0]
-    vsize, va, rsize, raw = struct.unpack_from('<IIII', buf, table + 8)
-    if vsize + len(data) > rsize:
-        raise ValueError('no room at the end of .text')
-    out = bytearray(buf)
-    out[raw + vsize:raw + vsize + len(data)] = data
-    struct.pack_into('<I', out, table + 8, vsize + len(data))
-    return out, va + vsize
-
-
 def _rva_to_off(buf, rva):
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     nsec = struct.unpack_from('<H', buf, pe_off + 6)[0]
