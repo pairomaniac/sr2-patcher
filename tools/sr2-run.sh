@@ -2,16 +2,20 @@
 # Run the installed game the way Faugus does, from a terminal, with the log
 # kept. Reads ~/.sr2-test, which stays on this machine:
 #
-#   SR2_GAME     the install folder
-#   SR2_PFX      its Wine prefix (Faugus keeps them under ~/Faugus/<game>)
+#   SR2_GAME_EU  the install folder, one per build (EU, US, AU)
+#   SR2_DISC_EU  its install disc, for tools/check.py
+#   SR2_PFX      the Wine prefix (Faugus keeps them under ~/Faugus/<game>);
+#                SR2_PFX_EU and so on for one per build
 #   SR2_UMU      umu-run, if not on PATH
 #   SR2_PROTON   Proton directory; a Proton-CachyOS build is looked for
 #                under ~/.steam/root/compatibilitytools.d when unset
 #   SR2_WINE     plain wine instead of umu, for a normal prefix
 #
-#     tools/sr2-run.sh            run; the Wine log goes to logs/sr2.log
-#     tools/sr2-run.sh debug      and +seh,+loaddll,+mci (edit for more)
-#     tools/sr2-run.sh show       print what it would use and exit
+#     tools/sr2-run.sh [eu|us|au]         run; the Wine log goes to logs/sr2.log
+#     tools/sr2-run.sh [eu|us|au] debug   and +seh,+loaddll,+mci (edit for more)
+#     tools/sr2-run.sh [eu|us|au] show    print what it would use and exit
+#
+# The build defaults to eu.
 #
 # logs/ is in the repository root and gitignored. Under umu, Proton writes
 # Wine's output to a file of its own rather than the terminal (PROTON_LOG);
@@ -27,8 +31,14 @@ LOG=$LOGS/sr2.log
 
 die() { echo "sr2-run: $*" >&2; exit 1; }
 
-GAME=${SR2_GAME:-}
-PFX=${SR2_PFX:-}
+case "${1:-}" in
+    eu|us|au) BUILD=${1^^}; shift ;;
+    *) BUILD=EU ;;
+esac
+game_var=SR2_GAME_$BUILD
+pfx_var=SR2_PFX_$BUILD
+GAME=${!game_var:-}
+PFX=${!pfx_var:-${SR2_PFX:-}}
 UMU=${SR2_UMU:-$(command -v umu-run || true)}
 PROTON=${SR2_PROTON:-}
 WINE=${SR2_WINE:-}
@@ -42,15 +52,16 @@ find_proton() {
     echo "$newest"
 }
 
-[ -n "$GAME" ] || die "set SR2_GAME in $CONF"
+[ -n "$GAME" ] || die "set $game_var in $CONF"
 [ -f "$GAME/$EXE" ] || die "no $EXE in $GAME"
-[ -n "$PFX" ] || die "set SR2_PFX in $CONF"
+[ -n "$PFX" ] || die "set SR2_PFX or $pfx_var in $CONF"
 
 mode=${1:-run}
 debug=""
 [ "$mode" = debug ] && debug="+seh,+loaddll,+mci"
 
 if [ "$mode" = show ]; then
+    echo "  build:  $BUILD"
     echo "  game:   $GAME"
     echo "  prefix: $PFX"
     if [ -n "$WINE" ]; then

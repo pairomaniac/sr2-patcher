@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """Run every check in the project.
 
-    python3 tools/check.py                    # everything that needs no game
-    python3 tools/check.py data1.cab          # and the cabinet reader on a real cab
-    python3 tools/check.py data1.cab GAMEDIR  # and compare it with an installed game
+    python3 tools/check.py                    # everything; discs and games from ~/.sr2-test
+    python3 tools/check.py data1.cab          # the cabinet reader on this cab instead
+    python3 tools/check.py data1.cab GAMEDIR  # and compare it with this installed game
+
+~/.sr2-test (see tools/sr2-run.sh) may name, per build, the install disc
+and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the same with US
+and AU. Each that is set runs the cab, music and altab checks below on
+that build.
 
 tables  a patch site outside the file, two patches on one byte, a
-        replacement longer than the original
+        replacement longer than the original, a placeholder left in a
+        stub
 asm     asm/ edited without asm/build.py being run; skipped without nasm
 lint    pyflakes: unused and undefined names
 cab     the IS5 reader misreading a real data1.cab; skipped without one
@@ -27,6 +33,25 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 PY = sys.executable or 'python3'
+CONF = os.path.expanduser('~/.sr2-test')
+BUILDS = ('EU', 'US', 'AU')
+
+
+def config():
+    """KEY=VALUE lines of ~/.sr2-test, quotes and ~ resolved."""
+    out = {}
+    if not os.path.isfile(CONF):
+        return out
+    with open(CONF) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            key = key.replace('export ', '').strip()
+            value = value.strip().strip('"\'')
+            out[key] = os.path.expanduser(value.replace('$HOME', '~'))
+    return out
 
 
 def run(name, cmd):
@@ -49,15 +74,20 @@ def main(argv):
     ok &= run('fullwin', [PY, 'tools/fullwintest.py'])
     ok &= run('altenter', [PY, 'tools/altentertest.py'])
     if len(argv) > 1:
-        ok &= run('cab', [PY, 'tools/cabtest.py'] + argv[1:])
+        targets = [('', argv[1], argv[2] if len(argv) > 2 else None)]
     else:
-        print('== cab\n   skipped: no data1.cab given')
-    if len(argv) > 2:
-        ok &= run('music', [PY, 'tools/musictest.py', argv[2]])
-        ok &= run('altab', [PY, 'tools/activatetest.py', argv[2]])
-    else:
-        print('== music\n   skipped: no game folder given')
-        print('== altab\n   skipped: no game folder given')
+        conf = config()
+        targets = [(b, conf.get('SR2_DISC_' + b), conf.get('SR2_GAME_' + b)) for b in BUILDS]
+        targets = [t for t in targets if t[1] or t[2]]
+    if not targets:
+        print('== cab, music, altab\n   skipped: no disc or game given, none in %s' % CONF)
+    for build, disc, game in targets:
+        tag = ' ' + build if build else ''
+        if disc:
+            ok &= run('cab' + tag, [PY, 'tools/cabtest.py', disc] + ([game] if game else []))
+        if game:
+            ok &= run('music' + tag, [PY, 'tools/musictest.py', game])
+            ok &= run('altab' + tag, [PY, 'tools/activatetest.py', game])
     return 0 if ok else 1
 
 
