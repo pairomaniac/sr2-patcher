@@ -12,6 +12,7 @@ says where to look.
 | `asm/` | `music.asm` the music hook, `activate.asm` the alt-tab stub, `restore.asm` the restore-all routine; `build.py` assembles them into `sr2-patcher.py` |
 | `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check, `tools/musictest.py` and `tools/activatetest.py` the two blobs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
+| `tools/discsurvey.py` | hashes every file in one or more install discs, checks the fingerprints and lists what differs between the discs |
 | `tools/sr2-run.sh` | runs the installed game under umu or wine with the log in `logs/`; paths in `~/.sr2-test` |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
