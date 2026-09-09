@@ -103,11 +103,11 @@ def main(argv):
     # Import slots -> stubs. Each stub is `ret N` at STUBS + 0x10 * k.
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'mciSendCommandA',
              'mciSendStringA', 'CreateFileA', 'GetFileSize', 'CloseHandle',
-             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject', 'waveOutSetVolume', 'Sleep']
+             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject', 'waveOutSetVolume', 'Sleep', 'OutputDebugStringA']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'mciSendCommandA': 4,
             'mciSendStringA': 4, 'CreateFileA': 7, 'GetFileSize': 2, 'CloseHandle': 1,
             'CreateThread': 6, 'CreateEventA': 4, 'SetEvent': 1, 'WaitForSingleObject': 2,
-            'waveOutSetVolume': 2, 'Sleep': 1}
+            'waveOutSetVolume': 2, 'Sleep': 1, 'OutputDebugStringA': 1}
     HREQ, HDONE = 0x501, 0x502
     blob_len = len(patcher.MUSIC_BLOB)
     D_CMD = BASE + hook_rva + blob_len - (512 + 32 + 4)
@@ -184,6 +184,8 @@ def main(argv):
                 ret = 0 if args[0] == 0xFF00 and log['settle'] <= 0 else 5
         elif name == 'Sleep':
             log['sleeps'] = log.get('sleeps', 0) + 1
+        elif name == 'OutputDebugStringA':
+            log.setdefault('traced', []).append(cstr(args[0]))
         mu.reg_write(UC_X86_REG_EAX, ret)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
@@ -203,7 +205,8 @@ def main(argv):
     mu.emu_start(BASE + entry, BASE + orig_entry, count=5000000)
     assert mu.reg_read(UC_X86_REG_EIP) == BASE + orig_entry, 'startup did not chain'
     assert mu.reg_read(UC_X86_REG_ESP) == esp, 'startup left the stack moved'
-    assert log['opened'] == ['S:\\Sega Rally 2\\music\\track%02d.wav' % n for n in range(2, 100)], log['opened'][:3]
+    assert log['opened'] == ['S:\\Sega Rally 2\\music\\trace'] + \
+        ['S:\\Sega Rally 2\\music\\track%02d.wav' % n for n in range(2, 100)], log['opened'][:3]
     assert log['thread'] and log['events'] == 2, 'no worker thread or events'
     # the worker body, one round: wait for a request, send D_CMD, answer
     mu.mem_write(D_CMD, b'stop sr2bgm\0')

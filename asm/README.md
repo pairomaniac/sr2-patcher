@@ -98,6 +98,11 @@ Windows takes a device id there, 0; Wine takes only handles it made,
 built from indices, `0xFF00` for the first mapper stream and `0xC000` for
 the first on device 0, so those are tried too and the unused ones fail.
 
+**Trace mode.** With an empty `music\trace` beside the tracks, the hook
+reports every command it receives to `OutputDebugStringA` as `sr2 <id>
+<msg> <flags> <p1> <p2> <p3>`. `+mci,+debugstr` then shows what the game
+asked as well as what the hook sent.
+
 The worker only ever waits; the game's own polling drives everything.
 `tools/musictest.py` runs this session under Unicorn, including one round
 of the worker.

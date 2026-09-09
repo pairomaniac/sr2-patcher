@@ -112,7 +112,10 @@ channels given. The last `loaddll` before the exit names the DLL whose
 init failed; `err:actctx` and `80040154` are the manifests;
 `seh:dispatch_exception` with its `eip` is a crash and the module it
 lands in; `mciSendStringW (L"…")` lines are the music hook's commands,
-and `+debugstr` shows what the Musashi DLLs say for themselves.
+and `+debugstr` shows what the Musashi DLLs say for themselves. An empty
+file `music\trace` beside the tracks makes the hook report every command
+it receives from the game through `OutputDebugStringA` as `sr2 <id> <msg>
+<flags> <p1> <p2> <p3>`, so `+mci,+debugstr` shows both sides.
 
 ## Not there yet
 

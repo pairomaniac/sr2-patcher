@@ -132,6 +132,44 @@ put2:
         stosb
         ret
 
+; Trace mode: every command the game sends, to OutputDebugStringA as
+; "sr2 <id> <msg> <flags> <p1> <p2> <p3>", which WINEDEBUG=+debugstr
+; shows. On when music\trace exists.
+trace:
+        pushad
+        lea     edi, [ebx + D_TRC]
+        lea     esi, [ebx + S_TRACE]
+        call    scat
+        mov     eax, [ebp + 8]
+        call    putnum
+        mov     byte [edi], ' '
+        inc     edi
+        mov     eax, [ebp + 12]
+        call    putnum
+        mov     byte [edi], ' '
+        inc     edi
+        mov     eax, [ebp + 16]
+        call    putnum
+        mov     esi, [ebp + 20]
+        test    esi, esi
+        jz      .send
+        add     esi, 4
+        push    3                       ; putnum uses ecx, so the count lives here
+.param:
+        mov     byte [edi], ' '
+        inc     edi
+        lodsd
+        call    putnum
+        dec     dword [esp]
+        jnz     .param
+        pop     eax
+.send:
+        lea     eax, [ebx + D_TRC]
+        push    eax
+        call    dword [ebx + D_ODS]
+        popad
+        ret
+
 ; eax = value, written in decimal at edi, NUL-terminated, edi on the NUL.
 putnum:
         push    ebx
@@ -416,6 +454,10 @@ hook:
         push    esi
         push    edi
         call    getbase
+        cmp     dword [ebx + D_TRACE], 0
+        je      .go_on
+        call    trace
+.go_on:
         mov     eax, [ebp + 12]         ; msg
         cmp     eax, MCI_OPEN
         jne     .notopen
@@ -674,6 +716,11 @@ startup:
         push    esi
         call    dword [ebx + MAGIC_GETPROC]
         mov     [ebx + D_SLEEP], eax
+        lea     ecx, [ebx + S_ODS]
+        push    ecx
+        push    esi
+        call    dword [ebx + MAGIC_GETPROC]
+        mov     [ebx + D_ODS], eax
         lea     esi, [ebx + D_CREATEF]  ; the seven resolved above, in a row
         mov     ecx, 7
 .resolved:
@@ -698,6 +745,28 @@ startup:
         cmp     byte [edi], '\'
         jne     .back
         inc     edi
+        push    edi
+        ; music\trace beside the tracks turns the trace on
+        lea     esi, [ebx + S_TRACEF]
+        call    scat
+        push    0
+        push    0x80
+        push    3
+        push    0
+        push    1
+        push    0x80000000
+        lea     eax, [ebx + D_PATH]
+        push    eax
+        call    dword [ebx + D_CREATEF]
+        cmp     eax, -1
+        je      .notrace
+        push    eax
+        call    dword [ebx + D_CLOSEH]
+        cmp     dword [ebx + D_ODS], 0
+        je      .notrace
+        mov     dword [ebx + D_TRACE], 1
+.notrace:
+        pop     edi
         lea     esi, [ebx + S_TRACK]
         call    scat
         sub     edi, ebx
@@ -798,7 +867,10 @@ D_HREQ      dd 0
 D_HDONE     dd 0
 D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
 D_SLEEP     dd 0                        ; Sleep
+D_ODS       dd 0                        ; OutputDebugStringA
 D_PLAYED    dd 0                        ; a play was just sent: settle the volume
+D_TRACE     dd 0                        ; music\trace exists: report every command
+D_TRC       times 96 db 0
 D_VOL       dd GAIN | GAIN << 16        ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
 S_HANDLES   dd 0                        ; Windows: device 0
@@ -820,7 +892,10 @@ S_CREATEEV  db 'CreateEventA', 0
 S_SETEVENT  db 'SetEvent', 0
 S_WAIT      db 'WaitForSingleObject', 0
 S_SLEEP     db 'Sleep', 0
+S_ODS       db 'OutputDebugStringA', 0
 S_TRACK     db 'music\track', 0
+S_TRACEF    db 'music\trace', 0
+S_TRACE     db 'sr2 ', 0
 S_WAV       db '.wav', 0
 S_CLOSE     db 'close sr2bgm', 0
 S_OPEN      db 'open "', 0
