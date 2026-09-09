@@ -49,7 +49,7 @@ every push, tag and pull request:
 
 | Check | Catches |
 | --- | --- |
-| `tables` | a patch site outside the file, two patches on one byte, a replacement longer than the original |
+| `tables` | a patch site outside the file, two patches on one byte, a replacement longer than the original, a placeholder left in a stub - for every build |
 | `asm` | `asm/` edited without `asm/build.py` being run: the hex in the patcher would install last week's code |
 | `lint` | pyflakes: unused and undefined names |
 
