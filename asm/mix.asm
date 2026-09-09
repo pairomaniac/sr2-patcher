@@ -14,12 +14,12 @@
 ;                its value-to-dB mapping through here: the slider step
 ;                the value was made from, on that same curve plus OFFSET.
 ;
-; The CD music's table in music.asm is the same curve plus 7 dB, as
+; The CD music's table in music.asm is the same curve plus 8 dB, as
 ; waveOut amplitudes. Nothing here is absolute.
 
 bits 32
 
-%define OFFSET          300             ; hundredths of a dB above the effects' curve
+%define OFFSET          200             ; hundredths of a dB above the effects' curve
 %define STEP            350             ; (max - min) / 10 of the remapped range
 %define BOTTOM          (-3950 + OFFSET) ; step 0 on it
 
