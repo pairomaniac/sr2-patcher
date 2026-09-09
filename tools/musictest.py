@@ -103,11 +103,11 @@ def main(argv):
     # Import slots -> stubs. Each stub is `ret N` at STUBS + 0x10 * k.
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'mciSendCommandA',
              'mciSendStringA', 'CreateFileA', 'GetFileSize', 'CloseHandle',
-             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject', 'waveOutSetVolume']
+             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject', 'waveOutSetVolume', 'Sleep']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'mciSendCommandA': 4,
             'mciSendStringA': 4, 'CreateFileA': 7, 'GetFileSize': 2, 'CloseHandle': 1,
             'CreateThread': 6, 'CreateEventA': 4, 'SetEvent': 1, 'WaitForSingleObject': 2,
-            'waveOutSetVolume': 2}
+            'waveOutSetVolume': 2, 'Sleep': 1}
     HREQ, HDONE = 0x501, 0x502
     blob_len = len(patcher.MUSIC_BLOB)
     D_CMD = BASE + hook_rva + blob_len - (512 + 32 + 4)
@@ -178,6 +178,12 @@ def main(argv):
             ret = 0x9999
         elif name == 'waveOutSetVolume':
             log['volume'].append((args[0], args[1]))
+            ret = 0 if args[0] == 0xFF00 or args[0] == 0 else 5      # MMSYSERR_INVALHANDLE elsewhere
+            if log.get('settle') is not None:
+                log['settle'] -= 1
+                ret = 0 if args[0] == 0xFF00 and log['settle'] <= 0 else 5
+        elif name == 'Sleep':
+            log['sleeps'] = log.get('sleeps', 0) + 1
         mu.reg_write(UC_X86_REG_EAX, ret)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
@@ -323,7 +329,22 @@ def main(argv):
     call(hook, 0xFACE, 0x814, 0x100, P)
     call(hook, 0xFACE, 0x814, 0x100, P)
     assert applied() == [0, 0], 'applied on every poll: %r' % log['volume']
-    print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding, volume')
+
+    # After a play, the worker settles the volume: retries with Sleep until
+    # a handle takes it. Here the third try on 0xFF00 succeeds.
+    call(hook, 0xFACE, 0x806, 0, P)                                       # sets the played flag
+    mu.mem_write(D_CMD, b'play sr2bgm\0')
+    log['volume'], log['sleeps'], rounds = [], 0, []
+    log['settle'] = 2 * len(handles) + 1
+    h = mu.hook_add(UC_HOOK_CODE, stop_second_wait, begin=STUBS, end=STUBS + 0x100)
+    mu.reg_write(UC_X86_REG_ESP, STACK + 0x40000)
+    mu.mem_write(STACK + 0x40000, struct.pack('<II', 0xDEAD0000, 0))
+    mu.emu_start(log['thread'], 0xDEAD0000, count=1000000)
+    mu.hook_del(h)
+    log['settle'] = None
+    assert len(rounds) == 2 and log['sleeps'] == 2 and len(log['volume']) == 3 * len(handles), \
+        'settle: %d sleeps, %d calls' % (log['sleeps'], len(log['volume']))
+    print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding, volume, settle')
     return 0
 
 

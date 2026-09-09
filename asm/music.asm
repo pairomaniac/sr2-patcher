@@ -32,11 +32,12 @@
 ; entries are pointed here: getvolume answers with the volume the blob
 ; holds, on the 0..10000 scale, and setvolume keeps what the game sends as
 ; a waveOut volume. mciwave opens the wave device on play, on its own
-; thread, so the volume is applied on every position poll the game makes
-; while music plays. Windows takes a device id for that, 0; Wine takes
-; only the handles it made, built from indices - 0xFF00 for the first
-; mapper stream, 0xC000 for the first on device 0 - so the hook tries a
-; short list of both kinds, and a handle not in use just fails.
+; thread, a moment after play returns, so after sending a play the worker
+; retries the volume every few milliseconds until a handle takes it; the
+; hook also applies it on every position poll. Windows takes a device id
+; for that, 0; Wine takes only the handles it made, built from indices -
+; 0xFF00 for the first mapper stream, 0xC000 for the first on device 0 -
+; so a short list of both kinds is tried, and a handle not in use fails.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -195,6 +196,22 @@ worker:
         mov     [ebx + D_RESULT], eax
         push    dword [ebx + D_HDONE]
         call    dword [ebx + D_SETEVENT]
+        cmp     dword [ebx + D_PLAYED], 0
+        je      .loop
+        mov     dword [ebx + D_PLAYED], 0
+        cmp     dword [ebx + D_SLEEP], 0
+        je      .loop
+        mov     ecx, 100                ; up to 400 ms for the stream to appear
+.settle:
+        call    applyvol
+        test    eax, eax
+        jz      .loop
+        push    ecx
+        push    4
+        call    dword [ebx + D_SLEEP]
+        pop     ecx
+        dec     ecx
+        jnz     .settle
         jmp     .loop
 
 ; eax = TMSF (track, min, sec, frame), returns ecx = ms into the track,
@@ -308,21 +325,34 @@ opentrack:
 .out:
         ret
 
-; waveOutSetVolume(h, D_VOL) for every h in S_HANDLES, if it was resolved.
-; Keeps every register.
+; waveOutSetVolume(h, D_VOL) for every h in S_HANDLES. eax = 0 if any
+; took it; other registers kept.
 applyvol:
+        mov     eax, -1
         cmp     dword [ebx + D_SETVOL], 0
         je      .none
-        pushad
+        push    ecx
+        push    edx
+        push    esi
+        push    edi
+        mov     edi, -1
         lea     esi, [ebx + S_HANDLES]
 .each:
         push    dword [ebx + D_VOL]
         push    dword [esi]
         call    dword [ebx + D_SETVOL]
+        test    eax, eax
+        jnz     .next
+        xor     edi, edi
+.next:
         add     esi, 4
         cmp     dword [esi], -1
         jne     .each
-        popad
+        mov     eax, edi
+        pop     edi
+        pop     esi
+        pop     edx
+        pop     ecx
 .none:
         ret
 
@@ -466,6 +496,7 @@ hook:
         mov     eax, ecx
         call    putnum
 .go:
+        mov     dword [ebx + D_PLAYED], 1  ; the worker settles the volume after this one
         call    mcistr
         jmp     .ret
 .range:
@@ -637,6 +668,11 @@ startup:
         push    esi
         call    dword [ebx + MAGIC_GETPROC]
         mov     [ebx + D_WAIT], eax
+        lea     ecx, [ebx + S_SLEEP]
+        push    ecx
+        push    esi
+        call    dword [ebx + MAGIC_GETPROC]
+        mov     [ebx + D_SLEEP], eax
         lea     esi, [ebx + D_CREATEF]  ; the seven resolved above, in a row
         mov     ecx, 7
 .resolved:
@@ -760,6 +796,8 @@ D_WAIT      dd 0
 D_HREQ      dd 0
 D_HDONE     dd 0
 D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
+D_SLEEP     dd 0                        ; Sleep
+D_PLAYED    dd 0                        ; a play was just sent: settle the volume
 D_VOL       dd 0xFFFFFFFF               ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
 S_HANDLES   dd 0                        ; Windows: device 0
@@ -780,6 +818,7 @@ S_CREATETHR db 'CreateThread', 0
 S_CREATEEV  db 'CreateEventA', 0
 S_SETEVENT  db 'SetEvent', 0
 S_WAIT      db 'WaitForSingleObject', 0
+S_SLEEP     db 'Sleep', 0
 S_TRACK     db 'music\track', 0
 S_WAV       db '.wav', 0
 S_CLOSE     db 'close sr2bgm', 0

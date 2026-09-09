@@ -90,8 +90,9 @@ and divides it by 100 for its scale; both return an error without a mixer
 handle. Both entries are pointed into the blob: `getvolume` reports the
 level the blob holds on the game's 0..10000 scale, `setvolume` keeps what
 arrives as a `waveOutSetVolume` value. `mciwave` opens the wave device on
-play, on its own thread, so the hook applies the value on every position
-poll the game makes while music plays. Windows takes a device id there,
+play, on its own thread, a moment after `play` returns, so after sending
+a play the worker retries the volume every 4 ms, up to 400, until a
+handle takes it; the hook also applies it on every position poll. Windows takes a device id there,
 0; Wine takes only handles it made, built from indices, `0xFF00` for the
 first mapper stream and `0xC000` for the first on device 0, so the hook
 tries a short list of both kinds and lets the unused ones fail.
