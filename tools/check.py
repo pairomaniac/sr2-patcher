@@ -5,10 +5,10 @@
     python3 tools/check.py data1.cab          # the cabinet reader on this cab instead
     python3 tools/check.py data1.cab GAMEDIR  # and compare it with this installed game
 
-~/.sr2-test (see tools/sr2-run.sh) may name, per build, the install disc
-and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the same with US
-and AU. Each that is set runs the cab, music and altab checks below on
-that build.
+~/.sr2-test (template: tools/sr2-test.example) names, per build, the
+install disc and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the
+same with US and AU. Each that is set runs the cab, music and altab
+checks below on that build.
 
 tables  a patch site outside the file, two patches on one byte, a
         replacement longer than the original, a placeholder left in a

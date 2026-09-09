@@ -25,7 +25,9 @@ python3 tools/check.py disc1.cue ~/games/sr2        # through a disc image
 
 `~/.sr2-test` names the install disc and the installed game per build -
 `SR2_DISC_EU`, `SR2_GAME_EU`, and `US`, `AU` likewise - and the cabinet,
-music and alt-tab checks run on each that is set. `data1.head` is the
+music and alt-tab checks run on each that is set. Start from
+`tools/sr2-test.example`, which describes every variable; the file stays
+on your machine. `data1.head` is the
 first 16 MB of `data1.cab` (`head -c 16M`): enough for the file table and
 the executables, small enough to keep around. The real cabinet or a real
 dump works the same and checks everything. To exercise the disc reader
@@ -97,8 +99,9 @@ step.
 ## Running the game
 
 `tools/sr2-run.sh [eu|us|au]` runs the installed game under umu (Proton)
-or plain wine, with the Wine log in `logs/`; `~/.sr2-test` holds the
-paths, see the script's header. `debug` adds `+seh,+loaddll,+mci`; edit the line for
+or plain wine, with the Wine log in `logs/`; `~/.sr2-test` holds the game
+folders, one prefix per build and the runner, see
+`tools/sr2-test.example`. `debug` adds `+seh,+loaddll,+mci`; edit the line for
 other channels. Reading a log: the last `loaddll` before the exit names
 the DLL whose init failed, `err:actctx` and `80040154` are the manifests,
 `seh:dispatch_exception` with its `eip` is a crash and the module it lands

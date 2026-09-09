@@ -13,9 +13,9 @@ says where to look.
 | `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check, `tools/musictest.py` and `tools/activatetest.py` the two blobs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
 | `tools/discsurvey.py` | hashes every file in one or more install discs, checks the fingerprints and lists what differs between the discs; `--play` lists a play disc's label, root and audio tracks |
-| `tools/sr2-run.sh` | runs the installed game under umu or wine with the log in `logs/`; paths in `~/.sr2-test` |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
+| `tools/sr2-run.sh`, `tools/sr2-test.example` | runs an installed build under umu or wine with the log in `logs/`; the template for `~/.sr2-test`, which names the discs, games and prefixes per build |
 | `.github/workflows/build.yml` | CI: the checks |
 
 ## 2. `sr2-patcher.py`

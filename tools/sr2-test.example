@@ -1,0 +1,27 @@
+# ~/.sr2-test: where the discs, the installed games and the Wine prefixes
+# are on this machine. Read by tools/sr2-run.sh and tools/check.py; never
+# in the repository. Copy to ~/.sr2-test and fill in. One line per
+# build, EU, US and AU; leave out a build you do not have.
+
+# The install disc dumps, for the cabinet check.
+SR2_DISC_EU="$HOME/dumps/Sega Rally 2 (Europe) (Disc 1) (Install Disc).cue"
+SR2_DISC_US="$HOME/dumps/Sega Rally 2 (USA) (Disc 1).cue"
+SR2_DISC_AU="$HOME/dumps/Sega Rally 2 (Australia) (Install Disc).cue"
+
+# The installed games, for the music and alt-tab checks and for running.
+SR2_GAME_EU=$HOME/games/sega-rally-2-eu
+SR2_GAME_US=$HOME/games/sega-rally-2-us
+SR2_GAME_AU=$HOME/games/sega-rally-2-au
+
+# The Wine prefix to run each in. Faugus keeps them under ~/Faugus/<game>.
+# SR2_PFX alone is one prefix for every build.
+SR2_PFX_EU=$HOME/Faugus/sega-rally-2-eu
+SR2_PFX_US=$HOME/Faugus/sega-rally-2-us
+SR2_PFX_AU=$HOME/Faugus/sega-rally-2-au
+
+# How to run: umu with a Proton, or plain wine. Unset, umu-run is taken
+# from PATH and the newest Proton-CachyOS under
+# ~/.steam/root/compatibilitytools.d.
+SR2_UMU=/usr/bin/umu-run
+SR2_PROTON="$HOME/.steam/root/compatibilitytools.d/Proton-CachyOS Latest"
+#SR2_WINE=/usr/bin/wine

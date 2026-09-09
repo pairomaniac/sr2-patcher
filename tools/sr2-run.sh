@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 # Run the installed game the way Faugus does, from a terminal, with the log
-# kept. Reads ~/.sr2-test, which stays on this machine:
-#
-#   SR2_GAME_EU  the install folder, one per build (EU, US, AU)
-#   SR2_DISC_EU  its install disc, for tools/check.py
-#   SR2_PFX      the Wine prefix (Faugus keeps them under ~/Faugus/<game>);
-#                SR2_PFX_EU and so on for one per build
-#   SR2_UMU      umu-run, if not on PATH
-#   SR2_PROTON   Proton directory; a Proton-CachyOS build is looked for
-#                under ~/.steam/root/compatibilitytools.d when unset
-#   SR2_WINE     plain wine instead of umu, for a normal prefix
+# kept. Reads ~/.sr2-test, which stays on this machine; tools/sr2-test.example
+# is the template and describes every variable.
 #
 #     tools/sr2-run.sh [eu|us|au]         run; the Wine log goes to logs/sr2.log
 #     tools/sr2-run.sh [eu|us|au] debug   and +seh,+loaddll,+mci (edit for more)
