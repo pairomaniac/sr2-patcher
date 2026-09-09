@@ -84,12 +84,16 @@ answers. Every `waveaudio` command comes from that one thread. Calls are
 not serialised against each other beyond that; MGAudio does not issue two
 at once.
 
+**The volume.** The BGM slider called the DLL's CD-volume routine, which
+set the mixer's CD line. Its entry is pointed at `setvolume` instead: the
+game's 0..10000 becomes a `waveOutSetVolume` on wave device 0 - the one
+`mciwave` plays through - kept in `D_VOL` and applied again after every
+track opened, since the device opens with each one.
+
 The worker only ever waits; the game's own polling drives everything.
 `tools/musictest.py` runs this session under Unicorn, including one round
 of the worker.
 
-**Known gap.** In-game BGM volume goes through the mixer's CD line, which a
-`waveaudio` stream does not follow.
 
 ## activate.asm
 

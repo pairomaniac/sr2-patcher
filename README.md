@@ -81,9 +81,8 @@ into `music\` beside the game, as plain WAV files (230 MB). The game plays
 them wherever it used to play the disc. Without that folder it behaves as
 it did with no disc: silent, but otherwise fine.
 
-One thing does not carry over: the in-game BGM volume slider drove the CD
-volume on old sound cards and has no effect on the files. Set the volume
-in the system mixer.
+The BGM slider in the game's Options sets the volume of that playback, as
+it once set the CD volume on the sound card.
 
 ## Status
 

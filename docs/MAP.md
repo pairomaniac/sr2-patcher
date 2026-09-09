@@ -155,7 +155,7 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | `0x10002415`, `0x100030ee`, `0x1000318f`, `0x100031ac`, `0x100031ce`, `0x100031ee`, `0x1000320e`, `0x1000323f`, `0x1000327f`, `0x100032c8`, `0x1000336e` | the eleven `call [__imp__mciSendCommandA]` |
 | `0x10003108` | `mov esi, [__imp__mciSendCommandA]`; `0x10003123` and the set after it call `esi` |
 | `0x10003100` | open by type ID; `0x10003160` play; `0x100031c0`/`0x100031e0`/`0x10003200` pause/resume/stop; `0x10003220`–`0x100032df` status; `0x100032f0` seek |
-| `.sr2m` at `0x1000f000` | the music blob: `+0` hook thunk, `+5` setup thunk, `+10` hook-address thunk, data after the code |
+| `.sr2m` at `0x1000f000` | the music blob: `+0` hook thunk, `+5` setup thunk, `+10` hook-address thunk, `+15` setvolume thunk, data after the code |
 
 ### Sites by patch
 
@@ -175,4 +175,4 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
 | win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
-| music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
+| music | 13 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |

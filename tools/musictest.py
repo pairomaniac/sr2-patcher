@@ -9,6 +9,7 @@ type ID, set, status, play, position, seek, pause, resume, stop, close, plus
 the cases that must be forwarded or refused. Needs python3-unicorn; exits 0
 with a note when it is missing so tools/check.py can skip it.
 """
+import hashlib
 import importlib.util
 import os
 import re
@@ -48,7 +49,12 @@ def main(argv):
         path += '.bak'
     with open(path, 'rb') as fh:
         raw = bytearray(fh.read())
-    image = patcher.apply_music(raw)
+    build = next((b for b, row in patcher.BUILDS.items()
+                  if row['files']['MUSASHI\\MGAudio.dll'][1] == hashlib.md5(raw).hexdigest()), None)
+    if build is None:
+        print('musictest: %s is not an MGAudio.dll the patcher knows' % path)
+        return 1
+    image = patcher.apply_music(raw, build)
 
     # Map the image by section, like a loader would.
     pe_off = struct.unpack_from('<I', image, 0x3c)[0]
@@ -97,10 +103,11 @@ def main(argv):
     # Import slots -> stubs. Each stub is `ret N` at STUBS + 0x10 * k.
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'mciSendCommandA',
              'mciSendStringA', 'CreateFileA', 'GetFileSize', 'CloseHandle',
-             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject']
+             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject', 'waveOutSetVolume']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'mciSendCommandA': 4,
             'mciSendStringA': 4, 'CreateFileA': 7, 'GetFileSize': 2, 'CloseHandle': 1,
-            'CreateThread': 6, 'CreateEventA': 4, 'SetEvent': 1, 'WaitForSingleObject': 2}
+            'CreateThread': 6, 'CreateEventA': 4, 'SetEvent': 1, 'WaitForSingleObject': 2,
+            'waveOutSetVolume': 2}
     HREQ, HDONE = 0x501, 0x502
     blob_len = len(patcher.MUSIC_BLOB)
     D_CMD = BASE + hook_rva + blob_len - (512 + 32 + 4)
@@ -114,7 +121,7 @@ def main(argv):
     mu.mem_write(BASE + patcher._iat_slot(image, 'winmm.dll', 'mciSendCommandA'),
                  struct.pack('<I', addr['mciSendCommandA']))
 
-    log = {'strings': [], 'forwarded': [], 'opened': [], 'thread': None, 'events': 0, 'waits': []}
+    log = {'strings': [], 'forwarded': [], 'opened': [], 'thread': None, 'events': 0, 'waits': [], 'volume': []}
 
     def cstr(p):
         return bytes(mu.mem_read(p, 300)).split(b'\0')[0].decode('latin-1')
@@ -169,6 +176,8 @@ def main(argv):
         elif name == 'mciSendCommandA':
             log['forwarded'].append((args[0], args[1]))
             ret = 0x9999
+        elif name == 'waveOutSetVolume':
+            log['volume'].append((args[0], args[1]))
         mu.reg_write(UC_X86_REG_EAX, ret)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
@@ -280,7 +289,25 @@ def main(argv):
     assert call(hook, 0xFACE, 0x806, 0, P) == 0
     assert log['strings'][-1] == 'play sr2bgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
     assert log['waits'] and set(log['waits']) == {HDONE}, 'the hook waits only on the done event'
-    print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding')
+
+    # The volume: full on every open so far, then the slider's 0..10000 as
+    # a waveOut volume, applied at once and after the next open.
+    assert log['volume'] and set(log['volume']) == {(0, 0xFFFFFFFF)}, log['volume']
+    V = STACK + 0x300
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))
+    assert call(hook + 15, 0x1234, 0, V) == 0
+    assert log['volume'][-1] == (0, 0x7FFF7FFF), log['volume']
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 12000, 12000))      # over the top clamps
+    call(hook + 15, 0x1234, 0, V)
+    assert log['volume'][-1] == (0, 0xFFFFFFFF)
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))              # no channels: keeps it
+    assert call(hook + 15, 0x1234, 0, V) == 0 and log['volume'][-1] == (0, 0xFFFFFFFF)
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 0, 0))
+    call(hook + 15, 0x1234, 0, V)
+    log['volume'] = []
+    call(hook, 0xFACE, 0x806, 0, P)
+    assert log['volume'] == [(0, 0)], 'volume not re-applied on open: %r' % log['volume']
+    print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding, volume')
     return 0
 
 

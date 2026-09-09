@@ -24,7 +24,7 @@ Australian releases map onto it; *Builds* says how far.
 | **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
 | **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
 | **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init looks for a CD line on the mixer for the volume slider; without one the European DLL returns `S_FALSE`, the Australian `E_FAIL`, and Wine has none. The `jne fail` → a stub that zeroes the control count at `+0x84` (uninitialised until the search fills it) and eax, and jumps back to the allocation |
-| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
+| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume routine `0x2630` (`0x2670` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the volume routine's entry → `jmp setvolume`, which turns the slider's 0..10000 into `waveOutSetVolume` on device 0, now and after every track opened; see [asm/README.md](../asm/README.md) |
 
 Offsets are the European build's file offsets; the other builds' are in
 `BUILDS` and under *Builds*. In the exe, which is never relocated, VA =
@@ -556,8 +556,6 @@ of them plays the same music, with the disc's own silence at the loop.
   after saving a replay. It does not under Wine with only `nodisc` and
   `music` applied, so nothing here fixes it and Wine's DirectDraw may
   be tolerating what Windows does not.
-- The in-game BGM volume slider drives the mixer's CD line, which the WAV
-  playback does not follow.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
 - Frame timing, input, resolution: nothing traced yet. The renderer is

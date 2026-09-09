@@ -11,6 +11,7 @@
 ;   +5   jmp startup    <- the new DllMain
 ;   +10  jmp hookaddr   <- esi = hook, for the one site that loads the
 ;                         import into esi and calls through it
+;   +15  jmp setvolume  <- what the CD-volume routine's entry is pointed at
 ;
 ; The DLL is relocated at load, so nothing here is absolute: the blob finds
 ; its own base (call/pop) and reaches everything as [ebx + offset]. The five
@@ -23,6 +24,11 @@
 ;
 ; Playback is not implemented here: a CD command becomes an MCI string
 ; command against waveaudio, and the same MCI subsystem does the work.
+;
+; The BGM slider used to set the mixer's CD line. That routine is replaced
+; by setvolume, which turns the 0..10000 the game passes into a waveOut
+; volume, keeps it, and applies it to wave device 0 - the one mciwave
+; plays through - now and after every track opened since.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -71,9 +77,10 @@ bits 32
 
 ; ---------------------------------------------------------------- thunks
 
-        jmp     hook                    ; +0
-        jmp     startup                 ; +5
-        jmp     hookaddr                ; +10
+        jmp     near hook               ; +0
+        jmp     near startup            ; +5
+        jmp     near hookaddr           ; +10
+        jmp     near setvolume          ; +15
 
 ; ------------------------------------------------------------- utilities
 
@@ -288,9 +295,54 @@ opentrack:
         call    scat
         call    mcistr
         mov     dword [ebx + D_OPEN], 1
+        call    applyvol
         xor     eax, eax
 .out:
         ret
+
+; waveOutSetVolume(0, D_VOL), if it was resolved. Keeps every register.
+applyvol:
+        cmp     dword [ebx + D_SETVOL], 0
+        je      .none
+        pushad
+        push    dword [ebx + D_VOL]
+        push    0
+        call    dword [ebx + D_SETVOL]
+        popad
+.none:
+        ret
+
+; ------------------------------------------------------------- setvolume
+; Replaces the CD-volume routine: stdcall (this, unused, values), where
+; values is the game's struct - +8 the channel count, +0xc the first
+; channel, 0..10000. Returns S_OK; the mixer is never touched.
+
+setvolume:
+        push    ebx
+        call    getbase
+        mov     eax, [esp + 16]         ; values
+        test    eax, eax
+        jz      .ok
+        cmp     dword [eax + 8], 0
+        je      .ok
+        mov     eax, [eax + 12]
+        cmp     eax, 10000
+        jbe     .scale
+        mov     eax, 10000
+.scale:
+        imul    eax, eax, 65535
+        xor     edx, edx
+        mov     ecx, 10000
+        div     ecx
+        mov     edx, eax
+        shl     edx, 16
+        or      eax, edx                ; both channels
+        mov     [ebx + D_VOL], eax
+        call    applyvol
+.ok:
+        xor     eax, eax
+        pop     ebx
+        ret     12
 
 ; ------------------------------------------------------------------ hook
 ; mciSendCommandA(id, msg, flags, params), stdcall.
@@ -499,13 +551,19 @@ startup:
         call    dword [ebx + MAGIC_LOADLIB]
         test    eax, eax
         jz      .done
+        mov     esi, eax
         lea     ecx, [ebx + S_MCISTR]
         push    ecx
-        push    eax
+        push    esi
         call    dword [ebx + MAGIC_GETPROC]
         test    eax, eax
         jz      .done
         mov     [ebx + D_MCISTR], eax
+        lea     ecx, [ebx + S_SETVOL]
+        push    ecx
+        push    esi
+        call    dword [ebx + MAGIC_GETPROC]
+        mov     [ebx + D_SETVOL], eax   ; may be 0: then the slider does nothing
 
         lea     eax, [ebx + S_KERNEL]
         push    eax
@@ -670,11 +728,14 @@ D_SETEVENT  dd 0
 D_WAIT      dd 0
 D_HREQ      dd 0
 D_HDONE     dd 0
+D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
+D_VOL       dd 0xFFFFFFFF               ; the slider, as a waveOut volume; full until set
 D_TOC       times (MAXTRACK + 1) dd 0   ; frames per track
 D_PATH      times PATHLEN db 0
 
 S_WINMM     db 'winmm.dll', 0
 S_MCISTR    db 'mciSendStringA', 0
+S_SETVOL    db 'waveOutSetVolume', 0
 S_KERNEL    db 'kernel32.dll', 0
 S_CREATEF   db 'CreateFileA', 0
 S_GETSIZE   db 'GetFileSize', 0
