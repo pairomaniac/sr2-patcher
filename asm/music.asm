@@ -547,6 +547,11 @@ hook:
         mov     eax, MCIERR_OUTOFRANGE
         jmp     .ret
 
+; The exe seeks with the track its play adds one to - at "Go!" it seeks
+; the course track, playing as N+1, to track N at 0:00 - so a seek to the
+; open track or the one below it is a seek within the open track. mciwave
+; stops on a seek, and no play follows, so the hook plays again from
+; there.
 .seek:
         test    dword [ebp + 16], MCI_TO
         jz      .ok
@@ -557,14 +562,21 @@ hook:
         cmp     dword [ebx + D_OPEN], 0
         je      .seeklater
         cmp     eax, [ebx + D_CUR]
+        je      .seekopen
+        inc     eax
+        cmp     eax, [ebx + D_CUR]
         jne     .seeklater
+.seekopen:
         lea     edi, [ebx + D_CMD]
         lea     esi, [ebx + S_SEEK]
         call    scat
         mov     eax, ecx
         call    putnum
         call    mcistr
-        jmp     .ok
+        lea     edi, [ebx + D_CMD]
+        lea     esi, [ebx + S_PLAY]
+        call    scat
+        jmp     .go
 .seeklater:
         mov     [ebx + D_CUR], eax      ; the next play without FROM starts here
         jmp     .ok

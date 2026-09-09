@@ -68,7 +68,7 @@ What MGAudio sends, and the answer:
 | --- | --- |
 | `MCI_SET` time format | ok; TMSF is assumed |
 | `MCI_PLAY` `MCI_FROM` TMSF | `close`, `open "<dir>music\trackNN.wav" type waveaudio alias sr2bgm`, `set … milliseconds`, `play sr2bgm [from ms]`; `MCIERR_OUTOFRANGE` for a track with no file |
-| `MCI_SEEK` `MCI_TO` TMSF | `seek sr2bgm to ms` if that track is open, else remembered for the next play |
+| `MCI_SEEK` `MCI_TO` TMSF | `seek sr2bgm to ms` then `play sr2bgm` if that track is open - or the one below it, since the exe seeks with the track its play adds one to, and mciwave stops on a seek with no play to follow - else remembered for the next play |
 | `MCI_PAUSE`, `MCI_RESUME`, `MCI_STOP`, `MCI_CLOSE` | the same word to `sr2bgm` |
 | `MCI_STATUS` number of tracks | the highest track with a file |
 | `MCI_STATUS` length of track N | from the file size, as MSF |

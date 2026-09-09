@@ -450,6 +450,12 @@ Three properties of the DLL shape the patch:
   `tools/musictest.py` relocates the image before running it for that
   reason.
 
+At "Go!" the exe seeks the course track to 0:00 - with the track number
+one below the one its play used, in every build - and sends no play
+after it. On a drive that left the CD stopped on the wrong track for
+`MGAudio`'s poller to sort out; the hook takes it as a restart of the
+open track.
+
 The play disc's audio: tracks 2–14, each in its own bin in the Redump
 dump with a 150-sector pregap at `INDEX 00`. The ripper starts each track
 at `INDEX 01` and stops at the end of its file.

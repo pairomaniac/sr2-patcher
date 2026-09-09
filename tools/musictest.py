@@ -280,7 +280,11 @@ def main(argv):
     # seek within the open track
     log['strings'] = []
     mu.mem_write(P, struct.pack('<II', 0, tmsf(5, 2, 0, 15)))
-    assert call(hook, 0xFACE, 0x807, 8, P) == 0 and log['strings'] == ['seek sr2bgm to 120200'], log['strings']
+    assert call(hook, 0xFACE, 0x807, 8, P) == 0 and log['strings'] == ['seek sr2bgm to 120200', 'play sr2bgm'], log['strings']
+    # the exe's seek names the track below the one it plays: the same
+    mu.mem_write(P, struct.pack('<II', 0, tmsf(4, 0, 0, 0)))
+    log['strings'] = []
+    assert call(hook, 0xFACE, 0x807, 8, P) == 0 and log['strings'] == ['seek sr2bgm to 0', 'play sr2bgm'], log['strings']
     # pause, resume, stop, close
     log['strings'] = []
     for msg in (0x809, 0x855, 0x808, 0x804):
