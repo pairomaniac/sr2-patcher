@@ -99,12 +99,13 @@ verified before the transform runs and written by it. `asm/build.py` puts the as
 GENERATED region of the patcher, and the `asm` check keeps the two in
 step.
 
-## Running the game
+## One build at a time
 
-`tools/sr2-run.sh [eu|us|au]` runs the installed game under umu (Proton)
-or plain wine, with the Wine log in `logs/`; `~/.sr2-test` holds the game
-folders, one prefix per build and the runner, see
-`tools/sr2-test.example`. `debug` adds `+seh,+loaddll,+mci`; edit the line for
+`tools/sr2.sh eu|us|au ACTION` does everything on one build with the
+paths from `~/.sr2-test` (template: `tools/sr2-test.example`): `install`,
+`rip`, `patch` and `restore` call the patcher, `run` and `debug` start
+the game under umu (Proton) or plain wine with the Wine log in `logs/`,
+`show` prints the paths. `debug` adds `+seh,+loaddll,+mci`; edit the line for
 other channels. Reading a log: the last `loaddll` before the exit names
 the DLL whose init failed, `err:actctx` and `80040154` are the manifests,
 `seh:dispatch_exception` with its `eip` is a crash and the module it lands

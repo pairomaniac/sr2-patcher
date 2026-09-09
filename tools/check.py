@@ -7,7 +7,7 @@
     python3 tools/check.py --list             # what there is
     python3 tools/check.py --only cab,music   # some of it
 
-~/.sr2-test (template: tools/sr2-test.example) names, per build, the
+~/.sr2-test (template: tools/sr2-test.example, used by tools/sr2.sh too) names, per build, the
 install disc and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the
 same with US and AU. Each that is set runs the cab, music and altab
 checks on that build, labelled cab/EU and so on. Each check is a script

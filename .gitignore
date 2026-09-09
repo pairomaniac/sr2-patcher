@@ -8,7 +8,7 @@ __pycache__/
 # Backups the patcher makes beside the game.
 *.bak
 
-# tools/sr2-run.sh writes the game's Wine log here.
+# tools/sr2.sh writes the game's Wine log here.
 logs/
 
 # Game files used by the checks are not in the repository.

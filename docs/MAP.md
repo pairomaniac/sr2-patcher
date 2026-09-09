@@ -16,7 +16,7 @@ says where to look.
 | `tools/setup-dev.sh` | says what the toolchain is missing |
 | `tools/kit.py` | bundles every build's installed files and `data1.head` into the gitignored `tools/sr2-kit.tar.gz`, from `~/.sr2-test` |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
-| `tools/sr2-run.sh`, `tools/sr2-test.example` | runs an installed build under umu or wine with the log in `logs/`; the template for `~/.sr2-test`, which names the discs, games and prefixes per build |
+| `tools/sr2.sh`, `tools/sr2-test.example` | installs, rips, patches, restores or runs one build with the paths from `~/.sr2-test`, whose template the example is |
 | `.github/workflows/build.yml` | CI: the checks |
 
 ## 2. `sr2-patcher.py`
