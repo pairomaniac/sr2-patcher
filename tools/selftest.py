@@ -30,24 +30,24 @@ spec.loader.exec_module(patcher)
 # deliberately, and only when a patch actually changed.
 EXPECTED = {
     'European': {
-        'SEGA RALLY 2.exe': 'b982019bb3e2510f0ff01f12dcc625a8',
+        'SEGA RALLY 2.exe': 'daa0e3a8893d4ebbba80a6d03bf6d3ed',
         'MUSASHI\\MGameD3D.dll': '1bf6b62a6bed2552924097fae3344634',
-        'MUSASHI\\MGAudio.dll': '6d756bfad9afafa089ad39d73c543ef1',
-        'MUSASHI\\MGSound.dll': 'bcabb848e1e2d2b9754eb3341709f3b6',
+        'MUSASHI\\MGAudio.dll': '2c585147d4e620aa96ade43610fab24f',
+        'MUSASHI\\MGSound.dll': 'a66bb4ac7f1b268aa0ad4743c2085a97',
         'Title.dll': '17a6a4f0b36e4f98dcebc3e038ddfb3c',
     },
     'American': {
-        'SEGA RALLY 2.exe': '463435e2defdebb41fcd81ea88bede9b',
+        'SEGA RALLY 2.exe': 'e151736e16f050fad672c9c9149375cb',
         'MUSASHI\\MGameD3D.dll': '1bf6b62a6bed2552924097fae3344634',
-        'MUSASHI\\MGAudio.dll': '6d756bfad9afafa089ad39d73c543ef1',
-        'MUSASHI\\MGSound.dll': 'bcabb848e1e2d2b9754eb3341709f3b6',
+        'MUSASHI\\MGAudio.dll': '2c585147d4e620aa96ade43610fab24f',
+        'MUSASHI\\MGSound.dll': 'a66bb4ac7f1b268aa0ad4743c2085a97',
         'Title.dll': '17a6a4f0b36e4f98dcebc3e038ddfb3c',
     },
     'Australian': {
-        'SEGA RALLY 2.exe': 'f9f0cc71d4888adada75824ee3ee96b0',
+        'SEGA RALLY 2.exe': 'a5eecba5771ea86ae0f7470d1f80a9fd',
         'MUSASHI\\MGameD3D.dll': '1bf6b62a6bed2552924097fae3344634',
-        'MUSASHI\\MGAudio.dll': 'b792cdf809b742df7dce844bb665a19c',
-        'MUSASHI\\MGSound.dll': 'bcabb848e1e2d2b9754eb3341709f3b6',
+        'MUSASHI\\MGAudio.dll': '8d9cbb6fa8a90a0467111e5042094207',
+        'MUSASHI\\MGSound.dll': 'a66bb4ac7f1b268aa0ad4743c2085a97',
         'Title.dll': '12af6ad8236f168605d0b2ef526c9244',
     },
 }

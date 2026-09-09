@@ -4,7 +4,8 @@
 ; DLL's copy of the same client code - ends in the streaming buffer's
 ; SetVolume (0x10006940), with the slider step times 1111 as a 0..10000
 ; value, which it maps across the stream's own dB range. The effects
-; and the announcer follow -36 dB + 4 dB a step; the streams did not,
+; and the announcer follow -39.5 dB + 3.5 dB a step (mixrange); the
+; streams did not,
 ; so the sliders meant different things. The mapping's last step
 ; becomes a call here, which puts the step on the effects' curve plus
 ; OFFSET, capped at 0 dB, 0 being off. The site tests the flags of the last instruction
@@ -13,8 +14,8 @@
 bits 32
 
 %define OFFSET          300             ; hundredths of a dB above the effects' curve
-%define STEP            400
-%define BOTTOM          (-3600 + OFFSET)
+%define STEP            350             ; the effects' range, MIX_MIN..MIX_MAX, in tenths
+%define BOTTOM          (-3950 + OFFSET)
 
         push    ecx
         lea     eax, [ebx + 555]        ; the step the value was made from, rounded

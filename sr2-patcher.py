@@ -56,7 +56,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
-                  'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
+                  'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc, 'mixrange': (0x72c50, 0x6e940),
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'bgmvol': 0x6980},        # in MGSound.dll: the streaming buffer's SetVolume
@@ -83,7 +83,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
-                  'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
+                  'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c, 'mixrange': (0x73080, 0x6ed60),
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'bgmvol': 0x6980},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
@@ -107,7 +107,7 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
-                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
+                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'mixrange': (0xb2270, 0xade70),
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'bgmvol': 0x6980,
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782)},
@@ -146,7 +146,8 @@ RESTORE_RELOCS = 10
 # the European build's; docs/NOTES.md has the account of each.
 #
 #   mixerless   MGAudio Init without a mixer CD line (Australian)
-#   bgmvol      MGSound's streaming SetVolume on the effects' curve, OFFSET dB under
+#   mixrange    the effects' dB range MIX_MIN..MIX_MAX, the sliders' 3.5 dB steps
+#   bgmvol      MGSound's streaming SetVolume on the effects' curve, OFFSET dB above
 #   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian)
 #   win9x       the Windows 9x check returns "fine" (Australian)
 #   nodisc      the disc check returns "found"; the loader takes the exe's directory
@@ -163,6 +164,10 @@ RESTORE_RELOCS = 10
 #   altenter    ALT+ENTER toggles a framed window
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
 #   voltrace    diagnostic, by name only: volume calls reported on +debugstr
+
+# The effects' dB range, hundredths: the sliders map (step+1)/10 of it.
+# The music curves in asm/ are derived from these two numbers.
+MIX_MIN, MIX_MAX = -4300, -800
 
 # The first bytes of the five volume entry points voltrace hooks.
 VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),
@@ -212,6 +217,9 @@ def patches(build):
             (0x4d7b, bytes.fromhex('8b0df8230110'), None),
             (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
         'bgmvol': ('MUSASHI\\MGSound.dll', ((site['bgmvol'], bytes.fromhex('03d68bf285f6'), None),), 'apply_bgmvol'),
+        'mixrange': (EXE, ((site['mixrange'][0], bytes.fromhex('c7462c60f0ffff'), bytes.fromhex('c7462c') + struct.pack('<i', MIX_MIN)),
+                           (site['mixrange'][0] + 13, b'\x68' + struct.pack('<i', -4000), b'\x68' + struct.pack('<i', MIX_MIN)),
+                           (site['mixrange'][1], bytes.fromhex('558bec51894dfc'), b'\xb8' + struct.pack('<i', MIX_MAX) + b'\xc3\x90')), None),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
     }
@@ -367,8 +375,8 @@ MUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '00000000000000000000000000000000000000000000000000000000ffffffff'
-    '102700000000650ed11629244f39d55af58f28e4ffffffff0000000000ff0000'
+    '0000000000000000000000000000000000000000000000000000000028e428e4'
+    '1027000000001509970d56146d1e862d1d44ea657d9828e40000000000ff0000'
     '01ff000000c00000ffffffff0000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -488,7 +496,7 @@ ALTENTER_BLOB = bytes.fromhex(
 )
 BGMVOL_BLOB = bytes.fromhex(
     '518d832b02000031d2b957040000f7f15983f8097605b80900000085c0741269'
-    'd09001000081c21cf3ffff780931d2eb05baf0d8ffff89d685f6c3'
+    'd05e01000081c2bef1ffff780931d2eb05baf0d8ffff89d685f6c3'
 )
 VOLTRACE_BLOB = bytes.fromhex(
     'e9bb000000e9c9000000e9da000000e9e7000000e9f80000006083ec5089e7e8'

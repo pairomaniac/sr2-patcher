@@ -878,10 +878,10 @@ D_ODS       dd 0                        ; OutputDebugStringA
 D_PLAYED    dd 0                        ; a play was just sent: settle the volume
 D_TRACE     dd 0                        ; music\trace exists: report every command
 D_TRC       times 96 db 0
-D_VOL       dd 4294967295               ; the slider, as a waveOut volume; full until set
+D_VOL       dd 3827885096               ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
-S_CURVE     dw 0, 3685, 5841, 9257, 14671, 23253, 36853, 58408, 65535, 65535
-            ; waveOut amplitude per slider step: the effects' curve, -36 dB + 4 dB a step, plus 7 dB, capped at 0, 0 off
+S_CURVE     dw 0, 2325, 3479, 5206, 7789, 11654, 17437, 26090, 39037, 58408
+            ; waveOut amplitude per slider step: the effects' curve (-39.5 dB + 3.5 dB a step) plus 7 dB, 0 off
 S_HANDLES   dd 0                        ; Windows: device 0
             dd 0xFF00, 0xFF01           ; Wine: mapper streams 0 and 1
             dd 0xC000                   ; Wine: device 0 stream 0
