@@ -95,7 +95,7 @@ exe first asks the get-volume method for the current level and divides
 it by 100 for its scale; both fail without a mixer. Both entries jump
 into the blob: `getvolume` reports the level the blob holds on the
 0..10000 scale, `setvolume` keeps what arrives as a `waveOutSetVolume`
-amplitude on the effects' dB curve plus 4 dB, capped at 0, from `S_CURVE`, ten entries for the ten slider steps. `mciwave` opens the wave device
+amplitude on the effects' dB curve plus 7 dB, capped at 0, from `S_CURVE`, ten entries for the ten slider steps. `mciwave` opens the wave device
 on play, on its own thread, so after each play the worker retries the
 volume every 4 ms, up to 400 ms, until a handle takes it. Windows takes
 device id 0; Wine takes only the handles it builds from indices, `0xFF00`

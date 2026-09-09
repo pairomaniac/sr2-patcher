@@ -12,7 +12,7 @@
 
 bits 32
 
-%define OFFSET          400             ; hundredths of a dB above the effects' curve
+%define OFFSET          300             ; hundredths of a dB above the effects' curve
 %define STEP            400
 %define BOTTOM          (-3600 + OFFSET)
 

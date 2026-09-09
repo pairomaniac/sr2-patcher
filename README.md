@@ -49,7 +49,7 @@ and refuses anything that is not an unmodified copy of it.
 | **Borderless fullscreen** | The game takes the display over at 640x480 and comes back from ALT+TAB on the wrong monitor. It now runs in a borderless window on the monitor it starts on, 4:3, black bars. |
 | **ALT+ENTER** | Toggles a framed window you can move, resize or maximise. |
 | **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there. |
-| **The mix** | The three sliders followed three different curves - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each; the Australian release also ran its effects at a fraction of theirs. All three follow one curve now, 4 dB a step, the music 4 dB above the effects. The Australian release no longer needs a CD volume control on the sound card. |
+| **The mix** | The three sliders followed three different curves - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each; the Australian release also ran its effects at a fraction of theirs. All three follow one curve now, 4 dB a step: the CD music 7 dB above the effects, the streamed music 3 dB above. The Australian release no longer needs a CD volume control on the sound card. |
 
 Everything else is the game as it shipped.
 

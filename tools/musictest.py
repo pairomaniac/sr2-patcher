@@ -307,7 +307,7 @@ def main(argv):
     # to a waveOut amplitude on the effects' dB curve and applied to each
     # handle on the list; getvolume reads the slider back.
     handles = [0, 0xFF00, 0xFF01, 0xC000]
-    CURVE = [0, 2609, 4135, 6554, 10387, 16462, 26090, 41350, 65535, 65535]
+    CURVE = [0, 3685, 5841, 9257, 14671, 23253, 36853, 58408, 65535, 65535]
 
     def both(a):
         return a | a << 16
