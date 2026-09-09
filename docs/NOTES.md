@@ -498,10 +498,11 @@ detail.
 
 ## The play disc
 
-Disc 2 (`diskid.2`, volume label `SEGARALLY2`, no audio tracks): the same
-assets as MS cabinets, 230 MB, MSZIP-compressed (plain deflate): one
-`bindata\<dir>.cab` per tier directory, `bindata\tenyear\N_M.cab` for the
-41 ten-year courses, `bindata\root.cab` for the root-level files. Every
+Disc 2 (`diskid.2`, volume label `SEGARALLY2`; the thirteen audio tracks
+are under *Music* above): the same assets as MS cabinets, 230 MB,
+MSZIP-compressed (plain deflate): one `bindata\<dir>.cab` per tier
+directory, `bindata\tenyear\N_M.cab` for the 41 ten-year courses,
+`bindata\root.cab` for the root-level files. Every
 cabinet checked (`root`, `serial`, `adv`) contains exactly the files the
 tiers hold. `diskid.2` is the text `Please enjoy SEGA RALLY 2.` The disc is
 not needed by a full install.

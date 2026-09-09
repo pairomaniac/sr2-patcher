@@ -2,6 +2,7 @@
 """Compare install discs: what is in each data1.cab, and what differs.
 
     python3 tools/discsurvey.py SOURCE [SOURCE ...]
+    python3 tools/discsurvey.py --play PLAY.cue [PLAY.cue ...]
 
 SOURCE is what the patcher accepts: a .cue, an .iso or .bin, a mounted
 disc folder, or data1.cab itself. Every file in every cabinet is read and
@@ -11,6 +12,10 @@ For each disc: the root files (folders only), the groups, and whether the
 files the patcher fingerprints are the ones it knows. With more than one
 disc: per group, how many files are identical across all of them, and the
 paths that differ or are missing on some.
+
+--play takes play-disc cue sheets and prints, per disc, the volume label,
+the root of the data track and the audio tracks with their lengths and
+MD5s - what the ripper depends on.
 """
 import hashlib
 import importlib.util
@@ -105,10 +110,36 @@ def _state(got, size, digest):
     return 'UNKNOWN %d %s' % got
 
 
+def play(cue):
+    """Label, root listing and audio tracks of one play disc."""
+    path, start = patcher.data_track(cue)
+    track = patcher.DataTrack(path, start)
+    try:
+        pvd = track.sector(patcher.PRIMARY_VD)
+        print('  label %r, data track %s' % (pvd[40:72].decode('latin-1').rstrip(), track.form))
+        for name, (is_dir, _lba, size) in sorted(patcher.iso_root(track).items()):
+            print('  %10s %s' % ('<dir>' if is_dir else size, name))
+    finally:
+        track.close()
+    spans = list(patcher.audio_spans(patcher.parse_cue(cue)))
+    print('  %d audio tracks' % len(spans))
+    for t, first, last in spans:
+        with open(t['bin'], 'rb') as fh:
+            fh.seek(first * patcher.RAW)
+            digest = hashlib.md5(fh.read((last - first) * patcher.RAW)).hexdigest()
+        n = last - first
+        print('    track %02d  %2d:%02d.%02d  %7d sectors  %s' % (t['no'], n // 75 // 60, n // 75 % 60, n % 75, n, digest))
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__.strip())
         return 2
+    if argv[1] == '--play':
+        for cue in argv[2:]:
+            print('== %s' % cue)
+            play(cue)
+        return 0
     surveys = []
     for src in argv[1:]:
         print('== %s' % src)
