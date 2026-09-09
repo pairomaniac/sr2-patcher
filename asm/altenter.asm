@@ -23,12 +23,14 @@
 
 bits 32
 
-%define HANDLER         0x41fe20
-%define IAT_LOADLIB     0x495090
-%define IAT_GETPROC     0x4950f0
-%define HWND            0x5088ac        ; the game window
-%define WIDTH           0x4d5e1c        ; MGameD3D's init struct: the picture's size
-%define HEIGHT          0x4d5e20
+; Placeholders the patcher fills from the build's row; the European
+; values are in the comments.
+%define HANDLER         0xECECECEC      ; 0x41fe20
+%define IAT_LOADLIB     0xE3E3E3E3      ; 0x495090
+%define IAT_GETPROC     0xE4E4E4E4      ; 0x4950f0
+%define HWND            0xEDEDEDED      ; 0x5088ac, the game window
+%define WIDTH           0xEEEEEEEE      ; 0x4d5e1c, MGameD3D's init struct: the picture's size
+%define HEIGHT          0xEFEFEFEF      ; 0x4d5e20
 
 %define WM_SYSKEYDOWN   0x104
 %define VK_RETURN       0x0d

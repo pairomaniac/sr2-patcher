@@ -24,25 +24,25 @@ In file order:
 
 | Region | Starts with |
 | --- | --- |
-| Constants | `VERSION`; `P3_FILES` the six fingerprints; `PATCHED_FILES` and `PATCHES` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
-| Generated | `MUSIC_BLOB`, `ACTIVATE_BLOB`, `RESTORE_BLOB`, `MUSIC_MAGICS`, written by `asm/build.py` |
+| Constants | `VERSION`; `BUILDS` the three builds' fingerprints, sites, slots and addresses, `build_of`; `patches` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
+| Generated | the eight `*_BLOB`s, `MUSIC_MAGICS`, `EXE_MAGICS`, written by `asm/build.py` |
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |
 | Music patch | `append_section`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Managed textures | `apply_managed` |
 | Restore-all patch | `apply_restore` |
-| Activation patch | `apply_activate` |
-| Text-colour patch | `TEXTCOLOR_SITES`, `apply_textcolor` |
-| Windowed patch | `BGROW_SITE`, `apply_windowed` |
-| ALT+ENTER patch | `ALTENTER_SITE`, `apply_altenter` |
+| Activation patch | `exe_blob`, `_check_call`, `apply_activate` |
+| Text-colour patch | `apply_textcolor` |
+| Windowed patch | `BGROW_LEN`, `apply_windowed` |
+| ALT+ENTER patch | `apply_altenter` |
 | Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
 | Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
 | Patch | `md5`, `check_build`, `patch`, `restore` |
 | Window | `gui` |
 | CLI | `selfcheck`, `main` |
 
-## 3. `SEGA RALLY 2.exe` (Pentium III)
+## 3. `SEGA RALLY 2.exe` (Pentium III, European)
 
 Image base `0x400000`. File offset = VA − `0x401000` + `0x400` inside
 `.text`.

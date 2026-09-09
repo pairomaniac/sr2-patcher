@@ -21,7 +21,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | ALT+ENTER between the borderless window and a framed one |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
-| `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob |
+| `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |
 
 ## music.asm
 

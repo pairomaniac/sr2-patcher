@@ -30,42 +30,106 @@ REPO_URL = 'https://github.com/pairomaniac/sr2-patcher'
 
 EXE = 'SEGA RALLY 2.exe'
 CAB = 'data1.cab'
+IMAGE_BASE = 0x400000                   # the exe is never relocated
 
-# The Pentium III build: the six files the installer swaps in for it.
-P3_FILES = (
-    ('SEGA RALLY 2.exe', 1469952, '51b3da97c3c73611d3516b65bb684cb5'),
-    ('AdvTelop.dll', 636928, '977dd8801a281e987c4503c9fb2f8778'),
-    ('Champagn.dll', 699392, 'b8dbfe718eef561f12c99223ba7b9ec4'),
-    ('MSelect.dll', 1137152, '1e6f713c39efb1558c79b795754d6e3a'),
-    ('MUSASHI\\MGameGL.dll', 601600, '3d095385ece996088381dd77a0f5f954'),
-    ('MUSASHI\\MGLBackground.dll', 579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
-)
+# Builds. The exe's MD5 picks the row, and the row holds everything a
+# patch needs that moves between builds: the fingerprints of the six
+# Pentium III files and the three patched DLLs, the exe's patch sites
+# (file offsets), the import slots those sites name, and the addresses
+# the stubs in asm/ read (VAs). MGameD3D.dll is the same file in all
+# three. Everything else in the script is written against the European
+# row; the others map it.
+PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGAudio.dll', 'Title.dll')
 
-# Files the patches write, with the untouched original's size and MD5.
-PATCHED_FILES = {
-    EXE: (1469952, '51b3da97c3c73611d3516b65bb684cb5'),
-    'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
-    'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
-    'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
+BUILDS = {
+    'European': {
+        'files': {
+            EXE: (1469952, '51b3da97c3c73611d3516b65bb684cb5'),
+            'AdvTelop.dll': (636928, '977dd8801a281e987c4503c9fb2f8778'),
+            'Champagn.dll': (699392, 'b8dbfe718eef561f12c99223ba7b9ec4'),
+            'MSelect.dll': (1137152, '1e6f713c39efb1558c79b795754d6e3a'),
+            'MUSASHI\\MGameGL.dll': (601600, '3d095385ece996088381dd77a0f5f954'),
+            'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
+            'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
+            'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
+            'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
+        },
+        'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
+                  'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc},
+        # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
+        'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
+                      (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
+                      (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
+        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4,
+                  'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
+        'addresses': {'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+                      'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'BITCOUNT': 0x4e68cc},
+    },
+    'American': {
+        'files': {
+            EXE: (1472000, '90d1f25110781707a888475ca37e9240'),
+            'AdvTelop.dll': (636928, '977dd8801a281e987c4503c9fb2f8778'),
+            'Champagn.dll': (699392, 'b8dbfe718eef561f12c99223ba7b9ec4'),
+            'MSelect.dll': (1137152, '1e6f713c39efb1558c79b795754d6e3a'),
+            'MUSASHI\\MGameGL.dll': (601600, '3d095385ece996088381dd77a0f5f954'),
+            'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
+            'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
+            'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
+            'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
+        },
+        'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
+                  'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c},
+        'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
+                      (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
+                      (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
+        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x49519c, 'lstrcpyA': 0x4950f4,
+                  'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
+        'addresses': {'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
+                      'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'BITCOUNT': 0x4e69bc},
+    },
+    'Australian': {
+        'files': {
+            EXE: (1754624, '84c95aed1b8cd8402fcff98f1687df7b'),
+            'AdvTelop.dll': (636928, '3bfd541b561dfb8477a80fa14f411994'),
+            'Champagn.dll': (722432, '30bc25f22c88e0d7570774504e5cedc0'),
+            'MSelect.dll': (1137152, '22a4f66685e61e9db2f93eaf77fad573'),
+            'MUSASHI\\MGameGL.dll': (601600, '3d095385ece996088381dd77a0f5f954'),
+            'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
+            'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
+            'MUSASHI\\MGAudio.dll': (57344, '35d38d59b6bd2a09eb38f0eced9ec5fb'),
+            'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
+        },
+        'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
+                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2},
+        'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
+                      (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
+                      (0x69164, 'ff15'), (0x69c16, 'ff15')),
+        'slots': {'SetTextColor': 0x4d402c, 'GetLogicalDriveStringsA': 0x4d4198, 'lstrcpyA': 0x4d40fc,
+                  'LoadLibraryA': 0x4d4094, 'GetProcAddress': 0x4d40f8},
+        'addresses': {'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
+                      'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc},
+    },
 }
+
+
+def build_of(digest):
+    """The build whose exe has this MD5, or None."""
+    for name, row in BUILDS.items():
+        if row['files'][EXE][1] == digest:
+            return name
+    return None
+
 
 # The restore-surfaces routine in MGameD3D.dll: RVA == file offset there.
 RESTORE_SITE = 0x7710
 RESTORE_LEN = 0x7c
 RESTORE_RELOCS = 10
 
-# The SetTextColor sites in the exe, file offsets: `ff15` call [slot],
-# `8b35` mov esi, [slot]. Every one is followed by the slot 0x495028.
-TEXTCOLOR_SITES = (
-    (0x203c7, '8b35'), (0x20566, '8b35'),
-    (0x3485f, 'ff15'), (0x34b2a, 'ff15'), (0x34efc, 'ff15'), (0x35533, 'ff15'),
-    (0x360c3, 'ff15'), (0x3a6c0, 'ff15'), (0x3cef4, 'ff15'), (0x3da96, 'ff15'),
-)
-
 # Patch table: key -> (file, sites, transform). A site is (file offset,
 # original, replacement); a replacement of None means the bytes are only
 # verified, the transform writes them. The transform, if any, runs on the
-# file after its sites and may grow it. Applied in this order.
+# file after its sites and may grow it. Applied in this order. Addresses
+# in the comments are the European build's.
 #
 # nodisc:  two sites. The startup check that scans CD-ROM drives for the
 #          play disc (0x4273c0) returns 0, "found", at once; and the loader
@@ -132,38 +196,52 @@ TEXTCOLOR_SITES = (
 #          asm/music.asm, rewrites its 11 mciSendCommandA calls to call the
 #          hook and its one load of the import into esi to fetch the hook's
 #          address, and repoints the entry point at the setup thunk.
-PATCHES = {
-    'nodisc': (EXE, (
-        (0x267c0, bytes.fromhex('8b442404'), bytes.fromhex('31c0c3')),
-        (0x7572e, bytes.fromhex('8d4c2420516880000000ff15985149008a44242084c0'),
-         bytes.fromhex('8d8608010000508d460450ff15f4504900e9cf000000'))), None),
-    'altab': (EXE, ((0x25ff7, bytes.fromhex('e864760400'), None),), 'apply_activate'),
-    'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
-        (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
-        for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
-    'managed': ('MUSASHI\\MGameD3D.dll', (
-        (0x3e91, bytes.fromhex('c74068001000048b153c250110f7da1bd281e20038000081c200180004895068'),
-         bytes.fromhex('c7406800100000c7406c10000000') + b'\x90' * 18),
-        (0x3eb7, bytes.fromhex('81486800400020'), b'\x90' * 7)), 'apply_managed'),
-    'restoreall': ('MUSASHI\\MGameD3D.dll', ((RESTORE_SITE, bytes.fromhex(
-        'a15025011085c0741e8b0850ff516085c07414a1502501108b1050ff526c85c0a3c41f01107c55a15425011085c0741e8b0850ff516085c07414a1542501108b1050ff526c85c0a3c41f01107c2ea15c25011085c0741e8b0850ff516085c07414a15c2501108b1050ff526c85c0a3c41f01107c0733c0a3c41f0110'), None),), 'apply_restore'),
-    'texfmt': ('MUSASHI\\MGameD3D.dll', ((0xf79c, bytes.fromhex('010000000200000003000000'),
-                                            bytes.fromhex('030000000100000002000000')),), None),
-    'textcolor': (EXE, tuple(
-        (off, bytes.fromhex(op) + bytes.fromhex('28504900'), None)
-        for off, op in TEXTCOLOR_SITES), 'apply_textcolor'),
-    'windowed': (EXE, (
-        (0x273e6, b'\x01', b'\x00'),
-        (0x14671, bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None)), 'apply_windowed'),
-    'anydepth': ('MUSASHI\\MGameD3D.dll', ((0x271e, b'\x74', b'\xeb'),), None),
-    'altenter': (EXE, ((0x260bc, bytes.fromhex('e85f91ffff'), None),), 'apply_altenter'),
-    'titlebg': ('Title.dll', ((0x8ba, bytes.fromhex('8bc88bf38be98bfac1e902f3a58bcd03d883e103f3a4'), None),),
-                'apply_titlebg'),
-    'borderless': ('MUSASHI\\MGameD3D.dll', (
-        (0x4d7b, bytes.fromhex('8b0df8230110'), None),
-        (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
-    'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
-}
+def patches(build):
+    """The patch table for one build: key -> (file, sites, transform).
+    The exe rows read their offsets and import slots from BUILDS; the DLL
+    rows are the same for every build."""
+    row = BUILDS[build]
+    site = row['sites']
+
+    def slot(name):
+        return struct.pack('<I', row['slots'][name])
+
+    return {
+        'nodisc': (EXE, (
+            (site['check'], bytes.fromhex('8b442404'), bytes.fromhex('31c0c3')),
+            (site['loader'],
+             bytes.fromhex('8d4c2420516880000000ff15') + slot('GetLogicalDriveStringsA') + bytes.fromhex('8a44242084c0'),
+             bytes.fromhex('8d8608010000508d460450ff15') + slot('lstrcpyA') + bytes.fromhex('e9cf000000'))), None),
+        'altab': (EXE, ((site['activate'], b'\xe8', None),), 'apply_activate'),
+        'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
+            (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
+            for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
+        'managed': ('MUSASHI\\MGameD3D.dll', (
+            (0x3e91, bytes.fromhex('c74068001000048b153c250110f7da1bd281e20038000081c200180004895068'),
+             bytes.fromhex('c7406800100000c7406c10000000') + b'\x90' * 18),
+            (0x3eb7, bytes.fromhex('81486800400020'), b'\x90' * 7)), 'apply_managed'),
+        'restoreall': ('MUSASHI\\MGameD3D.dll', ((RESTORE_SITE, bytes.fromhex(
+            'a15025011085c0741e8b0850ff516085c07414a1502501108b1050ff526c85c0a3c41f01107c55a15425011085c0741e8b0850ff516085c07414a1542501108b1050ff526c85c0a3c41f01107c2ea15c25011085c0741e8b0850ff516085c07414a15c2501108b1050ff526c85c0a3c41f01107c0733c0a3c41f0110'), None),), 'apply_restore'),
+        'texfmt': ('MUSASHI\\MGameD3D.dll', ((0xf79c, bytes.fromhex('010000000200000003000000'),
+                                                bytes.fromhex('030000000100000002000000')),), None),
+        'textcolor': (EXE, tuple(
+            (off, bytes.fromhex(op) + slot('SetTextColor'), None)
+            for off, op in row['textcolor']), 'apply_textcolor'),
+        'windowed': (EXE, (
+            (site['flag'], b'\x01', b'\x00'),
+            (site['bgrow'], bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None)), 'apply_windowed'),
+        'anydepth': ('MUSASHI\\MGameD3D.dll', ((0x271e, b'\x74', b'\xeb'),), None),
+        'altenter': (EXE, ((site['altenter'], b'\xe8', None),), 'apply_altenter'),
+        'titlebg': ('Title.dll', ((0x8ba, bytes.fromhex('8bc88bf38be98bfac1e902f3a58bcd03d883e103f3a4'), None),),
+                    'apply_titlebg'),
+        'borderless': ('MUSASHI\\MGameD3D.dll', (
+            (0x4d7b, bytes.fromhex('8b0df8230110'), None),
+            (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
+        'music': ('MUSASHI\\MGAudio.dll', (), 'apply_music'),
+    }
+
+
+PATCH_KEYS = tuple(patches('European'))
 
 # The mciSendCommandA sites in MGAudio.dll: 11 `call dword [slot]`, and
 # one `mov esi, dword [slot]` in the open routine, which then calls esi.
@@ -325,7 +403,7 @@ MUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000'
 )
 ACTIVATE_BLOB = bytes.fromhex(
-    '51a118b1500085c074068b1050ff5240596860e24600c3'
+    '51a1eaeaeaea85c074068b1050ff52405968ebebebebc3'
 )
 RESTORE_BLOB = bytes.fromhex(
     'e800000000598b8137ae000085c074118b105150ff5264598981afa80000c204'
@@ -335,7 +413,7 @@ TEXTCOLOR_BLOB = bytes.fromhex(
     '81642408ffffff00ff2528504900'
 )
 BGROW_BLOB = bytes.fromhex(
-    '833dcc684e0020741589c189cdc1e90289de89d7f3a589e983e103f3a4c35053'
+    '833df1f1f1f120741589c189cdc1e90289de89d7f3a589e983e103f3a4c35053'
     '5289c1d1e9744e89de89d70fb70683c60289c389c281e300f8000081e2e00700'
     '0083e01f89ddc1e308c1e50381e50000070009eb89d5c1e205d1ed81e5000300'
     '0009ea89c5c1e003c1ed0209e809d809d0ab4975b65a5b58c3'
@@ -373,13 +451,13 @@ FULLWIN_BLOB = bytes.fromhex(
 )
 ALTENTER_BLOB = bytes.fromhex(
     '8b4424083d040100007521837c240c0d751a8b442410a900000020740fa90000'
-    '00407505e81600000031c0c36820fe4100c3e8000000005b81eb37000000c353'
-    '56575589e583ec40e8e5ffffff83bbec01000000753f8d837a01000050ff1590'
-    '50490085c00f840801000089c631ff8b84bbd601000001d85056ff15f0504900'
-    '85c00f84eb0000008984bbec0100004783ff0572da8b3dac8850006a0257ff93'
+    '00407505e81600000031c0c368ececececc3e8000000005b81eb37000000c353'
+    '56575589e583ec40e8e5ffffff83bbec01000000753f8d837a01000050ff15e3'
+    'e3e3e385c00f840801000089c631ff8b84bbd601000001d85056ff15e4e4e4e4'
+    '85c00f84eb0000008984bbec0100004783ff0572da8b3dedededed6a0257ff93'
     'f801000085c00f84c7000000c745d8280000008d4dd85150ff93fc01000085c0'
     '0f84ad00000080b3ea01000001f683ea010000017470680000cf106af057ff93'
-    'ec01000031c08945c08945c4a11c5e4d008945c8a1205e4d008945cc6a006a00'
+    'ec01000031c08945c08945c4a1eeeeeeee8945c8a1efefefef8945cc6a006a00'
     '680000cf108d45c050ff93f40100008b75c82b75c08b55cc2b55c46a6452568b'
     '45e82b45e029d0d1f80345e0508b45e42b45dc29f0d1f80345dc506a0057ff93'
     'f0010000eb2d68000000906af057ff93ec0100006a648b45e82b45e0508b45e4'
@@ -395,6 +473,17 @@ MUSIC_MAGICS = {
     'MAGIC_LOADLIB': 0xE3E3E3E3,
     'MAGIC_GETPROC': 0xE4E4E4E4,
     'MAGIC_GETMODFN': 0xE5E5E5E5,
+}
+EXE_MAGICS = {
+    'GAMED3D': 0xEAEAEAEA,
+    'RESUME': 0xEBEBEBEB,
+    'HANDLER': 0xECECECEC,
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'HWND': 0xEDEDEDED,
+    'WIDTH': 0xEEEEEEEE,
+    'HEIGHT': 0xEFEFEFEF,
+    'BITCOUNT': 0xF1F1F1F1,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 # --- GENERATED by asm/build.py: END ---
@@ -812,7 +901,7 @@ def install(src, dest, lang='English', log=print):
         groups = install_groups(lang)
         missing = [g for g in groups if g not in cab.groups]
         if missing:
-            raise ValueError('cabinet lacks groups: %s' % ', '.join(missing))
+            raise ValueError('this disc has no %s' % ', '.join(missing))
         total = sum(e.size for g in groups for e in cab.groups[g])
         log('install: %d MB to %s' % (total // 1000000, dest))
         for g in groups:
@@ -921,7 +1010,7 @@ def _drop_relocations(buf, rvas):
     return dropped
 
 
-def apply_music(buf):
+def apply_music(buf, _build=None):
     """The music patch. Returns the grown DLL image."""
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     opt = pe_off + 24
@@ -967,7 +1056,7 @@ def apply_music(buf):
 
 # The managed-textures patch: sites, plus one relocation entry to drop
 
-def apply_managed(buf):
+def apply_managed(buf, _build=None):
     """The sites are written by patch(); this drops the relocation entry of
     the absolute address they removed."""
     if _drop_relocations(buf, {0x3e9a}) != 1:
@@ -977,7 +1066,7 @@ def apply_managed(buf):
 
 # The restore-all patch: MGameD3D's routine rewritten in place
 
-def apply_restore(buf):
+def apply_restore(buf, _build=None):
     """Returns the DLL with the routine replaced."""
     if len(RESTORE_BLOB) > RESTORE_LEN:
         raise ValueError('restore blob does not fit')
@@ -998,9 +1087,7 @@ def _branch(buf, off, target_rva, length=5, op=b'\xe8'):
     buf[off:off + length] = (op + struct.pack('<i', target_rva - (site_rva + 5))).ljust(length, b'\x90')
 
 
-ACTIVATE_SITE = 0x25ff7                 # exe, `call 0x46e260` at 0x426bf7
-BGROW_SITE, BGROW_LEN = 0x14671, 20     # exe, the .bg row copy at 0x415271
-ALTENTER_SITE = 0x260bc                 # exe, `call 0x41fe20` at 0x426cbc
+BGROW_LEN = 20                          # exe, the .bg row copy
 TITLEROW_SITE, TITLEROW_LEN = 0x8ba, 22  # Title.dll, the row copy at 0x100014ba
 PRESENT_SITE = 0x4d7b                   # MGameD3D, the windowed present's first instruction
 SIZE_SITE = 0x26be                      # MGameD3D, `call [__imp__MoveWindow]` in the windowed init
@@ -1009,19 +1096,42 @@ SIZE_SITE = 0x26be                      # MGameD3D, `call [__imp__MoveWindow]` i
 FULLWIN_RELOCS = {0x4d7d, 0x4d8a, 0x4d8f, 0x4d95, 0x4da3, 0x4db1, 0x4db6, 0x4dc4, 0x4dd3, 0x26c0}
 
 
-def apply_activate(buf):
-    """The alt-tab stub in the exe, called from the WM_ACTIVATEAPP case."""
-    out, rva = append_section(buf, ACTIVATE_SECTION, ACTIVATE_BLOB, chars=CODE_SECTION)
-    _branch(out, ACTIVATE_SITE, rva)
+def exe_blob(blob, build):
+    """A stub with the build's addresses in place of the placeholders."""
+    row = BUILDS[build]
+    values = dict(row['addresses'], LOADLIB=row['slots']['LoadLibraryA'], GETPROC=row['slots']['GetProcAddress'])
+    out = bytes(blob)
+    for name, magic in EXE_MAGICS.items():
+        out = out.replace(struct.pack('<I', magic), struct.pack('<I', values[name]))
     return out
 
 
-def apply_textcolor(buf):
+def _call_target(buf, off):
+    """The VA a `call rel32` at a file offset in .text goes to."""
+    rva = 0x1000 + off - _rva_to_off(buf, 0x1000) + 5 + struct.unpack_from('<i', buf, off + 1)[0]
+    return rva + struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
+
+
+def _check_call(buf, off, target, what):
+    if _call_target(buf, off) != target:
+        raise ValueError('the call at 0x%x does not go to %s' % (off, what))
+
+
+def apply_activate(buf, build):
+    """The alt-tab stub in the exe, called from the WM_ACTIVATEAPP case."""
+    row = BUILDS[build]
+    _check_call(buf, row['sites']['activate'], row['addresses']['RESUME'], 'the resume routine')
+    out, rva = append_section(buf, ACTIVATE_SECTION, exe_blob(ACTIVATE_BLOB, build), chars=CODE_SECTION)
+    _branch(out, row['sites']['activate'], rva)
+    return out
+
+
+def apply_textcolor(buf, build):
     """The SetTextColor stub in the exe; the eight calls and two loads of
     the import slot become a call to it and a load of its address."""
     out, rva = append_section(buf, TEXTCOLOR_SECTION, TEXTCOLOR_BLOB, chars=CODE_SECTION)
     base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
-    for off, op in TEXTCOLOR_SITES:
+    for off, op in BUILDS[build]['textcolor']:
         if op == 'ff15':
             _branch(out, off, rva, 6)
         else:
@@ -1029,22 +1139,24 @@ def apply_textcolor(buf):
     return out
 
 
-def apply_windowed(buf):
+def apply_windowed(buf, build):
     """The .bg row copy in the exe through bgrow.asm."""
-    out, rva = append_section(buf, BGROW_SECTION, BGROW_BLOB, chars=CODE_SECTION)
-    _branch(out, BGROW_SITE, rva, BGROW_LEN)
+    out, rva = append_section(buf, BGROW_SECTION, exe_blob(BGROW_BLOB, build), chars=CODE_SECTION)
+    _branch(out, BUILDS[build]['sites']['bgrow'], rva, BGROW_LEN)
     return out
 
 
-def apply_altenter(buf):
+def apply_altenter(buf, build):
     """altenter.asm in front of the window procedure's default handler.
     The section keeps the user32 entry points it resolves, so it is writable."""
-    out, rva = append_section(buf, ALTENTER_SECTION, ALTENTER_BLOB)
-    _branch(out, ALTENTER_SITE, rva)
+    row = BUILDS[build]
+    _check_call(buf, row['sites']['altenter'], row['addresses']['HANDLER'], 'the text-input handler')
+    out, rva = append_section(buf, ALTENTER_SECTION, exe_blob(ALTENTER_BLOB, build))
+    _branch(out, row['sites']['altenter'], rva)
     return out
 
 
-def apply_titlebg(buf):
+def apply_titlebg(buf, _build=None):
     """Title.dll's own .bg row copy through bgrow.asm's TITLE build. The
     site holds no absolute address, so no relocation entry goes."""
     out, rva = append_section(buf, TITLEROW_SECTION, TITLEROW_BLOB, chars=CODE_SECTION)
@@ -1052,7 +1164,7 @@ def apply_titlebg(buf):
     return out
 
 
-def apply_fullwin(buf):
+def apply_fullwin(buf, _build=None):
     """fullwin.asm in MGameD3D: the windowed present jumps to its first
     thunk, the window sizing calls its second."""
     if _drop_relocations(buf, FULLWIN_RELOCS) != len(FULLWIN_RELOCS):
@@ -1074,24 +1186,40 @@ def md5(path):
 
 
 def check_build(dest):
-    """Every P3 file present and untouched. Files the patches write are
-    checked from their backup when one exists."""
-    for name, size, digest in P3_FILES:
+    """Which build is installed: the exe's MD5 (its backup's, once
+    patched) names the row, and every file in the row must be untouched.
+    The import slots the row names are checked against the exe itself."""
+    def source(name):
         path = os.path.join(dest, *name.split('\\'))
         if not os.path.isfile(path):
             raise FileNotFoundError('missing %s' % name)
-        if name in PATCHED_FILES and os.path.isfile(path + '.bak'):
-            path += '.bak'
+        return path + '.bak' if name in PATCHED and os.path.isfile(path + '.bak') else path
+
+    build = build_of(md5(source(EXE)))
+    if build is None:
+        raise ValueError('%s is not a Pentium III build the patcher knows' % EXE)
+    row = BUILDS[build]
+    for name, (size, digest) in row['files'].items():
+        path = source(name)
         if os.path.getsize(path) != size or md5(path) != digest:
-            raise ValueError('%s is not the Pentium III build' % name)
+            raise ValueError('%s is not the %s build\'s' % (name, build))
+    with open(source(EXE), 'rb') as fh:
+        exe = fh.read()
+    for func, slot in row['slots'].items():
+        if _iat_slot(exe, 'kernel32.dll' if func != 'SetTextColor' else 'gdi32.dll', func) != slot - IMAGE_BASE:
+            raise ValueError('%s: the import table does not match the %s row' % (func, build))
+    return build
 
 
-def patch(dest, log=print, keys=tuple(PATCHES)):
+def patch(dest, log=print, keys=PATCH_KEYS):
     """Write every wanted patch. Each touched file is patched from its
     backup, written on the first run, so patching twice is patching once."""
-    check_build(dest)
-    for name, (size, digest) in PATCHED_FILES.items():
-        wanted = [PATCHES[key] for key in keys if PATCHES[key][0] == name]
+    build = check_build(dest)
+    table = patches(build)
+    log('patch: %s build' % build)
+    for name in PATCHED:
+        size, digest = BUILDS[build]['files'][name]
+        wanted = [table[key] for key in keys if table[key][0] == name]
         sites = [site for _f, ss, _t in wanted for site in ss]
         transforms = [globals()[t] for _f, _s, t in wanted if t]
         if not sites and not transforms:
@@ -1113,15 +1241,15 @@ def patch(dest, log=print, keys=tuple(PATCHES)):
             if new is not None:
                 buf[off:off + len(new)] = new
         for transform in transforms:
-            buf = transform(buf)
+            buf = transform(buf, build)
         with open(path, 'wb') as fh:
             fh.write(buf)
-        log('patch: %s written, %s' % (name, ', '.join(k for k in keys if PATCHES[k][0] == name)))
+        log('patch: %s written, %s' % (name, ', '.join(k for k in keys if table[k][0] == name)))
 
 
 def restore(dest, log=print):
     found = False
-    for name in PATCHED_FILES:
+    for name in PATCHED:
         path = os.path.join(dest, *name.split('\\'))
         if os.path.isfile(path + '.bak'):
             os.replace(path + '.bak', path)
@@ -1256,27 +1384,36 @@ def gui():
 
 
 def selfcheck():
-    """Fail here, not half way through somebody's executable: every site
-    inside the file, no two patches on one byte, replacement no longer
-    than what it replaces."""
-    taken = {}
-    for key, (name, sites, transform) in PATCHES.items():
-        if name not in PATCHED_FILES:
-            raise ValueError('%s: no fingerprint for %s' % (key, name))
-        if transform and transform not in globals():
-            raise ValueError('%s: no transform named %s' % (key, transform))
-        size = PATCHED_FILES[name][0]
-        for off, old, new in sites:
-            if new is not None and len(new) > len(old):
-                raise ValueError('%s: replacement longer than original at 0x%x' % (key, off))
-            if off + len(old) > size:
-                raise ValueError('%s: site 0x%x past the end of %s' % (key, off, name))
-            for i in range(off, off + len(old)):
-                if (name, i) in taken:
-                    raise ValueError('%s and %s both write %s:0x%x' % (key, taken[(name, i)], name, i))
-                taken[(name, i)] = key
-    print('tables OK: %d patches, %d sites, %d files'
-          % (len(PATCHES), sum(len(v[1]) for v in PATCHES.values()), len(PATCHED_FILES)))
+    """Fail here, not half way through somebody's executable: for every
+    build, every site inside the file, no two patches on one byte,
+    replacement no longer than what it replaces, and every stub
+    placeholder filled."""
+    sites = 0
+    for build, row in BUILDS.items():
+        table = patches(build)
+        taken = {}
+        for key, (name, ss, transform) in table.items():
+            if name not in PATCHED:
+                raise ValueError('%s: %s is not a patched file' % (key, name))
+            if transform and transform not in globals():
+                raise ValueError('%s: no transform named %s' % (key, transform))
+            size = row['files'][name][0]
+            for off, old, new in ss:
+                if new is not None and len(new) > len(old):
+                    raise ValueError('%s: replacement longer than original at 0x%x' % (key, off))
+                if off + len(old) > size:
+                    raise ValueError('%s: site 0x%x past the end of the %s %s' % (key, off, build, name))
+                for i in range(off, off + len(old)):
+                    if (name, i) in taken:
+                        raise ValueError('%s and %s both write %s:0x%x' % (key, taken[(name, i)], name, i))
+                    taken[(name, i)] = key
+            sites += len(ss)
+        for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB):
+            for magic in EXE_MAGICS.values():
+                if struct.pack('<I', magic) in exe_blob(blob, build):
+                    raise ValueError('%s: a placeholder left in a stub' % build)
+    print('tables OK: %d builds, %d patches, %d sites, %d files'
+          % (len(BUILDS), len(PATCH_KEYS), sites, len(PATCHED)))
     return 0
 
 

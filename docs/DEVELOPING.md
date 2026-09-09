@@ -51,13 +51,27 @@ tagging.
 
 ## Adding a patch
 
-A patch is a key in `PATCHES`: the file it writes, its `(file offset,
+A patch is a key in `patches()`: the file it writes, its `(file offset,
 original bytes, replacement)` sites, and the name of a transform function
-or `None`. The file needs an entry in `PATCHED_FILES` with the original's
-size and MD5. `patch()` verifies the original bytes before writing sites,
-then runs the transform, which may grow the file; `--selfcheck` catches
-the structural mistakes at import time. Document it in NOTES.md's table
-and MAP.md's *Sites by patch*.
+or `None`. A site in the exe takes its offset from the build's row in
+`BUILDS`, one per build; a site in a DLL is the same in every build. A
+transform takes the image and the build name, and an exe stub gets its
+addresses through `EXE_MAGICS` placeholders that `exe_blob` fills from
+the row. `patch()` verifies the original bytes before writing sites, then
+runs the transform, which may grow the file; `--selfcheck` checks every
+build's table. Document it in NOTES.md's table and MAP.md's *Sites by
+patch*.
+
+## Adding a build
+
+A row in `BUILDS`: the nine fingerprints, the six exe sites, the ten
+SetTextColor sites, the five import slots and the seven addresses. Find
+the sites by searching the new exe for each European site's bytes with
+addresses and `rel32`s masked (`tools/discsurvey.py` gives the
+fingerprints); read each hit back in a disassembler before it goes in.
+`check_build` compares the slots with the exe's import table, and the
+`call` sites are checked against `RESUME` and `HANDLER` when the stubs
+are applied, so a wrong row fails before anything is written.
 
 A patch that is code rather than bytes goes in `asm/` and is a transform.
 The shapes there are:

@@ -85,29 +85,28 @@ def survey(src):
     return files
 
 
+P3 = ('SEGA RALLY 2.exe', 'AdvTelop.dll', 'Champagn.dll', 'MSelect.dll',
+      'MUSASHI\\MGameGL.dll', 'MUSASHI\\MGLBackground.dll')
+
+
 def fingerprints(files):
-    """The patcher's known files against this cab, and the three CPU
-    builds' copies of the six overlay files."""
-    known = dict(patcher.PATCHED_FILES)
-    for path, size, digest in patcher.P3_FILES:
-        known.pop(path, None)
-        print('    %-9s %s' % (_state(files.get(('PentiumIII Modules', path)), size, digest), path))
-    for path, (size, digest) in sorted(known.items()):
-        print('    %-9s %s' % (_state(files.get(('Program Executable Files', path)), size, digest), path))
+    """The build the P3 exe names, its row against this cab, and the
+    three CPU builds' copies of the six overlay files."""
+    exe = files.get(('PentiumIII Modules', patcher.EXE))
+    build = patcher.build_of(exe[1]) if exe else None
+    print('  build: %s' % (build or 'unknown'))
+    if build:
+        for path, (size, digest) in patcher.BUILDS[build]['files'].items():
+            group = 'PentiumIII Modules' if path in P3 else 'Program Executable Files'
+            got = files.get((group, path))
+            state = 'missing' if got is None else 'known' if got == (size, digest) else 'UNKNOWN %d %s' % got
+            print('    %-9s %s' % (state, path))
     print('  overlay files by build:')
-    for path, _s, _d in patcher.P3_FILES:
+    for path in P3:
         for group in CPU_GROUPS:
             got = files.get((group, path))
             if got:
                 print('    %-24s %8d %s %s' % (group, got[0], got[1], path))
-
-
-def _state(got, size, digest):
-    if got is None:
-        return 'missing'
-    if got == (size, digest):
-        return 'known'
-    return 'UNKNOWN %d %s' % got
 
 
 def play(cue):

@@ -6,7 +6,8 @@ and file offsets see [MAP.md](MAP.md).
 
 Everything below is read off the retail European release (files stamped
 20-21 Oct 1999, VC6 linker 6.0) with pefile, capstone and unshield, and
-checked on the game running under Wine and Proton.
+checked on the game running under Wine and Proton. The American and
+Australian releases map onto it; *Builds* says how far.
 
 ## Patches
 
@@ -23,8 +24,9 @@ checked on the game running under Wine and Proton.
 | **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
-Offsets are file offsets. In the exe, which is never relocated, VA =
-offset − 0x400 + 0x401000 inside `.text`. In the two DLLs raw and virtual
+Offsets are the European build's file offsets; the other builds' are in
+`BUILDS` and under *Builds*. In the exe, which is never relocated, VA =
+offset − 0x400 + 0x401000 inside `.text` (− 0x600 in the American). In the two DLLs raw and virtual
 layouts coincide, so VA = offset + 0x10000000 at the preferred base; both
 are relocated at load, which is why every patch that lands in them is
 position-independent and drops the relocation entries of the bytes it
@@ -228,30 +230,63 @@ Sections: `.text`, `.rdata`, `.data`, `STATUSDA`, `METERDAT`, `MYDATA`,
 
 `data1.cab` carries the base build (x87) and two overlay groups,
 *PentiumIII Modules* (SSE) and *AMD Modules* (3DNow!), each replacing the
-same six files. The patcher installs and patches the Pentium III build
-only, and refuses the other two by size and MD5:
+same six files: `SEGA RALLY 2.exe`, `AdvTelop.dll`, `Champagn.dll`,
+`MSelect.dll`, `MUSASHI\MGameGL.dll` and `MUSASHI\MGLBackground.dll`. The
+patcher installs and patches the Pentium III build only. The P3 exe
+carries about eighty SSE instructions in its vector paths and
+`MGameGL.dll` holds the rest of the SIMD math, which is why the Musashi
+renderer is among the six; the three builds compute physics differently,
+so replays and netplay between them are not expected to match. One build
+is the reasonable scope, and the P3 one is the obvious choice.
 
-| File | Size | MD5 |
-| --- | --- | --- |
-| `SEGA RALLY 2.exe` | 1469952 | `51b3da97c3c73611d3516b65bb684cb5` |
-| `AdvTelop.dll` | 636928 | `977dd8801a281e987c4503c9fb2f8778` |
-| `Champagn.dll` | 699392 | `b8dbfe718eef561f12c99223ba7b9ec4` |
-| `MSelect.dll` | 1137152 | `1e6f713c39efb1558c79b795754d6e3a` |
-| `MUSASHI\MGameGL.dll` | 601600 | `3d095385ece996088381dd77a0f5f954` |
-| `MUSASHI\MGLBackground.dll` | 579584 | `e7cc2a9f084a39c6f119fa1a1d769e30` |
+Three pressings are supported, told apart by the exe's MD5 in `BUILDS`:
 
-The base and AMD executables are known (`65e7537e…`, 1470976 bytes, and
-1467392 bytes) but have no patch tables. Three files are patched:
-`SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` (86016, `201a9cc6…`) and
-`MUSASHI\MGAudio.dll` (57344, `b05b9c8e…`); the exe and `MGAudio.dll` grow
-by a section. Each gets a `.bak` beside it, the untouched original; the
-patcher always starts from those, so patching twice is patching once, and
-restoring is a rename. The P3 exe carries about eighty SSE instructions (`movups`,
-`mulps`, `addps`, `shufps`) in its vector paths; `MGameGL.dll` is where
-the rest of the SIMD math lives, which is why the Musashi renderer is
-among the six. The three builds compute physics differently, so netplay
-and replays between builds are not expected to match. That is the reason
-to support one build, and the P3 one is the obvious choice.
+| | Exe linked | `.text` | Cabinet | What differs from the European |
+| --- | --- | --- | --- | --- |
+| **Australian** | 3 Jun 1999 | 0xd2c9a | `0x01005100` | the oldest build: 259 KB more code, no `LAUNCH.EXE`, English and Japanese only, help under `HELPE\`; its own `AdvTelop`, `Champagn`, `MSelect`, `MainMode`, `Options`, `Record`, `ReplayGallery`, `SegaLogo`, `Title.dll`, `miscdll.dll`, `MGAudio.dll` and `MGInput.dll` |
+| **European** | 21 Oct 1999 | 0x936ca | `0x01000004` | - |
+| **American** | 3 Oct 2000 | 0x9367a | `0x01005100` | a relink of the same source with a `.data1` section and 0x100 more `.data`; the exe, `LAUNCH.EXE`, `MSG_S.dll`, `VendorLogo.dll` and `sr2_cpl.cpl`; the `TENYEAR` trackside art and `empire.txr` renamed `vendorlogo.txr` |
+
+Every other file is byte-identical across the three, `MGameD3D.dll`,
+`MGameGL.dll` and `MGLBackground.dll` among them. The play discs carry
+the same assets and one soundtrack (see *The play disc*).
+
+Each row of `BUILDS` holds the fingerprints of the six P3 files and the
+three patched DLLs, the exe's patch sites, the import slots those sites
+name, and the seven addresses the exe stubs read. In all three exes every
+patched instruction is the same bytes bar its operands, and every one was
+found by its masked context in the other builds and read back before it
+went into the table:
+
+| European | American | Australian | |
+| --- | --- | --- | --- |
+| `0x267c0` | `0x26a80` | `0x4b420` | the disc check |
+| `0x7572e` | `0x75b5e` | `0xb4dbe` | the loader's drive scan; the epilogue is 0xcf past the jump in all three |
+| `0x25ff7` | `0x262a7` | `0x4abfd` | `call` resume in the window procedure |
+| `0x273e6` | `0x276a6` | `0x4c026` | the fullscreen flag |
+| `0x14671` | `0x14921` | `0x27e71` | the .bg row copy |
+| `0x260bc` | `0x2636c` | `0x4acc2` | `call` the text-input handler |
+| `0x46e260` | `0x46e480` | `0x4ad790` | `RESUME` |
+| `0x41fe20` | `0x41feb0` | `0x43fb50` | `HANDLER` |
+| `0x50b118` | `0x50b218` | `0x575ae8` | `GAMED3D` |
+| `0x5088ac` | `0x5089ac` | `0x57327c` | `HWND` |
+| `0x4d5e1c` | `0x4d5f0c` | `0x52dc1c` | `WIDTH`, `HEIGHT` four bytes on |
+| `0x4e68cc` | `0x4e69bc` | `0x53fddc` | `BITCOUNT` |
+
+The ten SetTextColor sites are in the rows. The American import table is
+the European one with six CRT slots reordered, none the patches use; the
+Australian one is laid out afresh, so the five slots the patches name are
+in its row. The Australian `Title.dll` differs in its picture and in code
+past the row copy, which sits in identical bytes at the same offset; its
+`MGAudio.dll` has the same eleven calls and one load of
+`mciSendCommandA`, 0x40-0x60 further on, which the music patch finds for
+itself.
+
+Three files are patched in every build: `SEGA RALLY 2.exe`,
+`MUSASHI\MGameD3D.dll` and `MUSASHI\MGAudio.dll`, plus `Title.dll`; the
+exe and `MGAudio.dll` grow by a section. Each gets a `.bak` beside it, the
+untouched original; the patcher always starts from those, so patching
+twice is patching once, and restoring is a rename.
 
 ### The processor check
 

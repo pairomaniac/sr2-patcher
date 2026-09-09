@@ -39,17 +39,15 @@ def main(argv):
         if name not in cab.groups:
             print('missing group: %s' % name)
             return 1
-    p3 = {n: (s, d) for n, s, d in patcher.P3_FILES}
+    p3 = {}
     read = same = differ = 0
     for e in cab.entries:
         if not e.group or e.offset + e.compressed > size:
             continue
         data = cab.read(e)
         read += 1
-        if e.group == 'PentiumIII Modules' and e.path in p3:
-            if (len(data), hashlib.md5(data).hexdigest()) != p3[e.path]:
-                print('P3 fingerprint mismatch: %s' % e.path)
-                return 1
+        if e.group == 'PentiumIII Modules':
+            p3[e.path] = (len(data), hashlib.md5(data).hexdigest())
         if game:
             local = os.path.join(game, *e.path.split('\\'))
             if os.path.isfile(local):
@@ -61,7 +59,16 @@ def main(argv):
                         if e.group != 'Program Executable Files':
                             print('differs: %s\\%s' % (e.group, e.path))
     close()
-    print('extracted %d files' % read)
+    build = patcher.build_of(p3.get(patcher.EXE, (0, ''))[1])
+    if build is None:
+        print('the P3 exe is not a build the patcher knows')
+        return 1
+    files = patcher.BUILDS[build]['files']
+    for path, got in p3.items():
+        if got != files[path]:
+            print('%s: %s is not the %s build\'s' % (build, path, build))
+            return 1
+    print('extracted %d files, %s build' % (read, build))
     if game:
         print('compared with %s: %d identical, %d differ' % (game, same, differ))
     return 0

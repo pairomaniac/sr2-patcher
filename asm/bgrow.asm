@@ -19,14 +19,15 @@
 ; Title.dll has its own copy of the same loop (0x100014ba, 22 bytes, with
 ; the source advanced at the end), its lock description on the stack:
 ; assembled with -DTITLE it reads the depth from there and advances ebx.
-; Neither variant holds an absolute address of its own.
+; The TITLE variant holds no absolute address; the other has the one
+; placeholder the patcher fills.
 
 bits 32
 
 %ifdef TITLE
 %define BITCOUNT    esp + 0x70          ; the lock description's dwRGBBitCount, past the return address
 %else
-%define BITCOUNT    0x4e68cc            ; ddpfPixelFormat.dwRGBBitCount of the lock
+%define BITCOUNT    0xF1F1F1F1          ; ddpfPixelFormat.dwRGBBitCount of the lock; a placeholder, 0x4e68cc in the European build
 %endif
 
         cmp     dword [BITCOUNT], 32

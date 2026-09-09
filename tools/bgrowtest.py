@@ -30,7 +30,7 @@ except ImportError:
     sys.exit(0)
 
 CODE, DESC, SRC, DST, STACK = 0x400000, 0x4e6000, 0x1000000, 0x1008000, 0x3000000
-BITCOUNT = 0x4e68cc
+BITCOUNT = patcher.BUILDS['European']['addresses']['BITCOUNT']
 PIXELS = (0x0000, 0xffff, 0xf800, 0x07e0, 0x001f, 0x8410, 0x1234)
 
 
@@ -40,7 +40,7 @@ def expand(p):
 
 
 def run(bpp, title=False):
-    blob = patcher.TITLEROW_BLOB if title else patcher.BGROW_BLOB
+    blob = patcher.TITLEROW_BLOB if title else patcher.exe_blob(patcher.BGROW_BLOB, 'European')
     src = b''.join(p.to_bytes(2, 'little') for p in PIXELS)
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     for addr in (CODE, DESC):

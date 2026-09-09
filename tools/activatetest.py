@@ -31,8 +31,6 @@ except ImportError:
     sys.exit(0)
 
 BASE = 0x400000
-GAMED3D = 0x50b118
-RESUME = 0x46e260
 OBJ, VTABLE, RESTORE, STACK = 0x2000000, 0x2001000, 0x2002000, 0x3000000
 
 
@@ -44,7 +42,15 @@ def main(argv):
     if os.path.isfile(path + '.bak'):
         path += '.bak'
     with open(path, 'rb') as fh:
-        image = patcher.apply_activate(bytearray(fh.read()))
+        image = bytearray(fh.read())
+    build = patcher.build_of(patcher.md5(path))
+    if build is None:
+        print('activatetest: %s is not a build the patcher knows' % path)
+        return 1
+    row = patcher.BUILDS[build]
+    gamed3d, resume = row['addresses']['GAMED3D'], row['addresses']['RESUME']
+    site = BASE + 0x1000 + row['sites']['activate'] - patcher._rva_to_off(image, 0x1000)
+    image = patcher.apply_activate(image, build)
     pe_off = struct.unpack_from('<I', image, 0x3c)[0]
     nsec = struct.unpack_from('<H', image, pe_off + 6)[0]
     table = pe_off + 24 + struct.unpack_from('<H', image, pe_off + 20)[0]
@@ -56,7 +62,7 @@ def main(argv):
         mu.mem_write(BASE + va, bytes(image[roff:roff + rsize]))
     mu.mem_map(OBJ & ~0xfff, 0x3000)
     mu.mem_map(STACK, 0x10000)
-    mu.mem_write(GAMED3D, struct.pack('<I', OBJ))
+    mu.mem_write(gamed3d, struct.pack('<I', OBJ))
     mu.mem_write(OBJ, struct.pack('<I', VTABLE))
     mu.mem_write(VTABLE + 0x40, struct.pack('<I', RESTORE))
     mu.mem_write(RESTORE, b'\xc2\x04\x00')                      # ret 4
@@ -70,17 +76,17 @@ def main(argv):
     esp = STACK + 0x8000
     mu.reg_write(UC_X86_REG_ESP, esp)
     mu.reg_write(UC_X86_REG_ECX, 0x1234)
-    mu.emu_start(BASE + 0x26bf7, RESUME, count=1000)
-    assert mu.reg_read(UC_X86_REG_EIP) == RESUME, 'did not reach the resume'
+    mu.emu_start(site, resume, count=1000)
+    assert mu.reg_read(UC_X86_REG_EIP) == resume, 'did not reach the resume'
     assert calls == [OBJ], 'restore not called with the object: %r' % calls
     assert mu.reg_read(UC_X86_REG_ECX) == 0x1234, 'ecx clobbered'
     assert mu.reg_read(UC_X86_REG_ESP) == esp - 4, 'stack differs from a plain call'
-    assert struct.unpack('<I', mu.mem_read(esp - 4, 4))[0] == BASE + 0x26bfc, 'return address'
+    assert struct.unpack('<I', mu.mem_read(esp - 4, 4))[0] == site + 5, 'return address'
     # with no MGameD3D object the stub must skip straight to the resume
-    mu.mem_write(GAMED3D, struct.pack('<I', 0))
+    mu.mem_write(gamed3d, struct.pack('<I', 0))
     mu.reg_write(UC_X86_REG_ESP, esp)
-    mu.emu_start(BASE + 0x26bf7, RESUME, count=1000)
-    assert calls == [OBJ] and mu.reg_read(UC_X86_REG_EIP) == RESUME
+    mu.emu_start(site, resume, count=1000)
+    assert calls == [OBJ] and mu.reg_read(UC_X86_REG_EIP) == resume
     # --- the DLL half
     path = os.path.join(argv[1], 'MUSASHI', 'MGameD3D.dll')
     if os.path.isfile(path + '.bak'):

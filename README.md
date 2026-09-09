@@ -96,10 +96,12 @@ scaled to the monitor), controller configuration (the
 original Control Panel item is gone, the game runs on its defaults), and
 frame timing. The controls can still be set in the game's own Options.
 
-Supported: the European release, Pentium III build - the one the original
-installer picked on any Pentium III or later. The exact files it expects
-are listed in [docs/NOTES.md](docs/NOTES.md), *Builds*. Other releases
-would need their own tables; a disc dump of one is the way to get there.
+Supported: the European, American and Australian releases, Pentium III
+build - the one the original installer picked on any Pentium III or
+later. The patcher tells them apart by the exe and refuses anything
+else; the files each expects are in [docs/NOTES.md](docs/NOTES.md),
+*Builds*. The Japanese release has not been seen; a disc dump of it is
+the way to get there.
 
 ## Working on the patcher
 

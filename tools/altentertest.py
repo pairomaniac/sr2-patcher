@@ -29,7 +29,9 @@ except ImportError:
     sys.exit(0)
 
 CODE, FAKE, STACK, RETURN = 0x63e000, 0x40000000, 0x30000000, 0xdead0000
-HANDLER, IAT_LOADLIB, IAT_GETPROC, HWND, WIDTH = 0x41fe20, 0x495090, 0x4950f0, 0x5088ac, 0x4d5e1c
+ROW = patcher.BUILDS['European']
+HANDLER, HWND, WIDTH = (ROW['addresses'][k] for k in ('HANDLER', 'HWND', 'WIDTH'))
+IAT_LOADLIB, IAT_GETPROC = ROW['slots']['LoadLibraryA'], ROW['slots']['GetProcAddress']
 WM_SYSKEYDOWN, VK_RETURN, ALT, REPEAT = 0x104, 0x0d, 1 << 29, 1 << 30
 STUBS = {'LoadLibraryA': 4, 'GetProcAddress': 8, 'SetWindowLongA': 12, 'SetWindowPos': 28,
          'AdjustWindowRectEx': 16, 'MonitorFromWindow': 8, 'GetMonitorInfoA': 8}
@@ -44,7 +46,7 @@ class Machine:
         mu.mem_map(0x400000, 0x300000)
         mu.mem_map(FAKE, 0x1000)
         mu.mem_map(STACK, 0x10000)
-        mu.mem_write(CODE, patcher.ALTENTER_BLOB)
+        mu.mem_write(CODE, patcher.exe_blob(patcher.ALTENTER_BLOB, 'European'))
         self.addr = {name: FAKE + i * 16 for i, name in enumerate(STUBS)}
         for name, pops in STUBS.items():
             mu.mem_write(self.addr[name], b'\xc2' + struct.pack('<H', pops))

@@ -7,8 +7,8 @@
 sr2-patcher.py carries the assembled bytes because it ships as one file that
 runs from a fresh checkout with nothing installed. Never edit the hex by
 hand; this overwrites it. The placeholders the patcher fills at apply time
-are listed in MAGICS, and each must appear in the music blob at least
-once; the other blobs have none.
+are listed in MAGICS; the music blob must hold each of MUSIC_MAGICS at
+least once, and each exe stub each of its EXE_MAGICS exactly once.
 """
 import os
 import re
@@ -32,6 +32,25 @@ MAGICS = {
     'MAGIC_LOADLIB': 0xE3E3E3E3,
     'MAGIC_GETPROC': 0xE4E4E4E4,
     'MAGIC_GETMODFN': 0xE5E5E5E5,
+}
+
+# The exe stubs' placeholders, filled with absolute addresses from the
+# build's row; the two IAT ones share their values with MAGICS.
+EXE_MAGICS = {
+    'GAMED3D': 0xEAEAEAEA,
+    'RESUME': 0xEBEBEBEB,
+    'HANDLER': 0xECECECEC,
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'HWND': 0xEDEDEDED,
+    'WIDTH': 0xEEEEEEEE,
+    'HEIGHT': 0xEFEFEFEF,
+    'BITCOUNT': 0xF1F1F1F1,
+}
+EXE_BLOB_MAGICS = {
+    'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
+    'ALTENTER_BLOB': ('HANDLER', 'LOADLIB', 'GETPROC', 'HWND', 'WIDTH', 'HEIGHT'),
+    'BGROW_BLOB': ('BITCOUNT',),
 }
 
 # fullwin.asm finds the image base from its own RVA, which the patcher
@@ -66,8 +85,14 @@ def generated():
             for magic, value in MAGICS.items():
                 if struct.pack('<I', value) not in raw:
                     raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
+        elif name != 'TITLEROW_BLOB':
+            for magic, value in EXE_MAGICS.items():
+                want = 1 if magic in EXE_BLOB_MAGICS.get(name, ()) else 0
+                if raw.count(struct.pack('<I', value)) != want:
+                    raise SystemExit('%s: %s should occur %d time(s) in %s' % (src, magic, want, name))
         out.append(hexblob(name, raw))
     out.append('MUSIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in MAGICS.items()))
+    out.append('EXE_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in EXE_MAGICS.items()))
     out.append('FULLWIN_MAGIC = 0x%08X\n' % SELF_MAGIC)
     out.append(END)
     return ''.join(out)

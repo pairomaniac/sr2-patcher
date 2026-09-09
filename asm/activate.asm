@@ -16,9 +16,11 @@
 
 bits 32
 
-%define GAMED3D     0x50b118            ; the MGameD3D interface pointer
+; GAMED3D and RESUME are placeholders the patcher fills from the build's
+; row (European: 0x50b118 and 0x46e260).
+%define GAMED3D     0xEAEAEAEA          ; the MGameD3D interface pointer
 %define RESTORE     0x40                ; its restore-surfaces slot
-%define RESUME      0x46e260            ; what the call site called
+%define RESUME      0xEBEBEBEB          ; what the call site called
 
         push    ecx
         mov     eax, [GAMED3D]
