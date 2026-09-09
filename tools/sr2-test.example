@@ -3,10 +3,15 @@
 # in the repository. Copy to ~/.sr2-test and fill in. One line per
 # build, EU, US and AU; leave out a build you do not have.
 
-# The install disc dumps, for the cabinet check.
+# The install disc dumps, for the cabinet check and tools/kit.py.
 SR2_DISC_EU="$HOME/dumps/Sega Rally 2 (Europe) (Disc 1) (Install Disc).cue"
 SR2_DISC_US="$HOME/dumps/Sega Rally 2 (USA) (Disc 1).cue"
 SR2_DISC_AU="$HOME/dumps/Sega Rally 2 (Australia) (Install Disc).cue"
+
+# The play disc dumps. Nothing reads these; they are here for --rip.
+SR2_PLAY_EU="$HOME/dumps/Sega Rally 2 (Europe) (Disc 2) (Play Disc).cue"
+SR2_PLAY_US="$HOME/dumps/Sega Rally 2 (USA) (Disc 2).cue"
+SR2_PLAY_AU="$HOME/dumps/Sega Rally 2 (Australia) (Play Disc).cue"
 
 # The installed games, for the music and alt-tab checks and for running.
 SR2_GAME_EU=$HOME/games/sega-rally-2-eu

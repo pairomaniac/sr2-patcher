@@ -29,7 +29,10 @@ music and alt-tab checks run on each that is set. Start from
 `tools/sr2-test.example`, which describes every variable; the file stays
 on your machine. `data1.head` is the
 first 16 MB of `data1.cab` (`head -c 16M`): enough for the file table and
-the executables, small enough to keep around. The real cabinet or a real
+the executables, small enough to keep around. `python3 tools/kit.py`
+bundles it with every build's installed files, minus the assets, into
+`tools/sr2-kit.tar.gz` - the set the notes and the tools are written
+against, and what to hand over when a second machine needs it. The real cabinet or a real
 dump works the same and checks everything. To exercise the disc reader
 without a dump, wrap the head in an image:
 
