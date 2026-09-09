@@ -7,7 +7,7 @@ working on the patcher.
 | --- | --- |
 | [NOTES.md](NOTES.md) | how the game works and what each patch changes: the executable and its DLLs, the builds and their fingerprints, the processor check, Musashi and the manifests, the registry, startup, the loader, activation, the texture formats, the lobby text, windowed mode, music, both discs and the `data1.cab` format |
 | [MAP.md](MAP.md) | where things are: the repository, the regions of `sr2-patcher.py`, the exe's sections and every address mapped so far |
-| [DEVELOPING.md](DEVELOPING.md) | setup, the checks and what each catches, adding a patch, what is not there yet |
+| [DEVELOPING.md](DEVELOPING.md) | setup, `~/.sr2-test`, the checks and what each catches, adding a patch or a build, reading a Wine log |
 | [../asm/README.md](../asm/README.md) | the assembly source of every code patch, how it is built into the patcher, and what each stub does |
 
 Where something lives, by question:

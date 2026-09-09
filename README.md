@@ -61,7 +61,7 @@ that is not an unmodified copy of it.
 
 | Fix | What you'd see without it |
 | --- | --- |
-| **Windows 9x check** | The Australian release refuses to start with "Please run on Windows 9x." on anything newer. The other two never had the check. |
+| **Windows 9x check** | The Australian release refuses to start on anything newer. |
 | **No disc required** | An "insert the play disc" box at startup, and a menu with everything but multiplayer greyed out. The game now finds everything in its own folder. |
 | **Startup crash** | Under Proton the game closes before its window appears. A renderer bug that Proton's DirectDraw does not forgive. |
 | **Survive ALT+TAB** | Switching away and back leaves a blank screen, or the world with no textures. The game now restores its display when it regains focus, and keeps its textures where they cannot be lost. |
@@ -69,10 +69,10 @@ that is not an unmodified copy of it.
 | **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear - only the caret. The game asks for white in a way only Windows 95 understood; everything since draws black on black. |
 | **Borderless fullscreen** | The game took the display over at 640x480, and under Wine or Proton came back from ALT+TAB on the wrong screen. It now runs in a borderless window covering the monitor it starts on, no mode change, its 4:3 picture centred with black bars: the engine's own windowed mode, which the shipped game never used, with the window sized to the monitor. |
 | **ALT+ENTER** | Switches between that and an ordinary window with a frame, the picture's size, centred on the monitor; drag it, resize it, maximise it. ALT+ENTER again puts it back. |
-| **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. The Australian release also refused to start its music without a CD volume control on the sound card, which nothing has had for years; it runs without one now. |
+| **Music from files** | Silence, because the music was audio tracks on the play disc. The game now plays it from the files the patcher rips. The Australian release also wanted a CD volume control on the sound card before it would play at all; it no longer does. |
 
-Everything else is the game as it shipped. Resolution, controls and
-frame rate are on the list; see [Status](#status).
+Everything else is the game as it shipped; see [Status](#status) for
+what is planned.
 
 ## Music
 
@@ -87,22 +87,25 @@ in the system mixer.
 
 ## Status
 
-Installs, starts, plays with music, survives ALT+TAB - under Wine and
-under Proton (via umu, e.g. Faugus). Windows has not been tried; the
-patched game should run there as well, and if it does not, an issue with
+Work in progress; here be dragons. Installs, starts, plays with music,
+survives ALT+TAB - under Wine and under Proton (via umu, e.g. Faugus).
+Windows is untested; if the patched game misbehaves there, an issue with
 what happens is welcome.
-
-Not done yet: resolution above 640x480 (the picture is still 640x480,
-scaled to the monitor), controller configuration (the
-original Control Panel item is gone, the game runs on its defaults), and
-frame timing. The controls can still be set in the game's own Options.
 
 Supported: the European, American and Australian releases, Pentium III
 build - the one the original installer picked on any Pentium III or
 later. The patcher tells them apart by the exe and refuses anything
-else; the files each expects are in [docs/NOTES.md](docs/NOTES.md),
-*Builds*. The Japanese release has not been seen; a disc dump of it is
-the way to get there.
+else; see [docs/NOTES.md](docs/NOTES.md), *Builds*. The Japanese release
+has not been seen; a disc dump of it is the way to get there.
+
+Planned, in no particular order:
+
+- Native widescreen, with split-screen adjusted to match.
+- XInput gamepad support. Until then the game runs on its defaults, and
+  the controls can be set in its own Options.
+- Online play with a lobby.
+- Frame timing.
+- A Windows exe of the patcher, with the first release.
 
 ## Working on the patcher
 

@@ -3,14 +3,14 @@
 
     python3 tools/check.py                    # everything; discs and games from ~/.sr2-test
     python3 tools/check.py data1.cab          # the cabinet reader on this cab instead
-    python3 tools/check.py data1.cab GAMEDIR  # and compare it with this installed game
+    python3 tools/check.py data1.cab GAMEDIR  # and the game checks on this install
     python3 tools/check.py --list             # what there is
     python3 tools/check.py --only cab,music   # some of it
 
 ~/.sr2-test (template: tools/sr2-test.example, used by tools/sr2.sh too) names, per build, the
 install disc and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the
-same with US and AU. Each that is set runs the cab, music and altab
-checks on that build, labelled cab/EU and so on. Each check is a script
+same with US and AU. Each that is set runs the cab, offsets, music and
+altab checks on that build, labelled cab/EU and so on. Each check is a script
 of its own; this only decides what to run and reports the result, and
 shows a script's output when it fails.
 """
@@ -37,15 +37,18 @@ CHECKS = [
     ('lint', 'pyflakes',
      [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py', 'tools/cabtest.py',
       'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py', 'tools/bgrowtest.py',
-      'tools/fullwintest.py', 'tools/altentertest.py', 'tools/discsurvey.py', 'tools/kit.py'], ''),
+      'tools/fullwintest.py', 'tools/altentertest.py', 'tools/discsurvey.py', 'tools/kit.py',
+      'tools/selftest.py'], ''),
     ('bgrow', 'the .bg row copies under Unicorn, 16 and 32 bits',
      [PY, 'tools/bgrowtest.py'], ''),
     ('fullwin', 'the borderless present and window sizing under Unicorn',
      [PY, 'tools/fullwintest.py'], ''),
     ('altenter', 'the ALT+ENTER toggle under Unicorn',
      [PY, 'tools/altentertest.py'], ''),
-    ('cab', 'the cabinet reader on a real disc, against the install',
-     [PY, 'tools/cabtest.py', '{disc}', '{game}'], 'disc'),
+    ('cab', 'the cabinet reader on a real disc',
+     [PY, 'tools/cabtest.py', '{disc}'], 'disc'),
+    ('offsets', 'every patch against the real files, in every combination, pinned',
+     [PY, 'tools/selftest.py', '{game}'], 'game'),
     ('music', 'the music hook under Unicorn, the real MGAudio.dll',
      [PY, 'tools/musictest.py', '{game}'], 'game'),
     ('altab', 'the alt-tab stub and restore routine under Unicorn, real files',

@@ -10,13 +10,13 @@ says where to look.
 | --- | --- |
 | `sr2-patcher.py` | the patcher: tables, the disc image and IS5 cabinet readers, installer, manifests, patch and restore, window, CLI |
 | `asm/` | `music.asm` the music hook, `activate.asm` the alt-tab stub, `restore.asm` the restore-all routine; `build.py` assembles them into `sr2-patcher.py` |
-| `tools/check.py` | runs every check; `tools/cabtest.py` is the disc and cabinet check, `tools/musictest.py` and `tools/activatetest.py` the two blobs under Unicorn |
+| `tools/check.py` | runs every check; `tools/selftest.py` applies the tables to a real install, `tools/cabtest.py` reads a real disc, the `*test.py` beside them run the stubs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
-| `tools/discsurvey.py` | hashes every file in one or more install discs, checks the fingerprints and lists what differs between the discs; `--play` lists a play disc's label, root and audio tracks |
-| `tools/setup-dev.sh` | says what the toolchain is missing |
-| `tools/kit.py` | bundles every build's installed files and `data1.head` into the gitignored `tools/sr2-kit.tar.gz`, from `~/.sr2-test` |
-| `docs/` | this and the other documents; `docs/README.md` is the index |
 | `tools/sr2.sh`, `tools/sr2-test.example` | installs, rips, patches, restores or runs one build with the paths from `~/.sr2-test`, whose template the example is |
+| `tools/discsurvey.py` | hashes every file on one or more install discs and lists what differs; `--play` lists a play disc's label, root and tracks |
+| `tools/setup-dev.sh` | says what the toolchain is missing |
+| `tools/kit.py` | bundles every build's installed files and `data1.head` into the gitignored `tools/sr2-kit.tar.gz` |
+| `docs/` | this and the other documents; `docs/README.md` is the index |
 | `.github/workflows/build.yml` | CI: the checks |
 
 ## 2. `sr2-patcher.py`
@@ -173,4 +173,6 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
 | titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2t` |
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
+| win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
+| mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 12 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |

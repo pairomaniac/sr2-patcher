@@ -113,6 +113,10 @@ BUILDS = {
 }
 
 
+# The DLL each import slot a row names comes from; kernel32 unless listed.
+SLOT_DLL = {'SetTextColor': 'gdi32.dll'}
+
+
 def build_of(digest):
     """The build whose exe has this MD5, or None."""
     for name, row in BUILDS.items():
@@ -655,6 +659,8 @@ def audio_spans(tracks):
 
 def rip(cue, dest, log=print):
     """Every audio track of the play disc into DEST\\music\\trackNN.wav."""
+    if not cue:
+        raise DiscError('No play disc given.')
     tracks = parse_cue(cue)
     spans = list(audio_spans(tracks))
     if not spans:
@@ -776,6 +782,8 @@ class DiscFile:
 def open_source(src):
     """A file object on data1.cab and a closer, from whatever the user
     gave: a .cue, an .iso or .bin, a mounted disc folder, or the cab."""
+    if not src:
+        raise DiscError('No install disc given.')
     low = src.lower()
     if os.path.isdir(src):
         for name in os.listdir(src):
@@ -1239,7 +1247,7 @@ def check_build(dest):
     with open(source(EXE), 'rb') as fh:
         exe = fh.read()
     for func, slot in row['slots'].items():
-        if _iat_slot(exe, 'kernel32.dll' if func != 'SetTextColor' else 'gdi32.dll', func) != slot - IMAGE_BASE:
+        if _iat_slot(exe, SLOT_DLL.get(func, 'kernel32.dll'), func) != slot - IMAGE_BASE:
             raise ValueError('%s: the import table does not match the %s row' % (func, build))
     return build
 

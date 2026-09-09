@@ -13,7 +13,7 @@ Australian releases map onto it; *Builds* says how far.
 
 | Patch | File | Offsets | Change |
 | --- | --- | --- | --- |
-| **Windows 9x check** (Australian only) | `SEGA RALLY 2.exe` | `0x4b3b0` | `0x44bfb0`, which puts up "Please run on Windows 9x." unless `GetVersionExA` reports `dwPlatformId` 1, returns 0 at once (`sub esp,0x94` → `xor eax,eax; ret`); the other builds have no such check and do not import `GetVersionExA` |
+| **Windows 9x check** (Australian only) | `SEGA RALLY 2.exe` | `0x4b3b0` | `0x44bfb0`, "Please run on Windows 9x." unless `GetVersionExA` gives `dwPlatformId` 1, returns 0 at once (`sub esp,0x94` → `xor eax,eax; ret`); the other builds have no such check |
 | **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
 | **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
@@ -23,7 +23,7 @@ Australian releases map onto it; *Builds* says how far.
 | **Title picture** | `Title.dll` | `0x8ba` and appended `.sr2t` section | the DLL's own .bg row copy at `0x100014ba` → `call` asm/bgrow.asm assembled for its stack |
 | **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
 | **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
-| **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init's `jne fail` after the CD-line search → a stub that zeroes the control count at `+0x84` and eax and jumps back to the allocation; the European DLL returns `S_FALSE` there, the Australian `E_FAIL`, and Wine has no CD line |
+| **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init looks for a CD line on the mixer for the volume slider; without one the European DLL returns `S_FALSE`, the Australian `E_FAIL`, and Wine has none. The `jne fail` → a stub that zeroes the control count at `+0x84` (uninitialised until the search fills it) and eax, and jumps back to the allocation |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; see [asm/README.md](../asm/README.md) |
 
 Offsets are the European build's file offsets; the other builds' are in
@@ -234,37 +234,33 @@ Sections: `.text`, `.rdata`, `.data`, `STATUSDA`, `METERDAT`, `MYDATA`,
 *PentiumIII Modules* (SSE) and *AMD Modules* (3DNow!), each replacing the
 same six files: `SEGA RALLY 2.exe`, `AdvTelop.dll`, `Champagn.dll`,
 `MSelect.dll`, `MUSASHI\MGameGL.dll` and `MUSASHI\MGLBackground.dll`. The
-patcher installs and patches the Pentium III build only. The P3 exe
-carries about eighty SSE instructions in its vector paths and
-`MGameGL.dll` holds the rest of the SIMD math, which is why the Musashi
-renderer is among the six; the three builds compute physics differently,
-so replays and netplay between them are not expected to match. One build
-is the reasonable scope, and the P3 one is the obvious choice.
+patcher installs and patches the Pentium III build only: the three
+compute physics differently, so replays and netplay between them would
+not match, and every CPU since runs SSE.
 
 Three pressings are supported, told apart by the exe's MD5 in `BUILDS`:
 
-| | Exe linked | `.text` | Cabinet | What differs from the European |
+| | Exe linked | `.text` | Cabinet | Against the European |
 | --- | --- | --- | --- | --- |
-| **Australian** | 3 Jun 1999 | 0xd2c9a | `0x01005100` | the oldest build: 259 KB more code, no `LAUNCH.EXE`, English and Japanese only, help under `HELPE\`; its own `AdvTelop`, `Champagn`, `MSelect`, `MainMode`, `Options`, `Record`, `ReplayGallery`, `SegaLogo`, `Title.dll`, `miscdll.dll`, `MGAudio.dll` and `MGInput.dll` |
+| **Australian** | 3 Jun 1999 | 0xd2c9a | `0x01005100` | the first release: 259 KB more code, a Windows 9x check, no `LAUNCH.EXE`, English and Japanese only; its own `AdvTelop`, `Champagn`, `MSelect`, `MainMode`, `Options`, `Record`, `ReplayGallery`, `SegaLogo`, `Title.dll`, `miscdll.dll`, `MGAudio.dll`, `MGInput.dll` |
 | **European** | 21 Oct 1999 | 0x936ca | `0x01000004` | - |
-| **American** | 3 Oct 2000 | 0x9367a | `0x01005100` | a relink of the same source with a `.data1` section and 0x100 more `.data`; the exe, `LAUNCH.EXE`, `MSG_S.dll`, `VendorLogo.dll` and `sr2_cpl.cpl`; the `TENYEAR` trackside art and `empire.txr` renamed `vendorlogo.txr` |
+| **American** | 3 Oct 2000 | 0x9367a | `0x01005100` | a relink: the exe (`.data1` added, `.data` 0x100 longer), `LAUNCH.EXE`, `MSG_S.dll`, `VendorLogo.dll`, `sr2_cpl.cpl`; its own `TENYEAR` trackside art |
 
-Every other file is byte-identical across the three, `MGameD3D.dll`,
-`MGameGL.dll` and `MGLBackground.dll` among them. The play discs carry
-the same assets and one soundtrack (see *The play disc*).
+Everything else is byte-identical across the three, `MGameD3D.dll`
+included. The play discs carry the same assets and one soundtrack (see
+*The play disc*).
 
-Each row of `BUILDS` holds the fingerprints of the six P3 files and the
-three patched DLLs, the exe's patch sites, the import slots those sites
-name, and the seven addresses the exe stubs read. In all three exes every
-patched instruction is the same bytes bar its operands, and every one was
-found by its masked context in the other builds and read back before it
-went into the table:
+A row of `BUILDS` holds the fingerprints of the six P3 files and the
+three patched DLLs, the exe's sites, the import slots those sites name,
+and the seven addresses the exe stubs read. Every patched instruction is
+the same bytes in all three exes bar its operands; each site was found
+by its masked context and read back before it went in:
 
 | European | American | Australian | |
 | --- | --- | --- | --- |
 | `0x267c0` | `0x26a80` | `0x4b420` | the disc check |
-| - | - | `0x4b3b0` | the Windows 9x check, Australian only |
-| `0x7572e` | `0x75b5e` | `0xb4dbe` | the loader's drive scan; the epilogue is 0xcf past the jump in all three |
+| - | - | `0x4b3b0` | the Windows 9x check |
+| `0x7572e` | `0x75b5e` | `0xb4dbe` | the loader's drive scan; its epilogue 0xcf past the jump in all three |
 | `0x25ff7` | `0x262a7` | `0x4abfd` | `call` resume in the window procedure |
 | `0x273e6` | `0x276a6` | `0x4c026` | the fullscreen flag |
 | `0x14671` | `0x14921` | `0x27e71` | the .bg row copy |
@@ -273,28 +269,21 @@ went into the table:
 | `0x41fe20` | `0x41feb0` | `0x43fb50` | `HANDLER` |
 | `0x50b118` | `0x50b218` | `0x575ae8` | `GAMED3D` |
 | `0x5088ac` | `0x5089ac` | `0x57327c` | `HWND` |
-| `0x4d5e1c` | `0x4d5f0c` | `0x52dc1c` | `WIDTH`, `HEIGHT` four bytes on |
+| `0x4d5e1c` | `0x4d5f0c` | `0x52dc1c` | `WIDTH`; `HEIGHT` four bytes on |
 | `0x4e68cc` | `0x4e69bc` | `0x53fddc` | `BITCOUNT` |
 
 The ten SetTextColor sites are in the rows. The American import table is
 the European one with six CRT slots reordered, none the patches use; the
-Australian one is laid out afresh, so the five slots the patches name are
-in its row. The Australian `Title.dll` differs in its picture and in code
-past the row copy, which sits in identical bytes at the same offset; its
-`MGAudio.dll` has the same eleven calls and one load of
-`mciSendCommandA`, 0x40-0x60 further on, which the music patch finds for
-itself. That DLL's Init also differs in one branch: after opening the CD
-and reading the track table it looks for a CD line on the mixer
-(`MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC`, or one named `CD`) for the
-volume slider, and where the European DLL returns `S_FALSE` without one,
-the Australian returns `E_FAIL`, the exe's wrapper drops the object, and
-nothing plays; the *No mixer needed* patch is for that. Its mixer block
-at `+0x68` is left uninitialised by the constructor, which is why the
-patch is a stub and not a byte.
+Australian is laid out afresh, so its row names the five slots. The
+Australian `Title.dll` has the row copy at the same offset in identical
+code; its `MGAudio.dll` has the same eleven calls and one load of
+`mciSendCommandA`, which the music patch finds for itself, and one
+different branch in Init, for which see *No mixer needed* in the table
+above.
 
-Three files are patched in every build: `SEGA RALLY 2.exe`,
-`MUSASHI\MGameD3D.dll` and `MUSASHI\MGAudio.dll`, plus `Title.dll`; the
-exe and `MGAudio.dll` grow by a section. Each gets a `.bak` beside it, the
+Three files are patched in every build - `SEGA RALLY 2.exe`,
+`MUSASHI\MGameD3D.dll`, `MUSASHI\MGAudio.dll` - and `Title.dll`; the exe
+and `MGAudio.dll` grow by a section. Each gets a `.bak` beside it, the
 untouched original; the patcher always starts from those, so patching
 twice is patching once, and restoring is a rename.
 
@@ -553,13 +542,11 @@ cabinet checked (`root`, `serial`, `adv`) contains exactly the files the
 tiers hold. `diskid.2` is the text `Please enjoy SEGA RALLY 2.` The disc is
 not needed by a full install.
 
-The three pressings hold one soundtrack. Stripped of leading and trailing
-digital silence, the USA and Australian tracks are bit-identical, and the
-European ones the same within eleven samples. What differs is padding:
-Europe trims the tail, the other two keep 151 sectors of it (two seconds
-per track), and the USA adds 2723 samples of lead. So a rip from any of
-them plays the same music, with two seconds of silence at the loop from
-the later two, as on the disc.
+The three pressings hold one soundtrack: stripped of digital silence,
+the American and Australian tracks are bit-identical and the European
+within eleven samples. Europe trims the tail; the other two keep two
+seconds of it per track, and America adds 62 ms of lead. A rip from any
+of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
