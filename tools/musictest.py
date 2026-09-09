@@ -290,23 +290,30 @@ def main(argv):
     assert log['strings'][-1] == 'play sr2bgm from 10000' and 'track03.wav' in log['strings'][1], log['strings']
     assert log['waits'] and set(log['waits']) == {HDONE}, 'the hook waits only on the done event'
 
-    # The volume: full on every open so far, then the slider's 0..10000 as
-    # a waveOut volume, applied at once and after the next open.
+    # The volume. Pending after every open and play, applied from the
+    # status polls until waveOutSetVolume succeeds; the stub always does.
     assert log['volume'] and set(log['volume']) == {(0, 0xFFFFFFFF)}, log['volume']
+    log['volume'] = []
+    call(hook, 0xFACE, 0x814, 0x100, P)                                   # the play above left it pending
+    call(hook, 0xFACE, 0x814, 0x100, P)
+    assert log['volume'] == [(0, 0xFFFFFFFF)], 'once after a play, then nothing: %r' % log['volume']
+    log['volume'] = []
     V = STACK + 0x300
-    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))
-    assert call(hook + 15, 0x1234, 0, V) == 0
-    assert log['volume'][-1] == (0, 0x7FFF7FFF), log['volume']
+    mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 5000, 5000))        # the slider at half
+    assert call(hook + 15, 0x1234, V, 0) == 0
+    assert log['volume'] == [(0, 0x7FFF7FFF)], log['volume']
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 12000, 12000))      # over the top clamps
-    call(hook + 15, 0x1234, 0, V)
+    call(hook + 15, 0x1234, V, 0)
     assert log['volume'][-1] == (0, 0xFFFFFFFF)
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 0, 0, 0))              # no channels: keeps it
-    assert call(hook + 15, 0x1234, 0, V) == 0 and log['volume'][-1] == (0, 0xFFFFFFFF)
+    assert call(hook + 15, 0x1234, V, 0) == 0 and log['volume'][-1] == (0, 0xFFFFFFFF)
     mu.mem_write(V, struct.pack('<IIIII', 0x2c, 0, 2, 0, 0))
-    call(hook + 15, 0x1234, 0, V)
+    call(hook + 15, 0x1234, V, 0)
     log['volume'] = []
-    call(hook, 0xFACE, 0x806, 0, P)
-    assert log['volume'] == [(0, 0)], 'volume not re-applied on open: %r' % log['volume']
+    call(hook, 0xFACE, 0x806, 0, P)                                       # play leaves it pending
+    call(hook, 0xFACE, 0x814, 0x100, P)
+    call(hook, 0xFACE, 0x814, 0x100, P)
+    assert log['volume'] == [(0, 0)], 'applied once from the polls after a play: %r' % log['volume']
     print('musictest OK: startup, worker, open, status, play, position, seek, pause/resume/stop/close, forwarding, volume')
     return 0
 

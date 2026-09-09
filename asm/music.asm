@@ -11,7 +11,7 @@
 ;   +5   jmp startup    <- the new DllMain
 ;   +10  jmp hookaddr   <- esi = hook, for the one site that loads the
 ;                         import into esi and calls through it
-;   +15  jmp setvolume  <- what the CD-volume routine's entry is pointed at
+;   +15  jmp setvolume  <- what the CD-volume method's entry is pointed at
 ;
 ; The DLL is relocated at load, so nothing here is absolute: the blob finds
 ; its own base (call/pop) and reaches everything as [ebx + offset]. The five
@@ -25,10 +25,12 @@
 ; Playback is not implemented here: a CD command becomes an MCI string
 ; command against waveaudio, and the same MCI subsystem does the work.
 ;
-; The BGM slider used to set the mixer's CD line. That routine is replaced
-; by setvolume, which turns the 0..10000 the game passes into a waveOut
-; volume, keeps it, and applies it to wave device 0 - the one mciwave
-; plays through - now and after every track opened since.
+; The BGM slider used to set the mixer's CD line, through a method that
+; gives up without a mixer handle. That method's entry goes to setvolume,
+; which turns the 0..10000 the game passes into a waveOut volume and keeps
+; it. mciwave opens the wave device on play, on its own thread, so the
+; volume is applied to device 0 from the game's position polls until the
+; call succeeds, and again after every open and play.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -295,32 +297,39 @@ opentrack:
         call    scat
         call    mcistr
         mov     dword [ebx + D_OPEN], 1
-        call    applyvol
+        mov     dword [ebx + D_VOLPEND], 1
         xor     eax, eax
 .out:
         ret
 
-; waveOutSetVolume(0, D_VOL), if it was resolved. Keeps every register.
+; waveOutSetVolume(0, D_VOL) while one is pending, until it takes: the
+; device is not open until mciwave plays. Keeps every register.
 applyvol:
+        cmp     dword [ebx + D_VOLPEND], 0
+        je      .none
         cmp     dword [ebx + D_SETVOL], 0
         je      .none
         pushad
         push    dword [ebx + D_VOL]
         push    0
         call    dword [ebx + D_SETVOL]
+        test    eax, eax
+        jnz     .keep
+        mov     dword [ebx + D_VOLPEND], 0
+.keep:
         popad
 .none:
         ret
 
 ; ------------------------------------------------------------- setvolume
-; Replaces the CD-volume routine: stdcall (this, unused, values), where
+; Replaces the CD-volume method: stdcall (this, values, flags), where
 ; values is the game's struct - +8 the channel count, +0xc the first
 ; channel, 0..10000. Returns S_OK; the mixer is never touched.
 
 setvolume:
         push    ebx
         call    getbase
-        mov     eax, [esp + 16]         ; values
+        mov     eax, [esp + 12]         ; values
         test    eax, eax
         jz      .ok
         cmp     dword [eax + 8], 0
@@ -338,6 +347,7 @@ setvolume:
         shl     edx, 16
         or      eax, edx                ; both channels
         mov     [ebx + D_VOL], eax
+        mov     dword [ebx + D_VOLPEND], 1
         call    applyvol
 .ok:
         xor     eax, eax
@@ -437,6 +447,7 @@ hook:
         call    putnum
 .go:
         call    mcistr
+        mov     dword [ebx + D_VOLPEND], 1
         jmp     .ret
 .range:
         mov     eax, MCIERR_OUTOFRANGE
@@ -465,6 +476,7 @@ hook:
         jmp     .ok
 
 .status:
+        call    applyvol                ; the game polls while music plays
         mov     edx, [ebp + 20]
         mov     dword [edx + 4], 0      ; dwReturn
         test    dword [ebp + 16], MCI_STATUS_ITEM
@@ -730,6 +742,7 @@ D_HREQ      dd 0
 D_HDONE     dd 0
 D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
 D_VOL       dd 0xFFFFFFFF               ; the slider, as a waveOut volume; full until set
+D_VOLPEND   dd 0                        ; D_VOL not yet applied to the open device
 D_TOC       times (MAXTRACK + 1) dd 0   ; frames per track
 D_PATH      times PATHLEN db 0
 
