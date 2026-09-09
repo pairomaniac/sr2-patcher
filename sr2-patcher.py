@@ -3,7 +3,7 @@
 
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab
-    python3 sr2-patcher.py --patch DIR              patch an installed game
+    python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game; KEYS a comma list to apply only those
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
     python3 sr2-patcher.py --restore DIR            put the original files back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -1466,8 +1466,12 @@ def main(argv):
     try:
         if args[0] == '--install' and 3 <= len(args) <= 4:
             install(*args[1:])
-        elif args[0] == '--patch' and len(args) == 2:
-            patch(args[1])
+        elif args[0] == '--patch' and 2 <= len(args) <= 3:
+            keys = tuple(args[2].split(',')) if len(args) == 3 else PATCH_KEYS
+            unknown = [k for k in keys if k not in PATCH_KEYS]
+            if unknown:
+                raise ValueError('no patch named %s; the patches are %s' % (unknown[0], ', '.join(PATCH_KEYS)))
+            patch(args[1], keys=keys)
         elif args[0] == '--rip' and len(args) == 3:
             rip(args[1], args[2])
         elif args[0] == '--restore' and len(args) == 2:

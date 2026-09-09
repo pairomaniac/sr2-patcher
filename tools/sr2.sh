@@ -5,7 +5,7 @@
 #
 #     tools/sr2.sh BUILD install [LANG]   install from the disc and patch; English unless given
 #     tools/sr2.sh BUILD rip              rip the play disc's music into the game folder
-#     tools/sr2.sh BUILD patch            patch the installed game
+#     tools/sr2.sh BUILD patch [KEYS]     patch the installed game; KEYS a comma list to apply only those
 #     tools/sr2.sh BUILD restore          put the original files back
 #     tools/sr2.sh BUILD run              run under umu the way Faugus does; the Wine log goes to logs/sr2.log
 #     tools/sr2.sh BUILD debug [CHANNELS] and WINEDEBUG=+seh,+loaddll,+mci, or the channels given
@@ -62,7 +62,7 @@ case "$mode" in
     rip)
         [ -n "$PLAY" ] || die "set $play_var in $CONF"
         exec python3 "$PATCHER" --rip "$PLAY" "$GAME" ;;
-    patch)   exec python3 "$PATCHER" --patch "$GAME" ;;
+    patch)   exec python3 "$PATCHER" --patch "$GAME" ${2:+"$2"} ;;
     restore) exec python3 "$PATCHER" --restore "$GAME" ;;
     run|debug|show) ;;
     *) die "no such action: $mode" ;;
