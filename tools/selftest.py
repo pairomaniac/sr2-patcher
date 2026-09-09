@@ -42,7 +42,7 @@ EXPECTED = {
         'Title.dll': '17a6a4f0b36e4f98dcebc3e038ddfb3c',
     },
     'Australian': {
-        'SEGA RALLY 2.exe': 'bab39ae8e648221e65f17a35662794bc',
+        'SEGA RALLY 2.exe': '4601e704b8aadaa8b67e1c003d7eaa5f',
         'MUSASHI\\MGameD3D.dll': '1bf6b62a6bed2552924097fae3344634',
         'MUSASHI\\MGAudio.dll': '6fd735b4a2abc846d03a776981d2331f',
         'Title.dll': '12af6ad8236f168605d0b2ef526c9244',

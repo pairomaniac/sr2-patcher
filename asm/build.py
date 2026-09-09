@@ -46,12 +46,18 @@ EXE_MAGICS = {
     'WIDTH': 0xEEEEEEEE,
     'HEIGHT': 0xEFEFEFEF,
     'BITCOUNT': 0xF1F1F1F1,
+    'SETTEXTCOLOR': 0xF2F2F2F2,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
     'ALTENTER_BLOB': ('HANDLER', 'LOADLIB', 'GETPROC', 'HWND', 'WIDTH', 'HEIGHT'),
     'BGROW_BLOB': ('BITCOUNT',),
+    'TEXTCOLOR_BLOB': ('SETTEXTCOLOR',),
 }
+
+# An exe stub's source must not name an exe address: every one moves
+# between builds and belongs in the row. Comments may.
+EXE_ADDRESS = re.compile(r'^[^;]*\b0x[4-6][0-9a-fA-F]{5}\b', re.M)
 
 # fullwin.asm finds the image base from its own RVA, which the patcher
 # fills in over this.
@@ -90,6 +96,11 @@ def generated():
                 want = 1 if magic in EXE_BLOB_MAGICS.get(name, ()) else 0
                 if raw.count(struct.pack('<I', value)) != want:
                     raise SystemExit('%s: %s should occur %d time(s) in %s' % (src, magic, want, name))
+            if name in EXE_BLOB_MAGICS:
+                with open(os.path.join(HERE, src)) as fh:
+                    hit = EXE_ADDRESS.search(fh.read())
+                if hit:
+                    raise SystemExit('%s: an exe address in the source (%s); put it in the row' % (src, hit.group(0).strip()))
         out.append(hexblob(name, raw))
     out.append('MUSIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in MAGICS.items()))
     out.append('EXE_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in EXE_MAGICS.items()))

@@ -93,7 +93,10 @@ and document the patch in NOTES.md's table and MAP.md's *Sites by patch*.
 ## Adding a build
 
 A row in `BUILDS`: the nine fingerprints, the six exe sites, the ten
-SetTextColor sites, the five import slots and the seven addresses.
+SetTextColor sites, the five import slots and the seven addresses. An
+exe stub may not name an exe address in its source - `asm/build.py`
+refuses one - so everything a stub reads goes through a placeholder and
+the row.
 `tools/discsurvey.py` gives the fingerprints and what differs from the
 discs you have; find each site by searching the new exe for the European
 site's bytes with addresses and `rel32`s masked, and read the hit back in

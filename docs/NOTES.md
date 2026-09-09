@@ -252,7 +252,7 @@ included. The play discs carry the same assets and one soundtrack (see
 
 A row of `BUILDS` holds the fingerprints of the six P3 files and the
 three patched DLLs, the exe's sites, the import slots those sites name,
-and the seven addresses the exe stubs read. Every patched instruction is
+and the addresses the exe stubs read. Every patched instruction is
 the same bytes in all three exes bar its operands; each site was found
 by its masked context and read back before it went in:
 
@@ -271,6 +271,7 @@ by its masked context and read back before it went in:
 | `0x5088ac` | `0x5089ac` | `0x57327c` | `HWND` |
 | `0x4d5e1c` | `0x4d5f0c` | `0x52dc1c` | `WIDTH`; `HEIGHT` four bytes on |
 | `0x4e68cc` | `0x4e69bc` | `0x53fddc` | `BITCOUNT` |
+| `0x495028` | `0x495028` | `0x4d402c` | `SETTEXTCOLOR`, the import slot the textcolor stub jumps through |
 
 The ten SetTextColor sites are in the rows. The American import table is
 the European one with six CRT slots reordered, none the patches use; the

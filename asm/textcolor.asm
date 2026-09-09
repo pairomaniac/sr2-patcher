@@ -14,11 +14,12 @@
 ; Same stdcall shape: mask the colour to its RGB bytes and continue into
 ; the import. Nothing else in the exe calls SetTextColor.
 ;
-; The exe is never relocated, so the address is absolute.
+; The exe is never relocated, so the address is absolute; it is a
+; placeholder the patcher fills from the build's row (European 0x495028).
 
 bits 32
 
-%define SETTEXTCOLOR    0x495028        ; the import slot
+%define SETTEXTCOLOR    0xF2F2F2F2      ; the import slot
 
         and     dword [esp + 8], 0x00ffffff
         jmp     [SETTEXTCOLOR]
