@@ -551,7 +551,11 @@ of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
-- Windows has not been tried; Wine and Proton have.
+- Windows has not been tried; Wine and Proton have. One report to check
+  there: the stock game is said to crash on returning to the main menu
+  after saving a replay. It does not under Wine with only `nodisc` and
+  `music` applied, so nothing here fixes it and Wine's DirectDraw may
+  be tolerating what Windows does not.
 - The in-game BGM volume slider drives the mixer's CD line, which the WAV
   playback does not follow.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and

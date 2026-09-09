@@ -101,8 +101,9 @@ has not been seen; a disc dump of it is the way to get there.
 Planned, in no particular order:
 
 - Native widescreen, with split-screen adjusted to match.
-- XInput gamepad support. Until then the game runs on its defaults, and
-  the controls can be set in its own Options.
+- Controller configuration and XInput gamepad support. The original
+  Control Panel item is gone and the game's own Options has no controls
+  page, so it runs on its defaults for now.
 - Online play with a lobby.
 - Frame timing.
 - A Windows exe of the patcher, with the first release.
