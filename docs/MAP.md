@@ -30,13 +30,14 @@ In file order:
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |
-| Music patch | `append_section`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
+| Music patch | `append_section`, `append_text`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Managed textures | `apply_managed` |
 | Restore-all patch | `apply_restore` |
 | Activation patch | `exe_blob`, `_check_call`, `apply_activate` |
 | Text-colour patch | `apply_textcolor` |
 | Windowed patch | `BGROW_LEN`, `apply_windowed` |
 | ALT+ENTER patch | `apply_altenter` |
+| Wave-BGM patch | `apply_bgmvol` |
 | No-mixer patch | `apply_mixerless` |
 | Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
 | Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
@@ -173,6 +174,21 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
 | titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2t` |
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
+| bgmvol | 1 + section | `MGSound.dll` `0x10006980` (file `0x6980`, 6 bytes), the appended `.sr2b` |
 | win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
+
+## 7. `MUSASHI\MGSound.dll`
+
+Image base `0x10000000`, relocated at load; identical in all three builds
+(MD5 `a9698c1d…`). The wave and streaming sound engine over DirectSound;
+the exe and `Options.dll` each carry a copy of the same client code for
+it, which is why a fix for the settings-menu music has to live here.
+
+| Address | What |
+|---|---|
+| `0x10006940` | the streaming buffer's `SetVolume(this, value)`: `min + (max−min) × value / 10000` in dB (`min` at `+0xdc`, `max` at `+0xe0`) into `IDirectSoundBuffer::SetVolume`; `0x6980` finishes the mapping, the `bgmvol` site |
+| `0x1000422e` region | the ordinary buffer's `SetVolume`, the effects and the announcer; untouched |
+| `0x10005d36` | the streaming buffer's `SetParameters`: bit 2 of the struct's `+4` is the volume, its value at `+0xc` |
+| `0x1001138e` | `CMGameSoundBuffer::SetVolume... volume overflow!` - the range check |

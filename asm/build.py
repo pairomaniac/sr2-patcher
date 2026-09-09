@@ -24,7 +24,8 @@ TARGET = os.path.join(ROOT, 'sr2-patcher.py')
 BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('RESTORE_BLOB', 'restore.asm', ()), ('TEXTCOLOR_BLOB', 'textcolor.asm', ()),
          ('BGROW_BLOB', 'bgrow.asm', ()), ('TITLEROW_BLOB', 'bgrow.asm', ('-DTITLE',)),
-         ('FULLWIN_BLOB', 'fullwin.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ())]
+         ('FULLWIN_BLOB', 'fullwin.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ()),
+         ('BGMVOL_BLOB', 'bgmvol.asm', ()), ('VOLTRACE_BLOB', 'voltrace.asm', ())]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -53,6 +54,7 @@ EXE_BLOB_MAGICS = {
     'ALTENTER_BLOB': ('HANDLER', 'LOADLIB', 'GETPROC', 'HWND', 'WIDTH', 'HEIGHT'),
     'BGROW_BLOB': ('BITCOUNT',),
     'TEXTCOLOR_BLOB': ('SETTEXTCOLOR',),
+    'VOLTRACE_BLOB': ('LOADLIB', 'GETPROC'),
 }
 
 # An exe stub's source must not name an exe address: every one moves
@@ -93,7 +95,7 @@ def generated():
                     raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
         elif name != 'TITLEROW_BLOB':
             for magic, value in EXE_MAGICS.items():
-                want = 1 if magic in EXE_BLOB_MAGICS.get(name, ()) else 0
+                want = EXE_BLOB_MAGICS.get(name, ()).count(magic)
                 if raw.count(struct.pack('<I', value)) != want:
                     raise SystemExit('%s: %s should occur %d time(s) in %s' % (src, magic, want, name))
             if name in EXE_BLOB_MAGICS:

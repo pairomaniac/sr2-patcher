@@ -3,7 +3,7 @@
 
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab
-    python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game; KEYS a comma list to apply only those
+    python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game; KEYS a comma list to apply only those (diagnostics only this way)
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
     python3 sr2-patcher.py --restore DIR            put the original files back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -39,7 +39,7 @@ IMAGE_BASE = 0x400000                   # the exe is never relocated
 # the stubs in asm/ read (VAs). MGameD3D.dll is the same file in all
 # three. Everything else in the script is written against the European
 # row; the others map it.
-PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGAudio.dll', 'Title.dll')
+PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll', 'Title.dll')
 
 BUILDS = {
     'European': {
@@ -52,11 +52,14 @@ BUILDS = {
             'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
             'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
             'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
+            'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
                   'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'volume': 0x1db0, 'getvolume': 0x1e40},   # in MGAudio.dll: the CD-volume methods
+                  'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
+                  'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
+                  'bgmvol': 0x6980},        # in MGSound.dll: the streaming buffer's SetVolume
         # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
@@ -76,11 +79,12 @@ BUILDS = {
             'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
             'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
             'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
+            'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
                   'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
-                  'volume': 0x1db0, 'getvolume': 0x1e40},
+                  'volume': 0x1db0, 'getvolume': 0x1e40, 'bgmvol': 0x6980},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
@@ -99,11 +103,13 @@ BUILDS = {
             'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
             'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
             'MUSASHI\\MGAudio.dll': (57344, '35d38d59b6bd2a09eb38f0eced9ec5fb'),
+            'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
-                  'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278},    # all in MGAudio.dll
+                  'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
+                  'bgmvol': 0x6980},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
@@ -143,6 +149,12 @@ RESTORE_RELOCS = 10
 #          S_FALSE; the failure branch goes to a stub that zeroes the
 #          control count and continues, so the object lives without a
 #          volume control, as the European does. apply_mixerless.
+# bgmvol:  the streamed BGM - menu loops, settings-menu and replay music
+#          - a few dB down: in MGSound.dll, where every path that sets a
+#          stream's level ends (the exe's and each screen DLL's copy of
+#          the same client code), the streaming buffer's SetVolume
+#          (0x10006940) finishes its value-to-dB mapping through a call
+#          to asm/bgmvol.asm in an appended section. apply_bgmvol.
 # win9x:   the Australian build only. Its startup checks GetVersionExA's
 #          dwPlatformId for Windows 9x (0x44bfb0) and refuses to run on
 #          anything else; the check returns 0, "fine", at once.
@@ -215,6 +227,11 @@ RESTORE_RELOCS = 10
 #          mciSendCommandA calls to call the hook and its one load of the
 #          import into esi to fetch the hook's address, and repoints the
 #          entry point at the setup thunk.
+# The first bytes of the five volume entry points voltrace hooks.
+VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),
+                  bytes.fromhex('558bec81ec88000000'), bytes.fromhex('558bec83ec0c'))
+
+
 def patches(build):
     """The patch table for one build: key -> (file, sites, transform).
     The exe rows read their offsets and import slots from BUILDS; the DLL
@@ -224,6 +241,7 @@ def patches(build):
 
     def slot(name):
         return struct.pack('<I', row['slots'][name])
+
 
     table = {
         'nodisc': (EXE, (
@@ -256,19 +274,26 @@ def patches(build):
         'borderless': ('MUSASHI\\MGameD3D.dll', (
             (0x4d7b, bytes.fromhex('8b0df8230110'), None),
             (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
+        'bgmvol': ('MUSASHI\\MGSound.dll', ((site['bgmvol'], bytes.fromhex('03d68bf285f6'), None),), 'apply_bgmvol'),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
     }
     if 'oscheck' in site:
         table['win9x'] = (EXE, ((site['oscheck'], bytes.fromhex('81ec94000000'), bytes.fromhex('31c0c3')),), None)
+    if 'voltrace' in site:
+        table['voltrace'] = (EXE, tuple((off, VOLTRACE_HEADS[i], None) for i, (off, _n) in enumerate(site['voltrace'])),
+                             'apply_voltrace')
     if 'mixer' in site:
         table['mixerless'] = ('MUSASHI\\MGAudio.dll', ((site['mixer'], bytes.fromhex('0f8530010000'), None),),
                               'apply_mixerless')
     return table
 
 
+# Diagnostics: applied only by name (--patch DIR KEYS), never by default.
+DIAGNOSTIC = ('voltrace',)
+
 # Every patch any build has, in table order.
-PATCH_KEYS = tuple(dict.fromkeys(k for b in BUILDS for k in patches(b)))
+PATCH_KEYS = tuple(k for k in dict.fromkeys(k for b in BUILDS for k in patches(b)) if k not in DIAGNOSTIC)
 
 # The mciSendCommandA sites in MGAudio.dll: 11 `call dword [slot]`, and
 # one `mov esi, dword [slot]` in the open routine, which then calls esi.
@@ -517,6 +542,22 @@ ALTENTER_BLOB = bytes.fromhex(
     '0041646a75737457696e646f77526563744578004d6f6e69746f7246726f6d57'
     '696e646f77004765744d6f6e69746f72496e666f41008501000094010000a101'
     '0000b4010000c601000000900000000000000000000000000000000000000000'
+)
+BGMVOL_BLOB = bytes.fromhex(
+    '01f281ea5802000081faf0d8ffff7d05baf0d8ffff89d685f6c3'
+)
+VOLTRACE_BLOB = bytes.fromhex(
+    'e9bb000000e9c9000000e9da000000e9e7000000e9f80000006083ec5089e7e8'
+    '000000005b81eb240000008db324010000e8820000008b4424740430aab020aa'
+    '8b442468e84d0000008b44247ce8440000008b842480000000e8380000008b84'
+    '2484000000e82c000000c607008d832a01000050ff15e3e3e3e38d8b37010000'
+    '5150ff15e4e4e4e485c0740354ffd083c45061c20400b908000000c1c00488c2'
+    '80e20f80c23080fa39760380c207881747e2e8c6072047c3acaa84c075fa4fc3'
+    '6a01e852ffffff5589e583ec0cff25e1e7e7e76a02e83fffffff5589e581ec80'
+    '000000ff25e2e7e7e76a03e829ffffff568b3185f6ff25e3e7e7e76a04e817ff'
+    'ffff5589e581ec88000000ff25e4e7e7e76a05e801ffffff5589e583ec0cff25'
+    'e5e7e7e77372322076006b65726e656c33322e646c6c004f7574707574446562'
+    '7567537472696e674100'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -1004,6 +1045,23 @@ def append_section(buf, name, data, chars=CODE_SECTION | 0x80000040):
     return out, rva
 
 
+def append_text(buf, data):
+    """Place data in the slack at the end of .text - the bytes between its
+    virtual and raw sizes, mapped and executable but used by nothing - and
+    grow the virtual size over it. For a stub too small to spend one of
+    the four section-table slots the European and Australian headers
+    have. Returns (buffer, RVA)."""
+    pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
+    table = pe_off + 24 + struct.unpack_from('<H', buf, pe_off + 20)[0]
+    vsize, va, rsize, raw = struct.unpack_from('<IIII', buf, table + 8)
+    if vsize + len(data) > rsize:
+        raise ValueError('no room at the end of .text')
+    out = bytearray(buf)
+    out[raw + vsize:raw + vsize + len(data)] = data
+    struct.pack_into('<I', out, table + 8, vsize + len(data))
+    return out, va + vsize
+
+
 def _rva_to_off(buf, rva):
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     nsec = struct.unpack_from('<H', buf, pe_off + 6)[0]
@@ -1228,6 +1286,40 @@ def apply_mixerless(buf, build):
     start = _rva_to_off(out, rva)
     struct.pack_into('<i', out, start + len(stub) + 1, site_rva + 6 - (rva + len(stub) + 5))
     out[site:site + 6] = b'\x0f\x85' + struct.pack('<i', rva - (site_rva + 6))
+    return out
+
+
+BGMVOL_SECTION = b'.sr2b'
+
+
+def apply_bgmvol(buf, build):
+    """bgmvol.asm in MGSound.dll: the 6 bytes that finish the dB mapping
+    in the streaming buffer's SetVolume, and set the flags the branch
+    after them tests, become a call to it."""
+    out, rva = append_section(buf, BGMVOL_SECTION, BGMVOL_BLOB, chars=CODE_SECTION)
+    _branch(out, BUILDS[build]['sites']['bgmvol'], rva, 6)
+    return out
+
+
+VOLTRACE_SECTION = b'.sr2v'
+
+
+def apply_voltrace(buf, build):
+    """The diagnostic: five volume entry points jump into voltrace.asm,
+    which reports and jumps back through a return-address table placed
+    after the blob. Needs a section-table slot: apply without one of the
+    exe patches that take one."""
+    sites = BUILDS[build]['sites']['voltrace']
+    blob = exe_blob(VOLTRACE_BLOB, build)
+    out, rva = append_section(buf, VOLTRACE_SECTION, blob + b'\0' * (4 * len(sites)), chars=CODE_SECTION)
+    start = _rva_to_off(out, rva)
+    text_off = _rva_to_off(out, 0x1000)
+    for i, (off, length) in enumerate(sites):
+        slot_va = IMAGE_BASE + rva + len(blob) + 4 * i
+        struct.pack_into('<I', out, start + len(blob) + 4 * i, IMAGE_BASE + 0x1000 + off - text_off + length)
+        out[start:start + len(blob)] = bytes(out[start:start + len(blob)]).replace(
+            struct.pack('<I', 0xE7E7E7E1 + i), struct.pack('<I', slot_va))
+        _branch(out, off, rva + 5 * i, length, op=b'\xe9')
     return out
 
 
@@ -1502,7 +1594,7 @@ def main(argv):
             install(*args[1:])
         elif args[0] == '--patch' and 2 <= len(args) <= 3:
             keys = tuple(args[2].split(',')) if len(args) == 3 else PATCH_KEYS
-            unknown = [k for k in keys if k not in PATCH_KEYS]
+            unknown = [k for k in keys if k not in PATCH_KEYS + DIAGNOSTIC]
             if unknown:
                 raise ValueError('no patch named %s; the patches are %s' % (unknown[0], ', '.join(PATCH_KEYS)))
             patch(args[1], keys=keys)

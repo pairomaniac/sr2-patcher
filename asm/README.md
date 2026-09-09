@@ -20,6 +20,8 @@ Never edit the hex by hand; the next build overwrites it.
 | `bgrow.asm` | one row of a .bg picture into the back buffer, expanded to 32 bits when the buffer is; built twice, for the exe and for `Title.dll` |
 | `fullwin.asm` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | ALT+ENTER between the borderless window and a framed one |
+| `voltrace.asm` | a diagnostic, applied by name: five volume entry points in the exe report their arguments through `OutputDebugStringA` |
+| `bgmvol.asm` | in `MGSound.dll`: the streamed BGM `ATTEN` hundredths of a dB below the level it is given, in the streaming buffer's `SetVolume` |
 | `restore.asm` | that restore, redone as `RestoreAllSurfaces` so the textures come back too |
 | - | the `mixerless` stub is three instructions, written by `apply_mixerless` in the patcher rather than assembled here |
 | `build.py` | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |

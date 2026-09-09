@@ -24,6 +24,7 @@ Australian releases map onto it; *Builds* says how far.
 | **Borderless** | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be` and appended `.sr2f` section | the windowed present → `jmp` asm/fullwin.asm's present, `call [__imp__MoveWindow]` in the windowed init → `call` its sizewindow; ten relocation entries dropped |
 | **ALT+ENTER** | `SEGA RALLY 2.exe` | `0x260bc` and appended `.sr2k` section | the window procedure's `call 0x41fe20` at `0x426cbc` → asm/altenter.asm, which takes ALT+ENTER and passes everything else on |
 | **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init looks for a CD line on the mixer for the volume slider; without one the European DLL returns `S_FALSE`, the Australian `E_FAIL`, and Wine has none. The `jne fail` → a stub that zeroes the control count at `+0x84` (uninitialised until the search fills it) and eax, and jumps back to the allocation |
+| **Wave BGM turned down** | `MUSASHI\MGSound.dll` | `0x6980` and appended `.sr2b` section | the menu loops, the settings-menu music and the replay music are streamed, and every path that sets a stream's level - the exe's, and the copy of the same client code inside `Options.dll` that plays the settings-menu music - ends in the streaming buffer's `SetVolume` (`0x10006940`), `min + (max−min) × value / 10000` in dB into the DirectSound buffer; the effects and the announcer have a `SetVolume` of their own. The range the game sets for streams is narrow, so scaling the value moves the level only a few dB; the mapping's last step → `call` asm/bgmvol.asm, which takes `ATTEN` (600, hundredths of a dB) off the result, floored at −10000. The effects and the announcer are created with a −40..0 dB range, the streams with a narrower, higher one, so the same slider value lands them louder |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the set-volume method's entry → `jmp setvolume`, which keeps the slider's 0..10000 as a `waveOutSetVolume` value, at 0.5 of full for the top of the slider, applied at once and by the worker after every play until the stream exists, to device 0 (Windows) and Wine's stream handles `0xFF00`, `0xFF01`, `0xC000`, and the get-volume method's → `jmp getvolume`, which reports it, since the exe divides that reading by 100 for its scale; see [asm/README.md](../asm/README.md) |
 
 Offsets are the European build's file offsets; the other builds' are in
@@ -563,9 +564,6 @@ of them plays the same music, with the disc's own silence at the loop.
   nothing here fixes it. And the volume patch's device-id
   `waveOutSetVolume(0, …)` is the Windows path; only the Wine handles
   have been seen to work.
-- The wave BGM the game plays itself through `MGSound` is balanced for a
-  CD line quieter than it, so at equal slider settings it is loud; a
-  factor in `MGSound`'s volume scaling would be the fix.
 - `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
   `MUSASHI\SR2.dll` offer.
 - Frame timing, input, resolution: nothing traced yet. The renderer is

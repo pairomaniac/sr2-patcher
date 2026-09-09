@@ -77,7 +77,10 @@ Code rather than bytes goes in `asm/` and is a transform. The shapes:
 
 - a section appended to the fixed exe, sites pointed at it with `_branch`:
   `altab`, `textcolor`, `windowed`, `altenter`; `titlebg` the same in
-  `Title.dll`, `mixerless` in `MGAudio.dll`;
+  `Title.dll`, `mixerless` in `MGAudio.dll`, `bgmvol` in `MGSound.dll`.
+  The European and Australian exes have room for exactly four appended
+  sections, all taken; a further small exe stub goes in the slack at the
+  end of `.text` with `append_text`;
 - a section appended to a relocated DLL, the blob finding its own base and
   a placeholder filled at apply time: `music`, `borderless`;
 - a routine rewritten in place: `restoreall`;
@@ -116,6 +119,21 @@ and `+debugstr` shows what the Musashi DLLs say for themselves. An empty
 file `music\trace` beside the tracks makes the hook report every command
 it receives from the game through `OutputDebugStringA` as `sr2 <id> <msg>
 <flags> <p1> <p2> <p3>`, so `+mci,+debugstr` shows both sides.
+
+## Diagnostics
+
+`voltrace` is a patch applied only by name: five volume entry points in
+the exe report every call through `OutputDebugStringA` as `sr2 vN this
+a1 a2 a3`, so `tools/sr2.sh eu debug +debugstr` shows which one fires
+when a slider moves and what it carries. It needs a section-table slot,
+so apply it in place of one of the exe patches that take one:
+
+```
+tools/sr2.sh eu patch nodisc,altab,textcolor,windowed,titlebg,zdetach,managed,restoreall,texfmt,anydepth,borderless,music,voltrace
+```
+
+The row lists the sites as `(offset, displaced length)`; the thunks in
+`asm/voltrace.asm` carry the displaced instructions by hand.
 
 ## Not there yet
 
