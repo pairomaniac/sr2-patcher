@@ -28,6 +28,9 @@ tools/sr2.sh au run             # play it
 `~/.sr2-test`. `run` and `debug` go through umu (Proton) or plain wine
 and leave the Wine log in `logs/`.
 
+The mix's numbers - the effects' range and the two music offsets - are
+`asm/mix.inc`; `build.py` derives the CD table (`curve.inc`) from it.
+
 `python3 tools/kit.py` bundles every build's installed files, minus the
 assets, with the first 16 MB of each `data1.cab`, into the gitignored
 `tools/sr2-kit.tar.gz`: what the notes are written against.
@@ -41,7 +44,7 @@ and games and skip themselves without.
 | Check | Catches |
 | --- | --- |
 | `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, a placeholder left unfilled |
-| `asm` | `asm/` edited without `asm/build.py` being run |
+| `asm` | `asm/` edited without `asm/build.py` being run, `curve.inc` included |
 | `lint` | pyflakes |
 | `bgrow`, `fullwin`, `altenter` | those stubs under Unicorn |
 | `cab` | the disc and cabinet readers on a real dump |

@@ -8,30 +8,43 @@
 ; both in the streaming and buffer code every client ends in:
 ;
 ;   +0   range   the buffer's SetRange (0x10004380) loads min and max
-;                through here: each becomes 7/8 of itself less 8 dB, so
-;                -40..0 is -43..-8 and a step is 3.5 dB, 9 being the old 7.
+;                through here: each mapped onto the range in mix.inc, so
+;                -40..0 is MIX_MIN..MIX_MAX, 3.5 dB a step, 9 the old 7.
 ;   +N   stream  the streaming buffer's SetVolume (0x10006940) finishes
 ;                its value-to-dB mapping through here: the slider step
-;                the value was made from, on that same curve plus OFFSET.
+;                the value was made from, on that same curve plus STREAM_DB.
 ;
-; The CD music's table in music.asm is the same curve plus 8 dB, as
-; waveOut amplitudes. Nothing here is absolute.
+; The CD music's table in music.asm is the same curve plus CD_DB, as
+; waveOut amplitudes. The numbers are in mix.inc. Nothing here is absolute.
 
 bits 32
+%include "mix.inc"
 
-%define OFFSET          200             ; hundredths of a dB above the effects' curve
-%define STEP            350             ; (max - min) / 10 of the remapped range
-%define BOTTOM          (-3950 + OFFSET) ; step 0 on it
+%define OFFSET          STREAM_DB
+%define STEP            MIX_STEP
+%define BOTTOM          (MIX_BOTTOM + OFFSET)
 
+; old -4000..0 -> MIX_MIN..MIX_MAX: new = MIX_MAX + old * (MIX_MAX - MIX_MIN) / 4000
 range:                                  ; +0: replaces mov ecx,[esp+0xc]; mov edx,[esp+0x10]
         mov     ecx, [esp + 0x10]       ; min, under the return address
         mov     edx, [esp + 0x14]       ; max
-        imul    ecx, ecx, 7
-        sar     ecx, 3
-        sub     ecx, 800
-        imul    edx, edx, 7
-        sar     edx, 3
-        sub     edx, 800
+        push    eax
+        push    edx
+        mov     eax, ecx
+        call    .map
+        mov     ecx, eax
+        pop     eax                     ; max
+        call    .map
+        mov     edx, eax
+        pop     eax
+        ret
+.map:   imul    eax, eax, (MIX_MAX - MIX_MIN)
+        push    ecx
+        mov     ecx, 4000
+        cdq
+        idiv    ecx
+        pop     ecx
+        add     eax, MIX_MAX
         ret
 
 stream:                                 ; +N: replaces add edx,esi; mov esi,edx; test esi,esi

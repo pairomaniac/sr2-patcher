@@ -9,7 +9,7 @@ says where to look.
 | Path | What |
 | --- | --- |
 | `sr2-patcher.py` | the patcher: tables, the disc image and IS5 cabinet readers, installer, manifests, patch and restore, window, CLI |
-| `asm/` | `music.asm` the music hook, `activate.asm` the alt-tab stub, `restore.asm` the restore-all routine; `build.py` assembles them into `sr2-patcher.py` |
+| `asm/` | the assembly source of every code patch, `mix.inc` with the mix's numbers and `curve.inc` derived from it; `build.py` assembles them into `sr2-patcher.py` |
 | `tools/check.py` | runs every check; `tools/selftest.py` applies the tables to a real install, `tools/cabtest.py` reads a real disc, the `*test.py` beside them run the stubs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
 | `tools/sr2.sh`, `tools/sr2-test.example` | installs, rips, patches, restores or runs one build with the paths from `~/.sr2-test`, whose template the example is |
@@ -26,7 +26,7 @@ In file order:
 | Region | Starts with |
 | --- | --- |
 | Constants | `VERSION`; `BUILDS` the three builds' fingerprints, sites, slots and addresses, `build_of`; `patches` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
-| Generated | the eight `*_BLOB`s, `MUSIC_MAGICS`, `EXE_MAGICS`, written by `asm/build.py` |
+| Generated | the `*_BLOB`s, `MUSIC_MAGICS`, `EXE_MAGICS`, written by `asm/build.py` |
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |

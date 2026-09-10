@@ -496,9 +496,10 @@ ALTENTER_BLOB = bytes.fromhex(
     '0000b4010000c601000000900000000000000000000000000000000000000000'
 )
 MIX_BLOB = bytes.fromhex(
-    '8b4c24108b5424146bc907c1f90381e9200300006bd207c1fa0381ea20030000'
-    'c3518d832b02000031d2b957040000f7f15983f8097605b80900000085c0740e'
-    '69d05e01000081c25af1ffffeb05baf0d8ffff89d685f6c3'
+    '8b4c24108b542414505289c8e80c00000089c158e80400000089c258c369c0ac'
+    '0d000051b9a00f000099f7f95905e0fcffffc3518d832b02000031d2b9570400'
+    '00f7f15983f8097605b80900000085c0740e69d05e01000081c25af1ffffeb05'
+    'baf0d8ffff89d685f6c3'
 )
 VOLTRACE_BLOB = bytes.fromhex(
     'e9bb000000e9c9000000e9da000000e9e7000000e9f80000006083ec5089e7e8'
@@ -1238,7 +1239,7 @@ def apply_mixerless(buf, build):
 
 
 MIX_SECTION = b'.sr2b'
-MIX_STREAM = 33                                  # the second routine in mix.asm
+MIX_STREAM = 51                                  # the second routine in mix.asm
 
 
 def apply_mix(buf, build):
@@ -1536,7 +1537,7 @@ def selfcheck():
                         raise ValueError('%s and %s both write %s:0x%x' % (key, taken[(name, i)], name, i))
                     taken[(name, i)] = key
             sites += len(ss)
-        if MIX_BLOB[MIX_STREAM] != 0x51:               # `push ecx` opens the stream routine
+        if MIX_BLOB[MIX_STREAM:MIX_STREAM + 3] != b'\x51\x8d\x83':    # `push ecx; lea eax, [ebx+...]` opens the stream routine
             raise ValueError('mix.asm: the stream routine is not at +%d' % MIX_STREAM)
         for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB, TEXTCOLOR_BLOB):
             for magic in EXE_MAGICS.values():

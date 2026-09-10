@@ -28,8 +28,8 @@
 ;
 ; The BGM slider's two methods are pointed here as well: getvolume and
 ; setvolume, the latter mapping the slider step to a waveOut amplitude on
-; the same dB curve the game uses for its effects, applied to the wave
-; stream by the worker after each play. README.md has the account.
+; the mix's dB curve (mix.inc, the table in curve.inc), applied to the
+; wave stream by the worker after each play. README.md has the account.
 ;
 ; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
 ; keeps an MCI device private to the thread that opened it. So every string
@@ -38,6 +38,7 @@
 ; command, stores the result in D_RESULT and signals back.
 
 bits 32
+%include "curve.inc"
 
 %define MAGIC_ORIGENTRY 0xE1E1E1E1      ; offset to the original entry point
 %define MAGIC_IATMCI    0xE2E2E2E2      ; offset to the mciSendCommandA IAT slot
@@ -878,10 +879,9 @@ D_ODS       dd 0                        ; OutputDebugStringA
 D_PLAYED    dd 0                        ; a play was just sent: settle the volume
 D_TRACE     dd 0                        ; music\trace exists: report every command
 D_TRC       times 96 db 0
-D_VOL       dd 4294967295               ; the slider, as a waveOut volume; full until set
+D_VOL       dd CD_FULL                 ; the slider, as a waveOut volume; full until set
 D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
-S_CURVE     dw 0, 2609, 3904, 5841, 8739, 13076, 19565, 29273, 43800, 65535
-            ; waveOut amplitude per slider step: the mix.asm curve (-39.5 dB + 3.5 dB a step) plus 8 dB, 0 off
+S_CURVE     dw CD_CURVE                 ; the waveOut amplitude per slider step, curve.inc
 S_HANDLES   dd 0                        ; Windows: device 0
             dd 0xFF00, 0xFF01           ; Wine: mapper streams 0 and 1
             dd 0xC000                   ; Wine: device 0 stream 0
