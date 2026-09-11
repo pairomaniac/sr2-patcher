@@ -235,43 +235,51 @@ init a page and 4/6/8 run it, 0xb leaves. The table moves to `.sr2d`
 with two more entries and the compare goes to 0xd: 0xc is the page's
 init, 0xd its exec, both in asm/devices.asm, entered as every case is
 with `esi` the Options object and leaving through the dispatcher's
-epilogue (`0x10003cd6`). Init binds the page's own UV table through
-`0x1000ed90` - once per load of the DLL, flagged in the blob, since the
-binding writes each entry's sheet handle over its index in place and a
-second pass reads handles as indices (the stock pages are bound once, in
-`OptionsModeInit`; the exe reloads the DLL for each visit) - and starts
-the slide-in; exec pushes the sixteen-dword sprite call for each entry of
-a (sprite, x, y) list with x offset by the slide, 640 down by 40 a frame
-as the stock pages, then, in place, reads the frame's key bits from the
-input object (`0x100b9464`, `+8`, vtable `+0x14`) and on cancel (bit 1)
-plays sound 0xe and slides the page on out to the left; at -640 it sets
-state 1, the menu with its cursor where it was. The list is 40-byte
-entries - kind, sprite or string, x, y, z or text flags, alpha, red,
-green, blue in 256ths - built by `devices_page` in the patcher in the
-Game Settings page's terms: its header band, group plate, row plate and
-the shared hint bar are that page's own sprites (`0x100a3128`,
-`0x100a3290`, `0x100a4198`, `0x1009f500`, found by their first quad),
-drawn as `0x100025f0` draws them - plates at z 14 with alpha 0xd8, text
-at z 10 - and the text goes through the stock
-routine `0x1000df10` over its 14-px glyph sprites (`0x1009c080`, one
-sprite a glyph, a 256-byte character map at `0x100fcc04` it fills on
-first use): (string, x, y, z, advance for a missing glyph, sx, sy,
-alpha, r, g, b, table, flags), flags 4 proportional, 1 right-aligned, 2
-centred. The table has letters, digits, `.`, `+`, `-` only; the colon
-is a piece. The 12-px font drawn from texel boxes was tried first and
-came out wrong at every size: the stock glyph cells carry a texel of
-margin. Geometry as the stock's: the band and heading at y 87, the
-group plate at (48, 106), rows of 18 from (261, 106), group text at
-x 56, action at 269, colon at 397, value at 405, the buttons at y 404,
-the hint bar at 451. The cursor is the stock's too (`0x10002c30`): up
-and down through the rows and the BACK button, wrapping, sound 0xe a
-move; the held row's plate drawn (0x100, 0x100, 0, 0), its group's
-(0x100, 0x100, 0x20, 0x20), the button pulsing green and blue 0 to
-0x100 by 0x10 a frame, the page's `pulse`; confirm on BACK leaves as
-cancel does. Each draw-list entry carries which rows hold it and how.
-The bindings shown are fixed strings for now. The new data carries absolute
-pointers, so `.sr2d` gets a relocation block appended to the directory in
-`.reloc`'s zero tail.
+epilogue (`0x10003cd6`).
+
+Init binds the page's own UV table through `0x1000ed90` - once per load
+of the DLL, flagged in the blob, since the binding writes each entry's
+sheet handle over its index in place and a second pass reads handles as
+indices (the stock pages are bound once, in `OptionsModeInit`; the exe
+reloads the DLL for each visit) - and starts the slide-in. Exec draws
+the list, moves the cursor, and slides: in from the right at 640 down
+by 40 a frame, out to the left on cancel or on confirm over BACK, the
+menu's state set at -640, the stock pages' numbers. The hint bar under
+every page belongs to the frame object (`0x10001cc0`), which pops it in
+and out by itself; a page only names its message in `0x1009c784`, -1
+for none. This one names 0xe, "Use Cursor keys to change mode
+selections", once in place, and -1 when it leaves, as Game Settings
+does at `0x10002b90` and `0x10002eae`.
+
+The list is 40-byte entries - kind, sprite or string, x, y, z or text
+flags, alpha, red, green, blue in 256ths, and the cursor's hold on the
+entry - built by `devices_page` in the patcher in the Game Settings
+page's terms (`0x100025f0` draws it): its header band, group plate and
+row plate are that page's own sprites (`0x100a3128`, `0x100a3290`,
+`0x100a4198`, found by their first quad), plates at z 14 with alpha
+0xd8, text at z 10, the text through the stock routine `0x1000df10`
+over its 14-px glyph sprites (`0x1009c080`, one sprite a glyph, a
+256-byte character map at `0x100fcc04` it fills on first use): (string,
+x, y, z, advance for a missing glyph, sx, sy, alpha, r, g, b, table,
+flags), flags 4 proportional, 1 right-aligned, 2 centred. The table has
+letters, digits, `.`, `+`, `-` only; the colon is a piece. The glyph
+cells carry a texel of margin around the ink, and need it: boxes cut to
+the ink render narrow and ragged. Geometry as the stock's: the band and
+heading at y 87, the group plate at (48, 106), rows of 18 from (261,
+106), 6 more between groups, group text at x 56, action at 269, colon
+at 397, value at 405, the buttons at y 404. Two groups, PLAYER 1 and
+PLAYER 2, seven rows each.
+
+The cursor is the stock's (`0x10002c30`): up and down through the rows
+and the BACK button, wrapping, sound 0xe a move. What it holds is drawn
+as Game Settings draws it: the row's plate (0x100, 0x100, 0, 0), its
+group's (0x100, 0x100, 0x20, 0x20), the button (0x100, 0x100, p, p) and
+the row's value white with alpha 0x80 + p/2, p the page's pulse, 0 to
+0x100 and back by 0x10 a frame (`0x10002a23`). Each entry carries which
+rows hold it and how. The bindings shown are fixed strings for now.
+
+The new data carries absolute pointers, so `.sr2d` gets a relocation
+block appended to the directory in `.reloc`'s zero tail.
 
 The item's label is "DEVICE" over the stock "SETTINGS". Its icon is a
 thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a

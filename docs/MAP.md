@@ -216,7 +216,8 @@ Australian is its own build (addresses in `BUILDS`).
 | `0x1000b610` | the sound manager's play: (id, 0, 0, 0), `ecx` the manager at `0x100b8bd8` |
 | `0x100b9464` | the input object's holder: `+8` the object, vtable `+0x14(1)` the frame's key bits, `+0x20(1)` the stick |
 | `0x1000df10` | draws a string in the 14-px font: (string, x, y, z, advance, sx, sy, a, r, g, b, glyph table, flags); `0x1009c080` the glyph sprites, `0x100fcc04` the character map |
-| `0x100025f0` | draws the Game Settings page: `0x100a3128` the header band, `0x100a3290` a group plate, `0x100a4198` a row plate, the glyph-sprite labels from `0x1009c400`; `0x1009f500` the hint bar and `0x1009f370` the frame on the shared page `0x1009e708` |
+| `0x100025f0` | draws the Game Settings page: `0x100a3128` the header band, `0x100a3290` a group plate, `0x100a4198` a row plate, the glyph-sprite labels from `0x1009c400`; `0x10002c30` its cursor, `0x10002a23` its pulse |
+| `0x10001cc0` | the frame object's exec: the OPTIONS plate, the bands, and the hint bar by the message in `0x1009c784` (-1 none), popped in and out by `0x100021b0` |
 | `0x1000e850` | draws a sprite: descriptor, x, y, z, rotation, scale, colour |
 | `0x1009c820`, `0x1009c82c`, `0x1009c838` | the menu's item tables: cursor frames, icons, labels |
 | `0x100ac9d8` | the menu's page: 54 UV entries; `0x100ace10` its sprite list |

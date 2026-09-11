@@ -70,7 +70,7 @@ BUILDS = {
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
-                    'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080},
+                    'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'HINT': 0x1009c784},
         'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'BITCOUNT': 0x4e68cc},
     },
@@ -99,7 +99,7 @@ BUILDS = {
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
-                    'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080},
+                    'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'HINT': 0x1009c784},
         'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'BITCOUNT': 0x4e69bc},
     },
@@ -130,7 +130,7 @@ BUILDS = {
                   'LoadLibraryA': 0x4d4094, 'GetProcAddress': 0x4d40f8},
         'options': {'BINDPAGE': 0x10013df0, 'DRAW': 0x100138b0, 'PLAYSOUND': 0x10010670, 'INPUT': 0x100c1b1c,
                     'SOUNDOBJ': 0x100be46c, 'HANDLES': 0x100be470, 'TOPTABLE': 0x10006500,
-                    'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090},
+                    'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090, 'HINT': 0x100a1b68},
         'addresses': {'MENUTABLES': 0x100a2708, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8},
     },
@@ -543,31 +543,33 @@ VOLTRACE_BLOB = bytes.fromhex(
     '7567537472696e674100'
 )
 DEVICES_BLOB = bytes.fromhex(
-    'e918000000e983000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
-    'e6ffffff8dbbd1d1d1d1c787f002000000002044c787f802000000000000c787'
-    'fc02000000000000c7870003000000000000c787040300001000000083bfec02'
-    '0000007523c787ec020000010000008d83d8d8d8d8508d83d9d9d9d9508d83d3'
-    'd3d3d3ffd083c408ff46085f5b535755e875ffffff8dabd1d1d1d18dbbdadada'
-    'da8b0785c00f84eb00000083f8020f84920000006a006a006a008b4f2485c974'
-    '400fb6c1483985fc0200007c340fb6c5483985fc0200007f28c1e91031d283f9'
-    '027505ba2000000083f90375068b9500030000525268000100006800010000eb'
-    '0cff7720ff771cff7718ff7714680000803f680000803f6a006a006a00ff7710'
-    'ff770c50d94708d885f0020000d91c24ff77048d83d4d4d4d4ffd083c44083c7'
-    '28e95bffffffff77108d83dcdcdcdc50ff7720ff771cff7718ff771468000080'
-    '3f680000803f68000020416800002041ff770c50d94708d885f0020000d91c24'
-    'ff77048d83dbdbdbdbffd083c43483c728e90bffffff8b850403000003850003'
-    '00008985000300003d000100007e14c7850003000000010000c78504030000f0'
-    'ffffff85c07914c7850003000000000000c785040300001000000083bdf80200'
-    '000075398b85f002000085c0745dd985f0020000d8a5f4020000d99df0020000'
-    '8b85f002000085c00f89d3000000c785f002000000000000e9c4000000d985f0'
-    '020000d8a5f4020000d99df002000081bdf0020000000020c40f82a2000000c7'
-    '460801000000e9960000008b83d6d6d6d68b480885c90f84850000008b116a01'
-    'ff521489c7f6c40474128b85fc020000403ddddddddd7e1731c0eb13f6c40274'
-    '1b8b85fc020000487905b8dddddddd8985fc020000e830000000eb45f7c70200'
-    '00007515f7c74100000074358b85fc0200003ddddddddd7528e80c000000c785'
-    'f802000001000000eb178b8bd7d7d7d76a006a006a006a0e8d83d5d5d5d5ffd0'
-    'c38d83d2d2d2d25d5f5bffe00000000000000000000020420000000000000000'
-    '0000000000000000'
+    'e918000000e98d000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
+    'e6ffffff8dbbd1d1d1d1c7873b03000000002044c7874303000000000000c787'
+    '4703000000000000c7874b03000000000000c7874f03000010000000c783dede'
+    'dedeffffffff83bf37030000007523c78737030000010000008d83d8d8d8d850'
+    '8d83d9d9d9d9508d83d3d3d3d3ffd083c408ff46085f5b535755e86bffffff8d'
+    'abd1d1d1d18dbbdadadada8b0785c00f841801000083f80274776a006a006a00'
+    'e8e2000000732531d283f9027505ba2000000083f90375068b954b0300005252'
+    '68000100006800010000eb0cff7720ff771cff7718ff7714680000803f680000'
+    '803f6a006a006a00ff7710ff770c50d94708d8853b030000d91c24ff77048d83'
+    'd4d4d4d4ffd083c44083c728e97affffffff77108d83dcdcdcdc50e867000000'
+    '731f8b854b030000d1f8058000000068000100006800010000680001000050eb'
+    '0cff7720ff771cff7718ff7714680000803f680000803f680000204168000020'
+    '41ff770c50d94708d8853b030000d91c24ff77048d83dbdbdbdbffd083c43483'
+    'c728e904ffffff8b4f2485c9741d0fb6c1483985470300007c110fb6c5483985'
+    '470300007f05c1e910f9c3f8c38b854f03000003854b03000089854b0300003d'
+    '000100007e14c7854b03000000010000c7854f030000f0ffffff85c07914c785'
+    '4b03000000000000c7854f0300001000000083bd430300000075438b853b0300'
+    '0085c07467d9853b030000d8a53f030000d99d3b0300008b853b03000085c00f'
+    '89e7000000c7853b03000000000000c783dededede0e000000e9ce000000d985'
+    '3b030000d8a53f030000d99d3b03000081bd3b030000000020c40f82ac000000'
+    'c7460801000000e9a00000008b83d6d6d6d68b480885c90f848f0000008b116a'
+    '01ff521489c7f6c40474128b8547030000403ddddddddd7e1731c0eb13f6c402'
+    '741b8b8547030000487905b8dddddddd898547030000e83a000000eb4ff7c702'
+    '0000007515f7c741000000743f8b85470300003ddddddddd7532e816000000c7'
+    '854303000001000000c783dedededeffffffffeb178b8bd7d7d7d76a006a006a'
+    '006a0e8d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe0000000000000000000'
+    '00204200000000000000000000000000000000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -603,6 +605,7 @@ DEVICES_MAGICS = {
     'TEXT': 0xDBDBDBDB,
     'GLYPHS': 0xDCDCDCDC,
     'ROWS': 0xDDDDDDDD,
+    'HINT': 0xDEDEDEDE,
 }
 # --- GENERATED by asm/build.py: END ---
 
@@ -1339,23 +1342,23 @@ DEVICES_X = (110.0, 250.0, 390.0, 530.0)   # four items across 640, stock 154, 3
 DEVICES_UV_DEVICE = 0xe                 # spare entries in the page's UV table: "DEVICE" on sheet 6,
 DEVICES_UV_ICON = 0x11                  # and the icon on the appended sheet
 DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the page's three-decimal UVs, the row "SOUND" uses
-# The page, in the Game Settings page's terms: its group and row plates,
-# header band and the shared hint bar are the stock sprites themselves,
-# found by their first quad; text is the stock routine over its 14-px
-# glyph sprites, which lack a colon, so that is a piece. Colours are (alpha,
-# red, green, blue) in 256ths, as the sprite call takes them.
+# The page, in the Game Settings page's terms: its group and row plates
+# and header band are the stock sprites themselves, found by their first
+# quad; text is the stock routine over its 14-px glyph sprites, which lack
+# a colon, so that is a piece; the hint bar is the frame's, by message
+# number. Colours are (alpha, red, green, blue) in 256ths, as the sprite
+# call takes them.
 PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'COLON': (6, 143, 16, 151, 30)}
-PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'row': (1, (0, 0, 330, 18)), 'band': (2, (-154, -13, 0, 13)),
-              'hint': (7, (-216, -28, -200, 0))}
-PAGE_ROWS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
-             ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
-PAGE_GROUP_X, PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP = 48.0, 261.0, 106.0, 18.0   # the stock's plates
+PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'row': (1, (0, 0, 330, 18)), 'band': (2, (-154, -13, 0, 13))}
+PAGE_ACTIONS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
+                ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
+PAGE_GROUPS = ('PLAYER 1', 'PLAYER 2')
+PAGE_GROUP_X, PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP, PAGE_GROUP_GAP = 48.0, 261.0, 106.0, 18.0, 6.0   # the stock's plates
 PAGE_GROUP_TEXT_X, PAGE_ACTION_X, PAGE_COLON_X, PAGE_VALUE_X, PAGE_TEXT_DY = 56.0, 269.0, 397.0, 405.0, 2.0
-PAGE_GROUP = 'PLAYER 1'
 PLATE, TEXT = (0xd8, 0x100, 0x100, 0x100), (0x100, 0x100, 0x100, 0x100)
-HOLD_ROW, HOLD_GROUP, HOLD_BUTTON = 1, 2, 3     # how the cursor draws an entry it is on
+HOLD_ROW, HOLD_GROUP, HOLD_BUTTON, HOLD_VALUE = 1, 2, 3, 4   # how the cursor draws an entry it is on
 Z_PLATE, Z_TEXT = 14.0, 10.0
-FLAGS_PROPORTIONAL, FLAGS_RIGHT, FLAGS_CENTRE = 4, 1, 2
+FLAGS_PROPORTIONAL = 4                  # the text routine: 4 proportional, +1 right-aligned, +2 centred
 
 TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
 TXR_SIZE = 1282048
@@ -1518,7 +1521,7 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
     if None in stock.values():
         raise ValueError('Options.dll: the Game Settings sprites not found: %s' % [k for k, v in stock.items() if v is None])
 
-    # the page's own sprites: pieces, and the hint bar without its text
+    # the page's own sprites: the pieces
     sprites, uvkeys, strings, draw = [], {}, [], []
 
     def uv(key):
@@ -1526,9 +1529,9 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
             uvkeys[key] = len(uvkeys)
         return uvkeys[key]
 
-    def piece(key, scale=1.0):
+    def piece(key):
         sheet, x0, y0, x1, y1 = key
-        w, h = (x1 - x0) * scale, (y1 - y0) * scale
+        w, h = float(x1 - x0), float(y1 - y0)
         sprites.append(([(uv(key), (-w / 2, -h / 2, w / 2, h / 2), 0xffffffff)], w, h))
         return len(sprites) - 1
 
@@ -1541,26 +1544,31 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
     def add_stock(sp, x, y, z, colour, held=0):
         draw.append((1, ('stock', sp), x, y, z, colour, held))
 
-    def add_text(text, x, y, flags, colour):
+    def add_text(text, x, y, flags, colour, held=0):
         strings.append(text)
-        draw.append((2, ('string', len(strings) - 1), x, y, flags, colour, 0))
+        draw.append((2, ('string', len(strings) - 1), x, y, flags, colour, held))
 
     device, settings, colon = (piece(PAGE_PIECES[k]) for k in ('DEVICE', 'SETTINGS', 'COLON'))
-    rows = len(PAGE_ROWS)
+    per_group = len(PAGE_ACTIONS)
+    rows = per_group * len(PAGE_GROUPS)
 
     add_stock(stock['band'], 320.0, 87.0, Z_PLATE, PLATE)
     add_sprite(device, 320.0 - 95.5 + 38.5, 87.0, Z_TEXT, TEXT)
     add_sprite(settings, 320.0 + 95.5 - 53.0, 87.0, Z_TEXT, TEXT)
-    add_stock(stock['group'], PAGE_GROUP_X, PAGE_ROW_Y, Z_PLATE, PLATE, hold(HOLD_GROUP, 0, rows - 1))
-    add_text(PAGE_GROUP, PAGE_GROUP_TEXT_X, PAGE_ROW_Y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
-    for i, (action, binding) in enumerate(PAGE_ROWS):
-        y = PAGE_ROW_Y + i * PAGE_ROW_STEP
-        add_stock(stock['row'], PAGE_ROW_X, y, Z_PLATE, PLATE, hold(HOLD_ROW, i, i))
-        add_text(action, PAGE_ACTION_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
-        add_sprite(colon, PAGE_COLON_X, y + PAGE_TEXT_DY + 7.0, Z_TEXT, TEXT)
-        add_text(binding, PAGE_VALUE_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
+    y = PAGE_ROW_Y
+    for g, group in enumerate(PAGE_GROUPS):
+        first = g * per_group
+        add_stock(stock['group'], PAGE_GROUP_X, y, Z_PLATE, PLATE, hold(HOLD_GROUP, first, first + per_group - 1))
+        add_text(group, PAGE_GROUP_TEXT_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
+        for i, (action, binding) in enumerate(PAGE_ACTIONS):
+            r = first + i
+            add_stock(stock['row'], PAGE_ROW_X, y, Z_PLATE, PLATE, hold(HOLD_ROW, r, r))
+            add_text(action, PAGE_ACTION_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
+            add_sprite(colon, PAGE_COLON_X, y + PAGE_TEXT_DY + 7.0, Z_TEXT, TEXT)
+            add_text(binding, PAGE_VALUE_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
+            y += PAGE_ROW_STEP
+        y += PAGE_GROUP_GAP
     add_stock(back, 320.0, 404.0, Z_PLATE, TEXT, hold(HOLD_BUTTON, rows, rows))
-    add_stock(stock['hint'], 320.0, 451.0, Z_PLATE, TEXT)
 
     # lay it out: code, state table, page header, UV table, sprites, quads, draw list, strings
     code = DEVICES_BLOB

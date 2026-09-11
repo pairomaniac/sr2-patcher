@@ -74,6 +74,7 @@ DEVICES_MAGICS = {
     'TEXT': 0xDBDBDBDB,
     'GLYPHS': 0xDCDCDCDC,
     'ROWS': 0xDDDDDDDD,
+    'HINT': 0xDEDEDEDE,
 }
 
 # An exe stub's source must not name an exe address: every one moves
