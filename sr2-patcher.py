@@ -555,7 +555,7 @@ DEVICES_BLOB = bytes.fromhex(
     '000083f8020f84ac0000006a006a006a00e820010000735c83f905735783f901'
     '751983bdbe0400000075356a006a0068000100006800010000eb4531d283f902'
     '7505ba2000000083f90375068b95aa040000525268000100006800010000eb20'
-    '8b95aa040000525268000100006800010000eb0cff7720ff771cff7718ff7714'
+    '8b95aa040000680001000052526800010000eb0cff7720ff771cff7718ff7714'
     'ffb5c6040000680000803f6a006a006a00ff7710ffb5c204000050d94708d885'
     '9a040000d91c24ff77048d83d4d4d4d4ffd083c440eb77ff77108d83dcdcdcdc'
     '50e870000000732483f904751f8b85aa040000d1f80580000000680001000068'
@@ -1386,7 +1386,7 @@ HINT_GLYPHS = {'S': (104, 58, 112), 'H': (49, 58, 57), 'E': (175, 210, 182), 'C'
                'n': (54, 135, 61), 'i': (162, 135, 165), 'o': (19, 135, 26), 'd': (103, 135, 109), 'h': (38, 135, 45),
                'k': (148, 173, 155), 'y': (163, 173, 170), 'p': (31, 173, 38), ',': (23, 173, 25),
                'b': (132, 230, 138), 'u': (42, 230, 48), 'r': (156, 230, 160)}
-HINT_SPACING, HINT_SPACE, HINT_ROWS = 1, 5, 16
+HINT_SPACING, HINT_SPACE, HINT_ROWS, HINT_MARGIN = 1, 5, 16, 2   # the margin: white texels each side, so the edges filter to white
 HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to bind it, or hit ESC to keep it')
 HINT_STRIP_TOPS = (130, 150, 170, 190)  # the lines' two halves each on the appended sheet, from x 1
 HINT_SHEET = 4
@@ -1616,9 +1616,10 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
         quads = []
         for half in (placed[:cut], placed[cut:]):
             top, x0 = next(tops), half[0][0]
-            w = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0
+            w = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0 + 2 * HINT_MARGIN
             quads.append((uv((TXR_ICON, 1, top, 1 + w, top + HINT_ROWS)),
-                          (x0 - width / 2, PAGE_STRIP_Y, x0 - width / 2 + w, PAGE_STRIP_Y + HINT_ROWS), 0xffffffff))
+                          (x0 - width / 2 - HINT_MARGIN, PAGE_STRIP_Y, x0 - width / 2 - HINT_MARGIN + w, PAGE_STRIP_Y + HINT_ROWS),
+                          0xffffffff))
         sprites.append((quads, float(width), float(HINT_ROWS)))
         strips.append(len(sprites) - 1)
     per_group = len(PAGE_ACTIONS)
@@ -1779,15 +1780,15 @@ def patch_txr(data):
         for half in (placed[:cut], placed[cut:]):
             top, x0 = next(tops), half[0][0]
             width = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0
-            for y in range(HINT_ROWS):          # the strip opaque white, then the letters
-                for x in range(width):
+            for y in range(HINT_ROWS):          # the strip opaque white, a margin each side, then the letters
+                for x in range(width + 2 * HINT_MARGIN):
                     struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x) * 2, 0xffff)
             for x, (gx0, gy0, gx1) in half:
                 for y in range(HINT_ROWS):
                     for gx in range(gx1 - gx0):
                         v = struct.unpack_from('<H', data, letters + ((gy0 + y) * 256 + gx0 + gx) * 2)[0]   # 565 to 4444, opaque
                         texel = 0xf000 | (v >> 12) << 8 | (v >> 7 & 15) << 4 | (v >> 1 & 15)
-                        struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x - x0 + gx) * 2, texel)
+                        struct.pack_into('<H', texture, ((top + y) * 256 + 1 + HINT_MARGIN + x - x0 + gx) * 2, texel)
     out = bytearray(data)
     struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
     struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 256, len(texture), 0)

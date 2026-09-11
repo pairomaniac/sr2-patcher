@@ -11,7 +11,7 @@
 ;              from the right by 40 px a frame as the stock pages are.
 ;              In place, the hint bar pops up as the frame's does and the
 ;              cursor moves on up and down; confirm on a row starts a
-;              bind - the row pulses red to white, the bar says to
+;              bind - the row pulses blue to white, the bar says to
 ;              press the button, cancel gives up -
 ;              and confirm on BACK, or cancel, drops the bar and slides
 ;              the page on out to the left, as the stock pages go, and
@@ -25,7 +25,7 @@
 ; cursor's hold on the entry: 0 for none, else the first and last row
 ; (plus one) in the low bytes and in bits 16-23 what the cursor on one of
 ; those rows does to it - 1 solid red, the stock's row, and during a
-; bind red pulsing to white; 2 red with a little green and blue, its
+; bind blue pulsing to white; 2 red with a little green and blue, its
 ; group plate; 3 red pulsing to white, its button; 4 white fading, its
 ; row's value. Holds 5 to 7 are the hint bar's, for every row: the entry
 ; rises with the bar; 6 is shown only outside a bind, 7 only during
@@ -161,7 +161,7 @@ exec:
         jnc     .plain
         cmp     ecx, HOLD_BAR
         jae     .plain
-        cmp     ecx, HOLD_ROW           ; 1: red, pulsing to white during a bind
+        cmp     ecx, HOLD_ROW           ; 1: red, or blue pulsing to white during a bind
         jne     .notrow
         cmp     dword [ebp + binding - $$], 0
         jne     .bindpulse
@@ -185,11 +185,11 @@ exec:
         push    FULL
         push    FULL
         jmp     .coloured
-.bindpulse:                             ; the bind: the row red pulsing to white, as a button does
+.bindpulse:                             ; the bind: the row blue pulsing to white
         mov     edx, [ebp + pulse - $$]
-        push    edx
-        push    edx
         push    FULL
+        push    edx
+        push    edx
         push    FULL
         jmp     .coloured
 .plain:

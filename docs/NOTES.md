@@ -255,10 +255,11 @@ place and dropped before it leaves, and on it one of two lines set
 letter by letter from the frame's own lettering - sheet 4, format 0,
 565, dark ink on opaque white, six lines in a condensed face - one texel box a letter cut from a clean instance there
 (`HINT_GLYPHS`), a texel apart, 5 for a space, onto white on the
-appended sheet at patch time. The lines say what those six lines'
+appended sheet at patch time, two texels of white beyond each end so
+the edge samples filter to white and not to the clear gutter. The lines say what those six lines'
 letters allow; there is no N or R among the capitals, so no ENTER.
-Confirm on a row starts a bind - the row's plate pulses red to white as
-a held button does, and the bar says to press the button - and cancel
+Confirm on a row starts a bind - the row's plate pulses blue to white,
+(0x100, p, p, 0x100), and the bar says to press the button - and cancel
 gives it up; nothing listens for the button yet.
 
 The list is 40-byte entries - kind, sprite or string, x, y, z or text
