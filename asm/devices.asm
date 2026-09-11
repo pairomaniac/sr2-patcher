@@ -10,8 +10,9 @@
 ;   +5  exec   state 0xd: draws every sprite of the page's list, slid in
 ;              from the right by 40 px a frame as the stock pages are,
 ;              then, once in place, on cancel plays the back sound and
-;              puts the menu's state back. Leaves through the
-;              dispatcher's epilogue.
+;              slides the page out the way it came, and only then puts
+;              the menu's state back. Leaves through the dispatcher's
+;              epilogue.
 ;
 ; The sprites, their quads and UV entries and the draw list are data the
 ; patcher builds after this code; the list is (sprite, x, y) with a null
@@ -56,6 +57,7 @@ init:
         call    getbase
         lea     edi, [ebx + MAGIC_SELFRVA]  ; this blob
         mov     dword [edi + slide - $$], SLIDE_FROM
+        mov     dword [edi + leaving - $$], 0
         cmp     dword [edi + bound - $$], 0
         jne     .ready
         mov     dword [edi + bound - $$], 1
@@ -108,6 +110,8 @@ exec:
         add     edi, 12
         jmp     .sprite
 .slide:
+        cmp     dword [ebp + leaving - $$], 0
+        jne     .leave
         mov     eax, [ebp + slide - $$]
         test    eax, eax
         jz      .input
@@ -118,6 +122,14 @@ exec:
         test    eax, eax                ; below zero, the sign bit
         jns     .out
         mov     dword [ebp + slide - $$], 0
+        jmp     .out
+.leave:                                 ; out to the right, then the menu
+        fld     dword [ebp + slide - $$]
+        fadd    dword [ebp + step - $$]
+        fstp    dword [ebp + slide - $$]
+        cmp     dword [ebp + slide - $$], SLIDE_FROM
+        jb      .out
+        mov     dword [esi + STATE], 1  ; the menu, cursor where it was
         jmp     .out
 .input:
         mov     eax, [ebx + MAGIC_INPUT]
@@ -136,7 +148,7 @@ exec:
         push    BACK_SOUND
         lea     eax, [ebx + MAGIC_PLAYSOUND]
         call    eax
-        mov     dword [esi + STATE], 1  ; the menu, cursor where it was
+        mov     dword [ebp + leaving - $$], 1
 .out:
         lea     eax, [ebx + MAGIC_EPILOGUE]
         pop     ebp
@@ -145,5 +157,6 @@ exec:
         jmp     eax
 
 bound:  dd      0                       ; the UV table bound this load
-slide:  dd      0                       ; the slide-in's x offset, 640.0 down to 0
+slide:  dd      0                       ; the slide's x offset, 640.0 down to 0 and back
 step:   dd      SLIDE_STEP
+leaving: dd     0                       ; sliding out after cancel

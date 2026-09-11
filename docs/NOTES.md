@@ -244,8 +244,8 @@ the slide-in; exec pushes the sixteen-dword sprite call for each entry of
 a (sprite, x, y) list with x offset by the slide, 640 down by 40 a frame
 as the stock pages, then, in place, reads the frame's key bits from the
 input object (`0x100b9464`, `+8`, vtable `+0x14`) and on cancel (bit 1)
-plays sound 0xe and sets state 1, the menu with its cursor where it
-was. The data - the page's UV table and header, sprites, quads, the draw
+plays sound 0xe and slides the page back out; at 640 it sets state 1,
+the menu with its cursor where it was. The data - the page's UV table and header, sprites, quads, the draw
 list - is built by `devices_page` in the patcher: the heading from the
 label pieces on sheet 6, the Dreamcast pad from sheet 8 as a placeholder,
 the bindings as a list in the 12-px font of sheet 6 (`FONT`, texel boxes

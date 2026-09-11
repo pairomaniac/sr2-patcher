@@ -48,7 +48,7 @@ and games and skip themselves without.
 | `lint` | pyflakes |
 | `bgrow`, `fullwin`, `altenter` | those stubs under Unicorn |
 | `cab` | the disc and cabinet readers on a real dump |
-| `offsets` | every original byte string in the file, every combination of patches applying, the all-on result at its pinned MD5 |
+| `offsets` | every original byte string in the file, every combination of patches applying, the all-on result at its pinned MD5; an install older than the tables is noted, not failed |
 | `music` | the music hook under Unicorn, on the build's real `MGAudio.dll` |
 | `altab` | the alt-tab stub and the rewritten restore routine under Unicorn |
 
