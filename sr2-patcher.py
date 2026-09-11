@@ -1448,12 +1448,11 @@ def txr_check(data):
 
 
 def patch_txr(data):
-    """OPTIONS.TXR with a thirteenth sheet: the third icon's plate, its
-    picture filled back in, with a steering wheel cut out the same way,
-    at the top left of a 256x256 sheet like the stock icons' - a 128 one
-    comes out point-sampled. The gutter is clear white like the stock
-    sheets', so the edge texels filter to white, not to black. Returns
-    the grown file."""
+    """OPTIONS.TXR with a thirteenth sheet, 256x256 with the icon at its
+    top left and room for the page's art: the third icon's plate, its
+    picture filled back in, with a steering wheel cut out the same way.
+    The gutter is clear white like the stock sheets', so the edge texels
+    filter to white, not to black. Returns the grown file."""
     why = txr_check(data)
     if why:
         raise ValueError('%s: %s' % (TXR, why))

@@ -238,10 +238,14 @@ thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
 its handle and entry arrays from the count, and the DLL's copy of the
 handles has room for 256): the monitor icon's plate with the picture's box
 filled back to the plate's grey, and a steering wheel cut out of it the
-way the stock pictures are - they are holes in the plate, alpha 0, the
-menu's dark background showing through. The wheel is drawn by the patcher
+way the stock pictures are - holes in the plate, alpha 0 with a one-texel
+ramp, the menu's dark background showing through. The sheet is 256x256
+like the icons', the icon at its top left; the rest is for the page's art.
+The wheel is drawn by the patcher
 (`wheel_mask`), not copied from anywhere. UV entry `0x11` covers the sheet
-but its one-texel edge. The English label sheet is checked by the texels
+with the car icon's own UVs - the page's are three-decimal values, 126.2
+texels across 126 pixels, and exact fractions sample visibly differently.
+The English label sheet is checked by the texels
 of "DEVICE"; a Japanese install, never seen, would fail that check rather
 than draw the wrong thing.
 

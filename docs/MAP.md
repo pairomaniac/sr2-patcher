@@ -180,7 +180,7 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
-| devices | 5 + section + TXR | `Options.dll` `0x10003ff8`, `0x1000400f`, `0x10003e14`, `0x10003e67`, `0x10003dcc` (files `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc`), nine `x` floats and UV entries `0xe`, `0x11` in `.data`, the appended `.sr2d` with an 18-entry relocation block; `BINDATA\MISC\OPTIONS.TXR` grown by a 128x128 sheet |
+| devices | 5 + section + TXR | `Options.dll` `0x10003ff8`, `0x1000400f`, `0x10003e14`, `0x10003e67`, `0x10003dcc` (files `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc`), nine `x` floats and UV entries `0xe`, `0x11` in `.data`, the appended `.sr2d` with an 18-entry relocation block; `BINDATA\MISC\OPTIONS.TXR` grown by a 256x256 sheet |
 
 ## 7. `MUSASHI\MGSound.dll`
 
