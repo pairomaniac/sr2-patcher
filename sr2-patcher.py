@@ -543,45 +543,48 @@ VOLTRACE_BLOB = bytes.fromhex(
     '7567537472696e674100'
 )
 DEVICES_BLOB = bytes.fromhex(
-    'e918000000e997000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
-    'e6ffffff8dbbd1d1d1d1c7879a04000000002044c787a204000000000000c787'
-    'a604000000000000c787aa04000000000000c787ae04000010000000c787b204'
-    '000000000000c787be0400000000000083bf96040000007523c7879604000001'
-    '0000008d83d8d8d8d8508d83d9d9d9d9508d83d3d3d3d3ffd083c408ff46085f'
-    '5b535755e861ffffff8dabd1d1d1d18dbbdadadada8b0785c00f84c00100008b'
-    '4f0c898dc2040000c785c60400000000803fe87f010000734983f905724483bd'
-    'be04000000740b83f9060f845e010000eb0983f9070f84530100008b8db20400'
-    '00898dc6040000d9470cd8a5ba040000d88db2040000d885ba040000d99dc204'
-    '000083f8020f84ac0000006a006a006a00e820010000735c83f905735783f901'
-    '751983bdbe0400000075356a006a0068000100006800010000eb4531d283f902'
-    '7505ba2000000083f90375068b95aa040000525268000100006800010000eb20'
-    '8b95aa040000680001000052526800010000eb0cff7720ff771cff7718ff7714'
-    'ffb5c6040000680000803f6a006a006a00ff7710ffb5c204000050d94708d885'
-    '9a040000d91c24ff77048d83d4d4d4d4ffd083c440eb77ff77108d83dcdcdcdc'
-    '50e870000000732483f904751f8b85aa040000d1f80580000000680001000068'
-    '00010000680001000050eb0cff7720ff771cff7718ff7714ffb5c60400006800'
-    '00803f68000020416800002041ffb5c204000050d94708d8859a040000d91c24'
-    'ff77048d83dbdbdbdbffd083c43483c728e95ffeffff508b4f2485c9741e0fb6'
-    'c1483985a60400007c120fb6c5483985a60400007f06c1e91058f9c358f8c38b'
-    '85ae0400000385aa0400008985aa0400003d000100007e14c785aa0400000001'
-    '0000c785ae040000f0ffffff85c07914c785aa04000000000000c785ae040000'
-    '1000000083bda204000000757b8b859a04000085c0742fd9859a040000d8a59e'
-    '040000d99d9a0400008b859a04000085c00f8f94010000c7859a040000000000'
-    '00e9850100008b85b20400003d0000803f0f8398000000d985b2040000d885b6'
-    '040000d99db204000081bdb20400000000803f0f8252010000c785b204000000'
-    '00803fe9430100008b85b204000085c0742fd985b2040000d8a5b6040000d99d'
-    'b20400008b85b204000085c00f8f19010000c785b204000000000000e90a0100'
-    '00d9859a040000d8a59e040000d99d9a04000081bd9a040000000020c40f82e8'
-    '000000c7460801000000e9dc0000008b83d6d6d6d68b480885c90f84cb000000'
-    '8b116a01ff521489c783bdbe04000000756ff6c40474128b85a6040000403ddd'
-    'dddddd7e1731c0eb13f6c40274208b85a6040000487905b8dddddddd8985a604'
-    '0000b80e000000e869000000eb7df7c7020000007549f7c741000000746d8b85'
-    'a60400003ddddddddd7434c785be04000001000000b80f000000e836000000eb'
-    '4af7c7020000007442c785be04000000000000b80e000000e818000000eb2cb8'
-    '0e000000e80c000000c785a204000001000000eb168b8bd7d7d7d76a006a006a'
+    'e918000000e9a1000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
+    'e6ffffff8dbbd1d1d1d1c787fa04000000002044c7870205000000000000c787'
+    '0605000000000000c7870a05000000000000c7870e05000010000000c7871205'
+    '000000000000c7871e05000000000000c787220500000100000083bff6040000'
+    '007523c787f6040000010000008d83d8d8d8d8508d83d9d9d9d9508d83d3d3d3'
+    'd3ffd083c408ff46085f5b535755e857ffffff8dabd1d1d1d18dbbdadadada8b'
+    '0785c00f84d00100008b4f0c898d26050000c7852a0500000000803fe87f0100'
+    '00734980f905724483bd1e05000000740b80f9060f845e010000eb0980f9070f'
+    '84530100008b8d12050000898d2a050000d9470cd8a51a050000d88d12050000'
+    'd8851a050000d99d2605000083f8020f84ac0000006a006a006a00e820010000'
+    '735c80f905735780f901751983bd1e0500000075356a006a0068000100006800'
+    '010000eb4531d280f9027505ba2000000080f90375068b950a05000052526800'
+    '0100006800010000eb208b950a050000680001000052526800010000eb0cff77'
+    '20ff771cff7718ff7714ffb52a050000680000803f6a006a006a00ff7710ffb5'
+    '2605000050d94708d885fa040000d91c24ff77048d83d4d4d4d4ffd083c440eb'
+    '77ff77108d83dcdcdcdc50e870000000732480f904751f8b850a050000d1f805'
+    '8000000068000100006800010000680001000050eb0cff7720ff771cff7718ff'
+    '7714ffb52a050000680000803f68000020416800002041ffb52605000050d947'
+    '08d885fa040000d91c24ff77048d83dbdbdbdbffd083c43483c728e95ffeffff'
+    '508b4f2485c9742e0fb6c1483985060500007c220fb6c5483985060500007f16'
+    'c1e91080f903750b0fb6c5398522050000750358f9c358f8c38b850e05000003'
+    '850a05000089850a0500003d000100007e14c7850a05000000010000c7850e05'
+    '0000f0ffffff85c07914c7850a05000000000000c7850e0500001000000083bd'
+    '0205000000757b8b85fa04000085c0742fd985fa040000d8a5fe040000d99dfa'
+    '0400008b85fa04000085c00f8fda010000c785fa04000000000000e9cb010000'
+    '8b85120500003d0000803f0f8398000000d98512050000d88516050000d99d12'
+    '05000081bd120500000000803f0f8298010000c785120500000000803fe98901'
+    '00008b851205000085c0742fd98512050000d8a516050000d99d120500008b85'
+    '1205000085c00f8f5f010000c7851205000000000000e950010000d985fa0400'
+    '00d8a5fe040000d99dfa04000081bdfa040000000020c40f822e010000c74608'
+    '01000000e9220100008b83d6d6d6d68b480885c90f84110100008b116a01ff52'
+    '1489c783bd1e050000000f85b1000000f6c40474128b8506050000403ddddddd'
+    'dd7e1731c0eb13f6c40274238b8506050000487905b8dddddddd898506050000'
+    'b80e000000e8ab000000e9bc000000f7c7020000000f85840000008b85060500'
+    '003ddddddddd753bf7c700180000741683b52205000001b80e000000e8740000'
+    '00e985000000f7c741000000747d83bd22050000017448b80f000000e8540000'
+    '00eb68f7c7410000007460c7851e05000001000000b80f000000e836000000eb'
+    '4af7c7020000007442c7851e05000000000000b80e000000e818000000eb2cb8'
+    '0e000000e80c000000c7850205000001000000eb168b8bd7d7d7d76a006a006a'
     '00508d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe000000000000000000000'
     '20420000000000000000000000000000000000000000cdcccc3d0080e1430000'
-    '00000000000000000000'
+    '0000000000000000000000000000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -1362,8 +1365,9 @@ DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the pa
 # in 256ths, as the sprite call takes them.
 PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'COLON': (6, 143, 16, 151, 30)}
 PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'row': (1, (0, 0, 330, 18)), 'band': (2, (-154, -13, 0, 13)),
-              'bar': (7, (-216, -28, -200, 0))}
-PAGE_BAR_QUADS, PAGE_BAR_Y, PAGE_STRIP_Y = 5, 451.0, -19.0
+              'bar': (7, (-216, -28, -200, 0)), 'default': (1, (-58, -10, 59, 10))}
+PAGE_BUTTON_X = (253.0, 386.0)          # DEFAULT and BACK, as the stock pages place them
+PAGE_BAR_QUADS, PAGE_BAR_Y, PAGE_STRIP_Y = 5, 451.0, -20.0
 PAGE_ACTIONS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
                 ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
 PAGE_GROUPS = ('PLAYER 1', 'PLAYER 2')
@@ -1378,15 +1382,16 @@ FLAGS_PROPORTIONAL = 4                  # the text routine: 4 proportional, +1 r
 
 # The hint bar's lettering is the stock's own, from sheet 4, where the
 # frame's messages keep six lines in their condensed face: one texel box
-# a letter, cut from clean instances there (x0, top, x1; 16 rows), laid
-# in a row a texel apart, a word gap of 5. The lines say what they can
-# with the letters those six offer.
-HINT_GLYPHS = {'S': (104, 58, 112), 'H': (49, 58, 57), 'E': (175, 210, 182), 'C': (192, 210, 200),
+# a letter, cut from clean instances there (x0, top, x1; the top a row
+# above the line's ascenders, so the box is 17 rows and every baseline
+# lands on the same row), laid in a row a texel apart, a word gap of 5.
+# The lines say what they can with the letters those six offer.
+HINT_GLYPHS = {'S': (104, 59, 112), 'H': (49, 59, 57), 'E': (175, 211, 182), 'C': (192, 211, 200),
                'e': (70, 135, 77), 'l': (138, 135, 141), 'c': (31, 135, 37), 't': (14, 135, 18), 'a': (46, 135, 53),
                'n': (54, 135, 61), 'i': (162, 135, 165), 'o': (19, 135, 26), 'd': (103, 135, 109), 'h': (38, 135, 45),
                'k': (148, 173, 155), 'y': (163, 173, 170), 'p': (31, 173, 38), ',': (23, 173, 25),
                'b': (132, 230, 138), 'u': (42, 230, 48), 'r': (156, 230, 160)}
-HINT_SPACING, HINT_SPACE, HINT_ROWS, HINT_MARGIN = 1, 5, 16, 2   # the margin: white texels each side, so the edges filter to white
+HINT_SPACING, HINT_SPACE, HINT_ROWS, HINT_MARGIN = 1, 5, 17, 2   # the margin: white texels each side, so the edges filter to white
 HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to bind it, or hit ESC to keep it')
 HINT_STRIP_TOPS = (130, 150, 170, 190)  # the lines' two halves each on the appended sheet, from x 1
 HINT_SHEET = 4
@@ -1550,8 +1555,12 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
             quads, count = struct.unpack_from('<II', buf, off + 4)
             if count == n and lo <= quads < hi:
                 try:
-                    if tuple(round(v) for v in struct.unpack_from('<4f', buf, _rva_to_off(buf, quads - base) + 4)) == rect:
-                        return cand
+                    q = _rva_to_off(buf, quads - base)
+                    if tuple(round(v) for v in struct.unpack_from('<4f', buf, q + 4)) == rect:
+                        page = _rva_to_off(buf, struct.unpack_from('<I', buf, off)[0] - base)
+                        sheet, _u0, v0 = struct.unpack_from('<iff', buf, page + struct.unpack_from('<I', buf, q)[0] * 0x14)
+                        if rect != PAGE_STOCK['default'][1] or (sheet == 11 and v0 < 0.1):
+                            return cand
                 except ValueError:
                     pass
         return None
@@ -1595,8 +1604,8 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
         sprites.append((out, w, h))
         return len(sprites) - 1
 
-    def hold(kind, first, last):
-        return kind << 16 | (last + 1) << 8 | (first + 1)
+    def hold(kind, first, last, index=0):
+        return index << 24 | kind << 16 | (last + 1) << 8 | (first + 1)
 
     def add_sprite(sp, x, y, z, colour, held=0):
         draw.append((1, ('sprite', sp), x, y, z, colour, held))
@@ -1642,7 +1651,8 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
             add_text(binding, PAGE_VALUE_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
             y += PAGE_ROW_STEP
         y += PAGE_GROUP_GAP
-    add_stock(back, 320.0, PAGE_BUTTON_Y, Z_PLATE, TEXT, hold(HOLD_BUTTON, rows, rows))
+    for i, button in enumerate((stock['default'], back)):
+        add_stock(button, PAGE_BUTTON_X[i], PAGE_BUTTON_Y, Z_PLATE, TEXT, hold(HOLD_BUTTON, rows, rows, i))
     add_sprite(bar, 320.0, PAGE_BAR_Y, Z_PLATE, TEXT, hold(HOLD_BAR, *every))
     for sprite, kind in zip(strips, (HOLD_BAR_IDLE, HOLD_BAR_BIND)):
         add_sprite(sprite, 320.0, PAGE_BAR_Y, Z_PLATE, TEXT, hold(kind, *every))
@@ -1786,7 +1796,7 @@ def patch_txr(data):
             for x, (gx0, gy0, gx1) in half:
                 for y in range(HINT_ROWS):
                     for gx in range(gx1 - gx0):
-                        v = struct.unpack_from('<H', data, letters + ((gy0 + y) * 256 + gx0 + gx) * 2)[0]   # 565 to 4444, opaque
+                        v = struct.unpack_from('<H', data, letters + ((gy0 - 1 + y) * 256 + gx0 + gx) * 2)[0]   # 565 to 4444, opaque
                         texel = 0xf000 | (v >> 12) << 8 | (v >> 7 & 15) << 4 | (v >> 1 & 15)
                         struct.pack_into('<H', texture, ((top + y) * 256 + 1 + HINT_MARGIN + x - x0 + gx) * 2, texel)
     out = bytearray(data)

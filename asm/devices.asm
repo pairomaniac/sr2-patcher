@@ -12,8 +12,8 @@
 ;              In place, the hint bar pops up as the frame's does and the
 ;              cursor moves on up and down; confirm on a row starts a
 ;              bind - the row pulses blue to white, the bar says to
-;              press the button, cancel gives up -
-;              and confirm on BACK, or cancel, drops the bar and slides
+;              press the button, cancel gives up - and confirm on BACK,
+;              or cancel, drops the bar and slides
 ;              the page on out to the left, as the stock pages go, and
 ;              only then puts the menu's state back. Leaves through the
 ;              dispatcher's epilogue.
@@ -26,14 +26,14 @@
 ; (plus one) in the low bytes and in bits 16-23 what the cursor on one of
 ; those rows does to it - 1 solid red, the stock's row, and during a
 ; bind blue pulsing to white; 2 red with a little green and blue, its
-; group plate; 3 red pulsing to white, its button; 4 white fading, its
-; row's value. Holds 5 to 7 are the hint bar's, for every row: the entry
-; rises with the bar; 6 is shown only outside a bind, 7 only during
-; one. The row after the
-; last is the BACK button. The DLL is relocated on every load: the blob
-; finds its own address with a call/pop and subtracts its RVA to get the
-; image base, and every DLL address here is an RVA from that, filled in
-; from the build's row.
+; group plate; 3 red pulsing to white, a button, with which one in bits
+; 24-31, since the row after the last holds both, DEFAULT and BACK, left
+; and right between them; 4 white fading, its row's value. Holds 5 to 7
+; are the hint bar's, for every row: the entry rises with the bar; 6 is
+; shown only outside a bind, 7 only during one. The DLL is relocated on
+; every load: the blob finds its own address with a call/pop and
+; subtracts its RVA to get the image base, and every DLL address here is
+; an RVA from that, filled in from the build's row.
 
 bits 32
 
@@ -58,6 +58,8 @@ bits 32
 %define KEY_CONFIRM     0x41
 %define KEY_UP          0x200
 %define KEY_DOWN        0x400
+%define KEY_LEFT        0x800
+%define KEY_RIGHT       0x1000
 %define SLIDE_FROM      0x44200000      ; 640.0
 %define SLIDE_GONE      0xC4200000      ; -640.0
 %define SLIDE_STEP      0x42200000      ; 40.0
@@ -98,6 +100,7 @@ init:
         mov     dword [edi + pulsedir - $$], PULSE_STEP
         mov     dword [edi + bar - $$], 0
         mov     dword [edi + binding - $$], 0
+        mov     dword [edi + button - $$], 1
         cmp     dword [edi + bound - $$], 0
         jne     .ready
         mov     dword [edi + bound - $$], 1
@@ -132,15 +135,15 @@ exec:
         mov     dword [ebp + sy - $$], ONE
         call    .holds
         jnc     .free
-        cmp     ecx, HOLD_BAR
+        cmp     cl, HOLD_BAR
         jb      .free
         cmp     dword [ebp + binding - $$], 0     ; the bar's strings, one or the other
         je      .idle
-        cmp     ecx, HOLD_BAR_IDLE
+        cmp     cl, HOLD_BAR_IDLE
         je      .next
         jmp     .risen
 .idle:
-        cmp     ecx, HOLD_BAR_BIND
+        cmp     cl, HOLD_BAR_BIND
         je      .next
 .risen:                                 ; with the bar: y from its bottom edge, scaled
         mov     ecx, [ebp + bar - $$]
@@ -159,9 +162,9 @@ exec:
         push    0
         call    .holds
         jnc     .plain
-        cmp     ecx, HOLD_BAR
+        cmp     cl, HOLD_BAR
         jae     .plain
-        cmp     ecx, HOLD_ROW           ; 1: red, or blue pulsing to white during a bind
+        cmp     cl, HOLD_ROW           ; 1: red, or blue pulsing to white during a bind
         jne     .notrow
         cmp     dword [ebp + binding - $$], 0
         jne     .bindpulse
@@ -172,11 +175,11 @@ exec:
         jmp     .coloured
 .notrow:
         xor     edx, edx
-        cmp     ecx, HOLD_GROUP
+        cmp     cl, HOLD_GROUP
         jne     .kind3
         mov     edx, GROUP_TINT
 .kind3:
-        cmp     ecx, HOLD_BUTTON
+        cmp     cl, HOLD_BUTTON
         jne     .held
         mov     edx, [ebp + pulse - $$]
 .held:
@@ -221,7 +224,7 @@ exec:
         push    eax                     ; its glyph table
         call    .holds
         jnc     .plaintext
-        cmp     ecx, HOLD_VALUE
+        cmp     cl, HOLD_VALUE
         jne     .plaintext
         mov     eax, [ebp + pulse - $$] ; 4: white, alpha 0x80 to 0x100 with the pulse
         sar     eax, 1
@@ -269,7 +272,13 @@ exec:
         dec     eax
         cmp     [ebp + row - $$], eax
         jg      .nohold
-        shr     ecx, 16
+        shr     ecx, 16                 ; the kind, and in ch a button's index
+        cmp     cl, HOLD_BUTTON
+        jne     .holding
+        movzx   eax, ch
+        cmp     [ebp + button - $$], eax
+        jne     .nohold
+.holding:
         pop     eax
         stc
         ret
@@ -373,11 +382,26 @@ exec:
 .notup:
         test    edi, KEY_CANCEL
         jnz     .go
+        mov     eax, [ebp + row - $$]
+        cmp     eax, MAGIC_ROWS         ; the button row: left and right pick, confirm presses
+        jne     .onrow
+        test    edi, KEY_LEFT | KEY_RIGHT
+        jz      .press
+        xor     dword [ebp + button - $$], 1
+        mov     eax, MOVE_SOUND
+        call    .sound
+        jmp     .out
+.press:
         test    edi, KEY_CONFIRM
         jz      .out
-        mov     eax, [ebp + row - $$]   ; confirm: on the BACK row leave, on a row bind
-        cmp     eax, MAGIC_ROWS
+        cmp     dword [ebp + button - $$], 1
         je      .go
+        mov     eax, PICK_SOUND         ; DEFAULT: nothing to reset yet
+        call    .sound
+        jmp     .out
+.onrow:
+        test    edi, KEY_CONFIRM
+        jz      .out
         mov     dword [ebp + binding - $$], 1
         mov     eax, PICK_SOUND
         call    .sound
@@ -424,5 +448,6 @@ bar:    dd      0                       ; the hint bar's height, 0 to 1.0
 barstep: dd     BAR_STEP
 bary:   dd      BAR_Y
 binding: dd     0                       ; waiting for a button for the cursor's row
+button: dd      0                       ; the button row's pick, 0 DEFAULT, 1 BACK
 y:      dd      0                       ; the entry being drawn: its y and vertical scale
 sy:     dd      0

@@ -254,9 +254,12 @@ strip copied from message 14, grown the same way once the page is in
 place and dropped before it leaves, and on it one of two lines set
 letter by letter from the frame's own lettering - sheet 4, format 0,
 565, dark ink on opaque white, six lines in a condensed face - one texel box a letter cut from a clean instance there
-(`HINT_GLYPHS`), a texel apart, 5 for a space, onto white on the
-appended sheet at patch time, two texels of white beyond each end so
-the edge samples filter to white and not to the clear gutter. The lines say what those six lines'
+(`HINT_GLYPHS`; the boxes 17 rows from a row above each line's
+ascenders, since the two lines the capitals come from sit a row lower
+than the others against their tops), a texel apart, 5 for a space, onto
+white on the appended sheet at patch time, two texels of white beyond
+each end so the edge samples filter to white and not to the clear
+gutter. The lines say what those six lines'
 letters allow; there is no N or R among the capitals, so no ENTER.
 Confirm on a row starts a bind - the row's plate pulses blue to white,
 (0x100, p, p, 0x100), and the bar says to press the button - and cancel
@@ -282,12 +285,15 @@ at 397, value at 405, the buttons at y 404. Two groups, PLAYER 1 and
 PLAYER 2, seven rows each.
 
 The cursor is the stock's (`0x10002c30`): up and down through the rows
-and the BACK button, wrapping, sound 0xe a move and 0xf a confirm. What it holds is drawn
-as Game Settings draws it: the row's plate (0x100, 0x100, 0, 0), its
-group's (0x100, 0x100, 0x20, 0x20), the button (0x100, 0x100, p, p) and
-the row's value white with alpha 0x80 + p/2, p the page's pulse, 0 to
-0x100 and back by 0x10 a frame (`0x10002a23`). Each entry carries which
-rows hold it and how. The bindings shown are fixed strings for now.
+and the button row, DEFAULT and BACK with left and right between them
+as on the stock pages, wrapping, sound 0xe a move and 0xf a confirm.
+What it holds is drawn as Game Settings draws it: the row's plate
+(0x100, 0x100, 0, 0), its group's (0x100, 0x100, 0x20, 0x20), the
+button (0x100, 0x100, p, p) and the row's value white with alpha
+0x80 + p/2, p the page's pulse, 0 to 0x100 and back by 0x10 a frame
+(`0x10002a23`). Each entry carries which rows hold it and how. The
+bindings shown are fixed strings for now, and DEFAULT has nothing to
+reset.
 
 The new data carries absolute pointers, so `.sr2d` gets a relocation
 block appended to the directory in `.reloc`'s zero tail.
