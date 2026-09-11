@@ -548,8 +548,8 @@ DEVICES_BLOB = bytes.fromhex(
     '010000680000803f680000803f6a006a006a006800004041ff770850d94704d8'
     '8582010000d91c24508d83d4d4d4d4ffd083c44083c70cebaa83bd8a01000000'
     '75328b858201000085c0744fd98582010000d8a586010000d99d820100008b85'
-    '8201000085c0796bc7858201000000000000eb5fd98582010000d88586010000'
-    'd99d8201000081bd82010000000020447241c7460801000000eb388b83d6d6d6'
+    '8201000085c0796bc7858201000000000000eb5fd98582010000d8a586010000'
+    'd99d8201000081bd82010000000020c47241c7460801000000eb388b83d6d6d6'
     'd68b480885c9742b8b116a01ff5214a80274208b8bd7d7d7d76a006a006a006a'
     '0e8d83d5d5d5d5ffd0c7858a010000010000008d83d2d2d2d25d5f5bffe00000'
     '0000000000000000204200000000'
@@ -1336,10 +1336,11 @@ FONT_SPACING, FONT_SPACE = 3, 6
 PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'PAD': (8, 56, 60, 200, 206),
                '1PLAYER': (6, 105, 32, 173, 48)}
 PAGE_LAYOUT = (('DEVICE', 'piece', 224 + 38.5, 100.0), ('SETTINGS', 'piece', 309 + 53.0, 100.0),
-               ('PAD', 'piece', 150.0, 262.0), ('1PLAYER', 'piece', 330 + 34.0, 152.0))
+               ('PAD', 'piece', 130.0, 262.0), ('1PLAYER', 'piece', 250 + 34.0, 150.0))
 PAGE_ROWS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
              ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
-PAGE_LIST_X, PAGE_LIST_RIGHT, PAGE_LIST_Y, PAGE_LIST_STEP = 330.0, 600.0, 182.0, 24.0
+PAGE_LIST_X, PAGE_LIST_RIGHT, PAGE_LIST_Y, PAGE_LIST_STEP = 250.0, 620.0, 180.0, 26.0
+PAGE_TEXT_SCALE = 1.5                   # the 12-px font drawn at 18: at 12 its strokes are lost to the renderer's filtering
 PAGE_BACK = (320.0, 381.0)
 
 TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
@@ -1489,18 +1490,18 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
         draw.append((len(sprites) - 1, x, y))
 
     def text(s, x, y, right=False):
-        keys, quads, cx = [], [], 0.0
+        keys, quads, cx, z = [], [], 0.0, PAGE_TEXT_SCALE
         for c in s:
             if c == ' ':
-                cx += FONT_SPACE
+                cx += FONT_SPACE * z
                 continue
             x0, y0, x1, y1 = FONT[c]
             keys.append(uv((6, x0, y0, x1, y1)))
-            quads.append((cx, cx + (x1 - x0)))
-            cx += (x1 - x0) + FONT_SPACING
-        width = cx - FONT_SPACING
+            quads.append((cx, cx + (x1 - x0) * z))
+            cx += ((x1 - x0) + FONT_SPACING) * z
+        width = cx - FONT_SPACING * z
         shift = -width if right else 0.0
-        sprites.append(([(k, (qx0 + shift, -6.0, qx1 + shift, 6.0)) for k, (qx0, qx1) in zip(keys, quads)], width, 12.0))
+        sprites.append(([(k, (qx0 + shift, -6.0 * z, qx1 + shift, 6.0 * z)) for k, (qx0, qx1) in zip(keys, quads)], width, 12.0 * z))
         draw.append((len(sprites) - 1, x, y))
 
     for name, kind, x, y in PAGE_LAYOUT:

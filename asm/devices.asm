@@ -10,8 +10,8 @@
 ;   +5  exec   state 0xd: draws every sprite of the page's list, slid in
 ;              from the right by 40 px a frame as the stock pages are,
 ;              then, once in place, on cancel plays the back sound and
-;              slides the page out the way it came, and only then puts
-;              the menu's state back. Leaves through the dispatcher's
+;              slides the page on out to the left, as the stock pages
+;              go, and only then puts the menu's state back. Leaves through the dispatcher's
 ;              epilogue.
 ;
 ; The sprites, their quads and UV entries and the draw list are data the
@@ -38,6 +38,7 @@ bits 32
 %define BACK_SOUND      0xe
 %define KEY_CANCEL      2
 %define SLIDE_FROM      0x44200000      ; 640.0
+%define SLIDE_GONE      0xC4200000      ; -640.0
 %define SLIDE_STEP      0x42200000      ; 40.0
 
         jmp     near init               ; +0
@@ -123,11 +124,11 @@ exec:
         jns     .out
         mov     dword [ebp + slide - $$], 0
         jmp     .out
-.leave:                                 ; out to the right, then the menu
+.leave:                                 ; on out to the left, then the menu
         fld     dword [ebp + slide - $$]
-        fadd    dword [ebp + step - $$]
+        fsub    dword [ebp + step - $$]
         fstp    dword [ebp + slide - $$]
-        cmp     dword [ebp + slide - $$], SLIDE_FROM
+        cmp     dword [ebp + slide - $$], SLIDE_GONE    ; negative floats grow as unsigned
         jb      .out
         mov     dword [esi + STATE], 1  ; the menu, cursor where it was
         jmp     .out
