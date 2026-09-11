@@ -3,11 +3,15 @@
 ; Two entries in the top-level state table the patcher moves into
 ; .sr2d, reached with esi = the Options object as every case there is:
 ;
-;   +0  init   state 0xc: binds the page's UV table to the loaded sheets,
-;              steps to 0xd and falls into exec.
-;   +5  exec   state 0xd: draws every sprite of the page's list, then
-;              on cancel plays the back sound and puts the menu's state
-;              back. Leaves through the dispatcher's epilogue.
+;   +0  init   state 0xc: binds the page's UV table to the loaded sheets
+;              - once per load of the DLL, since the binding replaces
+;              each entry's sheet index with its handle in place - starts
+;              the slide-in, steps to 0xd and falls into exec.
+;   +5  exec   state 0xd: draws every sprite of the page's list, slid in
+;              from the right by 40 px a frame as the stock pages are,
+;              then, once in place, on cancel plays the back sound and
+;              puts the menu's state back. Leaves through the
+;              dispatcher's epilogue.
 ;
 ; The sprites, their quads and UV entries and the draw list are data the
 ; patcher builds after this code; the list is (sprite, x, y) with a null
@@ -32,6 +36,8 @@ bits 32
 %define STATE           8               ; the Options object's state
 %define BACK_SOUND      0xe
 %define KEY_CANCEL      2
+%define SLIDE_FROM      0x44200000      ; 640.0
+%define SLIDE_STEP      0x42200000      ; 40.0
 
         jmp     near init               ; +0
         jmp     near exec               ; +5
@@ -46,7 +52,13 @@ getbase:
 
 init:
         push    ebx
+        push    edi
         call    getbase
+        lea     edi, [ebx + MAGIC_SELFRVA]  ; this blob
+        mov     dword [edi + slide - $$], SLIDE_FROM
+        cmp     dword [edi + bound - $$], 0
+        jne     .ready
+        mov     dword [edi + bound - $$], 1
         lea     eax, [ebx + MAGIC_HANDLES]
         push    eax
         lea     eax, [ebx + MAGIC_PAGEHDR]
@@ -54,19 +66,23 @@ init:
         lea     eax, [ebx + MAGIC_BINDPAGE]
         call    eax
         add     esp, 8
+.ready:
         inc     dword [esi + STATE]
+        pop     edi
         pop     ebx
         ; fall through
 
 exec:
         push    ebx
         push    edi
+        push    ebp
         call    getbase
+        lea     ebp, [ebx + MAGIC_SELFRVA]  ; this blob
         lea     edi, [ebx + MAGIC_DRAWLIST]
 .sprite:
         mov     eax, [edi]
         test    eax, eax
-        jz      .input
+        jz      .slide
         push    0                       ; the sprite call's sixteen dwords
         push    0
         push    0
@@ -81,13 +97,28 @@ exec:
         push    0
         push    0x41400000              ; z 12.0, the menu's
         push    dword [edi + 8]         ; y
-        push    dword [edi + 4]         ; x
+        push    eax                     ; x, slid: the sprite's plus the offset
+        fld     dword [edi + 4]
+        fadd    dword [ebp + slide - $$]
+        fstp    dword [esp]
         push    eax                     ; the sprite
         lea     eax, [ebx + MAGIC_DRAW]
         call    eax
         add     esp, 0x40
         add     edi, 12
         jmp     .sprite
+.slide:
+        mov     eax, [ebp + slide - $$]
+        test    eax, eax
+        jz      .input
+        fld     dword [ebp + slide - $$]
+        fsub    dword [ebp + step - $$]
+        fstp    dword [ebp + slide - $$]
+        mov     eax, [ebp + slide - $$]
+        test    eax, eax                ; below zero, the sign bit
+        jns     .out
+        mov     dword [ebp + slide - $$], 0
+        jmp     .out
 .input:
         mov     eax, [ebx + MAGIC_INPUT]
         mov     ecx, [eax + 8]
@@ -108,6 +139,11 @@ exec:
         mov     dword [esi + STATE], 1  ; the menu, cursor where it was
 .out:
         lea     eax, [ebx + MAGIC_EPILOGUE]
+        pop     ebp
         pop     edi
         pop     ebx
         jmp     eax
+
+bound:  dd      0                       ; the UV table bound this load
+slide:  dd      0                       ; the slide-in's x offset, 640.0 down to 0
+step:   dd      SLIDE_STEP

@@ -236,10 +236,15 @@ with two more entries and the compare goes to 0xd: 0xc is the page's
 init, 0xd its exec, both in asm/devices.asm, entered as every case is
 with `esi` the Options object and leaving through the dispatcher's
 epilogue (`0x10003cd6`). Init binds the page's own UV table through
-`0x1000ed90` and steps on; exec pushes the sixteen-dword sprite call for
-each entry of a (sprite, x, y) list, then reads the frame's key bits from
-the input object (`0x100b9464`, `+8`, vtable `+0x14`) and on cancel (bit
-1) plays sound 0xe and sets state 1, the menu with its cursor where it
+`0x1000ed90` - once per load of the DLL, flagged in the blob, since the
+binding writes each entry's sheet handle over its index in place and a
+second pass reads handles as indices (the stock pages are bound once, in
+`OptionsModeInit`; the exe reloads the DLL for each visit) - and starts
+the slide-in; exec pushes the sixteen-dword sprite call for each entry of
+a (sprite, x, y) list with x offset by the slide, 640 down by 40 a frame
+as the stock pages, then, in place, reads the frame's key bits from the
+input object (`0x100b9464`, `+8`, vtable `+0x14`) and on cancel (bit 1)
+plays sound 0xe and sets state 1, the menu with its cursor where it
 was. The data - the page's UV table and header, sprites, quads, the draw
 list - is built by `devices_page` in the patcher: the heading from the
 label pieces on sheet 6, the Dreamcast pad from sheet 8 as a placeholder,
