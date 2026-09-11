@@ -71,6 +71,8 @@ DEVICES_MAGICS = {
     'HANDLES': 0xD8D8D8D8,
     'PAGEHDR': 0xD9D9D9D9,
     'DRAWLIST': 0xDADADADA,
+    'TEXT': 0xDBDBDBDB,
+    'GLYPHS': 0xDCDCDCDC,
 }
 
 # An exe stub's source must not name an exe address: every one moves

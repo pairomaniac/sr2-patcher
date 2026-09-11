@@ -15,11 +15,12 @@
 ;              epilogue.
 ;
 ; The sprites, their quads and UV entries and the draw list are data the
-; patcher builds after this code; the list is (sprite, x, y) with a null
-; sprite at the end. The DLL is relocated on every load: the blob finds
-; its own address with a call/pop and subtracts its RVA to get the image
-; base, and every DLL address here is an RVA from that, filled in from
-; the build's row.
+; patcher builds after this code. The list is 40-byte entries: kind (1 a
+; sprite, 2 a string, 0 the end), the sprite or string, x, y, z or the
+; text routine's flags, then alpha, red, green, blue in 256ths. The DLL
+; is relocated on every load: the blob finds its own address with a
+; call/pop and subtracts its RVA to get the image base, and every DLL
+; address here is an RVA from that, filled in from the build's row.
 
 bits 32
 
@@ -32,7 +33,9 @@ bits 32
 %define MAGIC_SOUNDOBJ  0xD7D7D7D7      ; the sound manager
 %define MAGIC_HANDLES   0xD8D8D8D8      ; the loaded sheets' handles
 %define MAGIC_PAGEHDR   0xD9D9D9D9      ; the page's (UV table, count)
-%define MAGIC_DRAWLIST  0xDADADADA      ; the (sprite, x, y) list
+%define MAGIC_DRAWLIST  0xDADADADA      ; the draw list
+%define MAGIC_TEXT      0xDBDBDBDB      ; the stock text routine: a string in the 14-px font
+%define MAGIC_GLYPHS    0xDCDCDCDC      ; its glyph sprite table
 
 %define STATE           8               ; the Options object's state
 %define BACK_SOUND      0xe
@@ -86,29 +89,54 @@ exec:
         mov     eax, [edi]
         test    eax, eax
         jz      .slide
+        cmp     eax, 2
+        je      .string
         push    0                       ; the sprite call's sixteen dwords
         push    0
         push    0
-        push    0x100                   ; colour, 256 = as drawn
-        push    0x100
-        push    0x100
-        push    0x100
+        push    dword [edi + 32]        ; blue, green, red, alpha
+        push    dword [edi + 28]
+        push    dword [edi + 24]
+        push    dword [edi + 20]
         push    0x3f800000              ; scale 1.0, 1.0
         push    0x3f800000
         push    0
         push    0
         push    0
-        push    0x41400000              ; z 12.0, the menu's
-        push    dword [edi + 8]         ; y
-        push    eax                     ; x, slid: the sprite's plus the offset
-        fld     dword [edi + 4]
+        push    dword [edi + 16]        ; z
+        push    dword [edi + 12]        ; y
+        push    eax                     ; x, slid: the entry's plus the offset
+        fld     dword [edi + 8]
         fadd    dword [ebp + slide - $$]
         fstp    dword [esp]
-        push    eax                     ; the sprite
+        push    dword [edi + 4]         ; the sprite
         lea     eax, [ebx + MAGIC_DRAW]
         call    eax
         add     esp, 0x40
-        add     edi, 12
+        add     edi, 40
+        jmp     .sprite
+.string:
+        push    dword [edi + 16]        ; the text routine's thirteen: flags
+        lea     eax, [ebx + MAGIC_GLYPHS]
+        push    eax                     ; its glyph table
+        push    dword [edi + 32]        ; blue, green, red, alpha
+        push    dword [edi + 28]
+        push    dword [edi + 24]
+        push    dword [edi + 20]
+        push    0x3f800000              ; scale 1.0, 1.0
+        push    0x3f800000
+        push    0x41200000              ; the advance of a glyph it lacks, 10.0
+        push    0x41200000              ; z 10.0, the stock's text
+        push    dword [edi + 12]        ; y
+        push    eax                     ; x, slid
+        fld     dword [edi + 8]
+        fadd    dword [ebp + slide - $$]
+        fstp    dword [esp]
+        push    dword [edi + 4]         ; the string
+        lea     eax, [ebx + MAGIC_TEXT]
+        call    eax
+        add     esp, 0x34
+        add     edi, 40
         jmp     .sprite
 .slide:
         cmp     dword [ebp + leaving - $$], 0

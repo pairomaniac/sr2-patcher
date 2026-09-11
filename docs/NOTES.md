@@ -244,15 +244,27 @@ the slide-in; exec pushes the sixteen-dword sprite call for each entry of
 a (sprite, x, y) list with x offset by the slide, 640 down by 40 a frame
 as the stock pages, then, in place, reads the frame's key bits from the
 input object (`0x100b9464`, `+8`, vtable `+0x14`) and on cancel (bit 1)
-plays sound 0xe and slides the page on out to the left; at -640 it sets state 1,
-the menu with its cursor where it was. The data - the page's UV table and header, sprites, quads, the draw
-list - is built by `devices_page` in the patcher: the heading from the
-label pieces on sheet 6, the Dreamcast pad from sheet 8 as a placeholder,
-the bindings as a list in the 12-px font of sheet 6 (`FONT`, texel boxes
-per glyph) drawn at 18 px - at 12 the renderer's filtering
-leaves little of its strokes - the menu's own BACK sprite at its usual
-place. The bindings
-shown are fixed text for now. The new data carries absolute
+plays sound 0xe and slides the page on out to the left; at -640 it sets
+state 1, the menu with its cursor where it was. The list is 40-byte
+entries - kind, sprite or string, x, y, z or text flags, alpha, red,
+green, blue in 256ths - built by `devices_page` in the patcher in the
+Game Settings page's terms: its header band, group plate, row plate and
+the shared hint bar are that page's own sprites (`0x100a3128`,
+`0x100a3290`, `0x100a4198`, `0x1009f500`, found by their first quad; the
+hint bar copied without its text), drawn as `0x100025f0` draws them -
+plates at z 14 with alpha 0xd8, a selected row at (0x100, 0x100, g, b)
+with g and b low, text at z 10 - and the text goes through the stock
+routine `0x1000df10` over its 14-px glyph sprites (`0x1009c080`, one
+sprite a glyph, a 256-byte character map at `0x100fcc04` it fills on
+first use): (string, x, y, z, advance for a missing glyph, sx, sy,
+alpha, r, g, b, table, flags), flags 4 proportional, 1 right-aligned, 2
+centred. The table has letters, digits, `.`, `+`, `-` only; the colon
+is a piece. The 12-px font drawn from texel boxes was tried first and
+came out wrong at every size: the stock glyph cells carry a texel of
+margin. Geometry as the stock's: the band and heading at y 87, the
+group plate at (48, 106), rows of 18 from (261, 106), group text at
+x 56, action at 269, colon at 397, value at 405, the buttons at y 404,
+the hint bar at 451. The bindings shown are fixed strings for now. The new data carries absolute
 pointers, so `.sr2d` gets a relocation block appended to the directory in
 `.reloc`'s zero tail.
 
