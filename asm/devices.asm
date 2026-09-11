@@ -7,28 +7,31 @@
 ;              - once per load of the DLL, since the binding replaces
 ;              each entry's sheet index with its handle in place - starts
 ;              the slide-in, steps to 0xd and falls into exec.
-;   +5  exec   state 0xd: draws every sprite of the page's list, slid in
-;              from the right by 40 px a frame as the stock pages are,
-;              then, once in place, moves the cursor on up and down, and
-;              on cancel, or confirm on the BACK row, plays the back
-;              sound and slides the page on out to the left, as the
-;              stock pages go, and only then puts the menu's state back.
-;              Leaves through the dispatcher's epilogue.
+;   +5  exec   state 0xd: draws every entry of the page's list, slid in
+;              from the right by 40 px a frame as the stock pages are.
+;              In place, the hint bar pops up as the frame's does and the
+;              cursor moves on up and down; confirm on a row starts a
+;              bind - the bar says to press a button, cancel gives up -
+;              and confirm on BACK, or cancel, drops the bar and slides
+;              the page on out to the left, as the stock pages go, and
+;              only then puts the menu's state back. Leaves through the
+;              dispatcher's epilogue.
 ;
 ; The sprites, their quads and UV entries and the draw list are data the
 ; patcher builds after this code. The list is 40-byte entries: kind (1 a
 ; sprite, 2 a string, 0 the end), the sprite or string, x, y, z or the
 ; text routine's flags, alpha, red, green, blue in 256ths, and the
 ; cursor's hold on the entry: 0 for none, else the first and last row
-; (plus one) in the low bytes and in bits 16-23 how it is drawn when the
-; cursor is on one of those rows - 1 solid red, the stock's row; 2 red
-; with a little green and blue, its group plate; 3 red pulsing to white,
-; its button; 4 white fading, its row's value. The row after the last is
-; the BACK button. The hint bar under the page is the frame's: the page
-; names its message once in place and takes it back to leave. The DLL
-; is relocated on every load: the blob finds its own address with a
-; call/pop and subtracts its RVA to get the image base, and every DLL
-; address here is an RVA from that, filled in from the build's row.
+; (plus one) in the low bytes and in bits 16-23 what the cursor on one of
+; those rows does to it - 1 solid red, the stock's row; 2 red with a
+; little green and blue, its group plate; 3 red pulsing to white, its
+; button; 4 white fading, its row's value. Holds 5 to 7 are the hint
+; bar's, for every row: the entry rises with the bar; 6 is shown only
+; outside a bind, 7 only during one. The row after the last is the BACK
+; button. The DLL is relocated on every load:
+; the blob finds its own address with a call/pop and subtracts its RVA
+; to get the image base, and every DLL address here is an RVA from that,
+; filled in from the build's row.
 
 bits 32
 
@@ -45,22 +48,30 @@ bits 32
 %define MAGIC_TEXT      0xDBDBDBDB      ; the stock text routine: a string in the 14-px font
 %define MAGIC_GLYPHS    0xDCDCDCDC      ; its glyph sprite table
 %define MAGIC_ROWS      0xDDDDDDDD      ; the page's rows; the BACK row is one more
-%define MAGIC_HINT      0xDEDEDEDE      ; the frame's hint-bar message, -1 for none
 
 %define STATE           8               ; the Options object's state
-%define BACK_SOUND      0xe             ; the stock's for cursor moves and leaving
+%define MOVE_SOUND      0xe             ; the stock's for cursor moves and leaving
+%define PICK_SOUND      0xf             ; and for confirming
 %define KEY_CANCEL      2
 %define KEY_CONFIRM     0x41
 %define KEY_UP          0x200
 %define KEY_DOWN        0x400
-%define FULL            0x100
-%define GROUP_TINT      0x20
-%define PULSE_STEP      0x10
-%define HINT_CURSOR     0xe             ; "Use Cursor keys to change mode selections"
-%define HINT_NONE       -1
 %define SLIDE_FROM      0x44200000      ; 640.0
 %define SLIDE_GONE      0xC4200000      ; -640.0
 %define SLIDE_STEP      0x42200000      ; 40.0
+%define ONE             0x3f800000      ; 1.0
+%define BAR_STEP        0x3dcccccd      ; 0.1, the frame's hint bar a frame
+%define BAR_Y           0x43e18000      ; 451.0, the bar's bottom edge, which it grows from
+%define FULL            0x100
+%define GROUP_TINT      0x20
+%define PULSE_STEP      0x10
+%define HOLD_ROW        1
+%define HOLD_GROUP      2
+%define HOLD_BUTTON     3
+%define HOLD_VALUE      4
+%define HOLD_BAR        5
+%define HOLD_BAR_IDLE   6
+%define HOLD_BAR_BIND   7
 
         jmp     near init               ; +0
         jmp     near exec               ; +5
@@ -83,7 +94,8 @@ init:
         mov     dword [edi + row - $$], 0
         mov     dword [edi + pulse - $$], 0
         mov     dword [edi + pulsedir - $$], PULSE_STEP
-        mov     dword [ebx + MAGIC_HINT], HINT_NONE
+        mov     dword [edi + bar - $$], 0
+        mov     dword [edi + binding - $$], 0
         cmp     dword [edi + bound - $$], 0
         jne     .ready
         mov     dword [edi + bound - $$], 1
@@ -107,23 +119,52 @@ exec:
         call    getbase
         lea     ebp, [ebx + MAGIC_SELFRVA]  ; this blob
         lea     edi, [ebx + MAGIC_DRAWLIST]
-.sprite:
+
+; ---- the list --------------------------------------------------------
+.entry:
         mov     eax, [edi]
         test    eax, eax
-        jz      .slide
+        jz      .drawn
+        mov     ecx, [edi + 12]         ; y and vertical scale as given
+        mov     [ebp + y - $$], ecx
+        mov     dword [ebp + sy - $$], ONE
+        call    .holds
+        jnc     .free
+        cmp     ecx, HOLD_BAR
+        jb      .free
+        cmp     dword [ebp + binding - $$], 0     ; the bar's strings, one or the other
+        je      .idle
+        cmp     ecx, HOLD_BAR_IDLE
+        je      .next
+        jmp     .risen
+.idle:
+        cmp     ecx, HOLD_BAR_BIND
+        je      .next
+.risen:                                 ; with the bar: y from its bottom edge, scaled
+        mov     ecx, [ebp + bar - $$]
+        mov     [ebp + sy - $$], ecx
+        fld     dword [edi + 12]
+        fsub    dword [ebp + bary - $$]
+        fmul    dword [ebp + bar - $$]
+        fadd    dword [ebp + bary - $$]
+        fstp    dword [ebp + y - $$]
+.free:
         cmp     eax, 2
         je      .string
+
         push    0                       ; the sprite call's sixteen dwords
         push    0
         push    0
         call    .holds
         jnc     .plain
+        cmp     ecx, HOLD_BAR
+        jae     .plain
         xor     edx, edx                ; 1: green and blue 0
-        cmp     ecx, 2
+        cmp     ecx, HOLD_GROUP
         jne     .kind3
         mov     edx, GROUP_TINT
 .kind3:
-        cmp     ecx, 3
+        cmp     ecx, HOLD_BUTTON
         jne     .held
         mov     edx, [ebp + pulse - $$]
 .held:
@@ -138,13 +179,13 @@ exec:
         push    dword [edi + 24]
         push    dword [edi + 20]
 .coloured:
-        push    0x3f800000              ; scale 1.0, 1.0
-        push    0x3f800000
+        push    dword [ebp + sy - $$]   ; scale y, x
+        push    ONE
         push    0
         push    0
         push    0
         push    dword [edi + 16]        ; z
-        push    dword [edi + 12]        ; y
+        push    dword [ebp + y - $$]    ; y
         push    eax                     ; x, slid: the entry's plus the offset
         fld     dword [edi + 8]
         fadd    dword [ebp + slide - $$]
@@ -153,14 +194,16 @@ exec:
         lea     eax, [ebx + MAGIC_DRAW]
         call    eax
         add     esp, 0x40
-        add     edi, 40
-        jmp     .sprite
+        jmp     .next
+
 .string:
         push    dword [edi + 16]        ; the text routine's thirteen: flags
         lea     eax, [ebx + MAGIC_GLYPHS]
         push    eax                     ; its glyph table
         call    .holds
         jnc     .plaintext
+        cmp     ecx, HOLD_VALUE
+        jne     .plaintext
         mov     eax, [ebp + pulse - $$] ; 4: white, alpha 0x80 to 0x100 with the pulse
         sar     eax, 1
         add     eax, 0x80
@@ -175,11 +218,11 @@ exec:
         push    dword [edi + 24]
         push    dword [edi + 20]
 .colouredtext:
-        push    0x3f800000              ; scale 1.0, 1.0
-        push    0x3f800000
+        push    dword [ebp + sy - $$]   ; scale y, x
+        push    ONE
         push    0x41200000              ; the advance of a glyph it lacks, 10.0
         push    0x41200000              ; z 10.0, the stock's text
-        push    dword [edi + 12]        ; y
+        push    dword [ebp + y - $$]    ; y
         push    eax                     ; x, slid
         fld     dword [edi + 8]
         fadd    dword [ebp + slide - $$]
@@ -188,27 +231,36 @@ exec:
         lea     eax, [ebx + MAGIC_TEXT]
         call    eax
         add     esp, 0x34
+.next:
         add     edi, 40
-        jmp     .sprite
-.holds:                                 ; carry set, ecx the kind, when the cursor's row holds the entry
+        jmp     .entry
+
+; carry set, ecx the kind, when the cursor's row holds the entry at edi.
+; eax kept.
+.holds:
+        push    eax
         mov     ecx, [edi + 36]
         test    ecx, ecx
-        jz      .free
+        jz      .nohold
         movzx   eax, cl                 ; first row + 1 .. last row + 1
         dec     eax
         cmp     [ebp + row - $$], eax
-        jl      .free
+        jl      .nohold
         movzx   eax, ch
         dec     eax
         cmp     [ebp + row - $$], eax
-        jg      .free
+        jg      .nohold
         shr     ecx, 16
+        pop     eax
         stc
         ret
-.free:
+.nohold:
+        pop     eax
         clc
         ret
-.slide:
+
+; ---- the frame ------------------------------------------------------
+.drawn:
         mov     eax, [ebp + pulsedir - $$]   ; the pulse, 0 to 0x100 and back
         add     eax, [ebp + pulse - $$]
         mov     [ebp + pulse - $$], eax
@@ -226,17 +278,39 @@ exec:
         jne     .leave
         mov     eax, [ebp + slide - $$]
         test    eax, eax
-        jz      .input
-        fld     dword [ebp + slide - $$]
+        jz      .settled
+        fld     dword [ebp + slide - $$]    ; sliding in
         fsub    dword [ebp + step - $$]
         fstp    dword [ebp + slide - $$]
         mov     eax, [ebp + slide - $$]
-        test    eax, eax                ; below zero, the sign bit
-        jns     .out
+        test    eax, eax                ; to zero, or past it
+        jg      .out
         mov     dword [ebp + slide - $$], 0
-        mov     dword [ebx + MAGIC_HINT], HINT_CURSOR   ; in place: the hint bar pops in
         jmp     .out
-.leave:                                 ; on out to the left, then the menu
+.settled:
+        mov     eax, [ebp + bar - $$]   ; in place: the bar up, then input
+        cmp     eax, ONE
+        jae     .input
+        fld     dword [ebp + bar - $$]
+        fadd    dword [ebp + barstep - $$]
+        fstp    dword [ebp + bar - $$]
+        cmp     dword [ebp + bar - $$], ONE
+        jb      .out
+        mov     dword [ebp + bar - $$], ONE
+        jmp     .out
+.leave:
+        mov     eax, [ebp + bar - $$]   ; the bar down, then out to the left, then the menu
+        test    eax, eax
+        jz      .leaving
+        fld     dword [ebp + bar - $$]
+        fsub    dword [ebp + barstep - $$]
+        fstp    dword [ebp + bar - $$]
+        mov     eax, [ebp + bar - $$]
+        test    eax, eax
+        jg      .out
+        mov     dword [ebp + bar - $$], 0
+        jmp     .out
+.leaving:
         fld     dword [ebp + slide - $$]
         fsub    dword [ebp + step - $$]
         fstp    dword [ebp + slide - $$]
@@ -244,6 +318,8 @@ exec:
         jb      .out
         mov     dword [esi + STATE], 1  ; the menu, cursor where it was
         jmp     .out
+
+; ---- input ----------------------------------------------------------
 .input:
         mov     eax, [ebx + MAGIC_INPUT]
         mov     ecx, [eax + 8]
@@ -253,6 +329,8 @@ exec:
         push    1
         call    [edx + 0x14]            ; the frame's key bits
         mov     edi, eax
+        cmp     dword [ebp + binding - $$], 0
+        jne     .bindkeys
         test    ah, KEY_DOWN >> 8
         jz      .notdown
         mov     eax, [ebp + row - $$]   ; down: the next row, the BACK row, the first
@@ -270,6 +348,7 @@ exec:
         mov     eax, MAGIC_ROWS
 .moved:
         mov     [ebp + row - $$], eax
+        mov     eax, MOVE_SOUND
         call    .sound
         jmp     .out
 .notup:
@@ -277,23 +356,37 @@ exec:
         jnz     .go
         test    edi, KEY_CONFIRM
         jz      .out
-        mov     eax, [ebp + row - $$]   ; confirm: on the BACK row, leave
+        mov     eax, [ebp + row - $$]   ; confirm: on the BACK row leave, on a row bind
         cmp     eax, MAGIC_ROWS
-        jne     .out
+        je      .go
+        mov     dword [ebp + binding - $$], 1
+        mov     eax, PICK_SOUND
+        call    .sound
+        jmp     .out
+.bindkeys:                              ; waiting for a button: cancel gives up
+        test    edi, KEY_CANCEL
+        jz      .out
+        mov     dword [ebp + binding - $$], 0
+        mov     eax, MOVE_SOUND
+        call    .sound
+        jmp     .out
 .go:
+        mov     eax, MOVE_SOUND
         call    .sound
         mov     dword [ebp + leaving - $$], 1
-        mov     dword [ebx + MAGIC_HINT], HINT_NONE     ; leaving: the hint bar pops out
         jmp     .out
+
+; plays sound eax
 .sound:
         mov     ecx, [ebx + MAGIC_SOUNDOBJ]
         push    0
         push    0
         push    0
-        push    BACK_SOUND
+        push    eax
         lea     eax, [ebx + MAGIC_PLAYSOUND]
         call    eax
         ret
+
 .out:
         lea     eax, [ebx + MAGIC_EPILOGUE]
         pop     ebp
@@ -302,9 +395,15 @@ exec:
         jmp     eax
 
 bound:  dd      0                       ; the UV table bound this load
-slide:  dd      0                       ; the slide's x offset, 640.0 down to 0 and back
+slide:  dd      0                       ; the slide's x offset, 640.0 down to 0 and on to -640
 step:   dd      SLIDE_STEP
 leaving: dd     0                       ; sliding out after cancel
 row:    dd      0                       ; the cursor's row; ROWS is the BACK button
-pulse:  dd      0                       ; the button highlight, 0 to 0x100 and back
+pulse:  dd      0                       ; the highlights' pulse, 0 to 0x100 and back
 pulsedir: dd    0
+bar:    dd      0                       ; the hint bar's height, 0 to 1.0
+barstep: dd     BAR_STEP
+bary:   dd      BAR_Y
+binding: dd     0                       ; waiting for a button for the cursor's row
+y:      dd      0                       ; the entry being drawn: its y and vertical scale
+sy:     dd      0

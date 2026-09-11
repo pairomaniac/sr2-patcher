@@ -245,11 +245,16 @@ reloads the DLL for each visit) - and starts the slide-in. Exec draws
 the list, moves the cursor, and slides: in from the right at 640 down
 by 40 a frame, out to the left on cancel or on confirm over BACK, the
 menu's state set at -640, the stock pages' numbers. The hint bar under
-every page belongs to the frame object (`0x10001cc0`), which pops it in
-and out by itself; a page only names its message in `0x1009c784`, -1
-for none. This one names 0xe, "Use Cursor keys to change mode
-selections", once in place, and -1 when it leaves, as Game Settings
-does at `0x10002b90` and `0x10002eae`.
+every stock page belongs to the frame object (`0x10001cc0`), which pops
+one of fifteen lettered messages in and out by a message number in
+`0x1009c784` (`0x100021b0`, height 0 to 1 by 0.1 a frame, the bar
+growing from its bottom edge at y 451). All fifteen are lettered, so
+the page leaves that at -1 and draws its own: the bar's plate and white
+strip copied from message 14, grown the same way once the page is in
+place and dropped before it leaves, with two strings of its own on it
+in the glyph font, one outside a bind and one during. Confirm on a row
+starts a bind - the bar says to press the button - and cancel gives it
+up; nothing listens for the button yet.
 
 The list is 40-byte entries - kind, sprite or string, x, y, z or text
 flags, alpha, red, green, blue in 256ths, and the cursor's hold on the
@@ -271,7 +276,7 @@ at 397, value at 405, the buttons at y 404. Two groups, PLAYER 1 and
 PLAYER 2, seven rows each.
 
 The cursor is the stock's (`0x10002c30`): up and down through the rows
-and the BACK button, wrapping, sound 0xe a move. What it holds is drawn
+and the BACK button, wrapping, sound 0xe a move and 0xf a confirm. What it holds is drawn
 as Game Settings draws it: the row's plate (0x100, 0x100, 0, 0), its
 group's (0x100, 0x100, 0x20, 0x20), the button (0x100, 0x100, p, p) and
 the row's value white with alpha 0x80 + p/2, p the page's pulse, 0 to
