@@ -11,7 +11,7 @@
 ;              from the right by 40 px a frame as the stock pages are.
 ;              In place, the hint bar pops up as the frame's does and the
 ;              cursor moves on up and down; confirm on a row starts a
-;              bind - the row and the bar pulse blue, the bar says to
+;              bind - the row pulses red to white, the bar says to
 ;              press the button, cancel gives up -
 ;              and confirm on BACK, or cancel, drops the bar and slides
 ;              the page on out to the left, as the stock pages go, and
@@ -25,11 +25,11 @@
 ; cursor's hold on the entry: 0 for none, else the first and last row
 ; (plus one) in the low bytes and in bits 16-23 what the cursor on one of
 ; those rows does to it - 1 solid red, the stock's row, and during a
-; bind blue pulsing to white; 2 red with a little green and blue, its
+; bind red pulsing to white; 2 red with a little green and blue, its
 ; group plate; 3 red pulsing to white, its button; 4 white fading, its
 ; row's value. Holds 5 to 7 are the hint bar's, for every row: the entry
-; rises with the bar, and 5, the bar itself, pulses blue during a bind;
-; 6 is shown only outside a bind, 7 only during one. The row after the
+; rises with the bar; 6 is shown only outside a bind, 7 only during
+; one. The row after the
 ; last is the BACK button. The DLL is relocated on every load: the blob
 ; finds its own address with a call/pop and subtracts its RVA to get the
 ; image base, and every DLL address here is an RVA from that, filled in
@@ -161,10 +161,10 @@ exec:
         jnc     .plain
         cmp     ecx, HOLD_BAR
         jae     .plain
-        cmp     ecx, HOLD_ROW           ; 1: red, or blue pulsing during a bind
+        cmp     ecx, HOLD_ROW           ; 1: red, pulsing to white during a bind
         jne     .notrow
         cmp     dword [ebp + binding - $$], 0
-        jne     .bindblue
+        jne     .bindpulse
         push    0
         push    0
         push    FULL
@@ -185,19 +185,14 @@ exec:
         push    FULL
         push    FULL
         jmp     .coloured
-.bindblue:                              ; the bind: blue pulsing to white, the row and the bar alike
+.bindpulse:                             ; the bind: the row red pulsing to white, as a button does
         mov     edx, [ebp + pulse - $$]
+        push    edx
+        push    edx
         push    FULL
-        push    edx
-        push    edx
         push    FULL
         jmp     .coloured
 .plain:
-        cmp     ecx, HOLD_BAR
-        jne     .asgiven
-        cmp     dword [ebp + binding - $$], 0
-        jne     .bindblue
-.asgiven:
         push    dword [edi + 32]        ; blue, green, red, alpha
         push    dword [edi + 28]
         push    dword [edi + 24]

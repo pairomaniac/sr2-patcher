@@ -4,8 +4,7 @@
     python3 tools/txrdump.py OPTIONS.TXR [OUTDIR]
 
 RTEX, a count, 16-byte entries (format, size, bytes, 0), pixels from
-0x1000 back to back. Format 0 is 555 without alpha, 2 is 1555, 8 is
-4444. Each texture goes to texNN.png over grey, plus a montage.png of
+0x1000 back to back. Format 0 is 565, 2 is 1555, 8 is 4444. Each texture goes to texNN.png over grey, plus a montage.png of
 all of them.
 """
 import os
@@ -30,8 +29,10 @@ def load(path):
         img = Image.new('RGBA', (width, height))
         if fmt == 8:
             img.putdata([((v >> 8 & 15) * 17, (v >> 4 & 15) * 17, (v & 15) * 17, (v >> 12) * 17) for v in pixels])
+        elif fmt == 0:
+            img.putdata([((v >> 11) * 8, (v >> 5 & 63) * 4, (v & 31) * 8, 255) for v in pixels])
         else:
-            img.putdata([((v >> 10 & 31) * 8, (v >> 5 & 31) * 8, (v & 31) * 8, 255 if fmt == 0 or v & 0x8000 else 0) for v in pixels])
+            img.putdata([((v >> 10 & 31) * 8, (v >> 5 & 31) * 8, (v & 31) * 8, 255 if v & 0x8000 else 0) for v in pixels])
         textures.append((fmt, img))
         off += nbytes
     if off != len(data):

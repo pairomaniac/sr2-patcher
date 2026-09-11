@@ -203,7 +203,7 @@ the screen stays blank. Three patches:
 
 `Options.dll` draws from `BINDATA\MISC\OPTIONS.TXR`: `RTEX`, a count,
 16-byte entries `(format, size, bytes, 0)` and, from `0x1000`, the pixels
-back to back. Format 0 is 555 without alpha, 2 is 1555, 8 is 4444. Twelve textures; the
+back to back. Format 0 is 565, 2 is 1555, 8 is 4444. Twelve textures; the
 Dreamcast Device Settings page survives in them unused - both controller
 diagrams (8, 9), every label and the full uppercase font (6), the
 calibration bars (7). What is not there is a steering-wheel icon: sheet 10
@@ -253,14 +253,13 @@ the page leaves that at -1 and draws its own: the bar's plate and white
 strip copied from message 14, grown the same way once the page is in
 place and dropped before it leaves, and on it one of two lines set
 letter by letter from the frame's own lettering - sheet 4, format 0,
-555 with no alpha, dark ink on opaque white, six lines in a condensed
-face - one texel box a letter cut from a clean instance there
+565, dark ink on opaque white, six lines in a condensed face - one texel box a letter cut from a clean instance there
 (`HINT_GLYPHS`), a texel apart, 5 for a space, onto white on the
 appended sheet at patch time. The lines say what those six lines'
 letters allow; there is no N or R among the capitals, so no ENTER.
-Confirm on a row starts a bind - the row's plate and the bar pulse blue
-to white, (0x100, p, p, 0x100), and the bar says to press the button -
-and cancel gives it up; nothing listens for the button yet.
+Confirm on a row starts a bind - the row's plate pulses red to white as
+a held button does, and the bar says to press the button - and cancel
+gives it up; nothing listens for the button yet.
 
 The list is 40-byte entries - kind, sprite or string, x, y, z or text
 flags, alpha, red, green, blue in 256ths, and the cursor's hold on the
