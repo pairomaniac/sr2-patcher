@@ -27,6 +27,7 @@ Australian releases map onto it; *Builds* says how far.
 | **The mix** | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980` and appended `.sr2b` section | the sound manager - in the exe and, as a copy of the same code, in every screen DLL - gives each effect a −40..0 dB range and sets its ceiling at `(step+1)/10` of it from the slider: 4 dB a step, 0 dB at 9. The buffer's `SetRange` (`0x10004380`) loads min and max through asm/mix.asm, each mapped onto `MIX_MIN..MIX_MAX` from asm/mix.inc, −43..−8: 3.5 dB a step, 9 the old 7, for every client. The streamed music - every client ends in the streaming buffer's `SetVolume` (`0x10006940`) with the step × 1111 as a 0..10000 value mapped across the stream's own range - finishes that mapping through the second routine, the step on the same curve plus `STREAM_DB` (200), 0 off |
 | **Effects at full** (Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; `Options.dll` `0xf92a`, `0xf98d`, `0xf9e1` | the volume routine sets each effect's ceiling from its slider and then its level as a percentage of that; the other builds pass 100, the Australian's passes the slider × 11 - the slider twice - in the exe and in its `Options.dll`, which re-applies on the way out of the screen. The setting's load → `mov eax, 9`, which the × 100 × 0.111 after it makes 100; in the DLL the load's relocation entry goes with it. The percentage is also how every build drives the engine's level by throttle, so it stays a percentage |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume`: the slider's 0..10000 becomes a `waveOutSetVolume` amplitude on the mix's curve plus `CD_DB` (800), 0 dB at 9, from the ten-entry table `build.py` derives into `curve.inc`, applied after each play once the stream exists; see [asm/README.md](../asm/README.md) |
+| **Device Settings item** | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc` (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x593c`), nine `x` fields and two UV entries in `.data`, appended `.sr2d` section; the TXR grows a thirteenth sheet | a fourth item on the Options menu: the cursor's and the icon set's item counts 3 → 4, the three item tables moved to `.sr2d` with a fourth entry, the dispatch table's fourth slot → a stub that returns to the menu; the icon drawn on a sheet appended to the texture file. See *The Options screen* |
 
 Offsets are the European build's file offsets; the other builds' are in
 `BUILDS` and under *Builds*. In the exe, which is never relocated, VA =
@@ -197,6 +198,52 @@ the screen stays blank. Three patches:
   `DDSCAPS2_TEXTUREMANAGE` DirectDraw holds the copy and re-uploads on
   its own, and neither Windows nor Wine ever marks the surface lost.
   `Load` into a managed texture works as before.
+
+### The Options screen
+
+`Options.dll` draws from `BINDATA\MISC\OPTIONS.TXR`: `RTEX`, a count,
+16-byte entries `(format, size, bytes, 0)` and, from `0x1000`, the pixels
+back to back. Formats 0 and 2 are 1555, 8 is 4444. Twelve textures; the
+Dreamcast Device Settings page survives in them unused - both controller
+diagrams (8, 9), every label and the full uppercase font (6), the
+calibration bars (7). What is not there is a steering-wheel icon: sheet 10
+holds car, speaker, monitor and a blank plate, and the blank plate is the
+cursor's red frame, drawn as a nine-slice of 28-texel pieces.
+
+`OptionsModeInit` (`0x10003770`) loads the TXR and binds ten *pages*
+through `0x1000ed90`: a page is a table of 20-byte UV entries
+`(texture, u0, v0, u1, v1)`, and the loader swaps each texture index for
+its handle in place. A *sprite* is 32 bytes - page, quads, count, width,
+height, x, y, 0 - and a *quad* 52: UV index, a rectangle about the sprite's
+centre, four vertex colours. `0x1000e850` draws a sprite at a position,
+scale and colour. The menu's page is `0x100ac9d8` with 54 entries, one
+`-1` between sprites; those separators are spare, and `0xe` now holds
+"DEVICE" from sheet 6.
+
+The menu itself (`0x10003dd0` init, `0x10003f40` exec) owns a cursor
+(`0x1000ba40`, sliding between the frame sprites of a table) and an icon
+set (`0x10002330`), both over three-entry tables at `0x1009c820`,
+`0x1009c82c`, `0x1009c838` (labels), and draws the labels itself at
+`0x10003e10`. Confirming returns the index with bit 15, and `0x10003c6b`
+dispatches it through `0x10003dc0` to the page states; the fourth slot
+was the exit state, never reached with three items. The stub in `.sr2d`
+puts state 1 back - the menu, cursor on the item - until the page exists.
+The four items sit at x 110, 250, 390, 530. The new data carries absolute
+pointers, so `.sr2d` gets a relocation block appended to the directory in
+`.reloc`'s zero tail.
+
+The item's label is "DEVICE" over the stock "SETTINGS". Its icon is a
+thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
+16-byte entry in the 4 KB header, the pixels at the end; the loader sizes
+its handle and entry arrays from the count, and the DLL's copy of the
+handles has room for 256): the monitor icon's plate with the picture's box
+filled back to the plate's grey, and a steering wheel cut out of it the
+way the stock pictures are - they are holes in the plate, alpha 0, the
+menu's dark background showing through. The wheel is drawn by the patcher
+(`wheel_mask`), not copied from anywhere. UV entry `0x11` covers the sheet
+but its one-texel edge. The English label sheet is checked by the texels
+of "DEVICE"; a Japanese install, never seen, would fail that check rather
+than draw the wrong thing.
 
 ## The executable
 

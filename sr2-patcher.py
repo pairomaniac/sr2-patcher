@@ -57,6 +57,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
+                  'devmenu': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20),   # Options.dll
                   'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
@@ -67,7 +68,7 @@ BUILDS = {
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
         'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
-        'addresses': {'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+        'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'BITCOUNT': 0x4e68cc},
     },
     'American': {
@@ -85,6 +86,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
+                  'devmenu': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20),   # Options.dll
                   'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
@@ -92,7 +94,7 @@ BUILDS = {
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
         'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x49519c, 'lstrcpyA': 0x4950f4,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
-        'addresses': {'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
+        'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'BITCOUNT': 0x4e69bc},
     },
     'Australian': {
@@ -110,6 +112,7 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
+                  'devmenu': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08),   # Options.dll
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980),
@@ -119,7 +122,7 @@ BUILDS = {
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
         'slots': {'SetTextColor': 0x4d402c, 'GetLogicalDriveStringsA': 0x4d4198, 'lstrcpyA': 0x4d40fc,
                   'LoadLibraryA': 0x4d4094, 'GetProcAddress': 0x4d40f8},
-        'addresses': {'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
+        'addresses': {'MENUTABLES': 0x100a2708, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8},
     },
 }
@@ -166,11 +169,24 @@ RESTORE_RELOCS = 10
 #   borderless  the window covers its monitor, the present letterboxes
 #   altenter    ALT+ENTER toggles a framed window
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
+#   devmenu     a fourth Options item, Device Settings, placed for the controller page; also grows OPTIONS.TXR
 #   voltrace    diagnostic, by name only: volume calls reported on +debugstr
 
 # The first bytes of the five volume entry points voltrace hooks.
 VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),
                   bytes.fromhex('558bec81ec88000000'), bytes.fromhex('558bec83ec0c'))
+
+
+def devmenu_sites(offsets, tables):
+    """The Options menu's sites: the cursor and icon-set constructors
+    (their item counts go 3 to 4), the label loop's bounds and the
+    dispatch table, all naming the three item tables at `tables`."""
+    cursor, icons, labels, labelend, _dispatch, _ftab = offsets
+    t = struct.pack('<I', tables)
+    return ((cursor, bytes.fromhex('6a035068') + t, bytes.fromhex('6a04')),
+            (icons, bytes.fromhex('6a0368') + struct.pack('<I', tables + 0xc), bytes.fromhex('6a04')),
+            (labels, b'\xbf' + struct.pack('<I', tables + 0x18), None),
+            (labelend, bytes.fromhex('81ff') + struct.pack('<I', tables + 0x24), None))
 
 
 def patches(build):
@@ -219,6 +235,7 @@ def patches(build):
                                         (site['mix'][1], bytes.fromhex('03d68bf285f6'), None)), 'apply_mix'),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
+        'devmenu': ('Options.dll', devmenu_sites(site['devmenu'], row['addresses']['MENUTABLES']), 'apply_devmenu'),
     }
     if 'oscheck' in site:
         table['win9x'] = (EXE, ((site['oscheck'], bytes.fromhex('81ec94000000'), bytes.fromhex('31c0c3')),), None)
@@ -1263,6 +1280,209 @@ def apply_sfxoptions(buf, build):
     return buf
 
 
+DEVMENU_SECTION = b'.sr2d'
+DATA_SECTION = 0xC0000040               # IMAGE_SCN_CNT_INITIALIZED_DATA | MEM_READ | MEM_WRITE
+DEVMENU_X = (110.0, 250.0, 390.0, 530.0)   # four items across 640, stock 154, 320, 487
+DEVMENU_UV_DEVICE = 0xe                 # spare entries in the page's UV table: "DEVICE" on sheet 6,
+DEVMENU_UV_ICON = 0x11                  # and the icon on the appended sheet
+DEVMENU_DEVICE = (2, 73, 79, 95)        # "DEVICE" on sheet 6, in texels
+TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
+TXR_SIZE = 1282048
+TXR_ENTRIES = ((2, 128), (0, 128), (8, 256), (8, 256), (0, 256), (0, 256), (8, 256), (2, 256), (8, 256), (8, 256), (8, 256), (8, 128))
+TXR_DEVICE_MD5 = '84a4889baf435baf631db36a90078df0'   # the "DEVICE" texels, English sheet
+TXR_ICON = 12                           # the appended sheet's index
+
+
+def _add_relocations(buf, rvas):
+    """Append HIGHLOW entries for the given RVAs to the relocation directory,
+    in the zero tail of .reloc; the directory grows."""
+    pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
+    opt = pe_off + 24
+    nsec = struct.unpack_from('<H', buf, pe_off + 6)[0]
+    table = opt + struct.unpack_from('<H', buf, pe_off + 20)[0]
+    rel_rva, rel_size = struct.unpack_from('<II', buf, opt + 136)
+    blocks = b''
+    for page in sorted({rva & ~0xfff for rva in rvas}):
+        entries = sorted(0x3000 | (rva & 0xfff) for rva in rvas if rva & ~0xfff == page)
+        if len(entries) % 2:
+            entries.append(0)
+        blocks += struct.pack('<II', page, 8 + 2 * len(entries)) + struct.pack('<%dH' % len(entries), *entries)
+    for i in range(nsec):
+        vsize, va, rsize = struct.unpack_from('<III', buf, table + i * 40 + 8)
+        if va == rel_rva:
+            break
+    else:
+        raise ValueError('no relocation section')
+    if rel_size + len(blocks) > rsize:
+        raise ValueError('no room in the relocation section')
+    off = _rva_to_off(buf, rel_rva) + rel_size
+    if any(buf[off:off + len(blocks)]):
+        raise ValueError('the relocation section\'s tail is not empty')
+    buf[off:off + len(blocks)] = blocks
+    struct.pack_into('<I', buf, opt + 140, rel_size + len(blocks))
+    struct.pack_into('<I', buf, table + i * 40 + 8, max(vsize, rel_size + len(blocks)))
+
+
+def apply_devmenu(buf, build):
+    """A fourth item on the Options menu. The three item tables (cursor
+    frames, icons, labels) move to a new data section with a fourth entry
+    each. The item's icon is the sheet patch_txr appends, its label
+    "DEVICE" and "SETTINGS" from the page's own sheets, both through spare
+    UV entries. Confirming it returns to the menu until the page exists.
+    The stock items move to four-across positions."""
+    cursor, icons, labels, labelend, dispatch, ftab = BUILDS[build]['sites']['devmenu']
+    base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
+
+    def va_off(va):
+        return _rva_to_off(buf, va - base)
+
+    def dword(off):
+        return struct.unpack_from('<I', buf, off)[0]
+
+    tables = [[dword(ftab + t * 0xc + i * 4) for i in range(3)] for t in range(3)]
+    frame0, icon0, label0 = (va_off(tables[t][0]) for t in range(3))
+    page = dword(frame0)
+    if page != dword(icon0) or page != dword(label0) or dword(frame0 + 8) != 9 or dword(label0 + 8) != 2:
+        raise ValueError('Options.dll: the menu tables are not what the patcher knows')
+    uvs = {}
+    for entry in (DEVMENU_UV_DEVICE, DEVMENU_UV_ICON):
+        uvs[entry] = va_off(page) + entry * 0x14
+        if struct.unpack_from('<i', buf, uvs[entry])[0] != -1:
+            raise ValueError('Options.dll: UV entry %#x is in use' % entry)
+    stub_site = dispatch + 12
+    cont = va_off(dword(stub_site)) + 7
+    if buf[cont - 7:cont] != bytes.fromhex('c746080b000000'):
+        raise ValueError('Options.dll: the dispatch table is not what the patcher knows')
+
+    # the stock items, four across
+    for t in range(3):
+        for i in range(3):
+            struct.pack_into('<f', buf, va_off(tables[t][i]) + 0x14, DEVMENU_X[i])
+    # the spare UV entries: "DEVICE", and the whole appended sheet but its edge
+    struct.pack_into('<i4f', buf, uvs[DEVMENU_UV_DEVICE], 6, *(v / 256.0 for v in DEVMENU_DEVICE))
+    struct.pack_into('<i4f', buf, uvs[DEVMENU_UV_ICON], TXR_ICON, 1 / 128.0, 1 / 128.0, 127 / 128.0, 127 / 128.0)
+
+    # the blob: tables, descriptors, quads, stub
+    rva = _next_section_rva(buf)
+    va = base + rva
+    frame_quads = bytes(buf[va_off(dword(frame0 + 4)):va_off(dword(frame0 + 4)) + 9 * 0x34])
+    icon_quad = bytearray(buf[va_off(dword(icon0 + 4)):va_off(dword(icon0 + 4)) + 0x34])
+    struct.pack_into('<I', icon_quad, 0, DEVMENU_UV_ICON)
+    settings = bytes(buf[va_off(dword(label0 + 4)) + 0x34:va_off(dword(label0 + 4)) + 0x68])
+    device = struct.pack('<I4f', DEVMENU_UV_DEVICE, -38.0, -22.0, 39.0, 0.0) + settings[0x14:]
+    layout = {'ftab': 0x00, 'itab': 0x10, 'ltab': 0x20, 'descf': 0x30, 'desci': 0x50, 'descl': 0x70,
+              'quadsf': 0x90, 'quadsi': 0x264, 'quadsl': 0x298, 'stub': 0x300}
+    blob = bytearray(0x30c)
+    relocs = []
+    for t, name in enumerate(('ftab', 'itab', 'ltab')):
+        for i in range(3):
+            struct.pack_into('<I', blob, layout[name] + i * 4, tables[t][i])
+        struct.pack_into('<I', blob, layout[name] + 12, va + layout[('descf', 'desci', 'descl')[t]])
+        relocs += [layout[name] + i * 4 for i in range(4)]
+    for name, quads, n, w, h, y in (('descf', 'quadsf', 9, 134.0, 134.0, 202.0), ('desci', 'quadsi', 1, 126.0, 126.0, 202.0),
+                                   ('descl', 'quadsl', 2, 106.0, 45.0, 296.0)):
+        struct.pack_into('<IIIffffI', blob, layout[name], page, va + layout[quads], n, w, h, DEVMENU_X[3], y, 0)
+        relocs += [layout[name], layout[name] + 4]
+    blob[layout['quadsf']:layout['quadsf'] + 9 * 0x34] = frame_quads
+    blob[layout['quadsi']:layout['quadsi'] + 0x34] = icon_quad
+    blob[layout['quadsl']:layout['quadsl'] + 0x68] = device + settings
+    stub_va = va + layout['stub']
+    blob[layout['stub']:layout['stub'] + 12] = bytes.fromhex('c7460801000000') + b'\xe9' + struct.pack('<i', base + _off_to_rva(buf, cont) - (stub_va + 12))
+    out, got = append_section(buf, DEVMENU_SECTION, bytes(blob), chars=DATA_SECTION | 0x20000000)
+    if got != rva:
+        raise ValueError('section placed at %#x, expected %#x' % (got, rva))
+    _add_relocations(out, [rva + r for r in relocs])
+
+    # the sites: the counts are written already; the tables and the dispatch entry here
+    struct.pack_into('<I', out, cursor + 4, va + layout['ftab'])
+    struct.pack_into('<I', out, icons + 3, va + layout['itab'])
+    struct.pack_into('<I', out, labels + 1, va + layout['ltab'])
+    struct.pack_into('<I', out, labelend + 2, va + layout['ltab'] + 16)
+    struct.pack_into('<I', out, stub_site, stub_va)
+    return out
+
+
+def wheel_mask(size=126):
+    """Coverage, 0..255, of a steering wheel drawn in the icons' style: a
+    rim, three spokes, a hub with a hole. Sixteen samples a pixel."""
+    c = size / 2.0
+    rim, inner, hub, hole, half = 50.0, 37.0, 14.0, 5.0, 6.0
+    mask = bytearray(size * size)
+    for y in range(size):
+        for x in range(size):
+            hits = 0
+            for sy in range(4):
+                for sx in range(4):
+                    dx = x + (sx + 0.5) / 4 - c
+                    dy = y + (sy + 0.5) / 4 - c
+                    d2 = dx * dx + dy * dy
+                    if inner * inner <= d2 <= rim * rim or hole * hole <= d2 <= hub * hub:
+                        hits += 1
+                    elif d2 < (inner + 1) * (inner + 1) and (abs(dy) <= half or (dy >= 0 and abs(dx) <= half)):
+                        hits += 1
+            mask[y * size + x] = hits * 255 // 16
+    return bytes(mask)
+
+
+def txr_check(data):
+    """The stock OPTIONS.TXR, or why not."""
+    if len(data) != TXR_SIZE or data[:4] != b'RTEX' or struct.unpack_from('<I', data, 4)[0] != len(TXR_ENTRIES):
+        return 'not the stock OPTIONS.TXR'
+    off = 0x1000
+    offsets = []
+    for i, (fmt, size) in enumerate(TXR_ENTRIES):
+        if struct.unpack_from('<4I', data, 16 + 16 * i) != (fmt, size, size * size * 2, 0):
+            return 'texture %d is not what the patcher knows' % i
+        offsets.append(off)
+        off += size * size * 2
+    x0, y0, x1, y1 = DEVMENU_DEVICE
+    sheet = offsets[6]
+    region = b''.join(data[sheet + (y * 256 + x0) * 2:sheet + (y * 256 + x1) * 2] for y in range(y0, y1))
+    if hashlib.md5(region).hexdigest() != TXR_DEVICE_MD5:
+        return 'the label sheet is not the English one'
+    return None
+
+
+def patch_txr(data):
+    """OPTIONS.TXR with a thirteenth sheet: the third icon's plate, its
+    picture filled back in, with a steering wheel cut out the same way.
+    Returns the grown file."""
+    why = txr_check(data)
+    if why:
+        raise ValueError('%s: %s' % (TXR, why))
+    sheet = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:10])
+    plate = bytearray(126 * 126 * 2)
+    for y in range(126):
+        row = sheet + ((129 + y) * 256 + 1) * 2
+        plate[y * 252:y * 252 + 252] = data[row:row + 252]
+    for y in range(16, 115):                # the picture's box, back to the plate's grey
+        for x in range(14, 112):
+            struct.pack_into('<H', plate, (y * 126 + x) * 2, 0xf999)
+    mask = wheel_mask()
+    for i in range(126 * 126):
+        texel = struct.unpack_from('<H', plate, i * 2)[0]
+        alpha = max(0, (texel >> 12) * 17 - mask[i])
+        struct.pack_into('<H', plate, i * 2, (texel & 0xfff) | ((alpha + 8) // 17) << 12)
+    texture = bytearray(128 * 128 * 2)
+    for y in range(126):
+        texture[((y + 1) * 128 + 1) * 2:((y + 1) * 128 + 127) * 2] = plate[y * 252:y * 252 + 252]
+    out = bytearray(data)
+    struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
+    struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 128, len(texture), 0)
+    return bytes(out + texture)
+
+
+def _next_section_rva(buf):
+    """Where append_section will put the next section."""
+    pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
+    nsec = struct.unpack_from('<H', buf, pe_off + 6)[0]
+    opt = pe_off + 24
+    table = opt + struct.unpack_from('<H', buf, pe_off + 20)[0]
+    sect_align = struct.unpack_from('<I', buf, opt + 32)[0]
+    last_vsize, last_va = struct.unpack_from('<II', buf, table + (nsec - 1) * 40 + 8)
+    return _align(last_va + last_vsize, sect_align)
+
+
 VOLTRACE_SECTION = b'.sr2v'
 
 
@@ -1346,6 +1566,15 @@ def patch(dest, log=print, keys=PATCH_KEYS):
     build = check_build(dest)
     table = patches(build)
     log('patch: %s build' % build)
+    txr = None
+    if 'devmenu' in keys:
+        path = os.path.join(dest, *TXR.split('\\'))
+        source = path + '.bak' if os.path.isfile(path + '.bak') else path
+        with open(source, 'rb') as fh:
+            txr = fh.read()
+        why = txr_check(txr)
+        if why:
+            raise ValueError('%s: %s' % (TXR, why))
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
         wanted = [table[key] for key in keys if key in table and table[key][0] == name]
@@ -1374,11 +1603,19 @@ def patch(dest, log=print, keys=PATCH_KEYS):
         with open(path, 'wb') as fh:
             fh.write(buf)
         log('patch: %s written, %s' % (name, ', '.join(k for k in keys if k in table and table[k][0] == name)))
+    if txr is not None:
+        path = os.path.join(dest, *TXR.split('\\'))
+        if not os.path.isfile(path + '.bak'):
+            os.replace(path, path + '.bak')
+            log('patch: backup written to %s.bak' % TXR)
+        with open(path, 'wb') as fh:
+            fh.write(patch_txr(txr))
+        log('patch: %s written, devmenu' % TXR)
 
 
 def restore(dest, log=print):
     found = False
-    for name in PATCHED:
+    for name in PATCHED + (TXR,):
         path = os.path.join(dest, *name.split('\\'))
         if os.path.isfile(path + '.bak'):
             os.replace(path + '.bak', path)

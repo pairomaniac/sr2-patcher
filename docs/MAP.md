@@ -180,6 +180,7 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | win9x | 1 | Australian exe `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
+| devmenu | 5 + section + TXR | `Options.dll` `0x10003ff8`, `0x1000400f`, `0x10003e14`, `0x10003e67`, `0x10003dcc` (files `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc`), nine `x` floats and UV entries `0xe`, `0x11` in `.data`, the appended `.sr2d` with an 18-entry relocation block; `BINDATA\MISC\OPTIONS.TXR` grown by a 128x128 sheet |
 
 ## 7. `MUSASHI\MGSound.dll`
 
@@ -195,3 +196,24 @@ it, which is why a fix for the settings-menu music has to live here.
 | `0x100041c0` | the buffer's `SetVolume(this, value)`, the effects and the announcer: `min + (max−min) × value / 10000`; the engine's throttle level comes through here as a percentage, so it is not patched |
 | `0x10005d36` | the streaming buffer's `SetParameters`: bit 2 of the struct's `+4` is the volume, its value at `+0xc` |
 | `0x1001138e` | `CMGameSoundBuffer::SetVolume... volume overflow!` - the range check |
+
+## 8. `Options.dll`
+
+Image base `0x10000000`, relocated at load; `.text` at RVA `0x1000`, file
+offset `0x400`. The European and American DLLs are one file; the
+Australian is its own build (addresses in `BUILDS`).
+
+| Address | What |
+|---|---|
+| `0x10003770` | `OptionsModeInit`: loads `options.txr`, binds the ten pages, constructs the top-level object at `0x100b8fe0` |
+| `0x10003af0` | the top-level state machine, 12 states through `0x10003d90`: 1 menu, 3/5/7 the pages, 0xb exit |
+| `0x10003c6b` | the menu's result dispatched through `0x10003dc0`, four slots. Patched by devmenu |
+| `0x10003dd0`, `0x10003f40` | the menu: init and exec; `0x10003ff8` and `0x1000400f` construct the cursor and the icon set with count 3. Patched by devmenu |
+| `0x10003e10` | draws the labels from `0x1009c838`–`0x1009c844` and the BACK button. Patched by devmenu |
+| `0x1000ba40`, `0x1000bab0` | the cursor class: table, index, count, speed; left/right slide, confirm `0x400`, cancel `0x800` |
+| `0x10002330`, `0x10002370` | the icon-set class over a sprite table |
+| `0x1000ed90` | binds a page's UV entries to texture handles |
+| `0x1000e850` | draws a sprite: descriptor, x, y, z, rotation, scale, colour |
+| `0x1009c820`, `0x1009c82c`, `0x1009c838` | the menu's item tables: cursor frames, icons, labels |
+| `0x100ac9d8` | the menu's page: 54 UV entries; `0x100ace10` its sprite list |
+| `0x100ad368`, `0x100ad3c0`, `0x100ad060` | the first item's frame, icon and label sprites; the rest follow |
