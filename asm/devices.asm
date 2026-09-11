@@ -11,7 +11,8 @@
 ;              from the right by 40 px a frame as the stock pages are.
 ;              In place, the hint bar pops up as the frame's does and the
 ;              cursor moves on up and down; confirm on a row starts a
-;              bind - the bar says to press a button, cancel gives up -
+;              bind - the row turns blue, the bar says to press the
+;              button, cancel gives up -
 ;              and confirm on BACK, or cancel, drops the bar and slides
 ;              the page on out to the left, as the stock pages go, and
 ;              only then puts the menu's state back. Leaves through the
@@ -23,9 +24,9 @@
 ; text routine's flags, alpha, red, green, blue in 256ths, and the
 ; cursor's hold on the entry: 0 for none, else the first and last row
 ; (plus one) in the low bytes and in bits 16-23 what the cursor on one of
-; those rows does to it - 1 solid red, the stock's row; 2 red with a
-; little green and blue, its group plate; 3 red pulsing to white, its
-; button; 4 white fading, its row's value. Holds 5 to 7 are the hint
+; those rows does to it - 1 solid red, the stock's row, blue during a
+; bind; 2 red with a little green and blue, its group plate; 3 red
+; pulsing to white, its button; 4 white fading, its row's value. Holds 5 to 7 are the hint
 ; bar's, for every row: the entry rises with the bar; 6 is shown only
 ; outside a bind, 7 only during one. The row after the last is the BACK
 ; button. The DLL is relocated on every load:
@@ -63,7 +64,8 @@ bits 32
 %define BAR_STEP        0x3dcccccd      ; 0.1, the frame's hint bar a frame
 %define BAR_Y           0x43e18000      ; 451.0, the bar's bottom edge, which it grows from
 %define FULL            0x100
-%define GROUP_TINT      0x20
+%define GROUP_TINT      0x20            ; green and blue of the group's red
+%define BIND_TINT       0x20            ; red and green of the blue row
 %define PULSE_STEP      0x10
 %define HOLD_ROW        1
 %define HOLD_GROUP      2
@@ -159,7 +161,23 @@ exec:
         jnc     .plain
         cmp     ecx, HOLD_BAR
         jae     .plain
-        xor     edx, edx                ; 1: green and blue 0
+        cmp     ecx, HOLD_ROW           ; 1: red, or blue during a bind
+        jne     .notrow
+        cmp     dword [ebp + binding - $$], 0
+        je      .red
+        push    FULL                    ; blue, green, red, alpha
+        push    BIND_TINT
+        push    BIND_TINT
+        push    FULL
+        jmp     .coloured
+.red:
+        push    0
+        push    0
+        push    FULL
+        push    FULL
+        jmp     .coloured
+.notrow:
+        xor     edx, edx
         cmp     ecx, HOLD_GROUP
         jne     .kind3
         mov     edx, GROUP_TINT

@@ -203,7 +203,7 @@ the screen stays blank. Three patches:
 
 `Options.dll` draws from `BINDATA\MISC\OPTIONS.TXR`: `RTEX`, a count,
 16-byte entries `(format, size, bytes, 0)` and, from `0x1000`, the pixels
-back to back. Formats 0 and 2 are 1555, 8 is 4444. Twelve textures; the
+back to back. Format 0 is 555 without alpha, 2 is 1555, 8 is 4444. Twelve textures; the
 Dreamcast Device Settings page survives in them unused - both controller
 diagrams (8, 9), every label and the full uppercase font (6), the
 calibration bars (7). What is not there is a steering-wheel icon: sheet 10
@@ -251,10 +251,14 @@ one of fifteen lettered messages in and out by a message number in
 growing from its bottom edge at y 451). All fifteen are lettered, so
 the page leaves that at -1 and draws its own: the bar's plate and white
 strip copied from message 14, grown the same way once the page is in
-place and dropped before it leaves, with two strings of its own on it
-in the glyph font, one outside a bind and one during. Confirm on a row
-starts a bind - the bar says to press the button - and cancel gives it
-up; nothing listens for the button yet.
+place and dropped before it leaves, and on it one of two lines the
+patcher lays onto the appended sheet as the stock's are laid on sheets 4
+and 5 - which are format 0, 555 with no alpha, dark ink on opaque white
+- from ink coverage rendered once into `HINT_STRIPS_DATA` (DejaVu Sans
+Condensed Bold at 13 px, the nearest to the stock's face on hand).
+Confirm on a row starts a bind - the row goes blue, (0x100, 0x20, 0x20,
+0x100), and the bar says to press the button - and cancel gives it up;
+nothing listens for the button yet.
 
 The list is 40-byte entries - kind, sprite or string, x, y, z or text
 flags, alpha, red, green, blue in 256ths, and the cursor's hold on the
@@ -296,8 +300,8 @@ way the stock pictures are - holes in the plate, alpha 0 with a one-texel
 ramp, the menu's dark background showing through. The sheet is 256x256
 like the icons', the icon at its top left; the rest is for the page's art.
 The wheel is drawn by the patcher
-(`wheel_mask`), not copied from anywhere. UV entry `0x11` covers the sheet
-with the car icon's own UVs - the page's are three-decimal values, 126.2
+(`wheel_mask`), not copied from anywhere; the page's hint lines go under
+it. UV entry `0x11` covers the icon with the car icon's own UVs - the page's are three-decimal values, 126.2
 texels across 126 pixels, and exact fractions sample visibly differently.
 The English label sheet is checked by the texels
 of "DEVICE"; a Japanese install, never seen, would fail that check rather
