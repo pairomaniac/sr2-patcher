@@ -1285,10 +1285,11 @@ DATA_SECTION = 0xC0000040               # IMAGE_SCN_CNT_INITIALIZED_DATA | MEM_R
 DEVICES_X = (110.0, 250.0, 390.0, 530.0)   # four items across 640, stock 154, 320, 487
 DEVICES_UV_DEVICE = 0xe                 # spare entries in the page's UV table: "DEVICE" on sheet 6,
 DEVICES_UV_ICON = 0x11                  # and the icon on the appended sheet
-DEVICES_DEVICE = (2, 73, 79, 95)        # "DEVICE" on sheet 6, in texels
+DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the page's three-decimal UVs, the row "SOUND" uses
 TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
 TXR_SIZE = 1282048
 TXR_ENTRIES = ((2, 128), (0, 128), (8, 256), (8, 256), (0, 256), (0, 256), (8, 256), (2, 256), (8, 256), (8, 256), (8, 256), (8, 128))
+TXR_DEVICE_TEXELS = (2, 73, 79, 95)    # the same, as texels, for the check
 TXR_DEVICE_MD5 = '84a4889baf435baf631db36a90078df0'   # the "DEVICE" texels, English sheet
 TXR_ICON = 12                           # the appended sheet's index
 
@@ -1358,9 +1359,11 @@ def apply_devices(buf, build):
     for t in range(3):
         for i in range(3):
             struct.pack_into('<f', buf, va_off(tables[t][i]) + 0x14, DEVICES_X[i])
-    # the spare UV entries: "DEVICE", and the whole appended sheet but its edge
-    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_DEVICE], 6, *(v / 256.0 for v in DEVICES_DEVICE))
-    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], TXR_ICON, 1 / 128.0, 1 / 128.0, 127 / 128.0, 127 / 128.0)
+    # the spare UV entries: "DEVICE", and the appended sheet's top-left quarter with the
+    # first icon's exact UVs - the page's are rounded to three decimals, and the tenth of
+    # a texel that adds shows at the plate's edge
+    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_DEVICE], 6, *DEVICES_DEVICE)
+    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], TXR_ICON, *struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4))
 
     # the blob: tables, descriptors, quads, stub
     rva = _next_section_rva(buf)
@@ -1403,9 +1406,9 @@ def apply_devices(buf, build):
 
 
 def wheel_mask(size=126):
-    """A steering wheel in the icons' style - a rim, three spokes, a hub
-    with a hole - as 0 or 255 a texel, hard-edged like the stock pictures:
-    sixteen samples a texel, in when half or more hit."""
+    """Coverage, 0..255, of a steering wheel in the icons' style: a rim,
+    three spokes, a hub with a hole. Sixteen samples a texel; the stock
+    pictures carry the same one-texel alpha ramp along their edges."""
     c = size / 2.0
     rim, inner, hub, hole, half = 50.0, 37.0, 14.0, 5.0, 6.0
     mask = bytearray(size * size)
@@ -1421,7 +1424,7 @@ def wheel_mask(size=126):
                         hits += 1
                     elif d2 < (inner + 1) * (inner + 1) and (abs(dy) <= half or (dy >= 0 and abs(dx) <= half)):
                         hits += 1
-            mask[y * size + x] = 255 if hits >= 8 else 0
+            mask[y * size + x] = hits * 255 // 16
     return bytes(mask)
 
 
@@ -1436,7 +1439,7 @@ def txr_check(data):
             return 'texture %d is not what the patcher knows' % i
         offsets.append(off)
         off += size * size * 2
-    x0, y0, x1, y1 = DEVICES_DEVICE
+    x0, y0, x1, y1 = TXR_DEVICE_TEXELS
     sheet = offsets[6]
     region = b''.join(data[sheet + (y * 256 + x0) * 2:sheet + (y * 256 + x1) * 2] for y in range(y0, y1))
     if hashlib.md5(region).hexdigest() != TXR_DEVICE_MD5:
@@ -1446,9 +1449,11 @@ def txr_check(data):
 
 def patch_txr(data):
     """OPTIONS.TXR with a thirteenth sheet: the third icon's plate, its
-    picture filled back in, with a steering wheel cut out the same way.
-    The gutter is clear white like the stock sheets', so the edge texels
-    filter to white, not to black. Returns the grown file."""
+    picture filled back in, with a steering wheel cut out the same way,
+    at the top left of a 256x256 sheet like the stock icons' - a 128 one
+    comes out point-sampled. The gutter is clear white like the stock
+    sheets', so the edge texels filter to white, not to black. Returns
+    the grown file."""
     why = txr_check(data)
     if why:
         raise ValueError('%s: %s' % (TXR, why))
@@ -1465,12 +1470,12 @@ def patch_txr(data):
         texel = struct.unpack_from('<H', plate, i * 2)[0]
         alpha = max(0, (texel >> 12) * 17 - mask[i])
         struct.pack_into('<H', plate, i * 2, (texel & 0xfff) | ((alpha + 8) // 17) << 12)
-    texture = bytearray(struct.pack('<H', 0x0fff) * (128 * 128))   # clear white, as the stock sheets' gutters
+    texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
     for y in range(126):
-        texture[((y + 1) * 128 + 1) * 2:((y + 1) * 128 + 127) * 2] = plate[y * 252:y * 252 + 252]
+        texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
     out = bytearray(data)
     struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
-    struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 128, len(texture), 0)
+    struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 256, len(texture), 0)
     return bytes(out + texture)
 
 
