@@ -50,7 +50,7 @@ and refuses anything that is not an unmodified copy of it.
 | **ALT+ENTER** | Toggles a framed window you can move, resize or maximise. |
 | **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there. |
 | **The mix** | The three sliders followed three different curves - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each; the Australian release also ran its effects at a fraction of theirs. All three follow one curve now, 3.5 dB a step, topping out at −8 dB - the old 7 - with the CD music 8 dB above the effects (stock at 9) and the streamed music 2 dB above. The Australian release no longer needs a CD volume control on the sound card. |
-| **Device Settings** | Three items on the Options menu. The fourth, with a steering-wheel icon, is new and opens nothing yet; the controller page goes behind it. |
+| **Device Settings** | Three items on the Options menu. The fourth is new: a page listing the pad bindings. Read-only for now, with the Dreamcast pad as a stand-in picture; editing and the pad itself follow. |
 
 Everything else is the game as it shipped.
 

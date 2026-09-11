@@ -25,7 +25,8 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('RESTORE_BLOB', 'restore.asm', ()), ('TEXTCOLOR_BLOB', 'textcolor.asm', ()),
          ('BGROW_BLOB', 'bgrow.asm', ()), ('TITLEROW_BLOB', 'bgrow.asm', ('-DTITLE',)),
          ('FULLWIN_BLOB', 'fullwin.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ()),
-         ('MIX_BLOB', 'mix.asm', ()), ('VOLTRACE_BLOB', 'voltrace.asm', ())]
+         ('MIX_BLOB', 'mix.asm', ()), ('VOLTRACE_BLOB', 'voltrace.asm', ()),
+         ('DEVICES_BLOB', 'devices.asm', ())]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -55,6 +56,21 @@ EXE_BLOB_MAGICS = {
     'BGROW_BLOB': ('BITCOUNT',),
     'TEXTCOLOR_BLOB': ('SETTEXTCOLOR',),
     'VOLTRACE_BLOB': ('LOADLIB', 'GETPROC'),
+}
+
+# devices.asm's placeholders: RVAs in Options.dll from the build's row,
+# and the blob's own RVA and its data's, from the patcher.
+DEVICES_MAGICS = {
+    'SELFRVA': 0xD1D1D1D1,
+    'EPILOGUE': 0xD2D2D2D2,
+    'BINDPAGE': 0xD3D3D3D3,
+    'DRAW': 0xD4D4D4D4,
+    'PLAYSOUND': 0xD5D5D5D5,
+    'INPUT': 0xD6D6D6D6,
+    'SOUNDOBJ': 0xD7D7D7D7,
+    'HANDLES': 0xD8D8D8D8,
+    'PAGEHDR': 0xD9D9D9D9,
+    'DRAWLIST': 0xDADADADA,
 }
 
 # An exe stub's source must not name an exe address: every one moves
@@ -127,6 +143,10 @@ def generated(check=False):
             for magic, value in MAGICS.items():
                 if struct.pack('<I', value) not in raw:
                     raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
+        elif name == 'DEVICES_BLOB':
+            for magic, value in DEVICES_MAGICS.items():
+                if struct.pack('<I', value) not in raw:
+                    raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
         elif name != 'TITLEROW_BLOB':
             for magic, value in EXE_MAGICS.items():
                 want = EXE_BLOB_MAGICS.get(name, ()).count(magic)
@@ -141,6 +161,7 @@ def generated(check=False):
     out.append('MUSIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in MAGICS.items()))
     out.append('EXE_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in EXE_MAGICS.items()))
     out.append('FULLWIN_MAGIC = 0x%08X\n' % SELF_MAGIC)
+    out.append('DEVICES_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DEVICES_MAGICS.items()))
     out.append(END)
     return ''.join(out)
 

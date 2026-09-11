@@ -57,7 +57,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
-                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20),   # Options.dll
+                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c),   # Options.dll
                   'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
@@ -68,6 +68,8 @@ BUILDS = {
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
         'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
+        'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
+                    'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90},
         'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'BITCOUNT': 0x4e68cc},
     },
@@ -86,7 +88,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
-                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20),   # Options.dll
+                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c),   # Options.dll
                   'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
@@ -94,6 +96,8 @@ BUILDS = {
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
         'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x49519c, 'lstrcpyA': 0x4950f4,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0},
+        'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
+                    'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90},
         'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'BITCOUNT': 0x4e69bc},
     },
@@ -112,7 +116,7 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
-                  'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08),   # Options.dll
+                  'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c),   # Options.dll
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980),
@@ -122,6 +126,8 @@ BUILDS = {
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
         'slots': {'SetTextColor': 0x4d402c, 'GetLogicalDriveStringsA': 0x4d4198, 'lstrcpyA': 0x4d40fc,
                   'LoadLibraryA': 0x4d4094, 'GetProcAddress': 0x4d40f8},
+        'options': {'BINDPAGE': 0x10013df0, 'DRAW': 0x100138b0, 'PLAYSOUND': 0x10010670, 'INPUT': 0x100c1b1c,
+                    'SOUNDOBJ': 0x100be46c, 'HANDLES': 0x100be470, 'TOPTABLE': 0x10006500},
         'addresses': {'MENUTABLES': 0x100a2708, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8},
     },
@@ -180,13 +186,15 @@ VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec800000
 def devices_sites(offsets, tables):
     """The Options menu's sites: the cursor and icon-set constructors
     (their item counts go 3 to 4), the label loop's bounds and the
-    dispatch table, all naming the three item tables at `tables`."""
-    cursor, icons, labels, labelend, _dispatch, _ftab = offsets
+    dispatch table, all naming the three item tables at `tables`; and the
+    top-level state count, 0xb to 0xd for the page's two states."""
+    cursor, icons, labels, labelend, _dispatch, _ftab, topcmp = offsets
     t = struct.pack('<I', tables)
     return ((cursor, bytes.fromhex('6a035068') + t, bytes.fromhex('6a04')),
             (icons, bytes.fromhex('6a0368') + struct.pack('<I', tables + 0xc), bytes.fromhex('6a04')),
             (labels, b'\xbf' + struct.pack('<I', tables + 0x18), None),
-            (labelend, bytes.fromhex('81ff') + struct.pack('<I', tables + 0x24), None))
+            (labelend, bytes.fromhex('81ff') + struct.pack('<I', tables + 0x24), None),
+            (topcmp, bytes.fromhex('83f80b0f87'), bytes.fromhex('83f80d')))
 
 
 def patches(build):
@@ -531,6 +539,15 @@ VOLTRACE_BLOB = bytes.fromhex(
     'e5e7e7e77372322076006b65726e656c33322e646c6c004f7574707574446562'
     '7567537472696e674100'
 )
+DEVICES_BLOB = bytes.fromhex(
+    'e918000000e936000000e8000000005b81eb0f00000081ebd1d1d1d1c353e8e7'
+    'ffffff8d83d8d8d8d8508d83d9d9d9d9508d83d3d3d3d3ffd083c408ff46085b'
+    '5357e8c3ffffff8dbbdadadada8b0785c074466a006a006a0068000100006800'
+    '01000068000100006800010000680000803f680000803f6a006a006a00680000'
+    '4041ff7708ff7704508d83d4d4d4d4ffd083c44083c70cebb48b83d6d6d6d68b'
+    '480885c974288b116a01ff5214a802741d8b8bd7d7d7d76a006a006a006a0e8d'
+    '83d5d5d5d5ffd0c74608010000008d83d2d2d2d25f5bffe0'
+)
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
     'MAGIC_IATMCI': 0xE2E2E2E2,
@@ -551,6 +568,18 @@ EXE_MAGICS = {
     'SETTEXTCOLOR': 0xF2F2F2F2,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
+DEVICES_MAGICS = {
+    'SELFRVA': 0xD1D1D1D1,
+    'EPILOGUE': 0xD2D2D2D2,
+    'BINDPAGE': 0xD3D3D3D3,
+    'DRAW': 0xD4D4D4D4,
+    'PLAYSOUND': 0xD5D5D5D5,
+    'INPUT': 0xD6D6D6D6,
+    'SOUNDOBJ': 0xD7D7D7D7,
+    'HANDLES': 0xD8D8D8D8,
+    'PAGEHDR': 0xD9D9D9D9,
+    'DRAWLIST': 0xDADADADA,
+}
 # --- GENERATED by asm/build.py: END ---
 
 
@@ -1286,11 +1315,31 @@ DEVICES_X = (110.0, 250.0, 390.0, 530.0)   # four items across 640, stock 154, 3
 DEVICES_UV_DEVICE = 0xe                 # spare entries in the page's UV table: "DEVICE" on sheet 6,
 DEVICES_UV_ICON = 0x11                  # and the icon on the appended sheet
 DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the page's three-decimal UVs, the row "SOUND" uses
+# The 12-px font on sheet 6, texel boxes per glyph; rows 2-14 and 17-29.
+FONT_ROWS = ((2, 14, 'ABCDEFGHIJKLMNOPQRSTUVWX', (3, 10, 14, 21, 24, 31, 34, 42, 45, 51, 54, 60, 63, 70, 73, 80, 84, 86, 90, 96, 99, 106,
+                                                  109, 115, 118, 128, 131, 139, 142, 150, 153, 161, 163, 171, 174, 181, 184, 191,
+                                                  194, 202, 205, 213, 216, 224, 227, 239, 243, 251)),
+             (17, 29, "YZ0123456789'\":;.,+-/!?#$%", (3, 11, 15, 23, 26, 33, 38, 42, 46, 53, 56, 63, 66, 73, 76, 83, 86, 93, 96, 103,
+                                                     106, 113, 116, 123, 126, 129, 135, 141, 145, 148, 154, 157, 163, 166, 172, 175,
+                                                     180, 186, 189, 195, 198, 204, 208, 210, 214, 220, 223, 231, 234, 241, 244, 253)))
+FONT = {c: (row[2 * i], y0, row[2 * i + 1], y1) for y0, y1, chars, row in FONT_ROWS for i, c in enumerate(chars)}
+FONT_SPACING, FONT_SPACE = 3, 6
+
+# The page: pieces are (sheet, x0, y0, x1, y1) drawn about their centre;
+# text is the font, drawn from its left edge (or right, anchored right).
+PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'PAD': (8, 56, 60, 200, 206),
+               '1PLAYER': (6, 105, 32, 173, 48)}
+PAGE_LAYOUT = (('DEVICE', 'piece', 224 + 38.5, 100.0), ('SETTINGS', 'piece', 309 + 53.0, 100.0),
+               ('PAD', 'piece', 150.0, 262.0), ('1PLAYER', 'piece', 330 + 34.0, 152.0))
+PAGE_ROWS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
+             ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
+PAGE_LIST_X, PAGE_LIST_RIGHT, PAGE_LIST_Y, PAGE_LIST_STEP = 330.0, 600.0, 182.0, 24.0
+PAGE_BACK = (320.0, 381.0)
+
 TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
 TXR_SIZE = 1282048
 TXR_ENTRIES = ((2, 128), (0, 128), (8, 256), (8, 256), (0, 256), (0, 256), (8, 256), (2, 256), (8, 256), (8, 256), (8, 256), (8, 128))
-TXR_DEVICE_TEXELS = (2, 73, 79, 95)    # the same, as texels, for the check
-TXR_DEVICE_MD5 = '84a4889baf435baf631db36a90078df0'   # the "DEVICE" texels, English sheet
+TXR_SHEET6_MD5 = 'f753766b79b10186b5af35be7c1c6c98'   # sheet 6's first 96 rows: the font and the labels, English
 TXR_ICON = 12                           # the appended sheet's index
 
 
@@ -1331,7 +1380,7 @@ def apply_devices(buf, build):
     "DEVICE" and "SETTINGS" from the page's own sheets, both through spare
     UV entries. Confirming it returns to the menu until the page exists.
     The stock items move to four-across positions."""
-    cursor, icons, labels, labelend, dispatch, ftab = BUILDS[build]['sites']['devices']
+    cursor, icons, labels, labelend, dispatch, ftab, topcmp = BUILDS[build]['sites']['devices']
     base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
 
     def va_off(va):
@@ -1365,7 +1414,7 @@ def apply_devices(buf, build):
     struct.pack_into('<i4f', buf, uvs[DEVICES_UV_DEVICE], 6, *DEVICES_DEVICE)
     struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], TXR_ICON, *struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4))
 
-    # the blob: tables, descriptors, quads, stub
+    # the menu's blob: tables, descriptors, quads, stub; then the page's
     rva = _next_section_rva(buf)
     va = base + rva
     frame_quads = bytes(buf[va_off(dword(frame0 + 4)):va_off(dword(frame0 + 4)) + 9 * 0x34])
@@ -1374,8 +1423,8 @@ def apply_devices(buf, build):
     settings = bytes(buf[va_off(dword(label0 + 4)) + 0x34:va_off(dword(label0 + 4)) + 0x68])
     device = struct.pack('<I4f', DEVICES_UV_DEVICE, -38.0, -22.0, 39.0, 0.0) + settings[0x14:]
     layout = {'ftab': 0x00, 'itab': 0x10, 'ltab': 0x20, 'descf': 0x30, 'desci': 0x50, 'descl': 0x70,
-              'quadsf': 0x90, 'quadsi': 0x264, 'quadsl': 0x298, 'stub': 0x300}
-    blob = bytearray(0x30c)
+              'quadsf': 0x90, 'quadsi': 0x264, 'quadsl': 0x298, 'stub': 0x300, 'page': 0x310}
+    blob = bytearray(layout['page'])
     relocs = []
     for t, name in enumerate(('ftab', 'itab', 'ltab')):
         for i in range(3):
@@ -1390,19 +1439,124 @@ def apply_devices(buf, build):
     blob[layout['quadsi']:layout['quadsi'] + 0x34] = icon_quad
     blob[layout['quadsl']:layout['quadsl'] + 0x68] = device + settings
     stub_va = va + layout['stub']
-    blob[layout['stub']:layout['stub'] + 12] = bytes.fromhex('c7460801000000') + b'\xe9' + struct.pack('<i', base + _off_to_rva(buf, cont) - (stub_va + 12))
+    blob[layout['stub']:layout['stub'] + 12] = bytes.fromhex('c74608') + struct.pack('<I', 0xc) + b'\xe9' + struct.pack('<i', base + _off_to_rva(buf, cont) - (stub_va + 12))
+    page_blob, page_relocs = devices_page(buf, build, va + layout['page'], settings[0x14:], cont, labelend)
+    blob += page_blob
+    relocs += [layout['page'] + r for r in page_relocs]
     out, got = append_section(buf, DEVICES_SECTION, bytes(blob), chars=DATA_SECTION | 0x20000000)
     if got != rva:
         raise ValueError('section placed at %#x, expected %#x' % (got, rva))
     _add_relocations(out, [rva + r for r in relocs])
 
-    # the sites: the counts are written already; the tables and the dispatch entry here
+    # the sites: the counts and the state count are written already; the
+    # tables, the dispatch entry and the state table here
     struct.pack_into('<I', out, cursor + 4, va + layout['ftab'])
     struct.pack_into('<I', out, icons + 3, va + layout['itab'])
     struct.pack_into('<I', out, labels + 1, va + layout['ltab'])
     struct.pack_into('<I', out, labelend + 2, va + layout['ltab'] + 16)
     struct.pack_into('<I', out, stub_site, stub_va)
+    struct.pack_into('<I', out, topcmp + 12, va + layout['page'] + len(DEVICES_BLOB))
     return out
+
+
+def devices_page(buf, build, va, quad_tail, cont, labelend):
+    """The Device Settings page after the menu's data at `va`: the code,
+    the top-level state table with the page's two states, the page's UV
+    table and header, its sprites and quads, the draw list. Returns
+    (bytes, relocation offsets)."""
+    row = BUILDS[build]
+    base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
+    opt = row['options']
+    # the sprites: pieces and text, each (uv keys, quad rects, w, h)
+    sprites, draw = [], []
+    uvkeys = {}
+
+    def uv(key):
+        if key not in uvkeys:
+            uvkeys[key] = len(uvkeys)
+        return uvkeys[key]
+
+    def piece(key, x, y):
+        sheet, x0, y0, x1, y1 = key
+        w, h = float(x1 - x0), float(y1 - y0)
+        sprites.append(([(uv(key), (-w / 2, -h / 2, w / 2, h / 2))], w, h))
+        draw.append((len(sprites) - 1, x, y))
+
+    def text(s, x, y, right=False):
+        keys, quads, cx = [], [], 0.0
+        for c in s:
+            if c == ' ':
+                cx += FONT_SPACE
+                continue
+            x0, y0, x1, y1 = FONT[c]
+            keys.append(uv((6, x0, y0, x1, y1)))
+            quads.append((cx, cx + (x1 - x0)))
+            cx += (x1 - x0) + FONT_SPACING
+        width = cx - FONT_SPACING
+        shift = -width if right else 0.0
+        sprites.append(([(k, (qx0 + shift, -6.0, qx1 + shift, 6.0)) for k, (qx0, qx1) in zip(keys, quads)], width, 12.0))
+        draw.append((len(sprites) - 1, x, y))
+
+    for name, kind, x, y in PAGE_LAYOUT:
+        piece(PAGE_PIECES[name], x, y)
+    for i, (action, binding) in enumerate(PAGE_ROWS):
+        y = PAGE_LIST_Y + i * PAGE_LIST_STEP
+        text(action, PAGE_LIST_X, y)
+        text(binding, PAGE_LIST_RIGHT, y, right=True)
+
+    # the menu's BACK sprite, the first sprite pushed after its label loop
+    back = None
+    off = labelend
+    for _ in range(0x100):
+        if buf[off] == 0x68 and buf[off + 5] == 0xe8:
+            back = struct.unpack_from('<I', buf, off + 1)[0]
+            break
+        off += 1
+    if back is None or struct.unpack_from('<I', buf, _rva_to_off(buf, back - base) + 8)[0] != 1:
+        raise ValueError('Options.dll: the menu\'s BACK sprite not found')
+
+    # lay it out: code, state table, page header, UV table, sprites, quads, draw list
+    code = DEVICES_BLOB
+    n_uv = len(uvkeys)
+    off_table = len(code)
+    off_hdr = off_table + 14 * 4
+    off_uv = off_hdr + 8
+    off_desc = off_uv + n_uv * 0x14
+    off_quads = off_desc + len(sprites) * 0x20
+    n_quads = sum(len(q) for q, _w, _h in sprites)
+    off_draw = off_quads + n_quads * 0x34
+    size = off_draw + (len(draw) + 2) * 12
+    blob = bytearray(size)
+    relocs = []
+    # code, its placeholders filled
+    values = dict(opt, SELFRVA=va - base, PAGEHDR=va - base + off_hdr, DRAWLIST=va - base + off_draw,
+                  EPILOGUE=_off_to_rva(buf, cont + 5 + buf[cont + 4]))
+    for name, magic in DEVICES_MAGICS.items():
+        value = values[name] - base if values[name] >= base else values[name]
+        code = code.replace(struct.pack('<I', magic), struct.pack('<I', value))
+    blob[:len(code)] = code
+    # the state table: the twelve stock states, then init and exec
+    top = _rva_to_off(buf, opt['TOPTABLE'] - base)
+    for i in range(12):
+        struct.pack_into('<I', blob, off_table + i * 4, struct.unpack_from('<I', buf, top + i * 4)[0])
+    struct.pack_into('<II', blob, off_table + 48, va, va + 5)
+    relocs += [off_table + i * 4 for i in range(14)]
+    # the page
+    struct.pack_into('<II', blob, off_hdr, va + off_uv, n_uv)
+    relocs.append(off_hdr)
+    for (sheet, x0, y0, x1, y1), i in uvkeys.items():
+        struct.pack_into('<i4f', blob, off_uv + i * 0x14, sheet, x0 / 256.0, y0 / 256.0, x1 / 256.0, y1 / 256.0)
+    q = off_quads
+    for i, (quads, w, h) in enumerate(sprites):
+        struct.pack_into('<IIIffffI', blob, off_desc + i * 0x20, va + off_uv, va + q, len(quads), w, h, 0.0, 0.0, 0)
+        relocs += [off_desc + i * 0x20, off_desc + i * 0x20 + 4]
+        for k, (x0, y0, x1, y1) in quads:
+            blob[q:q + 0x34] = struct.pack('<I4f', k, x0, y0, x1, y1) + quad_tail
+            q += 0x34
+    for i, (sprite, x, y) in enumerate(draw + [(None, PAGE_BACK[0], PAGE_BACK[1])]):
+        struct.pack_into('<Iff', blob, off_draw + i * 12, back if sprite is None else va + off_desc + sprite * 0x20, x, y)
+        relocs.append(off_draw + i * 12)
+    return bytes(blob), relocs
 
 
 def wheel_mask(size=126):
@@ -1439,10 +1593,7 @@ def txr_check(data):
             return 'texture %d is not what the patcher knows' % i
         offsets.append(off)
         off += size * size * 2
-    x0, y0, x1, y1 = TXR_DEVICE_TEXELS
-    sheet = offsets[6]
-    region = b''.join(data[sheet + (y * 256 + x0) * 2:sheet + (y * 256 + x1) * 2] for y in range(y0, y1))
-    if hashlib.md5(region).hexdigest() != TXR_DEVICE_MD5:
+    if hashlib.md5(data[offsets[6]:offsets[6] + 96 * 256 * 2]).hexdigest() != TXR_SHEET6_MD5:
         return 'the label sheet is not the English one'
     return None
 

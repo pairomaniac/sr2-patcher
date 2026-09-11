@@ -27,7 +27,7 @@ Australian releases map onto it; *Builds* says how far.
 | **The mix** | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980` and appended `.sr2b` section | the sound manager - in the exe and, as a copy of the same code, in every screen DLL - gives each effect a −40..0 dB range and sets its ceiling at `(step+1)/10` of it from the slider: 4 dB a step, 0 dB at 9. The buffer's `SetRange` (`0x10004380`) loads min and max through asm/mix.asm, each mapped onto `MIX_MIN..MIX_MAX` from asm/mix.inc, −43..−8: 3.5 dB a step, 9 the old 7, for every client. The streamed music - every client ends in the streaming buffer's `SetVolume` (`0x10006940`) with the step × 1111 as a 0..10000 value mapped across the stream's own range - finishes that mapping through the second routine, the step on the same curve plus `STREAM_DB` (200), 0 off |
 | **Effects at full** (Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; `Options.dll` `0xf92a`, `0xf98d`, `0xf9e1` | the volume routine sets each effect's ceiling from its slider and then its level as a percentage of that; the other builds pass 100, the Australian's passes the slider × 11 - the slider twice - in the exe and in its `Options.dll`, which re-applies on the way out of the screen. The setting's load → `mov eax, 9`, which the × 100 × 0.111 after it makes 100; in the DLL the load's relocation entry goes with it. The percentage is also how every build drives the engine's level by throttle, so it stays a percentage |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume`: the slider's 0..10000 becomes a `waveOutSetVolume` amplitude on the mix's curve plus `CD_DB` (800), 0 dB at 9, from the ten-entry table `build.py` derives into `curve.inc`, applied after each play once the stream exists; see [asm/README.md](../asm/README.md) |
-| **Device Settings item** | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc` (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x593c`), nine `x` fields and two UV entries in `.data`, appended `.sr2d` section; the TXR grows a thirteenth sheet | a fourth item on the Options menu: the cursor's and the icon set's item counts 3 → 4, the three item tables moved to `.sr2d` with a fourth entry, the dispatch table's fourth slot → a stub that returns to the menu; the icon drawn on a sheet appended to the texture file. See *The Options screen* |
+| **Device Settings** | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc`, `0x2f0c` (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x593c`, `0x567c`), nine `x` fields and two UV entries in `.data`, appended `.sr2d` section; the TXR grows a thirteenth sheet | a fourth item on the Options menu and the page behind it: the cursor's and the icon set's item counts 3 → 4, the item tables and the top-level state table moved to `.sr2d` with a fourth item and two more states, the dispatch table's fourth slot → a stub that selects the page's state; the page is asm/devices.asm over data the patcher builds. See *The Options screen* |
 
 Offsets are the European build's file offsets; the other builds' are in
 `BUILDS` and under *Builds*. In the exe, which is never relocated, VA =
@@ -227,8 +227,25 @@ set (`0x10002330`), both over three-entry tables at `0x1009c820`,
 `0x10003e10`. Confirming returns the index with bit 15, and `0x10003c6b`
 dispatches it through `0x10003dc0` to the page states; the fourth slot
 was the exit state, never reached with three items. The stub in `.sr2d`
-puts state 1 back - the menu, cursor on the item - until the page exists.
-The four items sit at x 110, 250, 390, 530. The new data carries absolute
+selects state 0xc. The four items sit at x 110, 250, 390, 530.
+
+The top-level machine (`0x10003af0`) has twelve states behind `cmp eax,
+0xb` and a table at `0x10003d90`: 1 re-inits the menu, 2 runs it, 3/5/7
+init a page and 4/6/8 run it, 0xb leaves. The table moves to `.sr2d`
+with two more entries and the compare goes to 0xd: 0xc is the page's
+init, 0xd its exec, both in asm/devices.asm, entered as every case is
+with `esi` the Options object and leaving through the dispatcher's
+epilogue (`0x10003cd6`). Init binds the page's own UV table through
+`0x1000ed90` and steps on; exec pushes the sixteen-dword sprite call for
+each entry of a (sprite, x, y) list, then reads the frame's key bits from
+the input object (`0x100b9464`, `+8`, vtable `+0x14`) and on cancel (bit
+1) plays sound 0xe and sets state 1, the menu with its cursor where it
+was. The data - the page's UV table and header, sprites, quads, the draw
+list - is built by `devices_page` in the patcher: the heading from the
+label pieces on sheet 6, the Dreamcast pad from sheet 8 as a placeholder,
+the bindings as a list in the 12-px font of sheet 6 (`FONT`, texel boxes
+per glyph), the menu's own BACK sprite at its usual place. The bindings
+shown are fixed text for now. The new data carries absolute
 pointers, so `.sr2d` gets a relocation block appended to the directory in
 `.reloc`'s zero tail.
 
@@ -247,7 +264,7 @@ with the car icon's own UVs - the page's are three-decimal values, 126.2
 texels across 126 pixels, and exact fractions sample visibly differently.
 The English label sheet is checked by the texels
 of "DEVICE"; a Japanese install, never seen, would fail that check rather
-than draw the wrong thing.
+than draw the wrong thing; the check covers the font and label rows.
 
 ## The executable
 
