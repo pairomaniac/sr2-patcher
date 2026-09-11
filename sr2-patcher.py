@@ -13,7 +13,6 @@ The version is the VERSION line below and nowhere else.
 
 https://github.com/pairomaniac/sr2-patcher
 """
-import base64
 import hashlib
 import os
 import queue
@@ -545,44 +544,44 @@ VOLTRACE_BLOB = bytes.fromhex(
 )
 DEVICES_BLOB = bytes.fromhex(
     'e918000000e997000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
-    'e6ffffff8dbbd1d1d1d1c7879604000000002044c7879e04000000000000c787'
-    'a204000000000000c787a604000000000000c787aa04000010000000c787ae04'
-    '000000000000c787ba0400000000000083bf92040000007523c7879204000001'
+    'e6ffffff8dbbd1d1d1d1c787a804000000002044c787b004000000000000c787'
+    'b404000000000000c787b804000000000000c787bc04000010000000c787c004'
+    '000000000000c787cc0400000000000083bfa4040000007523c787a404000001'
     '0000008d83d8d8d8d8508d83d9d9d9d9508d83d3d3d3d3ffd083c408ff46085f'
-    '5b535755e861ffffff8dabd1d1d1d18dbbdadadada8b0785c00f84bc0100008b'
-    '4f0c898dbe040000c785c20400000000803fe87b010000734983f905724483bd'
-    'ba04000000740b83f9060f845a010000eb0983f9070f844f0100008b8dae0400'
-    '00898dc2040000d9470cd8a5b6040000d88dae040000d885b6040000d99dbe04'
-    '000083f8020f84a80000006a006a006a00e81c010000735883f905735383f901'
-    '752983bdba04000000741068000100006a206a206800010000eb416a006a0068'
-    '000100006800010000eb3131d283f9027505ba2000000083f90375068b95a604'
-    '0000525268000100006800010000eb0cff7720ff771cff7718ff7714ffb5c204'
-    '0000680000803f6a006a006a00ff7710ffb5be04000050d94708d88596040000'
-    'd91c24ff77048d83d4d4d4d4ffd083c440eb77ff77108d83dcdcdcdc50e87000'
-    '0000732483f904751f8b85a6040000d1f8058000000068000100006800010000'
-    '680001000050eb0cff7720ff771cff7718ff7714ffb5c2040000680000803f68'
-    '000020416800002041ffb5be04000050d94708d88596040000d91c24ff77048d'
-    '83dbdbdbdbffd083c43483c728e963feffff508b4f2485c9741e0fb6c1483985'
-    'a20400007c120fb6c5483985a20400007f06c1e91058f9c358f8c38b85aa0400'
-    '000385a60400008985a60400003d000100007e14c785a604000000010000c785'
-    'aa040000f0ffffff85c07914c785a604000000000000c785aa04000010000000'
-    '83bd9e04000000757b8b859604000085c0742fd98596040000d8a59a040000d9'
-    '9d960400008b859604000085c00f8f94010000c7859604000000000000e98501'
-    '00008b85ae0400003d0000803f0f8398000000d985ae040000d885b2040000d9'
-    '9dae04000081bdae0400000000803f0f8252010000c785ae0400000000803fe9'
-    '430100008b85ae04000085c0742fd985ae040000d8a5b2040000d99dae040000'
-    '8b85ae04000085c00f8f19010000c785ae04000000000000e90a010000d98596'
-    '040000d8a59a040000d99d9604000081bd96040000000020c40f82e8000000c7'
-    '460801000000e9dc0000008b83d6d6d6d68b480885c90f84cb0000008b116a01'
-    'ff521489c783bdba04000000756ff6c40474128b85a2040000403ddddddddd7e'
-    '1731c0eb13f6c40274208b85a2040000487905b8dddddddd8985a2040000b80e'
-    '000000e869000000eb7df7c7020000007549f7c741000000746d8b85a2040000'
-    '3ddddddddd7434c785ba04000001000000b80f000000e836000000eb4af7c702'
-    '0000007442c785ba04000000000000b80e000000e818000000eb2cb80e000000'
-    'e80c000000c7859e04000001000000eb168b8bd7d7d7d76a006a006a00508d83'
-    'd5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe00000000000000000000020420000'
-    '000000000000000000000000000000000000cdcccc3d0080e143000000000000'
-    '000000000000'
+    '5b535755e861ffffff8dabd1d1d1d18dbbdadadada8b0785c00f84ce0100008b'
+    '4f0c898dd0040000c785d40400000000803fe88d010000734983f905724483bd'
+    'cc04000000740b83f9060f846c010000eb0983f9070f84610100008b8dc00400'
+    '00898dd4040000d9470cd8a5c8040000d88dc0040000d885c8040000d99dd004'
+    '000083f8020f84ba0000006a006a006a00e82e010000735c83f905735783f901'
+    '751983bdcc0400000075356a006a0068000100006800010000eb5331d283f902'
+    '7505ba2000000083f90375068b95b8040000525268000100006800010000eb2e'
+    '8b95b8040000680001000052526800010000eb1a83f905750983bdcc04000000'
+    '75deff7720ff771cff7718ff7714ffb5d4040000680000803f6a006a006a00ff'
+    '7710ffb5d004000050d94708d885a8040000d91c24ff77048d83d4d4d4d4ffd0'
+    '83c440eb77ff77108d83dcdcdcdc50e870000000732483f904751f8b85b80400'
+    '00d1f8058000000068000100006800010000680001000050eb0cff7720ff771c'
+    'ff7718ff7714ffb5d4040000680000803f68000020416800002041ffb5d00400'
+    '0050d94708d885a8040000d91c24ff77048d83dbdbdbdbffd083c43483c728e9'
+    '51feffff508b4f2485c9741e0fb6c1483985b40400007c120fb6c5483985b404'
+    '00007f06c1e91058f9c358f8c38b85bc0400000385b80400008985b80400003d'
+    '000100007e14c785b804000000010000c785bc040000f0ffffff85c07914c785'
+    'b804000000000000c785bc0400001000000083bdb004000000757b8b85a80400'
+    '0085c0742fd985a8040000d8a5ac040000d99da80400008b85a804000085c00f'
+    '8f94010000c785a804000000000000e9850100008b85c00400003d0000803f0f'
+    '8398000000d985c0040000d885c4040000d99dc004000081bdc0040000000080'
+    '3f0f8252010000c785c00400000000803fe9430100008b85c004000085c0742f'
+    'd985c0040000d8a5c4040000d99dc00400008b85c004000085c00f8f19010000'
+    'c785c004000000000000e90a010000d985a8040000d8a5ac040000d99da80400'
+    '0081bda8040000000020c40f82e8000000c7460801000000e9dc0000008b83d6'
+    'd6d6d68b480885c90f84cb0000008b116a01ff521489c783bdcc04000000756f'
+    'f6c40474128b85b4040000403ddddddddd7e1731c0eb13f6c40274208b85b404'
+    '0000487905b8dddddddd8985b4040000b80e000000e869000000eb7df7c70200'
+    '00007549f7c741000000746d8b85b40400003ddddddddd7434c785cc04000001'
+    '000000b80f000000e836000000eb4af7c7020000007442c785cc040000000000'
+    '00b80e000000e818000000eb2cb80e000000e80c000000c785b0040000010000'
+    '00eb168b8bd7d7d7d76a006a006a00508d83d5d5d5d5ffd0c38d83d2d2d2d25d'
+    '5f5bffe000000000000000000000204200000000000000000000000000000000'
+    '00000000cdcccc3d0080e143000000000000000000000000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -1358,11 +1357,9 @@ DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the pa
 # and header band are the stock sprites themselves, found by their first
 # quad; text is the stock routine over its 14-px glyph sprites, which lack
 # a colon, so that is a piece. The hint bar is the frame's bar without
-# its lettering, with the page's own two lines on it, drawn in the same
-# style as strips on the appended sheet (HINT_STRIPS: 16-row ink
-# coverage, four pieces, laid down dark on opaque white as the stock's
-# are). Colours are (alpha, red, green, blue) in 256ths, as the sprite
-# call takes them.
+# its lettering, with the page's own two lines on it, set from the
+# frame's lettering (HINT_GLYPHS). Colours are (alpha, red, green, blue)
+# in 256ths, as the sprite call takes them.
 PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'COLON': (6, 143, 16, 151, 30)}
 PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'row': (1, (0, 0, 330, 18)), 'band': (2, (-154, -13, 0, 13)),
               'bar': (7, (-216, -28, -200, 0))}
@@ -1370,7 +1367,7 @@ PAGE_BAR_QUADS, PAGE_BAR_Y, PAGE_STRIP_Y = 5, 451.0, -19.0
 PAGE_ACTIONS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
                 ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
 PAGE_GROUPS = ('PLAYER 1', 'PLAYER 2')
-PAGE_GROUP_X, PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP, PAGE_GROUP_GAP = 48.0, 261.0, 106.0, 20.0, 6.0   # the stock's plates, rows 2 wider apart
+PAGE_GROUP_X, PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP, PAGE_GROUP_GAP = 48.0, 261.0, 118.0, 18.0, 6.0   # the stock's plates, the block centred
 PAGE_GROUP_TEXT_X, PAGE_ACTION_X, PAGE_COLON_X, PAGE_VALUE_X, PAGE_TEXT_DY = 56.0, 269.0, 397.0, 405.0, 2.0
 PAGE_BUTTON_Y = 404.0
 PLATE, TEXT = (0xd8, 0x100, 0x100, 0x100), (0x100, 0x100, 0x100, 0x100)
@@ -1378,10 +1375,37 @@ HOLD_ROW, HOLD_GROUP, HOLD_BUTTON, HOLD_VALUE = 1, 2, 3, 4   # how the cursor dr
 HOLD_BAR, HOLD_BAR_IDLE, HOLD_BAR_BIND = 5, 6, 7             # rises with the hint bar; shown outside, or during, a bind
 Z_PLATE, Z_TEXT = 14.0, 10.0
 FLAGS_PROPORTIONAL = 4                  # the text routine: 4 proportional, +1 right-aligned, +2 centred
-HINT_STRIPS = ((180, 109), (203, 94))   # the two lines' pieces, widths; 16 rows each, 4-bit coverage, in order
-HINT_STRIPS_ROWS = (130, 150, 170, 190) # where they go on the appended sheet, from x 1
-HINT_STRIPS_DATA = zlib.decompress(base64.b64decode(
-    'eNrtWeuy4yAIVqMxN+P7v+2CiGKiOW13ZufsTP1REyQIovIVlPq2bxs2t66Lra8h3DiMeUMcMXekDNsa3JsqrxFbfZfPuR1xel0eMXekDNsW5/dU1vG0xm34OE26zEbP0FutdIjO0Cu8T3kxTbEj0xpmWm2S0mMuNGOrzkzkPiuRPynTKBNP8rw9I6hPOvOzDeACgz+R3Af0GCZkAvfsqqE1zEWK6zMzzcPrzjon4qGhX2AsK6EP+OTkLu9fYFuM0mec5xiSzvwM/Tavxp9xXcjG1dkVp8JvzmglrWUmKcuCK9JhZpqOyFN1PnyIHvpzXVgJFzc7b9xlZyUDjIuHcwEkw2z8DP1lP+t5WdHaCBR2aaa1zCRFKVzDDjPTEs9RdZ7UDBZFNFAo4enVi5vCzGf0Ph1F8io/+7i1OpszhgPdHqNmNZjWMjNhTct2Y2Za4tmqzlpZsAL7ogQMw/7R3CXDbbo7vIu71tpoWiF6djG0OuMUE01ZpmJay9yu842ZaaN1xiuYFQIVDzxOuUv3RtjABIu7b16C5p2Iz9Dvfjcw8bEmC2F/zcdFZ6a1zERYYR/oHjPT8BBscj/DJicjixJ2m90Rbe5I5w2P8gL7Gk/8TjPwM+51OET4mi4XPLzLRedCa5hZSrB9ZqbNoKe4N5ZIBzQdNFJiQv3AO9Rdw5zmS1g860sIFCx32pW5F0CvAuQ36BzTjGmSIrtf1t4Jnr+l7fsX/f3L5lPDHu62CX58bmIExvTo1BRQeUWXBUHiQP7szBjxxCsOLthMgMBXR/B1GuDFsqGvO1uEnfIZ3oXznET6NJmDEBX97MSIh0i60nnOQI/BXxJlGK8NMRt/xtgDLDu1S+jJpNAnRqxa8s1GoIvxloRSii7NLthSDOxgkhC2ZGEKnHIyHkHLSHZCS5aBksRAebIuSlKMyJJHDuynEOZ2Mh6hyFJ8ViKvDKp5si68ET7jxTLwTX8ZIUBGUycr0ESiDvWAS3qToQ0Dn20cjX6yTP1gWYBm0mT+MhmPWMQmZBoiAsNgQMZ59YAEFKMOOk00GWKMi88iTQaqkddSKOcoLgO0egjhqsKFT5oxg0A7Jn3bt33bX0X62bx6MnvJohstsT5kot5HCwIsPDRCCT9nqMY5pBstsT4kqN7HIuLyfzTFuz2GgjAGeZ+MMwomGeEU+FuSWA3nre5pqA+QjgA6pd0F5wCW80HDdFDJOBHI4dyVREGaYplLrJm/l536AEcJGJVbFbywXDDF6YXyMee6DLNEJRFFEIrTWxJjaZQCpiTWJfF3k1YfoDQB0rJnq2DQWp4VEmOfkkd8VhigUdZL4hw2RZyVbi7rAwx4OytCsBVn5dhXl2HeQ06JTcnwL1Z/Mz7smNJLcX2CMG+mNIKVOCuF/SHVVG+wtGTM13gFxIaRV9TrXlEPXpm9uXhF9U15yECVJFeGrpQ6a7BtiPuOrkqs6aeXEPsEHVdwnNVpBHdNeUhM1dwXqsRZtAY5u4i2uIqtTS9P9gn2rtA75G0mBQ9rHS/mq2SijUF4D4uPg/QnyF7XlJ/5z4H/dGj1bd+Umqzizuvq9Wh7v1CWlaiYM2Vcb6UKXhhVWF/IAcuIlVNjpTK6AzSaXJsia5Ej3RilZnpDhRI75vuVa5iTDO4XmJelT+c5lepmqXhmjHeBc5z8ytVGV8qPBanpFl+BcCvqkFybzLDrgrA425XrggXo1XW/BNfQ4i2uIuaYe1t3Kyt4VmKFCz6hTxHr1NpeqfdlcNKXzrU2XAZc/rHuK6xvrcKVytxI95TA4qoYqnVsR6ihukbxjKD2uIl6GdfQcghvU1mcsSr1KzWHmm5sAyvXaUJcSmWrVLuW8q+hn7sqB/N+Qo0Zhknqr8Wh/6mM0y+4/AGKsIEj'''))
+
+# The hint bar's lettering is the stock's own, from sheet 4, where the
+# frame's messages keep six lines in their condensed face: one texel box
+# a letter, cut from clean instances there (x0, top, x1; 16 rows), laid
+# in a row a texel apart, a word gap of 5. The lines say what they can
+# with the letters those six offer.
+HINT_GLYPHS = {'S': (104, 58, 112), 'H': (50, 58, 57), 'E': (175, 210, 182), 'C': (192, 210, 200),
+               'e': (70, 135, 77), 'l': (138, 135, 141), 'c': (31, 135, 37), 't': (14, 135, 18), 'a': (46, 135, 53),
+               'n': (55, 135, 60), 'i': (162, 135, 165), 'o': (19, 135, 26), 'd': (103, 135, 109), 'h': (39, 135, 44),
+               'k': (148, 173, 155), 'y': (163, 173, 170), 'p': (32, 173, 38), ',': (23, 173, 25),
+               'b': (132, 230, 138), 'u': (42, 230, 48), 'r': (156, 230, 160)}
+HINT_SPACING, HINT_SPACE, HINT_ROWS = 1, 5, 16
+HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to bind it, or hit ESC to keep it')
+HINT_STRIP_TOPS = (130, 150, 170, 190)  # the lines' two halves each on the appended sheet, from x 1
+HINT_SHEET = 4
+
+
+def hint_layout(line):
+    """The line's letters as (x, glyph) from x 0, its width, and how many
+    letters make its first half, cut at the space nearest the middle."""
+    placed, x, cut, best = [], 0, 0, None
+    for i, c in enumerate(line):
+        if c == ' ':
+            if best is None or abs(i - len(line) / 2) < best:
+                best, cut = abs(i - len(line) / 2), len(placed)
+            x += HINT_SPACE
+            continue
+        placed.append((x, HINT_GLYPHS[c]))
+        x += HINT_GLYPHS[c][2] - HINT_GLYPHS[c][0] + HINT_SPACING
+    return placed, x - HINT_SPACING, cut
+
 
 TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
 TXR_SIZE = 1282048
@@ -1586,14 +1610,16 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
 
     device, settings, colon = (piece(PAGE_PIECES[k]) for k in ('DEVICE', 'SETTINGS', 'COLON'))
     bar = copied(stock['bar'], PAGE_BAR_QUADS)
-    strips = []
-    for line, tops in zip(HINT_STRIPS, (HINT_STRIPS_ROWS[:2], HINT_STRIPS_ROWS[2:])):
-        width = sum(line)
-        left, quads = -width / 2, []
-        for w, top in zip(line, tops):
-            quads.append((uv((TXR_ICON, 1, top, 1 + w, top + 16)), (left, PAGE_STRIP_Y, left + w, PAGE_STRIP_Y + 16.0), 0xffffffff))
-            left += w
-        sprites.append((quads, float(width), 16.0))
+    strips, tops = [], iter(HINT_STRIP_TOPS)
+    for line in HINT_LINES:
+        placed, width, cut = hint_layout(line)
+        quads = []
+        for half in (placed[:cut], placed[cut:]):
+            top, x0 = next(tops), half[0][0]
+            w = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0
+            quads.append((uv((TXR_ICON, 1, top, 1 + w, top + HINT_ROWS)),
+                          (x0 - width / 2, PAGE_STRIP_Y, x0 - width / 2 + w, PAGE_STRIP_Y + HINT_ROWS), 0xffffffff))
+        sprites.append((quads, float(width), float(HINT_ROWS)))
         strips.append(len(sprites) - 1)
     per_group = len(PAGE_ACTIONS)
     rows = per_group * len(PAGE_GROUPS)
@@ -1746,13 +1772,22 @@ def patch_txr(data):
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
     for y in range(126):
         texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
-    off = 0
-    for width, top in zip([w for line in HINT_STRIPS for w in line], HINT_STRIPS_ROWS):   # the hint lines: dark ink on opaque white
-        for y in range(16):
-            for x in range(width):
-                v = 15 - HINT_STRIPS_DATA[off]
-                struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x) * 2, 0xf000 | v << 8 | v << 4 | v)
-                off += 1
+    letters = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:HINT_SHEET])   # the frame's messages' lettering
+    tops = iter(HINT_STRIP_TOPS)
+    for line in HINT_LINES:                 # the hint lines, letter by letter, each in two halves
+        placed, _width, cut = hint_layout(line)
+        for half in (placed[:cut], placed[cut:]):
+            top, x0 = next(tops), half[0][0]
+            width = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0
+            for y in range(HINT_ROWS):          # the strip opaque white, then the letters
+                for x in range(width):
+                    struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x) * 2, 0xffff)
+            for x, (gx0, gy0, gx1) in half:
+                for y in range(HINT_ROWS):
+                    for gx in range(gx1 - gx0):
+                        v = struct.unpack_from('<H', data, letters + ((gy0 + y) * 256 + gx0 + gx) * 2)[0]   # 555 to 4444, opaque
+                        texel = 0xf000 | (v >> 11 & 15) << 8 | (v >> 6 & 15) << 4 | (v >> 1 & 15)
+                        struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x - x0 + gx) * 2, texel)
     out = bytearray(data)
     struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
     struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 256, len(texture), 0)

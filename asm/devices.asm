@@ -11,8 +11,8 @@
 ;              from the right by 40 px a frame as the stock pages are.
 ;              In place, the hint bar pops up as the frame's does and the
 ;              cursor moves on up and down; confirm on a row starts a
-;              bind - the row turns blue, the bar says to press the
-;              button, cancel gives up -
+;              bind - the row and the bar pulse blue, the bar says to
+;              press the button, cancel gives up -
 ;              and confirm on BACK, or cancel, drops the bar and slides
 ;              the page on out to the left, as the stock pages go, and
 ;              only then puts the menu's state back. Leaves through the
@@ -24,15 +24,16 @@
 ; text routine's flags, alpha, red, green, blue in 256ths, and the
 ; cursor's hold on the entry: 0 for none, else the first and last row
 ; (plus one) in the low bytes and in bits 16-23 what the cursor on one of
-; those rows does to it - 1 solid red, the stock's row, blue during a
-; bind; 2 red with a little green and blue, its group plate; 3 red
-; pulsing to white, its button; 4 white fading, its row's value. Holds 5 to 7 are the hint
-; bar's, for every row: the entry rises with the bar; 6 is shown only
-; outside a bind, 7 only during one. The row after the last is the BACK
-; button. The DLL is relocated on every load:
-; the blob finds its own address with a call/pop and subtracts its RVA
-; to get the image base, and every DLL address here is an RVA from that,
-; filled in from the build's row.
+; those rows does to it - 1 solid red, the stock's row, and during a
+; bind blue pulsing to white; 2 red with a little green and blue, its
+; group plate; 3 red pulsing to white, its button; 4 white fading, its
+; row's value. Holds 5 to 7 are the hint bar's, for every row: the entry
+; rises with the bar, and 5, the bar itself, pulses blue during a bind;
+; 6 is shown only outside a bind, 7 only during one. The row after the
+; last is the BACK button. The DLL is relocated on every load: the blob
+; finds its own address with a call/pop and subtracts its RVA to get the
+; image base, and every DLL address here is an RVA from that, filled in
+; from the build's row.
 
 bits 32
 
@@ -65,7 +66,6 @@ bits 32
 %define BAR_Y           0x43e18000      ; 451.0, the bar's bottom edge, which it grows from
 %define FULL            0x100
 %define GROUP_TINT      0x20            ; green and blue of the group's red
-%define BIND_TINT       0x20            ; red and green of the blue row
 %define PULSE_STEP      0x10
 %define HOLD_ROW        1
 %define HOLD_GROUP      2
@@ -161,16 +161,10 @@ exec:
         jnc     .plain
         cmp     ecx, HOLD_BAR
         jae     .plain
-        cmp     ecx, HOLD_ROW           ; 1: red, or blue during a bind
+        cmp     ecx, HOLD_ROW           ; 1: red, or blue pulsing during a bind
         jne     .notrow
         cmp     dword [ebp + binding - $$], 0
-        je      .red
-        push    FULL                    ; blue, green, red, alpha
-        push    BIND_TINT
-        push    BIND_TINT
-        push    FULL
-        jmp     .coloured
-.red:
+        jne     .bindblue
         push    0
         push    0
         push    FULL
@@ -191,7 +185,19 @@ exec:
         push    FULL
         push    FULL
         jmp     .coloured
+.bindblue:                              ; the bind: blue pulsing to white, the row and the bar alike
+        mov     edx, [ebp + pulse - $$]
+        push    FULL
+        push    edx
+        push    edx
+        push    FULL
+        jmp     .coloured
 .plain:
+        cmp     ecx, HOLD_BAR
+        jne     .asgiven
+        cmp     dword [ebp + binding - $$], 0
+        jne     .bindblue
+.asgiven:
         push    dword [edi + 32]        ; blue, green, red, alpha
         push    dword [edi + 28]
         push    dword [edi + 24]
