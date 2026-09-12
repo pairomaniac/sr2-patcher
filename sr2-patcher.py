@@ -1484,11 +1484,21 @@ def apply_devices(buf, build):
     for t in range(3):
         for i in range(3):
             struct.pack_into('<f', buf, va_off(tables[t][i]) + 0x14, DEVICES_X[i])
-    # the spare UV entries: "DEVICE", and the appended sheet's top-left quarter with the
-    # first icon's exact UVs - the page's are rounded to three decimals, and the tenth of
-    # a texel that adds shows at the plate's edge
+    # the spare UV entries: "DEVICE", and the icon in the icon sheet's fourth quarter, with
+    # the first icon's exact UVs a half over - the page's are rounded to three decimals, and
+    # the tenth of a texel that adds shows at the plate's edge
     struct.pack_into('<i4f', buf, uvs[DEVICES_UV_DEVICE], 6, *DEVICES_DEVICE)
-    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], TXR_ICON, *struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4))
+    car = struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4)
+    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], 10, *(v + 0.5 for v in car))
+    # the cursor frame's nine entries go from the icon sheet's fourth quarter, where the icon
+    # now is, to the appended sheet's copy of that quarter: the renderer draws sheet by sheet,
+    # and the frame has to come after every icon to land over them
+    for k in range(9):
+        entry = va_off(page) + dword(va_off(dword(frame0 + 4)) + k * 0x34) * 0x14
+        sheet, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, entry)
+        if sheet != 10 or v0 < 0.5:
+            raise ValueError('Options.dll: the cursor frame is not where the patcher knows')
+        struct.pack_into('<i4f', buf, entry, TXR_ICON, u0, v0 - 0.5, u1, v1 - 0.5)
 
     # the menu's blob: tables, descriptors, quads, stub; then the page's
     rva = _next_section_rva(buf)
@@ -1507,21 +1517,16 @@ def apply_devices(buf, build):
             struct.pack_into('<I', blob, layout[name] + i * 4, tables[t][i])
         struct.pack_into('<I', blob, layout[name] + 12, va + layout[('descf', 'desci', 'descl')[t]])
         relocs += [layout[name] + i * 4 for i in range(4)]
-    # the item's cursor frame draws from the appended sheet as its icon does, through the
-    # page's own UV table: the renderer draws sheet by sheet, and the frame has to land
-    # over the icon as the stock frames land over theirs
-    page_blob, page_relocs, frame_uvs, frame_quads = devices_page(buf, build, va + layout['page'], settings[0x14:], cont, labelend,
-                                                                  va_off(page), frame_quads)
-    for name, quads, uvpage, n, w, h, y in (('descf', 'quadsf', frame_uvs, 9, 134.0, 134.0, 202.0),
-                                           ('desci', 'quadsi', page, 1, 126.0, 126.0, 202.0),
-                                           ('descl', 'quadsl', page, 2, 106.0, 45.0, 296.0)):
-        struct.pack_into('<IIIffffI', blob, layout[name], uvpage, va + layout[quads], n, w, h, DEVICES_X[3], y, 0)
+    for name, quads, n, w, h, y in (('descf', 'quadsf', 9, 134.0, 134.0, 202.0), ('desci', 'quadsi', 1, 126.0, 126.0, 202.0),
+                                   ('descl', 'quadsl', 2, 106.0, 45.0, 296.0)):
+        struct.pack_into('<IIIffffI', blob, layout[name], page, va + layout[quads], n, w, h, DEVICES_X[3], y, 0)
         relocs += [layout[name], layout[name] + 4]
     blob[layout['quadsf']:layout['quadsf'] + 9 * 0x34] = frame_quads
     blob[layout['quadsi']:layout['quadsi'] + 0x34] = icon_quad
     blob[layout['quadsl']:layout['quadsl'] + 0x68] = device + settings
     stub_va = va + layout['stub']
     blob[layout['stub']:layout['stub'] + 12] = bytes.fromhex('c74608') + struct.pack('<I', 0xc) + b'\xe9' + struct.pack('<i', base + _off_to_rva(buf, cont) - (stub_va + 12))
+    page_blob, page_relocs = devices_page(buf, build, va + layout['page'], settings[0x14:], cont, labelend)
     blob += page_blob
     relocs += [layout['page'] + r for r in page_relocs]
     out, got = append_section(buf, DEVICES_SECTION, bytes(blob), chars=DATA_SECTION | 0x20000000)
@@ -1540,14 +1545,11 @@ def apply_devices(buf, build):
     return out
 
 
-def devices_page(buf, build, va, quad_tail, cont, labelend, menu_page, frame_quads):
+def devices_page(buf, build, va, quad_tail, cont, labelend):
     """The Device Settings page after the menu's data at `va`: the code,
     the top-level state table with the page's two states, the page's UV
     table and header, its sprites and quads, the draw list, the strings.
-    The menu item's cursor frame quads come in over the menu page's UV
-    entries (sheet 10, the blank plate) and go out over this page's, on
-    the appended sheet's copy of that plate. Returns (bytes, relocation
-    offsets, the UV table's address, the frame quads)."""
+    Returns (bytes, relocation offsets)."""
     row = BUILDS[build]
     base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
     opt = row['options']
@@ -1625,11 +1627,6 @@ def devices_page(buf, build, va, quad_tail, cont, labelend, menu_page, frame_qua
         strings.append(text)
         draw.append((2, ('string', len(strings) - 1), x, y, flags, colour, held))
 
-    frame = bytearray(frame_quads)
-    for k in range(9):
-        entry = struct.unpack_from('<I', frame, k * 0x34)[0]
-        _sheet, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, menu_page + entry * 0x14)
-        struct.pack_into('<I', frame, k * 0x34, uv(('raw', TXR_ICON, u0, v0 - 0.5, u1, v1 - 0.5)))
     device, settings, colon = (piece(PAGE_PIECES[k]) for k in ('DEVICE', 'SETTINGS', 'COLON'))
     bar = copied(stock['bar'], PAGE_BAR_QUADS)
     strips, tops = [], iter(HINT_STRIP_TOPS)
@@ -1727,7 +1724,7 @@ def devices_page(buf, build, va, quad_tail, cont, labelend, menu_page, frame_qua
         relocs.append(off_draw + i * 40 + 4)
     for text, off in zip(strings, string_offs):
         blob[off:off + len(text)] = text.encode('ascii')
-    return bytes(blob), relocs, va + off_uv, bytes(frame)
+    return bytes(blob), relocs
 
 
 def wheel_mask(size=126):
@@ -1770,11 +1767,13 @@ def txr_check(data):
 
 
 def patch_txr(data):
-    """OPTIONS.TXR with a thirteenth sheet, 256x256: the icon at its top
-    left - the third icon's plate, its picture filled back in, with a
-    steering wheel cut out the same way - the cursor frame's blank plate
-    beside it, and the page's hint lines below, dark on opaque white as the stock's message strips are (their
-    sheets 4 and 5 are format 0, 555 without alpha). The gutter is clear
+    """OPTIONS.TXR with the new icon in the icon sheet's fourth quarter -
+    the third icon's plate, its picture filled back in, with a steering
+    wheel cut out the same way - and a thirteenth sheet, 256x256, holding
+    what that quarter held, the cursor frame's blank plate, in its second
+    quarter, and the page's hint lines below, set letter by letter from
+    the frame's own message lettering on sheet 4, as the stock's message
+    strips are (sheets 4 and 5 are format 0, 565). The gutter is clear
     white like the stock sheets', so the edge texels filter to white, not
     to black. Returns the grown file."""
     why = txr_check(data)
@@ -1793,12 +1792,14 @@ def patch_txr(data):
         texel = struct.unpack_from('<H', plate, i * 2)[0]
         alpha = max(0, (texel >> 12) * 17 - mask[i])
         struct.pack_into('<H', plate, i * 2, (texel & 0xfff) | ((alpha + 8) // 17) << 12)
+    out = bytearray(data)
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
-    for y in range(126):
-        texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
-    for y in range(128):                    # the cursor frame's blank plate, from the icon sheet's fourth quarter to this one's second
-        row = sheet + ((128 + y) * 256 + 128) * 2
+    for y in range(128):                    # the icon sheet's fourth quarter, the cursor frame's blank plate, to the new
+        row = sheet + ((128 + y) * 256 + 128) * 2   # sheet's second; the icon into the quarter it leaves, beside its three
         texture[(y * 256 + 128) * 2:(y * 256 + 256) * 2] = data[row:row + 256]
+        out[row:row + 256] = struct.pack('<H', 0x0fff) * 128
+        if 1 <= y <= 126:
+            out[row + 2:row + 254] = plate[(y - 1) * 252:y * 252]
     letters = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:HINT_SHEET])   # the frame's messages' lettering
     tops = iter(HINT_STRIP_TOPS)
     for line in HINT_LINES:                 # the hint lines, letter by letter, each in two halves
@@ -1815,7 +1816,6 @@ def patch_txr(data):
                         v = struct.unpack_from('<H', data, letters + ((gy0 - 1 + y) * 256 + gx0 + gx) * 2)[0]   # 565 to 4444, opaque
                         texel = 0xf000 | (v >> 12) << 8 | (v >> 7 & 15) << 4 | (v >> 1 & 15)
                         struct.pack_into('<H', texture, ((top + y) * 256 + 1 + HINT_MARGIN + x - x0 + gx) * 2, texel)
-    out = bytearray(data)
     struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
     struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 256, len(texture), 0)
     return bytes(out + texture)

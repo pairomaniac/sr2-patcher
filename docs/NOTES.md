@@ -298,25 +298,28 @@ reset.
 The new data carries absolute pointers, so `.sr2d` gets a relocation
 block appended to the directory in `.reloc`'s zero tail.
 
-The item's label is "DEVICE" over the stock "SETTINGS". Its icon is a
-thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
-16-byte entry in the 4 KB header, the pixels at the end; the loader sizes
-its handle and entry arrays from the count, and the DLL's copy of the
-handles has room for 256): the monitor icon's plate with the picture's box
-filled back to the plate's grey, and a steering wheel cut out of it the
-way the stock pictures are - holes in the plate, alpha 0 with a one-texel
-ramp, the menu's dark background showing through. The sheet is 256x256
-like the icons', the icon at its top left; the rest is for the page's art.
-The wheel is drawn by the patcher
-(`wheel_mask`), not copied from anywhere; beside it the cursor frame's
-blank plate, copied from sheet 10's fourth quarter, and under them the
-page's hint lines. The item's cursor frame draws from that copy through
-the page's own UV table, not from sheet 10 as the other three frames do:
-the renderer draws sheet by sheet, so a frame on sheet 10 over an icon on
-sheet 12 came out under it, the plate grey and only its holes red, where
-the stock frames land over their icons and tint the plate. UV entry
-`0x11` covers the icon with the car icon's own UVs - the page's are three-decimal values, 126.2
-texels across 126 pixels, and exact fractions sample visibly differently.
+The item's label is "DEVICE" over the stock "SETTINGS". Its icon goes
+into the icon sheet's fourth quarter, beside its three: the monitor
+icon's plate with the picture's box filled back to the plate's grey, and
+a steering wheel cut out of it the way the stock pictures are - holes in
+the plate, alpha 0 with a one-texel ramp, the menu's dark background
+showing through - drawn by the patcher (`wheel_mask`), not copied from
+anywhere, with the car icon's own UVs a half over (UV entry `0x11`; the
+page's UVs are three-decimal values, 126.2 texels across 126 pixels, and
+exact fractions sample visibly differently). What that quarter held, the
+blank plate the cursor's red frame is cut from as a nine-slice, moves to
+a thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
+16-byte entry in the 4 KB header, the pixels at the end; 256x256 like the
+icon sheet; the loader sizes its handle and entry arrays from the count,
+and the DLL's copy of the handles has room for 256), and the frame's
+nine UV entries follow it there. That is what puts the frame over the
+icons: the renderer draws sheet by sheet, and a frame on the icon sheet
+lands over the three stock icons but under an icon on a later sheet -
+the plate grey with only its holes red where the stock plates tint. The
+cursor draws its table's entry for the item in place (`0x1000e5e0`)
+and, while sliding, the first entry at its own x, at z 16 with the pulse
+as alpha; the icons go at z 12. The page's hint lines go under the
+plate on the new sheet.
 The English label sheet is checked by the texels
 of "DEVICE"; a Japanese install, never seen, would fail that check rather
 than draw the wrong thing; the check covers the font and label rows.
