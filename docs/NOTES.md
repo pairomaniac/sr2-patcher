@@ -410,11 +410,13 @@ code; its `MGAudio.dll` has the same eleven calls and one load of
 different branch in Init, for which see *No mixer needed* in the table
 above.
 
-Five files are patched in every build - `SEGA RALLY 2.exe`,
+Six files are patched in every build - `SEGA RALLY 2.exe`,
 `MUSASHI\MGameD3D.dll`, `MUSASHI\MGAudio.dll`, `MUSASHI\MGSound.dll`,
-`Title.dll` - and `Options.dll` in the Australian. Each gets a
-`.bak` beside it, the untouched original; the patcher always starts from
-those, so patching twice is patching once and restoring is a rename.
+`Title.dll`, `Options.dll` - and `BINDATA\MISC\OPTIONS.TXR`. Each gets
+a `.bak` beside it, the untouched original; the patcher always starts
+from those, so patching twice is patching once and restoring is a
+rename, and a file that a run with fewer keys leaves alone goes back to
+its `.bak`, so the keys given are the patches in place.
 
 ### The processor check
 

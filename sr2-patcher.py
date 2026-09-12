@@ -1911,28 +1911,36 @@ def check_build(dest):
 
 def patch(dest, log=print, keys=PATCH_KEYS):
     """Write every wanted patch. Each touched file is patched from its
-    backup, written on the first run, so patching twice is patching once."""
+    backup, written on the first run, so patching twice is patching once;
+    a file nothing wanted touches goes back to its backup, so patching
+    with fewer keys takes the others out."""
     build = check_build(dest)
     table = patches(build)
     log('patch: %s build' % build)
     txr = None
+    txr_path = os.path.join(dest, *TXR.split('\\'))
     if 'devices' in keys:
-        path = os.path.join(dest, *TXR.split('\\'))
-        source = path + '.bak' if os.path.isfile(path + '.bak') else path
+        source = txr_path + '.bak' if os.path.isfile(txr_path + '.bak') else txr_path
         with open(source, 'rb') as fh:
             txr = fh.read()
         why = txr_check(txr)
         if why:
             raise ValueError('%s: %s' % (TXR, why))
+    elif os.path.isfile(txr_path + '.bak'):
+        os.replace(txr_path + '.bak', txr_path)
+        log('patch: %s back to stock' % TXR)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
         wanted = [table[key] for key in keys if key in table and table[key][0] == name]
         sites = [site for _f, ss, _t in wanted for site in ss]
         transforms = [globals()[t] for _f, _s, t in wanted if t]
-        if not sites and not transforms:
-            continue
         path = os.path.join(dest, *name.split('\\'))
         bak = path + '.bak'
+        if not sites and not transforms:
+            if os.path.isfile(bak):
+                os.replace(bak, path)
+                log('patch: %s back to stock' % name)
+            continue
         source = bak if os.path.isfile(bak) else path
         if os.path.getsize(source) != size or md5(source) != digest:
             raise ValueError('%s is not the file the patcher knows' % name)
@@ -1953,11 +1961,10 @@ def patch(dest, log=print, keys=PATCH_KEYS):
             fh.write(buf)
         log('patch: %s written, %s' % (name, ', '.join(k for k in keys if k in table and table[k][0] == name)))
     if txr is not None:
-        path = os.path.join(dest, *TXR.split('\\'))
-        if not os.path.isfile(path + '.bak'):
-            os.replace(path, path + '.bak')
+        if not os.path.isfile(txr_path + '.bak'):
+            os.replace(txr_path, txr_path + '.bak')
             log('patch: backup written to %s.bak' % TXR)
-        with open(path, 'wb') as fh:
+        with open(txr_path, 'wb') as fh:
             fh.write(patch_txr(txr))
         log('patch: %s written, devices' % TXR)
 
