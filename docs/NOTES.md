@@ -216,21 +216,44 @@ through `0x1000ed90`: a page is a table of 20-byte UV entries
 its handle in place. A *sprite* is 32 bytes - page, quads, count, width,
 height, x, y, 0 - and a *quad* 52: UV index, a rectangle about the sprite's
 centre, four vertex colours. `0x1000e850` draws a sprite at a position,
-scale and colour. The menu's page is `0x100ac9d8` with 54 entries, one
-`-1` between sprites; those separators are spare, and `0xe` now holds
-"DEVICE" from sheet 6.
+scale and colour, `0x1000e5e0` at its own position. Both put the quads on
+one list, which the flush (`0x1000e390`) sorts by depth (`0x1000e510`, a
+stable merge on the value the device makes of z) and draws far to near:
+a sprite at z 16 goes under one at z 12, and among equals the order of
+submission stands. The menu's page is `0x100ac9d8` with 54 entries, one
+`-1` between sprites; those separators are spare, and `0xe` and `0x11`
+now hold "DEVICE" from sheet 6 and the new icon.
 
 The menu itself (`0x10003dd0` init, `0x10003f40` exec) owns a cursor
-(`0x1000ba40`, sliding between the frame sprites of a table) and an icon
-set (`0x10002330`), both over three-entry tables at `0x1009c820`,
-`0x1009c82c`, `0x1009c838` (labels), and draws the labels itself at
-`0x10003e10`; its state after a confirm (`0x1000421c`) draws the frame
-table's entry for the item once more, nearer, at z 14, while the icon
-set zooms the icon - a fifth reference to the tables, indexed straight
-from the address, patched with the other four. Confirming returns the index with bit 15, and `0x10003c6b`
-dispatches it through `0x10003dc0` to the page states; the fourth slot
-was the exit state, never reached with three items. The stub in `.sr2d`
-selects state 0xc. The four items sit at x 110, 250, 390, 530.
+(`0x1000ba40`) and an icon set (`0x10002330`), both over three-entry
+tables at `0x1009c820` (frames), `0x1009c82c` (icons), `0x1009c838`
+(labels), and draws the labels itself at `0x10003e10`. The cursor draws
+the frame table's entry for the item in place while it rests, the first
+entry at its animated x while it slides, at z 16 with its pulse as
+alpha; the icons go at z 12, so the frame sits under the plate and shows
+as its red holes and a 4-px outline. The menu's state after a confirm
+(`0x1000421c`) draws the frame once more at z 14 while the icon set
+zooms the icon. That is five code references to the tables in all, and
+the patch moves every one of them. Confirming returns the index with bit
+15, and `0x10003c6b` dispatches it through `0x10003dc0` to the page
+states; the fourth slot was the exit state, never reached with three
+items. The stub in `.sr2d` selects state 0xc. The four items sit at
+x 110, 250, 390, 530.
+
+The item's label is "DEVICE" over the stock "SETTINGS". Its icon is on
+a thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
+16-byte entry in the 4 KB header, the pixels at the end; 256x256 like the
+icon sheet; the loader sizes its handle and entry arrays from the count,
+and the DLL's copy of the handles has room for 256): the monitor icon's
+plate with the picture's box filled back to the plate's grey, and a
+steering wheel cut out of it the way the stock pictures are - holes in
+the plate, alpha 0 with a one-texel ramp, the menu's dark background
+showing through - drawn by the patcher (`wheel_mask`), not copied from
+anywhere, with the car icon's own UVs (the page's UVs are three-decimal
+values, 126.2 texels across 126 pixels, and exact fractions sample
+visibly differently). The English label sheet is checked by the texels
+of its font and label rows; a Japanese install, never seen, would fail
+that check rather than draw the wrong thing.
 
 The top-level machine (`0x10003af0`) has twelve states behind `cmp eax,
 0xb` and a table at `0x10003d90`: 1 re-inits the menu, 2 runs it, 3/5/7
@@ -238,36 +261,14 @@ init a page and 4/6/8 run it, 0xb leaves. The table moves to `.sr2d`
 with two more entries and the compare goes to 0xd: 0xc is the page's
 init, 0xd its exec, both in asm/devices.asm, entered as every case is
 with `esi` the Options object and leaving through the dispatcher's
-epilogue (`0x10003cd6`).
-
-Init binds the page's own UV table through `0x1000ed90` - once per load
-of the DLL, flagged in the blob, since the binding writes each entry's
-sheet handle over its index in place and a second pass reads handles as
-indices (the stock pages are bound once, in `OptionsModeInit`; the exe
-reloads the DLL for each visit) - and starts the slide-in. Exec draws
-the list, moves the cursor, and slides: in from the right at 640 down
-by 40 a frame, out to the left on cancel or on confirm over BACK, the
-menu's state set at -640, the stock pages' numbers. The hint bar under
-every stock page belongs to the frame object (`0x10001cc0`), which pops
-one of fifteen lettered messages in and out by a message number in
-`0x1009c784` (`0x100021b0`, height 0 to 1 by 0.1 a frame, the bar
-growing from its bottom edge at y 451). All fifteen are lettered, so
-the page leaves that at -1 and draws its own: the bar's plate and white
-strip copied from message 14, grown the same way once the page is in
-place and dropped before it leaves, and on it one of two lines set
-letter by letter from the frame's own lettering - sheet 4, format 0,
-565, dark ink on opaque white, six lines in a condensed face - one texel box a letter cut from a clean instance there
-(`HINT_GLYPHS`; the boxes 17 rows from a row above each line's
-ascenders, since the two lines the capitals come from sit a row lower
-than the others against their tops), a texel apart, 5 for a space, onto
-white on the appended sheet at patch time, two texels of white beyond
-each end so the edge samples filter to white and not to the clear
-gutter. The lines say what those six lines'
-letters allow; there is no N or R among the capitals, so no ENTER.
-Confirm on a row starts a bind - the row's plate pulses blue to white,
-(0x100, p, p, 0x100), and the bar says to press the button - and cancel
-gives it up with the backing-out sound; nothing listens for the button
-yet.
+epilogue (`0x10003cd6`). Init binds the page's own UV table through
+`0x1000ed90` - once per load of the DLL, flagged in the blob, since the
+binding writes handles over indices in place (the stock pages are bound
+once, in `OptionsModeInit`; the exe reloads the DLL for each visit) -
+and starts the slide-in. Exec draws the list, moves the cursor, and
+slides: in from the right at 640 down by 40 a frame, out to the left on
+cancel or on confirm over BACK, the menu's state set at -640, the stock
+pages' numbers.
 
 The list is 40-byte entries - kind, sprite or string, x, y, z or text
 flags, alpha, red, green, blue in 256ths, and the cursor's hold on the
@@ -281,7 +282,7 @@ over its 14-px glyph sprites (`0x1009c080`, one sprite a glyph, a
 x, y, z, advance for a missing glyph, sx, sy, alpha, r, g, b, table,
 flags), flags 4 proportional, 1 right-aligned, 2 centred. The table has
 letters, digits, `.`, `+`, `-` only; the colon is a piece. The glyph
-cells carry a texel of margin around the ink, and need it: boxes cut to
+cells carry a texel of margin around the ink and need it: boxes cut to
 the ink render narrow and ragged. Geometry as the stock's: the band and
 heading at y 87, the group plate at (48, 106), rows of 18 from (261,
 106), 6 more between groups, group text at x 56, action at 269, colon
@@ -289,46 +290,38 @@ at 397, value at 405, the buttons at y 404. Two groups, PLAYER 1 and
 PLAYER 2, seven rows each.
 
 The cursor is the stock's (`0x10002c30`): up and down through the rows
-and the button row, DEFAULT then BACK with left and right between them
-as on the stock pages, wrapping; the stock's sounds, 0xe for a move,
-0xf for a confirm, BACK included, 0x10 for backing out.
-What it holds is drawn as Game Settings draws it: the row's plate
-(0x100, 0x100, 0, 0), its group's (0x100, 0x100, 0x20, 0x20), the
-button (0x100, 0x100, p, p) and the row's value white with alpha
-0x80 + p/2, p the page's pulse, 0 to 0x100 and back by 0x10 a frame
-(`0x10002a23`). Each entry carries which rows hold it and how. The
-bindings shown are fixed strings for now, and DEFAULT has nothing to
-reset.
+and the button row, DEFAULT then BACK with left and right between them,
+wrapping; the stock's sounds, 0xe for a move, 0xf for a confirm, BACK
+included, 0x10 for backing out. What it holds is drawn as Game Settings
+draws it: the row's plate (0x100, 0x100, 0, 0), its group's (0x100,
+0x100, 0x20, 0x20), the button (0x100, 0x100, p, p) and the row's value
+white with alpha 0x80 + p/2, p the page's pulse, 0 to 0x100 and back by
+0x10 a frame (`0x10002a23`). Each entry carries which rows hold it and
+how. Confirm on a row starts a bind - the row's plate pulses blue to
+white, (0x100, p, p, 0x100), and the bar says to press the button - and
+cancel gives it up with the backing-out sound. The bindings shown are
+fixed strings for now, nothing listens for the button yet, and DEFAULT
+has nothing to reset.
+
+The hint bar under every stock page belongs to the frame object
+(`0x10001cc0`), which pops one of fifteen lettered messages in and out
+by a message number in `0x1009c784` (`0x100021b0`, height 0 to 1 by 0.1
+a frame, the bar growing from its bottom edge at y 451). All fifteen are
+lettered, so the page leaves that at -1 and draws its own: the bar's
+plate and white strip copied from message 14, grown the same way once
+the page is in place and dropped before it leaves, and on it one of two
+lines set letter by letter from the frame's own lettering - sheet 4, six
+lines in a condensed face, dark ink on opaque white - one texel box a
+letter cut from a clean instance there (`HINT_GLYPHS`; 17 rows from a
+row above each line's ascenders, since the two lines the capitals come
+from sit a row lower against their tops), a texel apart, 5 for a space,
+onto white on the appended sheet at patch time, two texels of white
+beyond each end so the edge samples filter to white and not to the clear
+gutter. The lines say what those six lines' letters allow; there is no N
+or R among the capitals, so no ENTER.
 
 The new data carries absolute pointers, so `.sr2d` gets a relocation
 block appended to the directory in `.reloc`'s zero tail.
-
-The item's label is "DEVICE" over the stock "SETTINGS". Its icon goes
-into the icon sheet's fourth quarter, beside its three: the monitor
-icon's plate with the picture's box filled back to the plate's grey, and
-a steering wheel cut out of it the way the stock pictures are - holes in
-the plate, alpha 0 with a one-texel ramp, the menu's dark background
-showing through - drawn by the patcher (`wheel_mask`), not copied from
-anywhere, with the car icon's own UVs a half over (UV entry `0x11`; the
-page's UVs are three-decimal values, 126.2 texels across 126 pixels, and
-exact fractions sample visibly differently). What that quarter held, the
-blank plate the cursor's red frame is cut from as a nine-slice, moves to
-a thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
-16-byte entry in the 4 KB header, the pixels at the end; 256x256 like the
-icon sheet; the loader sizes its handle and entry arrays from the count,
-and the DLL's copy of the handles has room for 256), and the three
-frames' UV entries, nine each, follow it there (each item's frame sprite
-has quads of its own). That is what puts the frame over the
-icons: the renderer draws sheet by sheet, and a frame on the icon sheet
-lands over the three stock icons but under an icon on a later sheet -
-the plate grey with only its holes red where the stock plates tint. The
-cursor draws its table's entry for the item in place (`0x1000e5e0`)
-and, while sliding, the first entry at its own x, at z 16 with the pulse
-as alpha; the icons go at z 12. The page's hint lines go under the
-plate on the new sheet.
-The English label sheet is checked by the texels
-of "DEVICE"; a Japanese install, never seen, would fail that check rather
-than draw the wrong thing; the check covers the font and label rows.
 
 ## The executable
 

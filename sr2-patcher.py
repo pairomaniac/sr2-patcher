@@ -1486,21 +1486,11 @@ def apply_devices(buf, build):
     for t in range(3):
         for i in range(3):
             struct.pack_into('<f', buf, va_off(tables[t][i]) + 0x14, DEVICES_X[i])
-    # the spare UV entries: "DEVICE", and the icon in the icon sheet's fourth quarter, with
-    # the first icon's exact UVs a half over - the page's are rounded to three decimals, and
-    # the tenth of a texel that adds shows at the plate's edge
+    # the spare UV entries: "DEVICE", and the appended sheet's top-left quarter with the
+    # first icon's exact UVs - the page's are rounded to three decimals, and the tenth of
+    # a texel that adds shows at the plate's edge
     struct.pack_into('<i4f', buf, uvs[DEVICES_UV_DEVICE], 6, *DEVICES_DEVICE)
-    car = struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4)
-    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], 10, *(v + 0.5 for v in car))
-    # the three cursor frames' entries, nine each, go from the icon sheet's fourth quarter,
-    # where the icon now is, to the appended sheet's copy of that quarter
-    for frame in tables[0]:
-        for k in range(9):
-            entry = va_off(page) + dword(va_off(dword(va_off(frame) + 4)) + k * 0x34) * 0x14
-            sheet, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, entry)
-            if sheet != 10 or v0 < 0.5:
-                raise ValueError('Options.dll: a cursor frame is not where the patcher knows')
-            struct.pack_into('<i4f', buf, entry, TXR_ICON, u0, v0 - 0.5, u1, v1 - 0.5)
+    struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], TXR_ICON, *struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4))
 
     # the menu's blob: tables, descriptors, quads, stub; then the page's
     rva = _next_section_rva(buf)
@@ -1770,15 +1760,13 @@ def txr_check(data):
 
 
 def patch_txr(data):
-    """OPTIONS.TXR with the new icon in the icon sheet's fourth quarter -
-    the third icon's plate, its picture filled back in, with a steering
-    wheel cut out the same way - and a thirteenth sheet, 256x256, holding
-    what that quarter held, the cursor frame's blank plate, in its second
-    quarter, and the page's hint lines below, set letter by letter from
-    the frame's own message lettering on sheet 4, as the stock's message
-    strips are (sheets 4 and 5 are format 0, 565). The gutter is clear
-    white like the stock sheets', so the edge texels filter to white, not
-    to black. Returns the grown file."""
+    """OPTIONS.TXR with a thirteenth sheet, 256x256: the icon at its top
+    left - the third icon's plate, its picture filled back in, with a
+    steering wheel cut out the same way - and the page's hint lines
+    below, set letter by letter from the frame's own message lettering on
+    sheet 4, as the stock's message strips are (sheets 4 and 5 are format
+    0, 565). The gutter is clear white like the stock sheets', so the
+    edge texels filter to white, not to black. Returns the grown file."""
     why = txr_check(data)
     if why:
         raise ValueError('%s: %s' % (TXR, why))
@@ -1795,14 +1783,9 @@ def patch_txr(data):
         texel = struct.unpack_from('<H', plate, i * 2)[0]
         alpha = max(0, (texel >> 12) * 17 - mask[i])
         struct.pack_into('<H', plate, i * 2, (texel & 0xfff) | ((alpha + 8) // 17) << 12)
-    out = bytearray(data)
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
-    for y in range(128):                    # the icon sheet's fourth quarter, the cursor frame's blank plate, to the new
-        row = sheet + ((128 + y) * 256 + 128) * 2   # sheet's second; the icon into the quarter it leaves, beside its three
-        texture[(y * 256 + 128) * 2:(y * 256 + 256) * 2] = data[row:row + 256]
-        out[row:row + 256] = struct.pack('<H', 0x0fff) * 128
-        if 1 <= y <= 126:
-            out[row + 2:row + 254] = plate[(y - 1) * 252:y * 252]
+    for y in range(126):
+        texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
     letters = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:HINT_SHEET])   # the frame's messages' lettering
     tops = iter(HINT_STRIP_TOPS)
     for line in HINT_LINES:                 # the hint lines, letter by letter, each in two halves
@@ -1819,6 +1802,7 @@ def patch_txr(data):
                         v = struct.unpack_from('<H', data, letters + ((gy0 - 1 + y) * 256 + gx0 + gx) * 2)[0]   # 565 to 4444, opaque
                         texel = 0xf000 | (v >> 12) << 8 | (v >> 7 & 15) << 4 | (v >> 1 & 15)
                         struct.pack_into('<H', texture, ((top + y) * 256 + 1 + HINT_MARGIN + x - x0 + gx) * 2, texel)
+    out = bytearray(data)
     struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
     struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 256, len(texture), 0)
     return bytes(out + texture)
