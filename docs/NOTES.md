@@ -224,7 +224,10 @@ The menu itself (`0x10003dd0` init, `0x10003f40` exec) owns a cursor
 (`0x1000ba40`, sliding between the frame sprites of a table) and an icon
 set (`0x10002330`), both over three-entry tables at `0x1009c820`,
 `0x1009c82c`, `0x1009c838` (labels), and draws the labels itself at
-`0x10003e10`. Confirming returns the index with bit 15, and `0x10003c6b`
+`0x10003e10`; its state after a confirm (`0x1000421c`) draws the frame
+table's entry for the item once more, nearer, at z 14, while the icon
+set zooms the icon - a fifth reference to the tables, indexed straight
+from the address, patched with the other four. Confirming returns the index with bit 15, and `0x10003c6b`
 dispatches it through `0x10003dc0` to the page states; the fourth slot
 was the exit state, never reached with three items. The stub in `.sr2d`
 selects state 0xc. The four items sit at x 110, 250, 390, 530.

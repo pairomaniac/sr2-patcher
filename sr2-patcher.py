@@ -57,7 +57,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
-                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c),   # Options.dll
+                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
@@ -89,7 +89,7 @@ BUILDS = {
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
-                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c),   # Options.dll
+                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
@@ -118,7 +118,7 @@ BUILDS = {
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
-                  'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c),   # Options.dll
+                  'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c, 0x5da8),   # Options.dll
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980),
@@ -188,16 +188,18 @@ VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec800000
 
 def devices_sites(offsets, tables):
     """The Options menu's sites: the cursor and icon-set constructors
-    (their item counts go 3 to 4), the label loop's bounds and the
-    dispatch table, all naming the three item tables at `tables`; and the
-    top-level state count, 0xb to 0xd for the page's two states."""
-    cursor, icons, labels, labelend, _dispatch, _ftab, topcmp = offsets
+    (their item counts go 3 to 4), the label loop's bounds, the frame the
+    confirm animation draws, and the dispatch table, all naming the three
+    item tables at `tables`; and the top-level state count, 0xb to 0xd
+    for the page's two states."""
+    cursor, icons, labels, labelend, _dispatch, _ftab, topcmp, confirm = offsets
     t = struct.pack('<I', tables)
     return ((cursor, bytes.fromhex('6a035068') + t, bytes.fromhex('6a04')),
             (icons, bytes.fromhex('6a0368') + struct.pack('<I', tables + 0xc), bytes.fromhex('6a04')),
             (labels, b'\xbf' + struct.pack('<I', tables + 0x18), None),
             (labelend, bytes.fromhex('81ff') + struct.pack('<I', tables + 0x24), None),
-            (topcmp, bytes.fromhex('83f80b0f87'), bytes.fromhex('83f80d')))
+            (topcmp, bytes.fromhex('83f80b0f87'), bytes.fromhex('83f80d')),
+            (confirm, bytes.fromhex('8b0c85') + t, None))
 
 
 def patches(build):
@@ -1456,7 +1458,7 @@ def apply_devices(buf, build):
     "DEVICE" and "SETTINGS" from the page's own sheets, both through spare
     UV entries. Confirming it returns to the menu until the page exists.
     The stock items move to four-across positions."""
-    cursor, icons, labels, labelend, dispatch, ftab, topcmp = BUILDS[build]['sites']['devices']
+    cursor, icons, labels, labelend, dispatch, ftab, topcmp, confirm = BUILDS[build]['sites']['devices']
     base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
 
     def va_off(va):
@@ -1540,6 +1542,7 @@ def apply_devices(buf, build):
     struct.pack_into('<I', out, icons + 3, va + layout['itab'])
     struct.pack_into('<I', out, labels + 1, va + layout['ltab'])
     struct.pack_into('<I', out, labelend + 2, va + layout['ltab'] + 16)
+    struct.pack_into('<I', out, confirm + 3, va + layout['ftab'])
     struct.pack_into('<I', out, stub_site, stub_va)
     struct.pack_into('<I', out, topcmp + 12, va + layout['page'] + len(DEVICES_BLOB))
     return out
