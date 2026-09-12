@@ -52,8 +52,9 @@ bits 32
 %define MAGIC_ROWS      0xDDDDDDDD      ; the page's rows; the BACK row is one more
 
 %define STATE           8               ; the Options object's state
-%define MOVE_SOUND      0xe             ; the stock's for cursor moves and leaving
-%define PICK_SOUND      0xf             ; and for confirming
+%define MOVE_SOUND      0xe             ; the stock's for cursor moves
+%define PICK_SOUND      0xf             ; for confirming, BACK included
+%define CANCEL_SOUND    0x10            ; for backing out
 %define KEY_CANCEL      2
 %define KEY_CONFIRM     0x41
 %define KEY_UP          0x200
@@ -100,7 +101,7 @@ init:
         mov     dword [edi + pulsedir - $$], PULSE_STEP
         mov     dword [edi + bar - $$], 0
         mov     dword [edi + binding - $$], 0
-        mov     dword [edi + button - $$], 1
+        mov     dword [edi + button - $$], 0
         cmp     dword [edi + bound - $$], 0
         jne     .ready
         mov     dword [edi + bound - $$], 1
@@ -381,7 +382,7 @@ exec:
         jmp     .out
 .notup:
         test    edi, KEY_CANCEL
-        jnz     .go
+        jnz     .cancel
         mov     eax, [ebp + row - $$]
         cmp     eax, MAGIC_ROWS         ; the button row: left and right pick, confirm presses
         jne     .onrow
@@ -394,10 +395,10 @@ exec:
 .press:
         test    edi, KEY_CONFIRM
         jz      .out
-        cmp     dword [ebp + button - $$], 1
-        je      .go
-        mov     eax, PICK_SOUND         ; DEFAULT: nothing to reset yet
+        mov     eax, PICK_SOUND
         call    .sound
+        cmp     dword [ebp + button - $$], 1
+        je      .go                     ; BACK; DEFAULT has nothing to reset yet
         jmp     .out
 .onrow:
         test    edi, KEY_CONFIRM
@@ -410,12 +411,13 @@ exec:
         test    edi, KEY_CANCEL
         jz      .out
         mov     dword [ebp + binding - $$], 0
-        mov     eax, MOVE_SOUND
+        mov     eax, CANCEL_SOUND
         call    .sound
         jmp     .out
-.go:
-        mov     eax, MOVE_SOUND
+.cancel:
+        mov     eax, CANCEL_SOUND
         call    .sound
+.go:
         mov     dword [ebp + leaving - $$], 1
         jmp     .out
 

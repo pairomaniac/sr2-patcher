@@ -263,7 +263,8 @@ gutter. The lines say what those six lines'
 letters allow; there is no N or R among the capitals, so no ENTER.
 Confirm on a row starts a bind - the row's plate pulses blue to white,
 (0x100, p, p, 0x100), and the bar says to press the button - and cancel
-gives it up; nothing listens for the button yet.
+gives it up with the backing-out sound; nothing listens for the button
+yet.
 
 The list is 40-byte entries - kind, sprite or string, x, y, z or text
 flags, alpha, red, green, blue in 256ths, and the cursor's hold on the
@@ -285,8 +286,9 @@ at 397, value at 405, the buttons at y 404. Two groups, PLAYER 1 and
 PLAYER 2, seven rows each.
 
 The cursor is the stock's (`0x10002c30`): up and down through the rows
-and the button row, DEFAULT and BACK with left and right between them
-as on the stock pages, wrapping, sound 0xe a move and 0xf a confirm.
+and the button row, DEFAULT then BACK with left and right between them
+as on the stock pages, wrapping; the stock's sounds, 0xe for a move,
+0xf for a confirm, BACK included, 0x10 for backing out.
 What it holds is drawn as Game Settings draws it: the row's plate
 (0x100, 0x100, 0, 0), its group's (0x100, 0x100, 0x20, 0x20), the
 button (0x100, 0x100, p, p) and the row's value white with alpha
@@ -311,8 +313,9 @@ blank plate the cursor's red frame is cut from as a nine-slice, moves to
 a thirteenth sheet the patcher appends to `OPTIONS.TXR` (the count and a
 16-byte entry in the 4 KB header, the pixels at the end; 256x256 like the
 icon sheet; the loader sizes its handle and entry arrays from the count,
-and the DLL's copy of the handles has room for 256), and the frame's
-nine UV entries follow it there. That is what puts the frame over the
+and the DLL's copy of the handles has room for 256), and the three
+frames' UV entries, nine each, follow it there (each item's frame sprite
+has quads of its own). That is what puts the frame over the
 icons: the renderer draws sheet by sheet, and a frame on the icon sheet
 lands over the three stock icons but under an icon on a later sheet -
 the plate grey with only its holes red where the stock plates tint. The

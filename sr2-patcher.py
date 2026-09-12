@@ -546,7 +546,7 @@ DEVICES_BLOB = bytes.fromhex(
     'e918000000e9a1000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
     'e6ffffff8dbbd1d1d1d1c787fa04000000002044c7870205000000000000c787'
     '0605000000000000c7870a05000000000000c7870e05000010000000c7871205'
-    '000000000000c7871e05000000000000c787220500000100000083bff6040000'
+    '000000000000c7871e05000000000000c787220500000000000083bff6040000'
     '007523c787f6040000010000008d83d8d8d8d8508d83d9d9d9d9508d83d3d3d3'
     'd3ffd083c408ff46085f5b535755e857ffffff8dabd1d1d1d18dbbdadadada8b'
     '0785c00f84d00100008b4f0c898d26050000c7852a0500000000803fe87f0100'
@@ -578,10 +578,10 @@ DEVICES_BLOB = bytes.fromhex(
     'dd7e1731c0eb13f6c40274238b8506050000487905b8dddddddd898506050000'
     'b80e000000e8ab000000e9bc000000f7c7020000000f85840000008b85060500'
     '003ddddddddd753bf7c700180000741683b52205000001b80e000000e8740000'
-    '00e985000000f7c741000000747d83bd22050000017448b80f000000e8540000'
-    '00eb68f7c7410000007460c7851e05000001000000b80f000000e836000000eb'
-    '4af7c7020000007442c7851e05000000000000b80e000000e818000000eb2cb8'
-    '0e000000e80c000000c7850205000001000000eb168b8bd7d7d7d76a006a006a'
+    '00e985000000f7c741000000747db80f000000e85d00000083bd220500000174'
+    '48eb68f7c7410000007460c7851e05000001000000b80f000000e836000000eb'
+    '4af7c7020000007442c7851e05000000000000b810000000e818000000eb2cb8'
+    '10000000e80c000000c7850205000001000000eb168b8bd7d7d7d76a006a006a'
     '00508d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe000000000000000000000'
     '20420000000000000000000000000000000000000000cdcccc3d0080e1430000'
     '0000000000000000000000000000'
@@ -1490,15 +1490,15 @@ def apply_devices(buf, build):
     struct.pack_into('<i4f', buf, uvs[DEVICES_UV_DEVICE], 6, *DEVICES_DEVICE)
     car = struct.unpack_from('<4f', buf, va_off(page) + dword(va_off(dword(icon0 + 4))) * 0x14 + 4)
     struct.pack_into('<i4f', buf, uvs[DEVICES_UV_ICON], 10, *(v + 0.5 for v in car))
-    # the cursor frame's nine entries go from the icon sheet's fourth quarter, where the icon
-    # now is, to the appended sheet's copy of that quarter: the renderer draws sheet by sheet,
-    # and the frame has to come after every icon to land over them
-    for k in range(9):
-        entry = va_off(page) + dword(va_off(dword(frame0 + 4)) + k * 0x34) * 0x14
-        sheet, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, entry)
-        if sheet != 10 or v0 < 0.5:
-            raise ValueError('Options.dll: the cursor frame is not where the patcher knows')
-        struct.pack_into('<i4f', buf, entry, TXR_ICON, u0, v0 - 0.5, u1, v1 - 0.5)
+    # the three cursor frames' entries, nine each, go from the icon sheet's fourth quarter,
+    # where the icon now is, to the appended sheet's copy of that quarter
+    for frame in tables[0]:
+        for k in range(9):
+            entry = va_off(page) + dword(va_off(dword(va_off(frame) + 4)) + k * 0x34) * 0x14
+            sheet, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, entry)
+            if sheet != 10 or v0 < 0.5:
+                raise ValueError('Options.dll: a cursor frame is not where the patcher knows')
+            struct.pack_into('<i4f', buf, entry, TXR_ICON, u0, v0 - 0.5, u1, v1 - 0.5)
 
     # the menu's blob: tables, descriptors, quads, stub; then the page's
     rva = _next_section_rva(buf)
