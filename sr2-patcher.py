@@ -1507,16 +1507,21 @@ def apply_devices(buf, build):
             struct.pack_into('<I', blob, layout[name] + i * 4, tables[t][i])
         struct.pack_into('<I', blob, layout[name] + 12, va + layout[('descf', 'desci', 'descl')[t]])
         relocs += [layout[name] + i * 4 for i in range(4)]
-    for name, quads, n, w, h, y in (('descf', 'quadsf', 9, 134.0, 134.0, 202.0), ('desci', 'quadsi', 1, 126.0, 126.0, 202.0),
-                                   ('descl', 'quadsl', 2, 106.0, 45.0, 296.0)):
-        struct.pack_into('<IIIffffI', blob, layout[name], page, va + layout[quads], n, w, h, DEVICES_X[3], y, 0)
+    # the item's cursor frame draws from the appended sheet as its icon does, through the
+    # page's own UV table: the renderer draws sheet by sheet, and the frame has to land
+    # over the icon as the stock frames land over theirs
+    page_blob, page_relocs, frame_uvs, frame_quads = devices_page(buf, build, va + layout['page'], settings[0x14:], cont, labelend,
+                                                                  va_off(page), frame_quads)
+    for name, quads, uvpage, n, w, h, y in (('descf', 'quadsf', frame_uvs, 9, 134.0, 134.0, 202.0),
+                                           ('desci', 'quadsi', page, 1, 126.0, 126.0, 202.0),
+                                           ('descl', 'quadsl', page, 2, 106.0, 45.0, 296.0)):
+        struct.pack_into('<IIIffffI', blob, layout[name], uvpage, va + layout[quads], n, w, h, DEVICES_X[3], y, 0)
         relocs += [layout[name], layout[name] + 4]
     blob[layout['quadsf']:layout['quadsf'] + 9 * 0x34] = frame_quads
     blob[layout['quadsi']:layout['quadsi'] + 0x34] = icon_quad
     blob[layout['quadsl']:layout['quadsl'] + 0x68] = device + settings
     stub_va = va + layout['stub']
     blob[layout['stub']:layout['stub'] + 12] = bytes.fromhex('c74608') + struct.pack('<I', 0xc) + b'\xe9' + struct.pack('<i', base + _off_to_rva(buf, cont) - (stub_va + 12))
-    page_blob, page_relocs = devices_page(buf, build, va + layout['page'], settings[0x14:], cont, labelend)
     blob += page_blob
     relocs += [layout['page'] + r for r in page_relocs]
     out, got = append_section(buf, DEVICES_SECTION, bytes(blob), chars=DATA_SECTION | 0x20000000)
@@ -1535,11 +1540,14 @@ def apply_devices(buf, build):
     return out
 
 
-def devices_page(buf, build, va, quad_tail, cont, labelend):
+def devices_page(buf, build, va, quad_tail, cont, labelend, menu_page, frame_quads):
     """The Device Settings page after the menu's data at `va`: the code,
     the top-level state table with the page's two states, the page's UV
     table and header, its sprites and quads, the draw list, the strings.
-    Returns (bytes, relocation offsets)."""
+    The menu item's cursor frame quads come in over the menu page's UV
+    entries (sheet 10, the blank plate) and go out over this page's, on
+    the appended sheet's copy of that plate. Returns (bytes, relocation
+    offsets, the UV table's address, the frame quads)."""
     row = BUILDS[build]
     base = struct.unpack_from('<I', buf, struct.unpack_from('<I', buf, 0x3c)[0] + 24 + 28)[0]
     opt = row['options']
@@ -1617,6 +1625,11 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
         strings.append(text)
         draw.append((2, ('string', len(strings) - 1), x, y, flags, colour, held))
 
+    frame = bytearray(frame_quads)
+    for k in range(9):
+        entry = struct.unpack_from('<I', frame, k * 0x34)[0]
+        _sheet, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, menu_page + entry * 0x14)
+        struct.pack_into('<I', frame, k * 0x34, uv(('raw', TXR_ICON, u0, v0 - 0.5, u1, v1 - 0.5)))
     device, settings, colon = (piece(PAGE_PIECES[k]) for k in ('DEVICE', 'SETTINGS', 'COLON'))
     bar = copied(stock['bar'], PAGE_BAR_QUADS)
     strips, tops = [], iter(HINT_STRIP_TOPS)
@@ -1714,7 +1727,7 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
         relocs.append(off_draw + i * 40 + 4)
     for text, off in zip(strings, string_offs):
         blob[off:off + len(text)] = text.encode('ascii')
-    return bytes(blob), relocs
+    return bytes(blob), relocs, va + off_uv, bytes(frame)
 
 
 def wheel_mask(size=126):
@@ -1759,8 +1772,8 @@ def txr_check(data):
 def patch_txr(data):
     """OPTIONS.TXR with a thirteenth sheet, 256x256: the icon at its top
     left - the third icon's plate, its picture filled back in, with a
-    steering wheel cut out the same way - and the page's hint lines below
-    it, dark on opaque white as the stock's message strips are (their
+    steering wheel cut out the same way - the cursor frame's blank plate
+    beside it, and the page's hint lines below, dark on opaque white as the stock's message strips are (their
     sheets 4 and 5 are format 0, 555 without alpha). The gutter is clear
     white like the stock sheets', so the edge texels filter to white, not
     to black. Returns the grown file."""
@@ -1783,6 +1796,9 @@ def patch_txr(data):
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
     for y in range(126):
         texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
+    for y in range(128):                    # the cursor frame's blank plate, from the icon sheet's fourth quarter to this one's second
+        row = sheet + ((128 + y) * 256 + 128) * 2
+        texture[(y * 256 + 128) * 2:(y * 256 + 256) * 2] = data[row:row + 256]
     letters = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:HINT_SHEET])   # the frame's messages' lettering
     tops = iter(HINT_STRIP_TOPS)
     for line in HINT_LINES:                 # the hint lines, letter by letter, each in two halves

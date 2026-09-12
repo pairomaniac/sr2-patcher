@@ -308,8 +308,14 @@ way the stock pictures are - holes in the plate, alpha 0 with a one-texel
 ramp, the menu's dark background showing through. The sheet is 256x256
 like the icons', the icon at its top left; the rest is for the page's art.
 The wheel is drawn by the patcher
-(`wheel_mask`), not copied from anywhere; the page's hint lines go under
-it. UV entry `0x11` covers the icon with the car icon's own UVs - the page's are three-decimal values, 126.2
+(`wheel_mask`), not copied from anywhere; beside it the cursor frame's
+blank plate, copied from sheet 10's fourth quarter, and under them the
+page's hint lines. The item's cursor frame draws from that copy through
+the page's own UV table, not from sheet 10 as the other three frames do:
+the renderer draws sheet by sheet, so a frame on sheet 10 over an icon on
+sheet 12 came out under it, the plate grey and only its holes red, where
+the stock frames land over their icons and tint the plate. UV entry
+`0x11` covers the icon with the car icon's own UVs - the page's are three-decimal values, 126.2
 texels across 126 pixels, and exact fractions sample visibly differently.
 The English label sheet is checked by the texels
 of "DEVICE"; a Japanese install, never seen, would fail that check rather
