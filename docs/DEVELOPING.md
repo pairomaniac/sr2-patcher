@@ -25,7 +25,9 @@ tools/sr2.sh au run             # play it
 
 `tools/sr2.sh BUILD ACTION`: `install [LANG]`, `rip`, `patch [KEYS]`,
 `restore`, `run`, `debug [CHANNELS]`, `show`, with the paths from
-`~/.sr2-test`. `run` and `debug` go through umu (Proton) or plain wine
+`~/.sr2-test`. `xinput` needs `noregistry` (which gives the game's own
+block a file of its own and leaves `SR2.CFG` to the text) and `devices`
+needs `xinput`; the patcher refuses the combinations without. `run` and `debug` go through umu (Proton) or plain wine
 and leave the Wine log in `logs/`.
 
 The mix's numbers - the effects' range and the two music offsets - are
@@ -51,6 +53,8 @@ and games and skip themselves without.
 | `offsets` | every original byte string in the file, every combination of patches applying, the all-on result at its pinned MD5; an install older than the tables is noted, not failed |
 | `music` | the music hook under Unicorn, on the build's real `MGAudio.dll` |
 | `altab` | the alt-tab stub and the rewritten restore routine under Unicorn |
+| `padinput` | the pad annex under Unicorn, on the build's real `MGInput.dll`: the store, the pads, the poll |
+| `devices` | the Device Settings page's binding under Unicorn, on the real `Options.dll` over stubbed input objects |
 
 A truncated `data1.cab` works for `cab` (`head -c 16M`). To exercise the
 disc reader without a dump: `genisoimage -o sr2.iso -graft-points
@@ -75,7 +79,7 @@ Code goes in `asm/`, as a transform. The shapes:
   sections, all taken; a further exe stub has to go in the slack at the
   end of `.text` (0x136 bytes European, 0x166 Australian);
 - a section appended to a relocated DLL, the blob finding its own base:
-  `music`, `borderless`;
+  `music`, `borderless`, `xinput`;
 - a routine rewritten in place: `restoreall`;
 - plain sites plus a transform that drops a relocation entry: `managed`.
 

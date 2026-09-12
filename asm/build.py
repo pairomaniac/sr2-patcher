@@ -26,7 +26,7 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('BGROW_BLOB', 'bgrow.asm', ()), ('TITLEROW_BLOB', 'bgrow.asm', ('-DTITLE',)),
          ('FULLWIN_BLOB', 'fullwin.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ()),
          ('MIX_BLOB', 'mix.asm', ()), ('VOLTRACE_BLOB', 'voltrace.asm', ()),
-         ('DEVICES_BLOB', 'devices.asm', ())]
+         ('DEVICES_BLOB', 'devices.asm', ()), ('PADINPUT_BLOB', 'padinput.asm', ())]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -74,6 +74,20 @@ DEVICES_MAGICS = {
     'TEXT': 0xDBDBDBDB,
     'GLYPHS': 0xDCDCDCDC,
     'ROWS': 0xDDDDDDDD,
+    'BINDDATA': 0xDEDEDEDE,
+    'PADPOLL': 0xDFDFDFDF,              # an absolute exe address
+}
+
+# padinput.asm's placeholders: offsets from the blob to MGInput.dll's IAT
+# slots and to the two sites' continuations, filled by the patcher.
+PADINPUT_MAGICS = {
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'UPDATE': 0xE6E6E6E6,
+    'POLL': 0xE8E8E8E8,
+    'CARS': 0xE9E9E9E9,                 # an absolute exe address, not an offset
+    'KBDPOLL': 0xECECECEC,
+    'PUBLISH': 0xEDEDEDED,              # an absolute exe address
 }
 
 # An exe stub's source must not name an exe address: every one moves
@@ -150,6 +164,10 @@ def generated(check=False):
             for magic, value in DEVICES_MAGICS.items():
                 if struct.pack('<I', value) not in raw:
                     raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
+        elif name == 'PADINPUT_BLOB':
+            for magic, value in PADINPUT_MAGICS.items():
+                if struct.pack('<I', value) not in raw:
+                    raise SystemExit('%s: %s does not occur in %s' % (src, magic, name))
         elif name != 'TITLEROW_BLOB':
             for magic, value in EXE_MAGICS.items():
                 want = EXE_BLOB_MAGICS.get(name, ()).count(magic)
@@ -165,6 +183,7 @@ def generated(check=False):
     out.append('EXE_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in EXE_MAGICS.items()))
     out.append('FULLWIN_MAGIC = 0x%08X\n' % SELF_MAGIC)
     out.append('DEVICES_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DEVICES_MAGICS.items()))
+    out.append('PADINPUT_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in PADINPUT_MAGICS.items()))
     out.append(END)
     return ''.join(out)
 

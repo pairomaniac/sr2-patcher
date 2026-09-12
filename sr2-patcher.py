@@ -26,7 +26,6 @@ import zlib
 VERSION = 'dev'
 NAME = 'sr2-patcher'
 LABEL = 'SR2 Patcher'
-REPO_URL = 'https://github.com/pairomaniac/sr2-patcher'
 
 EXE = 'SEGA RALLY 2.exe'
 CAB = 'data1.cab'
@@ -39,7 +38,8 @@ IMAGE_BASE = 0x400000                   # the exe is never relocated
 # the stubs in asm/ read (VAs). MGameD3D.dll is the same file in all
 # three. Everything else in the script is written against the European
 # row; the others map it.
-PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll', 'Title.dll', 'Options.dll')
+PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll', 'MUSASHI\\MGInput.dll',
+           'Title.dll', 'Options.dll')
 
 BUILDS = {
     'European': {
@@ -53,11 +53,13 @@ BUILDS = {
             'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
             'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
             'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
+            'MUSASHI\\MGInput.dll': (90112, '7aa0b3aede10fd247835ad346c2ecee8'),
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
+                  'noregistry': (0xd07c0, 0x7e359), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
                   'flag': 0x273e6, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
@@ -71,7 +73,7 @@ BUILDS = {
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080},
-        'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+        'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'CARS': 0x4d64bc, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'BITCOUNT': 0x4e68cc},
     },
     'American': {
@@ -85,11 +87,13 @@ BUILDS = {
             'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
             'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
             'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
+            'MUSASHI\\MGInput.dll': (90112, '7aa0b3aede10fd247835ad346c2ecee8'),
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
+                  'noregistry': (0xd0bc0, 0x7e779), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),
                   'flag': 0x276a6, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
@@ -100,7 +104,7 @@ BUILDS = {
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080},
-        'addresses': {'MENUTABLES': 0x1009c820, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
+        'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'CARS': 0x4d65ac, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'BITCOUNT': 0x4e69bc},
     },
     'Australian': {
@@ -114,11 +118,13 @@ BUILDS = {
             'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
             'MUSASHI\\MGAudio.dll': (57344, '35d38d59b6bd2a09eb38f0eced9ec5fb'),
             'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
+            'MUSASHI\\MGInput.dll': (90112, '594a3435f9c2ef6f1ac23cd3ba5dd6b1'),
             'Options.dll': (798720, '0af388650bc11dcd6df2377d3d78a535'),
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
                   'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c, 0x5da8),   # Options.dll
+                  'noregistry': (0x115fd4, 0xbd959), 'xinput': (0x7940, 0x7a20, 0x6940, 0x81a8, 0x7e40),   # the latter MGInput.dll
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980),
@@ -131,7 +137,7 @@ BUILDS = {
         'options': {'BINDPAGE': 0x10013df0, 'DRAW': 0x100138b0, 'PLAYSOUND': 0x10010670, 'INPUT': 0x100c1b1c,
                     'SOUNDOBJ': 0x100be46c, 'HANDLES': 0x100be470, 'TOPTABLE': 0x10006500,
                     'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090},
-        'addresses': {'MENUTABLES': 0x100a2708, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
+        'addresses': {'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'CARS': 0x52f9cc, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'BITCOUNT': 0x53fddc, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8},
     },
 }
@@ -267,6 +273,38 @@ def patches(build):
     if 'mixer' in site:
         table['mixerless'] = ('MUSASHI\\MGAudio.dll', ((site['mixer'], bytes.fromhex('0f8530010000'), None),),
                               'apply_mixerless')
+    # The game's own 100-byte display block goes to SR2.DSP - its file name
+    # string renamed, one string for the read and the write - leaving SR2.CFG
+    # to the controls text the input DLL keeps from byte 0; and the registry
+    # key is never opened. The Australian MGInput.dll is an older build the
+    # annex is not written for, so that release keeps both for now.
+    if 'xinput' in site:
+        cfgname, regopen = site['noregistry']
+        table['noregistry'] = (EXE, (
+            (cfgname, b'SR2.CFG', b'SR2.DSP'),
+            (regopen, bytes.fromhex('8b45008b0868') + struct.pack('<I', row['addresses']['REGNAMES'][0]) + b'\x68'
+             + struct.pack('<I', row['addresses']['REGNAMES'][1]) + bytes.fromhex('50ff510c8bf0'),
+             bytes.fromhex('33f6') + b'\x90' * 19)), None)
+        # The menus' left and right are the steering's actions 4 and 5, read
+        # by several routes, so the annex answers the inputs that keep the
+        # menus navigable only while the exe's car table (CARS) is empty: the
+        # cars exist from a race's setup to its teardown, whatever the mode.
+        # The European and American MGInput.dll hook the device's poll; the
+        # Australian, an older build with static polls, the keyboard poll's
+        # address in the record update's dispatch (a relocated immediate).
+        if len(site['xinput']) == 4:
+            load, save, update, poll = site['xinput']
+            hook = (poll, bytes.fromhex('8b4424048b480c85c9'), None)
+            prologue = bytes.fromhex('538b5c240855')
+        else:
+            load, save, update, poll, kbdpoll = site['xinput']
+            hook = (poll, struct.pack('<I', 0x10000000 + kbdpoll), None)
+            prologue = bytes.fromhex('81ec94020000')
+        table['xinput'] = ('MUSASHI\\MGInput.dll', (
+            (load, bytes.fromhex('81ec0c020000'), None),
+            (save, bytes.fromhex('81ec04010000'), None),
+            (update, prologue, None),
+            hook), 'apply_xinput')
     return table
 
 
@@ -291,6 +329,7 @@ TITLEROW_SECTION = b'.sr2t'
 FULLWIN_SECTION = b'.sr2f'
 ALTENTER_SECTION = b'.sr2k'
 MIXERLESS_SECTION = b'.sr2v'
+XINPUT_SECTION = b'.sr2p'
 CODE_SECTION = 0x60000020               # IMAGE_SCN_CNT_CODE | MEM_EXECUTE | MEM_READ
 
 
@@ -545,48 +584,216 @@ VOLTRACE_BLOB = bytes.fromhex(
     '7567537472696e674100'
 )
 DEVICES_BLOB = bytes.fromhex(
-    'e918000000e9a1000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
-    'e6ffffff8dbbd1d1d1d1c787fa04000000002044c7870205000000000000c787'
-    '0605000000000000c7870a05000000000000c7870e05000010000000c7871205'
-    '000000000000c7871e05000000000000c787220500000000000083bff6040000'
-    '007523c787f6040000010000008d83d8d8d8d8508d83d9d9d9d9508d83d3d3d3'
-    'd3ffd083c408ff46085f5b535755e857ffffff8dabd1d1d1d18dbbdadadada8b'
-    '0785c00f84d00100008b4f0c898d26050000c7852a0500000000803fe87f0100'
-    '00734980f905724483bd1e05000000740b80f9060f845e010000eb0980f9070f'
-    '84530100008b8d12050000898d2a050000d9470cd8a51a050000d88d12050000'
-    'd8851a050000d99d2605000083f8020f84ac0000006a006a006a00e820010000'
-    '735c80f905735780f901751983bd1e0500000075356a006a0068000100006800'
-    '010000eb4531d280f9027505ba2000000080f90375068b950a05000052526800'
-    '0100006800010000eb208b950a050000680001000052526800010000eb0cff77'
-    '20ff771cff7718ff7714ffb52a050000680000803f6a006a006a00ff7710ffb5'
-    '2605000050d94708d885fa040000d91c24ff77048d83d4d4d4d4ffd083c440eb'
-    '77ff77108d83dcdcdcdc50e870000000732480f904751f8b850a050000d1f805'
-    '8000000068000100006800010000680001000050eb0cff7720ff771cff7718ff'
-    '7714ffb52a050000680000803f68000020416800002041ffb52605000050d947'
-    '08d885fa040000d91c24ff77048d83dbdbdbdbffd083c43483c728e95ffeffff'
-    '508b4f2485c9742e0fb6c1483985060500007c220fb6c5483985060500007f16'
-    'c1e91080f903750b0fb6c5398522050000750358f9c358f8c38b850e05000003'
-    '850a05000089850a0500003d000100007e14c7850a05000000010000c7850e05'
-    '0000f0ffffff85c07914c7850a05000000000000c7850e0500001000000083bd'
-    '0205000000757b8b85fa04000085c0742fd985fa040000d8a5fe040000d99dfa'
-    '0400008b85fa04000085c00f8fda010000c785fa04000000000000e9cb010000'
-    '8b85120500003d0000803f0f8398000000d98512050000d88516050000d99d12'
-    '05000081bd120500000000803f0f8298010000c785120500000000803fe98901'
-    '00008b851205000085c0742fd98512050000d8a516050000d99d120500008b85'
-    '1205000085c00f8f5f010000c7851205000000000000e950010000d985fa0400'
-    '00d8a5fe040000d99dfa04000081bdfa040000000020c40f822e010000c74608'
-    '01000000e9220100008b83d6d6d6d68b480885c90f84110100008b116a01ff52'
-    '1489c783bd1e050000000f85b1000000f6c40474128b8506050000403ddddddd'
-    'dd7e1731c0eb13f6c40274238b8506050000487905b8dddddddd898506050000'
-    'b80e000000e8ab000000e9bc000000f7c7020000000f85840000008b85060500'
-    '003ddddddddd753bf7c700180000741683b52205000001b80e000000e8740000'
-    '00e985000000f7c741000000747db80f000000e85d00000083bd220500000174'
-    '48eb68f7c7410000007460c7851e05000001000000b80f000000e836000000eb'
-    '4af7c7020000007442c7851e05000000000000b810000000e818000000eb2cb8'
-    '10000000e80c000000c7850205000001000000eb168b8bd7d7d7d76a006a006a'
-    '00508d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe000000000000000000000'
-    '20420000000000000000000000000000000000000000cdcccc3d0080e1430000'
-    '0000000000000000000000000000'
+    'e918000000e9c0000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
+    'e6ffffff8dbbd1d1d1d1c787710b000000002044c787790b000000000000c787'
+    '7d0b000000000000c787810b000000000000c787850b000010000000c787890b'
+    '000000000000c787950b000000000000c787990b000000000000c787a90b0000'
+    '0000000083bf6d0b0000007523c7876d0b0000010000008d83d8d8d8d8508d83'
+    'd9d9d9d9508d83d3d3d3d3ffd083c4088d83dededede80780f0074095589fde8'
+    '940900005dff46085f5b535755e838ffffff8dabd1d1d1d18dbbdadadada8b07'
+    '85c00f84c60100008b4f0c898d9d0b0000c785a10b00000000803fe875010000'
+    '734980f905724483bd950b000000740b80f9060f8454010000eb0980f9070f84'
+    '490100008b8d890b0000898da10b0000d9470cd8a5910b0000d88d890b0000d8'
+    '85910b0000d99d9d0b000083f8020f84a20000006a006a006a00e81601000073'
+    '5280f905734d80f901751983bd950b000000752b6a006a006800010000680001'
+    '0000eb3b31d280f90375068b95810b0000525268000100006800010000eb208b'
+    '95810b0000680001000052526800010000eb0cff7720ff771cff7718ff7714ff'
+    'b5a10b0000680000803f6a006a006a00ff7710ffb59d0b000050d94708d88571'
+    '0b0000d91c24ff77048d83d4d4d4d4ffd083c440eb77ff77108d83dcdcdcdc50'
+    'e870000000732480f904751f8b85810b0000d1f8058000000068000100006800'
+    '010000680001000050eb0cff7720ff771cff7718ff7714ffb5a10b0000680000'
+    '803f68000020416800002041ffb59d0b000050d94708d885710b0000d91c24ff'
+    '77048d83dbdbdbdbffd083c43483c728e969feffff508b4f2485c9742e0fb6c1'
+    '4839857d0b00007c220fb6c54839857d0b00007f16c1e91080f903750b0fb6c5'
+    '3985990b0000750358f9c358f8c38b85850b00000385810b00008985810b0000'
+    '3d000100007e14c785810b000000010000c785850b0000f0ffffff85c07914c7'
+    '85810b000000000000c785850b00001000000083bd790b000000757b8b85710b'
+    '000085c0742fd985710b0000d8a5750b0000d99d710b00008b85710b000085c0'
+    '0f8fa5020000c785710b000000000000e9960200008b85890b00003d0000803f'
+    '0f8398000000d985890b0000d8858d0b0000d99d890b000081bd890b00000000'
+    '803f0f8263020000c785890b00000000803fe9540200008b85890b000085c074'
+    '2fd985890b0000d8a58d0b0000d99d890b00008b85890b000085c00f8f2a0200'
+    '00c785890b000000000000e91b020000d985710b0000d8a5750b0000d99d710b'
+    '000081bd710b0000000020c40f82f9010000c7460801000000e9ed0100008b83'
+    'd6d6d6d68b480885c90f84dc0100008b116a01ff521489c783bd950b0000000f'
+    '8593010000f6c40474128b857d0b0000403ddddddddd7e1731c0eb13f6c40274'
+    '238b857d0b0000487905b8dddddddd89857d0b0000b80e000000e876010000e9'
+    '87010000f7c7020000000f854f0100008b857d0b00003ddddddddd755bf7c700'
+    '180000741683b5990b000001b80e000000e83f010000e950010000f7c7410000'
+    '000f8444010000b80f000000e82401000083bd990b0000010f840b0100008d83'
+    'dededede80780f000f841d010000e8e3040000e9130100008d83dededede8078'
+    '0f000f8403010000e84302000081fafe000000743c81faff000000745bf7c741'
+    '0000000f84e2000000e872020000c785950b000001000000c785a50b00000000'
+    '0000b80f000000e8a9000000e9ba000000f7c7411800000f84ae00000083b5a9'
+    '0b000001e82f050000b80e000000e882000000e993000000f7c7001800000f84'
+    '87000000508d04c5000000008d04c53f030000e861010000f7c700080000740b'
+    '2df4010000791531c0eb1105f40100003d282300007605b828230000e8980400'
+    '0058e812010000e8cc040000b80e000000e81f000000eb33e805020000eb2cb8'
+    '10000000e80c000000c785790b000001000000eb168b8bd7d7d7d76a006a006a'
+    '00508d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe08b83d6d6d6d68b40088b'
+    '4004c385c0740a50518b0850ff51085958c351526a0089c189e2e8d7ffffff52'
+    '51508b00ff5034585a59c356578bb0240100008b0639f0744f8b7808398f0c01'
+    '0000753d83bf38010000007434508b873c0100003d00010000721a2d00030000'
+    '3d80000000731ea9200000007517b801000000eb0231c039d058750589f85f5e'
+    'c38b00ebb058ebf931c05f5ec351525689d60fb68c0bdedededee873ffffff85'
+    'c074125089f2e880ffffff89c658e850ffffff89f05e5a59c3505152e851ffff'
+    'ff5a85c07410506a0152508b08ff513058e82dffffff5958c351526a008b0ddf'
+    'dfdfdf85c9740889e26a005250ffd1585a59c351526a006a00e8f8feffff8d54'
+    '2404526a006a03508b08ff51208b44240485c0741489e26a0052508b08ff5138'
+    '8b442404e8dafeffff5883c4045a59c38b85a90b00008b8d7d0b0000bafe0000'
+    '0085c97409490fb6940bdedededec3518d0cc5000000008d04cd000300005901'
+    'c8e873ffffff83f912720c3d881300000f97c00fb6c0c385c00f95c00fb6c0c3'
+    '50515657e86affffff8dbdc50b0000b94000000085c0740689c6f3a5eb0431c0'
+    'f3abe889ffffff31c950e8a0ffffff88840dc50c0000584183f91a72ec5f5e59'
+    '58c35156e82affffff85c0744889c6f6460180740e80bdc60b0000007505e987'
+    '000000b902000000f6040e80741680bc0dc50b000000751489c8e8ba000000e9'
+    '88000000c6840dc50b0000004181f90001000072d3e816ffffff31c983f90474'
+    '2650e828ffffff85c058741380bc0dc50c000000751189c8e8f4000000eb4dc6'
+    '840dc50c0000004183f91a72cfb904000000e8f8feffff85c07425ff85a50b00'
+    '0083bda50b00003c7236c785950b000000000000b810000000e825000000eb20'
+    'c785a50b000000000000eb14c785950b000000000000b80f000000e803000000'
+    '5e59c38b8bd7d7d7d76a006a006a00508d83d5d5d5d5ffd0c35152565789c6e8'
+    '6cfeffff31d2e8c2fdffff85c0745d89c78b873c0100008985b90b000031c031'
+    'c931d250e8a4fdffff85c0741839f8741439b03c010000750c8b95b90b000089'
+    '903c010000584183f90872d54083f80272cd89b73c01000031c031d2e898fdff'
+    'ff40e892fdffffe84c0100005f5e5a59c35152565789c6e8f4fdffff508d04c5'
+    '000000008d04c50003000001c658ba01000000e835fdffff85c0745589c78b87'
+    '3c0100008985b90b0000e8c1fdffff31c9ba0100000050e811fdffff85c07418'
+    '39f8741439b03c010000750c8b95b90b000089903c010000584183f90872d289'
+    'b73c01000031d2e80dfdffffe8c70000005f5e5a59c3505152565731c031c98d'
+    '34c50000000001ce8db4b3dededede83c61031d250e8b3fcffff85c074090fb7'
+    '1689903c0100008b0424ba01000000e899fcffff85c074188b1424c1e20681c2'
+    '000300000fb77e0201fa89903c010000584183f90872a850b8e8030000e81700'
+    '000058e891fcffff4083f802728fe8450000005f5e5a5958c35051568db5bd0b'
+    '000066c706445a83c602b9e803000031d2f7f104308806465289c831d2b90a00'
+    '0000f7f189c15885c975e4c606008d95bd0b00005e5958c350515256578b85a9'
+    '0b000031c950518d3c09c1e7048dbc3bdededede83c75031d2e8effbffff31f6'
+    '85c074070fb6b03c0100008d34768db4b3dededede81c690020000e8b9000000'
+    '8b4424048b0c24ba0100000083c710e8b9fbffff89c685c0741b8bb63c010000'
+    '83e63f8d34768db4b3dededede81c6900e0000eb0c8db3dededede81c6900200'
+    '00e87300000059584183f9080f8273ffffff8dbbdededede81c750010000508d'
+    '04c5000000008d04c53f030000e8a7fbffff31d2b964000000f7f1b90a000000'
+    '31d2f7f185c07405043088074780c2308817c6470100588dbbdededede81c770'
+    '0100008db5ad0b0000e80b00000004318847075f5e5a5958c3515657b9030000'
+    '00f3a5c707000000005f5e59c300000000000000000000204200000000000000'
+    '00000000000000000000000000cdcccc3d0080e1430000000000000000000000'
+    '00000000000000000000000000504c4159455220310000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000'
+)
+PADINPUT_BLOB = bytes.fromhex(
+    'e923000000e980000000e948070000e922080000e975080000e9ba080000e800'
+    '0000005b83eb23c3535657e8eeffffffe8350200008b742414e834010000723f'
+    '31c9837c2418007524e8330100008b7c241c85ff74173b4c242076048b4c2420'
+    '516bc90d8db3c8280000f3a5598b54242485d27402890a31c05f5e5bc21800b8'
+    '570007805f5e5bc21800535657e88cffffffe8d30100008b742414e8d2000000'
+    '0f82c100000089c78b74241885f6742266813e445a751b83c602e85b0400003d'
+    '102700007605b8102700008984bbc02000006bc7348d941858200000b90d0000'
+    '0066c702000066c74202ff0083c2044975ef8b74241c8b4c242085c9745c8b06'
+    '83f80d734f6bd7348d14828d9413582000008b46143d00010000730f85c07434'
+    '66833a00752e668902eb293d0003000072223d80030000731b66817a02ff0075'
+    '1383e03f83f83f740ba92000000075046689420283c63449eba0e8d903000031'
+    'c05f5e5bc21400b8570007805f5e5bc214000fb60683e83083f8017702f8c3f9'
+    'c35256575589c58dbbc82800006bf0348db4335820000031c931d2520fb70651'
+    '89d1e88c00000059410fb746023dff000000740fe86b0000005189d1e8720000'
+    '0059415a83c6044283fa0d72ce6bf5088db4332420000031d20fb70605000400'
+    '00510fb68c1351200000e844000000594183c6024283fa0472df8db334200000'
+    'ba080000000fb64601e816000000510fb60ee81c000000594183c6024a75e65d'
+    '5f5e5ac35189e9c1e10601c8050003000059c3515089c8ab31c083f902721383'
+    'f905770eb80a000000abb803000000abeb02abab31c0abb810270000ab58ab31'
+    'c0b907000000f3ab59c383bbb00b0000000f859c00000060e8d9070000c783b0'
+    '0b0000010000008d4319a3edededed8db3bc1f00008dbb58200000b91a000000'
+    'f3a5c783c0200000e8030000c783c4200000e80300006a036800000080e82804'
+    '000083f8ff744b89c68d83c82000006a008d8bc00b00005168ff0700005056ff'
+    '93940b000056ff93a00b00008b83c00b0000c68418c82000000031c081bbc820'
+    '0000646973707505b864000000e80200000061c38db418c8200000c783b80b00'
+    '00ffffffffe895010000750e803e000f844a010000e933010000803e5b756cc7'
+    '83b80b0000ffffffff0fb6460183e83183f8010f8714010000807e02500f850a'
+    '0100008983bc0b000089fee84f0100000f84f7000000c783b80b000001000000'
+    '803e430f84e4000000c783b80b000000000000803e4b0f84d1000000c783b80b'
+    '0000ffffffffe9c200000083bbb80b0000ff0f84b500000083f9087544813e44'
+    '656164753c817e047a6f6e65753383bbb80b0000010f859200000089fee8b400'
+    '00000f8485000000e82d010000e8bd0000008b93bc0b0000898493c0200000eb'
+    '6c8d93ec1e00006a0de8d7000000785d5089fee87e000000745083bbb80b0000'
+    '01741d8d93ec0c00006800010000e8b200000078355ae845000000668906eb2d'
+    'b8ff00000083f9017505803e2d740f8d93ec1c00006a20e889000000780c5ae8'
+    '1c00000066894602eb0383c40489fe8a0684c0740a463c0a75f5e9a6feffffc3'
+    '508bb3bc0b00006bf6348d34968db4335820000058c3e824000000741183f901'
+    '750c803e3d750789fee811000000c36bc0643d282300007605b828230000c331'
+    'c98a063c2074083c0974043c0d750346ebef89f78a0784c074083c2076044741'
+    'ebf285c9c356575189d731c05657518a163a17750f46474975f5803f00750559'
+    '5f5eeb10595f5e83c710403b44241072db83c8ff595f5ec2040031c0803e2075'
+    '0346ebf80fb61683ea3083fa0977086bc00a01d046ebedc360e8180500008dbb'
+    'c82000008db3ae060000e82e01000031edc783b80b000001000000b00aaab05b'
+    'aa8d4531aab050aab020aa8db3c706000083bbb80b00000174068db3d2060000'
+    'e8f8000000b05daab00aaa83bbb80b000001751a8db3db060000e8de0000008b'
+    '84abc0200000e8db000000b00aaa31d20fb68413442000003dff000000746b50'
+    'c1e0048db418ec1e0000e8ae0000008db3e6060000e8a3000000586bf5348d34'
+    '868db4335820000083bbb80b00000175210fb746023dff0000007505b02daaeb'
+    '23c1e0048db418ec1c0000e86d000000eb120fb706c1e0048db418ec0c0000e8'
+    '59000000b00aaa42eb86ff8bb80b00000f8925ffffff4583fd020f8211ffffff'
+    '8db3c820000029f76a0468000000c0e89600000083f8ff742289c56a008d8bc0'
+    '0b000051575655ff93980b000055ff93a80b000055ff93a00b000061c3ac84c0'
+    '7403aaebf8c35152b96400000031d2f7f1b220881747b90a00000031d2f7f185'
+    'c074030430aa88d00430aa5a59c33b20534547412052414c4c59203220636f6e'
+    '74726f6c730a00436f6e74726f6c6c6572004b6579626f61726400446561647a'
+    '6f6e65203d00203d200056578dbbe80b00006804010000576a00ff93a40b0000'
+    '89fe8a0784c07409473c5c75f589feebf1c7065352322ec74604434647006a00'
+    '6880000000ff7424186a006a03ff7424208d83e80b000050ff93900b000083f8'
+    'ff740f506a006a006a0050ff939c0b0000585f5ec2080060e8c1f8ffff8d83e6'
+    'e6e6e68944241c8b4424240fb6700c83ee3083fe01771485f6750ba1e9e9e9e9'
+    '8983b40b0000e80900000061c1c1c1c1c1c1ffe0e8bd0200008b83ac0b000083'
+    'f80176670fb68c33c40b000085c9741c49e86b00000085c07466c68433c40b00'
+    '0000c68433c60b00003ceb3ffe8c33c60b00007936c68433c60b00003c31c98d'
+    '41018d56fff7da3a8413c40b00007415e82c00000085c0750c8d4101888433c4'
+    '0b0000eb1b4183f90472d48dbbcc0b00006bc61001c731c08907894704894708'
+    'c3516bc6108d8418c80b00005051ff93ac0b000059c3535657e8e0f7ffff8b44'
+    '241031d280b8600200000375068b90080300008b4c2414e8b4000000731c8b4c'
+    '241c85c9740289118b4c241885c97402890131c05f5e5bc210008d93e8e8e8e8'
+    '5f5e5bc2c2c2c2c2c2c2c2c2ffe2535657e888f7ffff8b44241031d280780803'
+    '75048b5424148b4c2418e861000000731c8b4c242085c9740289118b4c241c85'
+    'c97402890131c05f5e5bc214008d83ecececec5f5e5bffe0535657e83ef7ffff'
+    '8b4c241031d2e825000000720731c0ba800000008b4c241885c9740289118b4c'
+    '241485c97402890131c05f5e5bc20c0081e90003000081f980000000723181e9'
+    '0001000081f9000100007202f8c331c085d2741483bbb40b000000750b803c0a'
+    '007405b880000000ba80000000f9c389cec1ee0683e13f83f93f741df7c12000'
+    '0000741583e1df83bbb40b000000740931c0ba80000000f9c3e802000000f9c3'
+    '6bfe108dbc3bc80b000083f93f0f84ae00000083f91073190fb747040fa3c8b8'
+    '000000007305b880000000ba80000000c383e91083f90273120fb6440f0683f8'
+    '1e730231c0baff000000c383e90283f908737b0fb6944b7c0b00000fbf041780'
+    'bc4b7d0b0000007502f7d885c07f0831c0ba10270000c3508b84b3c020000069'
+    'c0ff7f0000b91027000031d2f7f189c15829c87f0831c0ba10270000c369c010'
+    '270000f7d981c1ff7f000031d2f7f13d102700007605b810270000ba10270000'
+    'c38b84b3c0200000ba10270000c331c0ba10270000c383bb8c0b000000757860'
+    'c7838c0b0000010000008d83d80a000050ff93e3e3e3e389c68dbb900b00008d'
+    'abe50a00005556ff93e4e4e4e4ab45807dff0075f9807d000075ea8dab400b00'
+    '0055ff93e3e3e3e385c074128d8b6d0b00005150ff93e4e4e4e485c075124580'
+    '7dff0075f9807d000075d6b8010000008983ac0b000061c36b65726e656c3332'
+    '2e646c6c0043726561746546696c6541005265616446696c6500577269746546'
+    '696c650053657446696c65506f696e74657200436c6f736548616e646c650047'
+    '65744d6f64756c6546696c654e616d654100536574456e644f6646696c650000'
+    '78696e707574315f342e646c6c0078696e707574315f332e646c6c0078696e70'
+    '7574395f315f302e646c6c000058496e70757447657453746174650008000801'
+    '0a010a000c000c010e010e000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -622,6 +829,17 @@ DEVICES_MAGICS = {
     'TEXT': 0xDBDBDBDB,
     'GLYPHS': 0xDCDCDCDC,
     'ROWS': 0xDDDDDDDD,
+    'BINDDATA': 0xDEDEDEDE,
+    'PADPOLL': 0xDFDFDFDF,
+}
+PADINPUT_MAGICS = {
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'UPDATE': 0xE6E6E6E6,
+    'POLL': 0xE8E8E8E8,
+    'CARS': 0xE9E9E9E9,
+    'KBDPOLL': 0xECECECEC,
+    'PUBLISH': 0xEDEDEDED,
 }
 # --- GENERATED by asm/build.py: END ---
 
@@ -1311,6 +1529,147 @@ def apply_altenter(buf, build):
     return out
 
 
+# The bind store, as padinput.asm keeps it: SR2.CFG as text, a section a
+# player and device of "Name = value" lines for the eight driving actions
+# and "Deadzone = 10" in percent, names as below with spaces as
+# underscores. The annex generates the game's 0x34-byte records from it.
+# Pad sources are 0x300 + player * 0x40 + input.
+PAD_BASE = 0x300
+PAD_PLAYER = 0x40
+PAD_DEADZONE = 1000
+# the pad inputs, by index
+PAD_UP, PAD_DOWN, PAD_LEFT, PAD_RIGHT, PAD_START, PAD_BACK, PAD_LS, PAD_RS, PAD_LB, PAD_RB = range(10)
+PAD_A, PAD_B, PAD_X, PAD_Y, PAD_LT, PAD_RT = 12, 13, 14, 15, 16, 17
+PAD_LS_LEFT, PAD_LS_RIGHT, PAD_LS_UP, PAD_LS_DOWN = 18, 19, 20, 21
+# the actions: 0 accel, 1 brake, 2 up, 3 down, 4 left, 5 right, 6 shift up,
+# 7 shift down, 8 handbrake, 9 view, 10 enter, 11 escape, 12 start (the
+# race's pause, a confirm in the menus). 2-5 repeat.
+# the driving actions by name; the menus' (2, 3, 10, 11, 12) have none
+# and are fixed
+ACTION_NAMES = ('Accelerate', 'Brake', '', '', 'SteeringLeft', 'SteeringRight', 'ShiftUp', 'ShiftDown',
+                'Handbrake', 'View', '', '', '')
+TEXT_ORDER = (4, 5, 0, 1, 6, 7, 8, 9)   # the actions as the text lists them
+# the exe's own keyboard table (Type A), and the manual's for player 2
+KEYS_1P = {0: 0x2d, 1: 0x2e, 2: 0xc8, 3: 0xd0, 4: 0xcb, 5: 0xcd, 6: 0xd0, 7: 0xc8, 8: 0x39, 9: 0x2f, 10: 0x1c, 11: 0x01, 12: 0x1c}
+KEYS_2P = {0: 0x11, 1: 0x1f, 2: 0x11, 3: 0x1f, 4: 0x1e, 5: 0x20, 6: 0x30, 7: 0x31, 8: 0x23, 9: 0x15, 10: 0x39, 11: 0x31, 12: 0x39}
+PAD_DEFAULT = {0: PAD_RT, 1: PAD_LT, 2: PAD_UP, 3: PAD_DOWN, 4: PAD_LS_LEFT, 5: PAD_LS_RIGHT, 6: PAD_A, 7: PAD_X, 8: PAD_B, 9: PAD_Y,
+               10: PAD_A, 11: PAD_B, 12: PAD_START}
+# what the menus keep whatever is bound: keys per player and pad inputs
+# on actions 2-5. Left and right are the steering's actions, so those
+# are menu-only - a scancode at MENUKEY_BASE, a pad input with MENU_ONLY
+# set - answered only outside a race; up and down are nobody else's and
+# stay plain, for the pause menu.
+MENU_ONLY, MENUKEY_BASE = 0x20, 0x400
+FIXED_ACTIONS = (2, 3, 4, 5)
+FIXED_KEYS = ((0xc8, 0xd0, 0xcb, 0xcd), (0x11, 0x1f, 0x1e, 0x20))
+FIXED_PADS = ((2, PAD_UP), (3, PAD_DOWN), (4, PAD_LEFT | MENU_ONLY), (5, PAD_RIGHT | MENU_ONLY),
+              (2, PAD_LS_UP), (3, PAD_LS_DOWN), (4, PAD_LS_LEFT | MENU_ONLY), (5, PAD_LS_RIGHT | MENU_ONLY))
+ANNEX_NAME = 16
+ANNEX_TABLES, ANNEX_END = 4972, 9180    # the tables' size and the working area's end, as padinput.asm lays them out
+
+
+def annex_tables():
+    """The name tables and defaults after padinput.asm's code."""
+    out = bytearray(ANNEX_TABLES)
+
+    def names(offset, table):
+        for i, name in enumerate(table):
+            name = name.replace(' ', '_').encode('ascii')
+            out[offset + i * ANNEX_NAME:offset + i * ANNEX_NAME + len(name)] = name
+    names(0, [KEY_NAMES.get(code, 'KEY %d' % code) for code in range(256)])
+    names(4096, PAD_NAMES)
+    names(4608, ACTION_NAMES)
+    for player, keys in enumerate((KEYS_1P, KEYS_2P)):
+        for action in range(13):
+            struct.pack_into('<HH', out, 4816 + (player * 13 + action) * 4, keys[action], PAD_DEFAULT[action])
+        struct.pack_into('<4H', out, 4920 + player * 8, *FIXED_KEYS[player])
+    for i, (action, pad) in enumerate(FIXED_PADS):
+        out[4936 + i * 2], out[4936 + i * 2 + 1] = action, pad
+    out[4952:4952 + len(TEXT_ORDER) + 1] = bytes(TEXT_ORDER) + b'\xff'
+    out[4965:4965 + 4] = bytes(FIXED_ACTIONS)
+    return bytes(out)
+
+
+def annex_records(player, table=None):
+    """The records the annex generates for a player from a table of
+    (key, pad input or None) per action - the defaults when none - in the
+    order it lays them out."""
+    if table is None:
+        keys = (KEYS_1P, KEYS_2P)[player]
+        table = [(keys[a], PAD_DEFAULT[a]) for a in range(13)]
+
+    def record(action, source):
+        delay, rate = (10, 3) if 2 <= action <= 5 else (0, 0)
+        return struct.pack('<13I', action, delay, rate, 0, 10000, source, 0, 0, 0, 0, 0, 0, 0)
+    out = []
+    for action, (key, pad) in enumerate(table):
+        out.append(record(action, key))
+        if pad is not None:
+            out.append(record(action, PAD_BASE + player * PAD_PLAYER + pad))
+    for action, key in zip(FIXED_ACTIONS, FIXED_KEYS[player]):
+        out.append(record(action, MENUKEY_BASE + key))
+    for action, pad in FIXED_PADS:
+        out.append(record(action, PAD_BASE + player * PAD_PLAYER + pad))
+    return out
+
+
+def annex_text(tables=None, deadzones=(PAD_DEADZONE, PAD_DEADZONE)):
+    """The text the annex writes, as it lays it out: for the defaults, or
+    for a (key, pad input or None) per action per player."""
+    defaults = [[(keys[a], PAD_DEFAULT[a]) for a in range(13)] for keys in (KEYS_1P, KEYS_2P)]
+    tables = [t or defaults[i] for i, t in enumerate(tables or (None, None))]
+    lines = ['; SEGA RALLY 2 controls']
+    for player, table in enumerate(tables):
+        for device in ('Controller', 'Keyboard'):
+            lines += ['', '[%dP %s]' % (player + 1, device)]
+            if device == 'Controller':
+                lines.append('Deadzone = %d' % (deadzones[player] // 100))
+            for action in TEXT_ORDER:
+                key, pad = table[action]
+                name = KEY_NAMES[key] if device == 'Keyboard' else ('-' if pad is None else PAD_NAMES[pad])
+                lines.append('%s = %s' % (ACTION_NAMES[action], name.replace(' ', '_')))
+    return ''.join(line + '\n' for line in lines).encode('ascii')
+
+
+def apply_xinput(buf, build):
+    """padinput.asm in MGInput.dll, its tables and working area after the
+    code: the registry helper's load and save and the config's update each
+    jump to it, their displaced bytes copied into its replay slots; the
+    device's poll too on the European and American build, while on the
+    Australian the keyboard poll's address in the record update's dispatch
+    is pointed at the annex's five-argument entry."""
+    sites = BUILDS[build]['sites']['xinput']
+    load, save, update, poll = sites[:4]
+    blob = PADINPUT_BLOB + annex_tables() + b'\0' * (ANNEX_END - ANNEX_TABLES)
+    out, rva = append_section(buf, XINPUT_SECTION, blob, chars=CODE_SECTION | 0x80000000)
+    values = {
+        'LOADLIB': _iat_slot(buf, 'kernel32.dll', 'LoadLibraryA'),
+        'GETPROC': _iat_slot(buf, 'kernel32.dll', 'GetProcAddress'),
+        'UPDATE': _off_to_rva(buf, update + 6),
+        'POLL': _off_to_rva(buf, poll + 9) if len(sites) == 4 else 0,
+        'KBDPOLL': sites[4] if len(sites) == 5 else 0,
+    }
+    code = bytearray(PADINPUT_BLOB)
+    for name, magic in PADINPUT_MAGICS.items():
+        if name in ('CARS', 'PUBLISH'):
+            code = code.replace(struct.pack('<I', magic), struct.pack('<I', BUILDS[build]['addresses'][{'CARS': 'CARS', 'PUBLISH': 'PADPOLL'}[name]]))
+        else:
+            code = code.replace(struct.pack('<I', magic), struct.pack('<i', values[name] - rva))
+    for marker, site, length in ((b'\xc1' * 6, update, 6), (b'\xc2' * 9, poll if len(sites) == 4 else None, 9)):
+        if code.count(marker) != 1:
+            raise ValueError('padinput.asm: the replay slot %s is not there once' % marker.hex())
+        code = code.replace(marker, bytes(buf[site:site + length]) if site is not None else b'\x90' * length)
+    start = _rva_to_off(out, rva)
+    out[start:start + len(code)] = code
+    for off, entry, length in ((load, 0, 6), (save, 5, 6), (update, 10, 6)):
+        _branch(out, off, rva + entry, length, op=b'\xe9')
+    if len(sites) == 4:
+        _branch(out, poll, rva + 15, 9, op=b'\xe9')
+    else:
+        struct.pack_into('<I', out, poll, 0x10000000 + rva + 20)
+    return out
+
+
 def apply_mixerless(buf, build):
     """MGAudio's Init, on finding no CD mixer line: `jne fail` becomes a
     jump to a stub that zeroes the control count it is about to allocate
@@ -1366,18 +1725,76 @@ DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the pa
 # frame's lettering (HINT_GLYPHS). Colours are (alpha, red, green, blue)
 # in 256ths, as the sprite call takes them.
 PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'COLON': (6, 143, 16, 151, 30)}
-PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'row': (1, (0, 0, 330, 18)), 'band': (2, (-154, -13, 0, 13)),
+PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'gsrow': (3, (0, 0, 123, 18)), 'band': (2, (-154, -13, 0, 13)),
               'bar': (7, (-216, -28, -200, 0)), 'default': (1, (-58, -10, 59, 10))}
 PAGE_BUTTON_X = (253.0, 386.0)          # DEFAULT and BACK, as the stock pages place them
 PAGE_BAR_QUADS, PAGE_BAR_Y, PAGE_STRIP_Y = 5, 451.0, -20.0
-PAGE_ACTIONS = (('STEERING', 'LEFT STICK'), ('ACCEL', 'RT'), ('BRAKE', 'LT'), ('SHIFT UP', 'A'), ('SHIFT DOWN', 'X'),
-                ('HANDBRAKE', 'B'), ('VIEW', 'Y'))
-PAGE_GROUPS = ('PLAYER 1', 'PLAYER 2')
-PAGE_GROUP_X, PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP, PAGE_GROUP_GAP = 48.0, 261.0, 118.0, 18.0, 6.0   # the stock's plates, the block centred
-PAGE_GROUP_TEXT_X, PAGE_ACTION_X, PAGE_COLON_X, PAGE_VALUE_X, PAGE_TEXT_DY = 56.0, 269.0, 397.0, 405.0, 2.0
+# The rows, each an action the page binds a key and a pad input to; the
+# last is the player's stick deadzone, which left and right adjust.
+PAGE_ACTIONS = (('STEER LEFT', 4), ('STEER RIGHT', 5), ('ACCEL', 0), ('BRAKE', 1), ('SHIFT UP', 6), ('SHIFT DOWN', 7),
+                ('HANDBRAKE', 8), ('VIEW', 9), ('DEADZONE', 0xff))
+# One player at a time: a selector row - the group plate with PLAYER 1 or
+# 2, left and right switching - the KEY and PAD headings, then the nine
+# rows, the stock's 18 px, the block centred.
+# the rows Graphic Settings' sprite - a 123-px label plate, a 30-px fade, a
+# 273-px value plate - at its x, spaced as it spaces them
+PAGE_SELECTOR_X, PAGE_SELECTOR_Y = 229.0, 112.0    # the 183-px group plate, centred
+PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP = 110.0, 156.0, 24.0
+PAGE_ACTION_X, PAGE_VALUE_X, PAGE_PAD_X, PAGE_TEXT_DY = 118.0, 271.0, 405.0, 2.0
+PAGE_HEADER_Y, PAGE_DIVIDER_X = 136.0, 398.0   # the KEY and PAD headings above the columns; the line between them
+PAGE_LABEL_VALUE = 18                    # the value string the selector's label lives in
+FLAGS_CENTRED = 2
+PAGE_HEADER_COLOUR = (0x100, 0xff, 0xd0, 0xa0)  # (alpha, red, green, blue) in 256ths: a warm off-white
+PAGE_DIVIDER_COLOUR = (0x70, 0x100, 0x100, 0x100)
+# The page's data block after its strings, at these offsets: the rows'
+# action ids, the shipped bindings (key, pad input) a player-row at a
+# time, the value strings the page fills, then the key and pad names,
+# NAME bytes each. devices.asm reads it through MAGIC_BINDDATA.
+NAME = 12
+DATA_ROWACTS, DATA_DEFAULTS, DATA_VALUES, DATA_KEYNAMES, DATA_PADNAMES = 0, 16, 16 + 64, 16 + 64 + 2 * 9 * 2 * 16, 16 + 64 + 2 * 9 * 2 * 16 + 256 * NAME
+DATA_SIZE = DATA_PADNAMES + 32 * NAME
+PAD_NAMES = ('DPAD UP', 'DPAD DOWN', 'DPAD LEFT', 'DPAD RIGHT', 'START', 'BACK', 'LS', 'RS', 'LB', 'RB', '', '',
+             'A', 'B', 'X', 'Y', 'LT', 'RT', 'LS LEFT', 'LS RIGHT', 'LS UP', 'LS DOWN', 'RS LEFT', 'RS RIGHT', 'RS UP', 'RS DOWN')
+KEY_NAMES = {0x00: '-', 0x01: 'ESC', 0x0e: 'BACKSPACE', 0x0f: 'TAB', 0x1c: 'ENTER', 0x1d: 'LCTRL', 0x2a: 'LSHIFT', 0x36: 'RSHIFT',
+             0x37: 'NUM MULT', 0x38: 'LALT', 0x39: 'SPACE', 0x3a: 'CAPS', 0x45: 'NUM LOCK', 0x46: 'SCROLL',
+             0x4a: 'NUM MINUS', 0x4e: 'NUM PLUS', 0x53: 'NUM DOT', 0x9c: 'NUM ENTER', 0x9d: 'RCTRL', 0xb5: 'NUM DIV',
+             0xb8: 'RALT', 0xc5: 'PAUSE', 0xc7: 'HOME', 0xc8: 'UP', 0xc9: 'PGUP', 0xcb: 'LEFT', 0xcd: 'RIGHT',
+             0xcf: 'END', 0xd0: 'DOWN', 0xd1: 'PGDN', 0xd2: 'INSERT', 0xd3: 'DELETE', 0x29: 'GRAVE', 0x0c: 'MINUS',
+             0x0d: 'EQUALS', 0x1a: 'LBRACKET', 0x1b: 'RBRACKET', 0x27: 'SEMICOLON', 0x28: 'QUOTE', 0x2b: 'BACKSLASH',
+             0x33: 'COMMA', 0x34: 'PERIOD', 0x35: 'SLASH', 0x56: 'OEM 102'}
+KEY_NAMES.update({0x02 + i: '%d' % ((i + 1) % 10) for i in range(10)})
+KEY_NAMES.update(zip((0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19), 'QWERTYUIOP'))
+KEY_NAMES.update(zip((0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26), 'ASDFGHJKL'))
+KEY_NAMES.update(zip((0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32), 'ZXCVBNM'))
+KEY_NAMES.update({0x3b + i: 'F%d' % (i + 1) for i in range(10)})
+KEY_NAMES.update({0x57: 'F11', 0x58: 'F12'})
+KEY_NAMES.update({0x47: 'NUM 7', 0x48: 'NUM 8', 0x49: 'NUM 9', 0x4b: 'NUM 4', 0x4c: 'NUM 5', 0x4d: 'NUM 6',
+                  0x4f: 'NUM 1', 0x50: 'NUM 2', 0x51: 'NUM 3', 0x52: 'NUM 0'})
+
+
+def bind_data(live):
+    """The page's data block; live when the build's MGInput carries the
+    annex, else the page only shows and its values say so."""
+    out = bytearray(DATA_SIZE)
+    for i, (_name, action) in enumerate(PAGE_ACTIONS):
+        out[DATA_ROWACTS + i] = action
+    out[DATA_ROWACTS + 15] = 1 if live else 0
+    if not live:
+        for i in range(2 * 9 * 2):
+            out[DATA_VALUES + i * 16] = ord('-')
+        out[DATA_VALUES + PAGE_LABEL_VALUE * 16:DATA_VALUES + PAGE_LABEL_VALUE * 16 + 8] = b'PLAYER 1'
+    for player, keys in enumerate((KEYS_1P, KEYS_2P)):
+        for r, (_name, action) in enumerate(PAGE_ACTIONS[:8]):
+            struct.pack_into('<HH', out, DATA_DEFAULTS + (player * 8 + r) * 4, keys[action], PAD_DEFAULT[action])
+    for code in range(256):
+        name = KEY_NAMES.get(code, 'KEY %d' % code)
+        out[DATA_KEYNAMES + code * NAME:DATA_KEYNAMES + code * NAME + len(name)] = name.encode('ascii')
+    for i, name in enumerate(PAD_NAMES):
+        out[DATA_PADNAMES + i * NAME:DATA_PADNAMES + i * NAME + len(name)] = name.encode('ascii')
+    return bytes(out)
 PAGE_BUTTON_Y = 404.0
 PLATE, TEXT = (0xd8, 0x100, 0x100, 0x100), (0x100, 0x100, 0x100, 0x100)
-HOLD_ROW, HOLD_GROUP, HOLD_BUTTON, HOLD_VALUE = 1, 2, 3, 4   # how the cursor draws an entry it is on
+HOLD_ROW, HOLD_BUTTON, HOLD_VALUE = 1, 3, 4      # how the cursor draws an entry it is on
 HOLD_BAR, HOLD_BAR_IDLE, HOLD_BAR_BIND = 5, 6, 7             # rises with the hint bar; shown outside, or during, a bind
 Z_PLATE, Z_TEXT = 14.0, 10.0
 FLAGS_PROPORTIONAL = 4                  # the text routine: 4 proportional, +1 right-aligned, +2 centred
@@ -1588,10 +2005,13 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
             uvkeys[key] = len(uvkeys)
         return uvkeys[key]
 
-    def piece(key):
+    def piece(key, size=None, top=False):
+        """A sprite of one texel box, drawn at its own size or stretched to
+        another, about its centre or from its top edge."""
         sheet, x0, y0, x1, y1 = key
-        w, h = float(x1 - x0), float(y1 - y0)
-        sprites.append(([(uv(key), (-w / 2, -h / 2, w / 2, h / 2), 0xffffffff)], w, h))
+        w, h = size or (float(x1 - x0), float(y1 - y0))
+        rect = (-w / 2, 0.0, w / 2, h) if top else (-w / 2, -h / 2, w / 2, h / 2)
+        sprites.append(([(uv(key), rect, 0xffffffff)], w, h))
         return len(sprites) - 1
 
     def copied(sprite, n):
@@ -1620,7 +2040,13 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
         strings.append(text)
         draw.append((2, ('string', len(strings) - 1), x, y, flags, colour, held))
 
+    def add_value(index, x, y, flags, colour, held=0):
+        draw.append((2, ('value', index), x, y, flags, colour, held))
+
     device, settings, colon = (piece(PAGE_PIECES[k]) for k in ('DEVICE', 'SETTINGS', 'COLON'))
+    group_plate, row_plate = copied(stock['group'], 2), copied(stock['gsrow'], 3)
+    # a line the height of a group, from the white margin of a hint strip on the appended sheet
+    divider = piece((TXR_ICON, 1, HINT_STRIP_TOPS[0] + 1, 2, HINT_STRIP_TOPS[0] + HINT_ROWS - 1), (1.0, 18.0), top=True)
     bar = copied(stock['bar'], PAGE_BAR_QUADS)
     strips, tops = [], iter(HINT_STRIP_TOPS)
     for line in HINT_LINES:
@@ -1634,26 +2060,27 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
                           0xffffffff))
         sprites.append((quads, float(width), float(HINT_ROWS)))
         strips.append(len(sprites) - 1)
-    per_group = len(PAGE_ACTIONS)
-    rows = per_group * len(PAGE_GROUPS)
+    rows = 1 + len(PAGE_ACTIONS)            # the selector, then the actions; the button row is one more
     every = (0, 254)
 
     add_stock(stock['band'], 320.0, 87.0, Z_PLATE, PLATE)
     add_sprite(device, 320.0 - 95.5 + 38.5, 87.0, Z_TEXT, TEXT)
     add_sprite(settings, 320.0 + 95.5 - 53.0, 87.0, Z_TEXT, TEXT)
+    add_sprite(group_plate, PAGE_SELECTOR_X, PAGE_SELECTOR_Y, Z_PLATE, PLATE, hold(HOLD_ROW, 0, 0))
+    add_value(PAGE_LABEL_VALUE, 320.0, PAGE_SELECTOR_Y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL | FLAGS_CENTRED, TEXT, hold(HOLD_VALUE, 0, 0))
+    add_text('KEY', PAGE_VALUE_X, PAGE_HEADER_Y, FLAGS_PROPORTIONAL, PAGE_HEADER_COLOUR)
+    add_text('PAD', PAGE_PAD_X, PAGE_HEADER_Y, FLAGS_PROPORTIONAL, PAGE_HEADER_COLOUR)
     y = PAGE_ROW_Y
-    for g, group in enumerate(PAGE_GROUPS):
-        first = g * per_group
-        add_stock(stock['group'], PAGE_GROUP_X, y, Z_PLATE, PLATE, hold(HOLD_GROUP, first, first + per_group - 1))
-        add_text(group, PAGE_GROUP_TEXT_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
-        for i, (action, binding) in enumerate(PAGE_ACTIONS):
-            r = first + i
-            add_stock(stock['row'], PAGE_ROW_X, y, Z_PLATE, PLATE, hold(HOLD_ROW, r, r))
-            add_text(action, PAGE_ACTION_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
-            add_sprite(colon, PAGE_COLON_X, y + PAGE_TEXT_DY + 7.0, Z_TEXT, TEXT)
-            add_text(binding, PAGE_VALUE_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
-            y += PAGE_ROW_STEP
-        y += PAGE_GROUP_GAP
+    for i, (action, code) in enumerate(PAGE_ACTIONS):
+        r = 1 + i
+        add_sprite(row_plate, PAGE_ROW_X, y, Z_PLATE, PLATE, hold(HOLD_ROW, r, r))
+        add_text(action, PAGE_ACTION_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
+        if code != 0xff:
+            add_sprite(divider, PAGE_DIVIDER_X, y, Z_TEXT, PAGE_DIVIDER_COLOUR)
+        add_value(i * 2, PAGE_VALUE_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
+        if code != 0xff:
+            add_value(i * 2 + 1, PAGE_PAD_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
+        y += PAGE_ROW_STEP
     for i, button in enumerate((stock['default'], back)):
         add_stock(button, PAGE_BUTTON_X[i], PAGE_BUTTON_Y, Z_PLATE, TEXT, hold(HOLD_BUTTON, rows, rows, i))
     add_sprite(bar, 320.0, PAGE_BAR_Y, Z_PLATE, TEXT, hold(HOLD_BAR, *every))
@@ -1675,11 +2102,14 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
     for text in strings:
         string_offs.append(size)
         size += len(text) + 1
-    blob = bytearray(_align(size, 4))
+    off_data = _align(size, 4)
+    blob = bytearray(off_data + DATA_SIZE)
+    blob[off_data:] = bind_data('xinput' in row['sites'])
     relocs = []
     # code, its placeholders filled
     values = dict(opt, SELFRVA=va - base, PAGEHDR=va - base + off_hdr, DRAWLIST=va - base + off_draw,
-                  EPILOGUE=_off_to_rva(buf, cont + 5 + buf[cont + 4]), ROWS=rows)
+                  EPILOGUE=_off_to_rva(buf, cont + 5 + buf[cont + 4]), ROWS=rows, BINDDATA=va - base + off_data,
+                  PADPOLL=row['addresses']['PADPOLL'])
     for name, magic in DEVICES_MAGICS.items():
         value = values[name] - base if values[name] >= base else values[name]
         code = code.replace(struct.pack('<I', magic), struct.pack('<I', value))
@@ -1711,7 +2141,8 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
                 struct.pack_into('<I', blob, q + 0x14 + j * 8, colour)
             q += 0x34
     for i, (kind, (what, ref), x, y, zf, colour, held) in enumerate(draw):
-        ptr = {'sprite': lambda: va + off_desc + ref * 0x20, 'stock': lambda: ref, 'string': lambda: va + string_offs[ref]}[what]()
+        ptr = {'sprite': lambda: va + off_desc + ref * 0x20, 'stock': lambda: ref, 'string': lambda: va + string_offs[ref],
+               'value': lambda: va + off_data + DATA_VALUES + ref * 16}[what]()
         z = struct.unpack('<I', struct.pack('<f', zf))[0] if kind == 1 else zf
         struct.pack_into('<IIffIIIIII', blob, off_draw + i * 40, kind, ptr, x, y, z, *colour, held)
         relocs.append(off_draw + i * 40 + 4)
@@ -1896,6 +2327,21 @@ def check_build(dest):
     return build
 
 
+def carry_display_block(dest, log):
+    """The game's 100-byte display block from a stock SR2.CFG into SR2.DSP,
+    where the noregistry patch has the game keep it, so a resolution choice
+    survives; only when SR2.DSP is not there yet."""
+    cfg, dsp = os.path.join(dest, 'SR2.CFG'), os.path.join(dest, 'SR2.DSP')
+    if os.path.isfile(dsp) or not os.path.isfile(cfg):
+        return
+    with open(cfg, 'rb') as fh:
+        head = fh.read(100)
+    if len(head) == 100 and head.startswith(b'display'):
+        with open(dsp, 'wb') as fh:
+            fh.write(head)
+        log('patch: the display block of SR2.CFG carried to SR2.DSP')
+
+
 def patch(dest, log=print, keys=PATCH_KEYS):
     """Write every wanted patch. Each touched file is patched from its
     backup, written on the first run, so patching twice is patching once;
@@ -1904,6 +2350,9 @@ def patch(dest, log=print, keys=PATCH_KEYS):
     build = check_build(dest)
     table = patches(build)
     log('patch: %s build' % build)
+    for key, needs in (('xinput', 'noregistry'), ('devices', 'xinput')):
+        if key in keys and key in table and needs not in keys:
+            raise ValueError('%s needs %s' % (key, needs))
     txr = None
     txr_path = os.path.join(dest, *TXR.split('\\'))
     if 'devices' in keys:
@@ -1916,6 +2365,8 @@ def patch(dest, log=print, keys=PATCH_KEYS):
     elif os.path.isfile(txr_path + '.bak'):
         os.replace(txr_path + '.bak', txr_path)
         log('patch: %s back to stock' % TXR)
+    if 'noregistry' in keys and 'noregistry' in table:
+        carry_display_block(dest, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
         wanted = [table[key] for key in keys if key in table and table[key][0] == name]

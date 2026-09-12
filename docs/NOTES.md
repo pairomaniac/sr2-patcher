@@ -28,6 +28,8 @@ Australian releases map onto it; *Builds* says how far.
 | **Effects at full** (Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; `Options.dll` `0xf92a`, `0xf98d`, `0xf9e1` | the volume routine sets each effect's ceiling from its slider and then its level as a percentage of that; the other builds pass 100, the Australian's passes the slider × 11 - the slider twice - in the exe and in its `Options.dll`, which re-applies on the way out of the screen. The setting's load → `mov eax, 9`, which the × 100 × 0.111 after it makes 100; in the DLL the load's relocation entry goes with it. The percentage is also how every build drives the engine's level by throttle, so it stays a percentage |
 | **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume`: the slider's 0..10000 becomes a `waveOutSetVolume` amplitude on the mix's curve plus `CD_DB` (800), 0 dB at 9, from the ten-entry table `build.py` derives into `curve.inc`, applied after each play once the stream exists; see [asm/README.md](../asm/README.md) |
 | **Device Settings** | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc`, `0x2f0c` (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x593c`, `0x567c`), nine `x` fields and two UV entries in `.data`, appended `.sr2d` section; the TXR grows a thirteenth sheet | a fourth item on the Options menu and the page behind it: the cursor's and the icon set's item counts 3 → 4, the item tables and the top-level state table moved to `.sr2d` with a fourth item and two more states, the dispatch table's fourth slot → a stub that selects the page's state; the page is asm/devices.asm over data the patcher builds. See *The Options screen* |
+| **No registry** | `SEGA RALLY 2.exe` | `0xd07c0`, `0x7e359` | the game's file name string `SR2.CFG` (one, for the read at `0x427740` and the write at `0x427880`) → `SR2.DSP`, so its 100-byte display block - the DirectDraw device name and capability flags recomputed from video memory at every start (`0x426ec0`), the launcher's options, the disc flag and the language - keeps its own stock-shaped file (`carry_display_block` copies a stock `SR2.CFG`'s block there at patch time, once) and `SR2.CFG` is the controls text from byte 0; and `MGameReg`'s Open at `0x47ef59` (21 bytes) → `xor esi,esi`, so `Software\SEGA` is never created. See *Gamepad* |
+| **XInput** | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`) and appended `.sr2p` section | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm, the Australian build's keyboard-poll address pointed at it instead; the section carries the name tables and defaults, then the working area, after the code. See *Gamepad* |
 
 Offsets are the European build's file offsets; the other builds' are in
 `BUILDS` and under *Builds*. In the exe, which is never relocated, VA =
@@ -294,14 +296,43 @@ and the button row, DEFAULT then BACK with left and right between them,
 wrapping; the stock's sounds, 0xe for a move, 0xf for a confirm, BACK
 included, 0x10 for backing out. What it holds is drawn as Game Settings
 draws it: the row's plate (0x100, 0x100, 0, 0), its group's (0x100,
-0x100, 0x20, 0x20), the button (0x100, 0x100, p, p) and the row's value
+0x100, 0x20, 0x20), the button (0x100, 0x100, p, p) and the row's values
 white with alpha 0x80 + p/2, p the page's pulse, 0 to 0x100 and back by
 0x10 a frame (`0x10002a23`). Each entry carries which rows hold it and
-how. Confirm on a row starts a bind - the row's plate pulses blue to
-white, (0x100, p, p, 0x100), and the bar says to press the button - and
-cancel gives it up with the backing-out sound. The bindings shown are
-fixed strings for now, nothing listens for the button yet, and DEFAULT
-has nothing to reset.
+how. The page shows one player at a time: a selector row - the group
+plate centred, PLAYER 1 or 2 on it, left, right or confirm switching -
+then the KEY and PAD headings and the nine rows, the eight driving
+actions and the deadzone, on Graphic Settings' own row sprite - a
+123-px label plate, a 30-px fade, a 273-px value plate, three quads - at
+its x and 24 px apart as it spaces them, a line between the key and pad
+columns cut from a hint strip's white margin.
+
+The values are live. The page reaches the game's input objects through
+the holder (`0x100b9464`, the exe's `0x50b120` block): its `+8` is the
+exe's input wrapper (vtable `0x4a158c`; `+0x14(mask)` a player's
+pressed-edge key bits), whose `+4` is `MGInput`'s input object, and from
+there `GetConfig` (`+0x34`), `GetDevice(3, 0)` (`+0x20`) for the
+keyboard and its `GetState` (`+0x38`, the 256 key bytes), the config's
+record list at
+`+0x124` - a pointer to the head node of a ring of (next, prev, record)
+- and `Persist` (`+0x30`) to save (*Gamepad*); the pad through the poll
+the annex publishes at `PADPOLL`, a dword in the writable room past the
+end of `.data` (`0x5a1ff0`; Australian `0x60bff0`), since the Australian
+device has no poll method. A row's key record is
+the first of its action with a source under 0x100, its pad record the
+first at 0x300-0x37f without the menu-only bit. Confirm on a row
+snapshots what is down and waits: the row pulses blue to white and the
+bar says to press the button. A key or pad input released since the
+wait began and pressed binds - the row that had it, either player's for
+a key, the same player's for a pad input, takes the row's old one - and
+both configs are saved; ESC, or Start held 60 frames, gives up. Left and
+right on the deadzone row step it 5%, saved through a `DZnnnn` name.
+DEFAULT puts the shipped set back from the page's data block, which
+follows the strings (`bind_data`): the rows' action ids and a live
+flag, the defaults, the value strings the page fills, a name per
+scancode and per pad input.
+`tools/devicestest.py` drives the routines under Unicorn against stubs
+for those objects.
 
 The hint bar under every stock page belongs to the frame object
 (`0x10001cc0`), which pops one of fifteen lettered messages in and out
@@ -472,12 +503,84 @@ KEY_ALL_ACCESS)`, called from the exe (`0x47ef5e`) with `"SEGA"` and
 (`0x47ef9e`): the controller configuration lived under that key, written
 by `SR2_CPL.cpl`, the "Controller Settings" Control Panel item the
 installer added. The game only reads it and runs on its defaults when it
-is empty. `HKEY_LOCAL_MACHINE` is pushed at three sites in `MGameReg.dll`
-(file `0x1476`, `0x1942`, `0x1b46`); which of them serve the
-`App Paths` lookup has not been checked, so none is redirected to
-`HKEY_CURRENT_USER` yet. Under Wine the key is writable as it is. Nothing
-in `setup.ins` writes under `Software\` except the DirectPlay lobby key
-`Software\Microsoft\DirectPlay\Applications\SEGA RALLY 2`.
+is empty - and writes player 1's defaults there itself on that first
+run; player 2 has none without the applet. The object serves nothing else
+in the exe (`MGameReg`'s `App Paths` lookup is never reached), so with
+the Open skipped and `MGInput`'s load and save replaced (*Gamepad*) the
+key is never made, which is also what Windows without administrator
+rights needs. Nothing in `setup.ins` writes under `Software\` except the
+DirectPlay lobby key `Software\Microsoft\DirectPlay\Applications\SEGA
+RALLY 2`.
+
+### Gamepad
+
+`MGInput.dll` (`0x10000000`, relocated; one build in the European and
+American releases, an older one in the Australian with the same
+interfaces at other addresses) reads every action.
+
+**The model.** The exe's init (`0x47eff0`) makes a config per player,
+named `"0"`/`"1"` at `+0xc`, attaches the keyboard device and loads it
+through `Persist` (vtable `+0x30`, `0x10007510`; flags bit 0 save, bit 1
+keep what is there) - player 1's twice, unnamed and clearing
+(`0x47f094`), then named `"0"` and appending (`0x47f0ca`). An action is a
+`0x34`-byte record: id, repeat delay and rate in frames, deadzone and
+saturation in 0..10000, up to eight source ids that are ANDed, the first
+carrying the value. Its object is `0x15c` bytes: `+0x10c` id, `+0x110`
+deadzone, `+0x114` saturation, `+0x118` delay, `+0x11c` rate, `+0x120`
+the scaled value, `+0x124` frames held, `+0x128` the press event,
+`+0x12c`/`+0x130` raw value and range, `+0x134` sources seen, `+0x138`
+their count, `+0x13c` the ids; import and export at `0x10008890`,
+`0x10008910`. Ids: 0 accel, 1 brake, 2-5 up, down, left, right (the
+menus, with repeat; 4 and 5 are also the steering), 6 shift up, 7 shift
+down, 8 handbrake, 9 view, 10 enter, 11 escape, 12 start - the race's
+pause (`0x419306`) and a confirm in the menus, like 10. Sources: 1-0xff
+keyboard scancodes, 0x101-0x168 joystick, 0x201-0x20b mouse, answered by
+the device's poll (`0x100056c0`, `(this, source, &value, &range)`). The
+config's update (`0x10007100`) has every record poll every attached
+device, then finalise; `GetActionState` (`0x100078b0`) takes the largest
+magnitude among an id's records, so a key record and a pad record for
+one action coexist.
+
+**XInput.** asm/padinput.asm, hooked at the load, the save, the update
+and the device's poll - the Australian build has no poll method, its
+record update (`0x10008170`) calling a static poll per device type, so
+there the keyboard poll's address in that dispatch (`0x100081a8`,
+`0x10007e40`, five arguments) is pointed at the annex's own entry; a
+third entry, `(source, &value, &range)` for the page, is published at
+`PADPOLL` - answers sources `0x300 + player * 0x40 + input`: the sixteen buttons as `0x80`/`0x80` like a key, the triggers
+over 255 past the usual threshold, the eight stick halves rescaled past
+the player's deadzone to 0..10000. The update hook refreshes the
+config's player first: each side keeps an XInput slot, takes the first
+free one when it has none, looking every 60 frames, and clears its state
+when the pad goes.
+
+**The store.** The registry helper's load and save (`0x10008130`,
+`0x10008210`) become the annex's own: a table of key and pad input per
+action per player and the two deadzones, kept as text in `SR2.CFG` - a
+section a player and device, `[1P Controller]`, `[1P Keyboard]`, of
+`Name = value` lines for the eight driving actions and `Deadzone = 10`
+in percent; the names are the page's with spaces as underscores, `-`
+for none; the `=` is optional, an unreadable section header closes the
+section, unreadable lines keep the defaults, the deadzone clamps to
+0-90%. A file with the game's 100-byte block ahead of the text (from
+before *No registry* moved it to `SR2.DSP`) is read past it. A load
+generates the player's records: the action's key record and pad record,
+then the menus' fixed ones - arrows (WASD for player 2), D-pad and stick
+halves on 2-5 - the bindable first, which is what the page takes as a
+row's; only unnamed loads get records, or player 1's would double. A
+save takes the table back out of the exported records (the first key
+and pad source per action), a name beginning `DZ` the digits after it as
+the deadzone, and rewrites the text. The menus' left and right are the
+steering's actions, so their fixed sources are *menu-only* - a key at
+`0x400` + scancode, read from the keyboard device's array at `+0x308`
+(type byte `+0x260` is 3), or a pad input with bit 5 set - and answer
+only while the exe's car table (`CARS`, `0x4d64bc`) has no car in slot
+0: the cars exist from a race's setup (`0x412aac`) to its teardown
+(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone.
+The name tables and defaults are data the patcher appends after the
+code (`annex_tables`); `annex_records` and `annex_text` model the
+output. `tools/padinputtest.py` runs the four entries under Unicorn
+against the real DLL.
 
 ## Startup and files
 
@@ -496,12 +599,18 @@ startup:
    retry, or give up. Returns 0 for found. This is nodisc's first site;
    the second is in the loader, below.
 
-`SR2.CFG` is 100 bytes and is read straight into the settings block at
-`[0x50afe0]` (`0x427740`): the string `display`, then at `0x20` five
-DWORDs `2, 2, 1, 1, 2` as shipped, written by `LAUNCH.EXE`, meanings not
-traced. Two fields are overwritten after the read: `+0x5c` the disc flag
-(below) and `+0x60` the language from `GetUserDefaultLangID` (`0x4272b0`,
-1 English, 2 French, 3 German, 4 Italian, 5 Spanish, 6 Japanese).
+`SR2.CFG` is 100 bytes, read straight into the settings block at
+`[0x50afe0]` (`0x427740`) and written back at shutdown (`0x427880`): the
+DirectDraw device name (`display`, the primary), which `0x426ec0` looks
+for among the enumerated devices, zeroing the block when none matches;
+five DWORDs at `0x20`, of which `+0x28`, `+0x2c` and bits 1-2 of `+0x30`
+are capability flags recomputed each start from the device's video
+memory (thresholds `0x426fb8`-`0x4270ac`) and the rest `LAUNCH.EXE`'s
+options; `+0x58` a copy of the live block's `+0x54`; `+0x5c` the disc
+flag (below); `+0x60` the language from `GetUserDefaultLangID`
+(`0x4272b0`, 1 English, 2 French, 3 German, 4 Italian, 5 Spanish, 6
+Japanese). The in-game options live in `SR2_SAVE.DAT`. With *No
+registry* the block's file is `SR2.DSP`.
 The loader switches to the `BINDATA\800x600\` asset set when
 `[[0x50afdc]+0x50] == 1` (`0x476512`), so one of them is the 640x480 /
 800x600 choice.
@@ -688,11 +797,8 @@ of them plays the same music, with the disc's own silence at the loop.
   crash on returning to the main menu after saving a replay, which Wine
   does not show; and the music volume's `waveOutSetVolume(0, …)`, the
   device-id form Windows takes and Wine does not.
-- `SR2.CFG` values, the 640x480/800x600 switch, and what `LAUNCH.EXE` and
-  `MUSASHI\SR2.dll` offer.
-- Frame timing, input, resolution: nothing traced yet. The renderer is
+- What `LAUNCH.EXE` and `MUSASHI\SR2.dll` offer, and `SR2_SAVE.DAT`'s
+  layout beyond the records table.
+- Frame timing, resolution: nothing traced yet. The renderer is
   `MGameGL.dll` + `MGameD3D.dll`, so resolution work lives there rather
   than in the exe.
-- The controller configuration: what `SR2_CPL.cpl` wrote under the
-  registry key, and what replaces it. `MGameReg.dll` to `HKEY_CURRENT_USER`
-  for Windows without administrator rights.

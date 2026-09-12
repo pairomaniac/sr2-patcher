@@ -50,7 +50,8 @@ and refuses anything that is not an unmodified copy of it.
 | **ALT+ENTER** | Toggles a framed window you can move, resize or maximise. |
 | **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there. |
 | **The mix** | The three sliders followed three different curves - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each; the Australian release also ran its effects at a fraction of theirs. All three follow one curve now, 3.5 dB a step, topping out at −8 dB - the old 7 - with the CD music 8 dB above the effects (stock at 9) and the streamed music 2 dB above. The Australian release no longer needs a CD volume control on the sound card. |
-| **Device Settings** | Three items on the Options menu. The fourth is new: a page listing both players' pad bindings in the style of Game Settings. ENTER on an action asks for a button; nothing answers yet, and DEFAULT resets nothing - the pad itself follows. |
+| **Device Settings** | A fourth item on the Options menu: each player's controls, key and pad side by side, bound by pressing the key or button. |
+| **Gamepad** | Pads are DirectInput only, set up in a Control Panel applet; an XInput pad does nothing. It now works out of the box: stick to steer, triggers, A/B through the menus, Start to pause. The controls live in `SR2.CFG` as plain text, not in the registry. |
 
 Everything else is the game as it shipped.
 
@@ -61,9 +62,8 @@ under Wine and Proton (via umu). Supported: the European, American and
 Australian releases, Pentium III build, told apart by the exe. The
 Japanese release has not been seen.
 
-Planned: native widescreen with split-screen to match, controller
-configuration and XInput (the game runs on its defaults for now), online
-play with a lobby, frame timing, a Windows exe of the patcher.
+Planned: native widescreen with split-screen to match, online play
+with a lobby, frame timing, a Windows exe of the patcher.
 
 ## Working on it
 

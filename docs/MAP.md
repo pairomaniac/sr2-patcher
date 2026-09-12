@@ -181,8 +181,33 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the appended `.sr2v` |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the appended `.sr2m` |
 | devices | 7 + section + TXR | `Options.dll` `0x10003ff8`, `0x1000400f`, `0x10003e14`, `0x10003e67`, `0x1000423b`, `0x10003dcc`, `0x10003b0c` (files `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x363b`, `0x31cc`, `0x2f0c`), nine `x` floats and UV entries `0xe`, `0x11` in `.data`, the appended `.sr2d` with its relocation blocks; `BINDATA\\MISC\\OPTIONS.TXR` grown by a 256x256 sheet |
+| noregistry | 2 | exe `0x5a29c0` (file `0xd07c0`, the 7-byte name string), `0x47ef59` (file `0x7e359`, 21 bytes); American `0xd0bc0`, `0x47f179`; Australian `0x115fd4`, `0xbd959` |
+| xinput | 4 + section | `MGInput.dll` `0x10008130`, `0x10008210` (6 bytes each), `0x10007100` (6), `0x100056c0` (9), files the same minus the base, the appended `.sr2p`; Australian `0x10007940`, `0x10007a20`, `0x10006940`, and the dword at `0x100081a8` |
 
-## 7. `MUSASHI\MGSound.dll`
+## 7. `MUSASHI\MGInput.dll`
+
+Image base `0x10000000`, relocated at load; one build in the European and
+American releases (MD5 `7aa0b3ae…`), an older one in the Australian
+(`594a3435…`) with the same vtables at `0x1000f764`, `0x1000f7b0`,
+`0x1000f868` and so on, its record update at `0x10008170` dispatching to
+static polls, the keyboard's `0x10007e40`.
+Vtables: the input object at `0x1000f764`, the device at `0x1000f7b0`,
+the config at `0x1000f868`, the registry helper at `0x1000f8f4`, the
+record at `0x1000f918`.
+
+| Address | What |
+| --- | --- |
+| `0x10002010` | input `+0x28`: the config named, made and registered |
+| `0x10002990` | input `+0x20`: the device of a type (3 keyboard, 4 joystick, 2 mouse) and index |
+| `0x100056c0` | device `+0x58`: poll `(this, source, &value, &range)`, by the type byte at `+0x260` to `0x10005390` keyboard, `0x100054b0` joystick, `0x100053e0` mouse; an xinput site |
+| `0x10007100` | config `+0x2c`: update, every record over every device then finalised; an xinput site |
+| `0x10007510` | config `+0x30`: `Persist(name, flags)`, bit 0 save, bit 1 keep the loaded set |
+| `0x100078b0` | config `+0x38`: `GetActionState(id, &state, mode)`, the largest magnitude among the id's records |
+| `0x10008130`, `0x10008210` | registry helper `+0x14` load and `+0x10` save of a slot's records; xinput sites |
+| `0x10008630` | record `+0x20`: `Update(device)`, the sources polled and ANDed; `Update(0)` scales, deadzones and counts the press |
+| `0x10008890`, `0x10008910` | record import and export, the `0x34`-byte layout |
+
+## 8. `MUSASHI\MGSound.dll`
 
 Image base `0x10000000`, relocated at load; identical in all three builds
 (MD5 `a9698c1d…`). The wave and streaming sound engine over DirectSound;
@@ -197,7 +222,7 @@ it, which is why a fix for the settings-menu music has to live here.
 | `0x10005d36` | the streaming buffer's `SetParameters`: bit 2 of the struct's `+4` is the volume, its value at `+0xc` |
 | `0x1001138e` | `CMGameSoundBuffer::SetVolume... volume overflow!` - the range check |
 
-## 8. `Options.dll`
+## 9. `Options.dll`
 
 Image base `0x10000000`, relocated at load; `.text` at RVA `0x1000`, file
 offset `0x400`. The European and American DLLs are one file; the

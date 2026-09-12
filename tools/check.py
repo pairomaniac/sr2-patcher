@@ -38,7 +38,7 @@ CHECKS = [
      [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py', 'tools/cabtest.py',
       'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py', 'tools/bgrowtest.py',
       'tools/fullwintest.py', 'tools/altentertest.py', 'tools/discsurvey.py', 'tools/kit.py',
-      'tools/selftest.py'], ''),
+      'tools/selftest.py', 'tools/padinputtest.py', 'tools/devicestest.py'], ''),
     ('bgrow', 'the .bg row copies under Unicorn, 16 and 32 bits',
      [PY, 'tools/bgrowtest.py'], ''),
     ('fullwin', 'the borderless present and window sizing under Unicorn',
@@ -53,6 +53,10 @@ CHECKS = [
      [PY, 'tools/musictest.py', '{game}'], 'game'),
     ('altab', 'the alt-tab stub and restore routine under Unicorn, real files',
      [PY, 'tools/activatetest.py', '{game}'], 'game'),
+    ('padinput', 'the pad annex under Unicorn, the real MGInput.dll',
+     [PY, 'tools/padinputtest.py', '{game}'], 'game'),
+    ('devices', 'the Device Settings page binding under Unicorn, the real Options.dll',
+     [PY, 'tools/devicestest.py', '{game}'], 'game'),
 ]
 
 
