@@ -373,7 +373,7 @@ def main(argv):
     # the race's level and the mute (flags bit 31), the fade (flags 0).
     # A level is the step on the mix's curve plus CD_DB, in hundredths of
     # a dB, 0 dB at 9, -10000 at 0; the fade is amplitude percent of it.
-    CURVE = [-10000] + [-3950 + 350 * s + 600 for s in range(1, 10)]
+    CURVE = [-10000] + [-3950 + 350 * s + 300 for s in range(1, 10)]
     MENU, RACE = 0x40, 0x80000000
 
     def vol():
@@ -391,12 +391,12 @@ def main(argv):
     assert struct.unpack_from('<III', mu.mem_read(V, 20), 8) == (2, 10000, 10000), 'getvolume: full'
     # D_SLIDER is stored right after the curve's `lea ecx, [eax - 3150]`
     # in setvolume; D_VOL is the dword before it
-    i = patcher.MUSIC_BLOB.index(b'\x8d\x88' + struct.pack('<i', -3950 + 600)) + 6
+    i = patcher.MUSIC_BLOB.index(b'\x8d\x88' + struct.pack('<i', -3950 + 300)) + 6
     assert patcher.MUSIC_BLOB[i:i + 2] == b'\x89\x8b'
     D_VOLADDR = hook + struct.unpack_from('<I', patcher.MUSIC_BLOB, i + 2)[0] - 4
     # the menu's level, marked: step x 1100, 10000 at 9
     assert setvol(8800, MENU) == CURVE[8] and log['requests'] == [('vol', CURVE[8] & 0xFFFFFFFF)], log['requests']
-    assert setvol(10000, MENU) == CURVE[9] == -200
+    assert setvol(10000, MENU) == CURVE[9] == -500
     assert setvol(4400, MENU) == CURVE[4]
     # a step of a fade with no fade begun is dropped
     assert setvol(5000) == CURVE[4] and log['requests'] == []

@@ -15,6 +15,7 @@ says where to look.
 | `tools/sr2.sh`, `tools/sr2-test.example` | installs, rips, patches, restores or runs one build with the paths from `~/.sr2-test`, whose template the example is |
 | `tools/discsurvey.py` | hashes every file on one or more install discs and lists what differs; `--play` lists a play disc's label, root and tracks |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
+| `tools/loudness.py` | the RMS of the CD rips and the streamed music, and the `CD_DB - STREAM_DB` that makes them equal at equal sliders |
 | `tools/kit.py` | bundles every build's installed files and `data1.head` into the gitignored `tools/sr2-kit.tar.gz` |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
 | `.github/workflows/build.yml` | CI: the checks |

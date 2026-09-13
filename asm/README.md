@@ -116,11 +116,11 @@ value: the menu's level, the slider's step × 11.11 percent, from
 the mute when a race starts, 0 from `0x474210`, the same flag; and the
 fade before a stop, 100 down to 10 a frame, from `0x4741bc`, flags 0. A
 level is the step in hundredths of a dB straight from `mix.inc` -
-`MIX_BOTTOM + step × MIX_STEP + CD_DB`, −2 dB at 9, `DSBVOLUME_MIN` at 0 -
+`MIX_BOTTOM + step × MIX_STEP + CD_DB`, −5 dB at 9, `DSBVOLUME_MIN` at 0 -
 the units the mix keeps every other level in, and is remembered; the
 mute is off without forgetting it. The fade was written for a mixer
 line that took amplitude, from full whatever the slider said - on the
-curve that would open up to 30 dB above the level - so it is an
+curve that would open up to 33 dB above the level - so it is an
 amplitude percentage of the level: the level plus `20 log10(v / 10000)`,
 from `S_PCTDB`. `cdlevel` is required for that: the menu's level is
 told from the fade by nothing but the flag. A fade counts from its

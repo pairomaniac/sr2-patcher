@@ -772,7 +772,7 @@ dev_stop:
 ; A level is the step on the mix's curve plus CD_DB, in hundredths of a
 ; dB, and is remembered; the mute is off without forgetting it. The fade
 ; was written for a mixer line that took amplitude, from full whatever
-; the slider said: on the curve that would start up to 30 dB above the
+; the slider said: on the curve that would start up to 33 dB above the
 ; level, so it is taken as a percentage of the level in amplitude, the
 ; level plus 20 log10(v / 10000), counting from its start at 100.
 ;

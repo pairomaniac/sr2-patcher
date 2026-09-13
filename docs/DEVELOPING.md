@@ -31,7 +31,9 @@ needs `xinput`; the patcher refuses the combinations without. `run` and `debug` 
 and leave the Wine log in `logs/`.
 
 The mix's numbers - the effects' range and the two music offsets - are
-`asm/mix.inc`, included by `mix.asm` and `music.asm`.
+`asm/mix.inc`, included by `mix.asm` and `music.asm`. `tools/loudness.py
+GAMEDIR` measures the CD rips against the streamed music and says what
+`CD_DB - STREAM_DB` makes them equally loud at equal sliders.
 
 `python3 tools/kit.py` bundles every build's installed files, minus the
 assets, with the first 16 MB of each `data1.cab`, into the gitignored
