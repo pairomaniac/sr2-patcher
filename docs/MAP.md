@@ -9,7 +9,7 @@ says where to look.
 | Path | What |
 | --- | --- |
 | `sr2-patcher.py` | the patcher: tables, the disc image and IS5 cabinet readers, installer, manifests, patch and restore, window, CLI |
-| `asm/` | the assembly source of every code patch, `mix.inc` with the mix's numbers and `curve.inc` derived from it; `build.py` assembles them into `sr2-patcher.py` |
+| `asm/` | the assembly source of every code patch and `mix.inc` with the mix's numbers; `build.py` assembles them into `sr2-patcher.py` |
 | `tools/check.py` | runs every check; `tools/selftest.py` applies the tables to a real install, `tools/cabtest.py` reads a real disc, the `*test.py` beside them run the stubs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
 | `tools/sr2.sh`, `tools/sr2-test.example` | installs, rips, patches, restores or runs one build with the paths from `~/.sr2-test`, whose template the example is |
@@ -82,7 +82,10 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
 | `0x427450` | `SR2.CFG` exists beside the exe | - |
 | `0x4274e0` | drive scan: CD-ROM, label `SEGARALLY2`, `DISKID.2` | - |
-| `0x427600` | main init; `0x427657` constructs the loader | - |
+| `0x427600` | main init; `0x427657` constructs the loader; `0x427b10` the rest, one `jl` at `0x427e05` to the error box `0x4404b0` ("Failed to initialize. Error code %X") | - |
+| `0x426ea0` | device select by the `display` string; `0x427240` the card warning, string 5 OK/Cancel | nocardwarn |
+| `0x46e160` | the CD wrapper's SetVolume(percent, flags): values = percent × the level read at startup / 100, to MGAudio's method; called from `0x473c5c` (the menu's level, step × 11.11), `0x473f11` (the race's, step × 9, bit 31), `0x474210` (the mute at a race start, bit 31), `0x4741bc` (an entry's percentage: the fade) | cdlevel |
+| `0x421330` | D3D bring-up: `0x421380` creates MGameD3D and inits it (`0x4214f0`), `0x421450` clears and presents three times, `0x4215a0` creates and inits MGameGL, `0x421670` | - |
 | `0x444be0` | processor check via `miscdll.dll!CheckKatmai` | - |
 | `0x46e210`, `0x46e260` | pause and resume of the sound object at `0x50b12c` | - |
 | `0x476260` | loader constructor: exe dir at `+0x108`, disc root at `+0x4`; `0x47632e` the drive scan | nodisc |
@@ -163,6 +166,8 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | Patch | Sites | Where |
 | --- | --- | --- |
 | nodisc | 2 | exe `0x4273c0` (file `0x267c0`), `0x47632e` (file `0x7572e`) |
+| nocardwarn | 1 | exe `0x427278` (file `0x26678`), 2 bytes; American `0x26938`, Australian `0x4b263` |
+| cdlevel | 1 | exe `0x473c48` (file `0x73048`), 1 byte of 4; American `0x73478`, Australian `0xb2668` |
 | altab | 1 + section | exe `0x426bf7` (file `0x25ff7`), the appended `.sr2a` |
 | zdetach | 4 | `MGameD3D.dll` `0x10002930`, `0x10002b31`, `0x10002d11`, `0x100037f4` (file offsets the same minus the base) |
 | managed | 2 | `MGameD3D.dll` `0x10003e91` (32 bytes), `0x10003eb7` (7 bytes), one relocation entry dropped |

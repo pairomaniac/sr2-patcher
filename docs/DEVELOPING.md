@@ -23,7 +23,7 @@ python3 tools/check.py          # everything
 tools/sr2.sh au run             # play it
 ```
 
-`tools/sr2.sh BUILD ACTION`: `install [LANG]`, `rip`, `patch [KEYS]`,
+`tools/sr2.sh BUILD ACTION`: `install [LANG]`, `rip`, `patch [KEYS...]`,
 `restore`, `run`, `debug [CHANNELS]`, `show`, with the paths from
 `~/.sr2-test`. `xinput` needs `noregistry` (which gives the game's own
 block a file of its own and leaves `SR2.CFG` to the text) and `devices`
@@ -31,7 +31,7 @@ needs `xinput`; the patcher refuses the combinations without. `run` and `debug` 
 and leave the Wine log in `logs/`.
 
 The mix's numbers - the effects' range and the two music offsets - are
-`asm/mix.inc`; `build.py` derives the CD table (`curve.inc`) from it.
+`asm/mix.inc`, included by `mix.asm` and `music.asm`.
 
 `python3 tools/kit.py` bundles every build's installed files, minus the
 assets, with the first 16 MB of each `data1.cab`, into the gitignored
@@ -46,7 +46,7 @@ and games and skip themselves without.
 | Check | Catches |
 | --- | --- |
 | `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, a placeholder left unfilled |
-| `asm` | `asm/` edited without `asm/build.py` being run, `curve.inc` included |
+| `asm` | `asm/` edited without `asm/build.py` being run |
 | `lint` | pyflakes |
 | `bgrow`, `fullwin`, `altenter` | those stubs under Unicorn |
 | `cab` | the disc and cabinet readers on a real dump |
@@ -104,9 +104,8 @@ wrong row fails before anything is written.
 `tools/sr2.sh BUILD debug` sets `WINEDEBUG=+seh,+loaddll,+mci`, or the
 channels given. The last `loaddll` before an exit names the DLL whose
 init failed; `err:actctx` and `80040154` are the manifests;
-`seh:dispatch_exception` with its `eip` is a crash; `mciSendStringW`
-lines are the music hook's commands; `+debugstr` shows what the Musashi
-DLLs print. An empty `music\trace` beside the tracks makes the hook
+`seh:dispatch_exception` with its `eip` is a crash; `+debugstr` shows
+what the Musashi DLLs print. An empty `music\trace` beside the tracks makes the hook
 report every command it receives as `sr2 <id> <msg> <flags> <p1> <p2>
 <p3>` on `+debugstr`.
 

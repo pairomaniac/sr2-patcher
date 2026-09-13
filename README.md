@@ -2,8 +2,8 @@
 
 Runs *SEGA RALLY 2* (PC, 1999) on a modern system from your own disc
 dumps: one folder with the game and its music in it, no installer, no
-registry, no disc in the drive. Works under Wine and Proton; Windows is
-untested.
+registry, no disc in the drive. Works under Wine and Proton; on Windows
+it starts and plays, with the gaps listed under *Status*.
 
 ## Quick start
 
@@ -25,6 +25,11 @@ python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
+`--patch` takes the patches to apply after the folder - the names in the
+table below's order, comma-separated - or the ones to leave out with a
+minus: `--patch ~/games/sr2 -borderless`. Leaving out a patch takes out
+the ones that need it. Nothing named means every patch.
+
 ## What you need
 
 - Both discs as bin/cue. One bin per track or a single bin; an `.iso`
@@ -42,6 +47,7 @@ and refuses anything that is not an unmodified copy of it.
 | --- | --- |
 | **Windows 9x check** | The Australian release refuses to start. |
 | **No disc required** | An "insert the play disc" box, and a menu with everything but multiplayer greyed out. |
+| **Video card warning** | An OK/Cancel box on every start saying the card is not certified: it checks a 1999 list and 4 MB of video memory. |
 | **Startup crash** | Under Proton the game closes before its window appears. |
 | **ALT+TAB** | Switching away and back leaves a blank screen or a world with no textures. |
 | **Missing lettering** | The black lettering on the 2D screens - SELECT GAME, SELECT CAR - drawn as outlines. |
@@ -49,7 +55,7 @@ and refuses anything that is not an unmodified copy of it.
 | **Borderless fullscreen** | The game takes the display over at 640x480 and comes back from ALT+TAB on the wrong monitor. It now runs in a borderless window on the monitor it starts on, 4:3, black bars. |
 | **ALT+ENTER** | Toggles a framed window you can move, resize or maximise. |
 | **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there. |
-| **The mix** | The three sliders followed three different curves - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each; the Australian release also ran its effects at a fraction of theirs. All three follow one curve now, 3.5 dB a step, topping out at −8 dB - the old 7 - with the CD music 8 dB above the effects (stock at 9) and the streamed music 2 dB above. The Australian release no longer needs a CD volume control on the sound card. |
+| **The mix** | The three sliders followed three different curves - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each; the Australian release also ran its effects at a fraction of theirs. All three follow one curve now, 3.5 dB a step, topping out at −8 dB - the old 7 - with the CD music 6 dB above the effects (stock at 9) and the streamed music 2 dB above. The Australian release no longer needs a CD volume control on the sound card. |
 | **Device Settings** | A fourth item on the Options menu: each player's controls, key and pad side by side, bound by pressing the key or button. |
 | **Gamepad** | Pads are DirectInput only, set up in a Control Panel applet; an XInput pad does nothing. It now works out of the box: stick to steer, triggers, A/B through the menus, Start to pause. The controls live in `SR2.CFG` as plain text, not in the registry. |
 
@@ -61,6 +67,12 @@ Work in progress. Installs, starts, plays with music, survives ALT+TAB,
 under Wine and Proton (via umu). Supported: the European, American and
 Australian releases, Pentium III build, told apart by the exe. The
 Japanese release has not been seen.
+
+On Windows (10, European release, AMD): starts and plays in stock
+fullscreen. Known: the game crashes on returning to the menu after
+saving a replay, as the original does; the borderless window fails at
+startup with error code 80004005, so leave `borderless` off there for
+now (`--patch DIR -borderless`).
 
 Planned: native widescreen with split-screen to match, online play
 with a lobby, frame timing, a Windows exe of the patcher.

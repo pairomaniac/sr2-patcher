@@ -23,22 +23,21 @@
 ; writes them; length comes from the file size. No tracks found means the
 ; hook forwards everything and the game reads a real CD as it always did.
 ;
-; Playback is not implemented here: a CD command becomes an MCI string
-; command against waveaudio, and the same MCI subsystem does the work.
+; A track plays from a DirectSound buffer of its own, filled from the file
+; on open, with the BGM slider set on that buffer in hundredths of a dB -
+; the units the mix keeps every other level in, so the music sits on the
+; same curve as the effects on Windows and Wine alike. winmm's volume, by
+; handle or by device, is the application's session volume on Windows
+; since Vista, and moves the effects with the music.
 ;
-; The BGM slider's two methods are pointed here as well: getvolume and
-; setvolume, the latter mapping the slider step to a waveOut amplitude on
-; the mix's dB curve (mix.inc, the table in curve.inc), applied to the
-; wave stream by the worker after each play. README.md has the account.
-;
-; MGAudio talks to MCI from several short-lived threads, and Wine's winmm
-; keeps an MCI device private to the thread that opened it. So every string
-; command is issued by one worker thread created at startup: the hook
-; writes D_CMD, signals D_HREQ and waits on D_HDONE; the worker sends the
-; command, stores the result in D_RESULT and signals back.
+; MGAudio talks to MCI from several short-lived threads it also
+; terminates. So every DirectSound call is made by one worker thread
+; created at startup: the hook writes D_OP and D_ARG, signals D_HREQ and waits on
+; D_HDONE; the worker does it, stores the result in D_RESULT and signals
+; back.
 
 bits 32
-%include "curve.inc"
+%include "mix.inc"
 
 %define MAGIC_ORIGENTRY 0xE1E1E1E1      ; offset to the original entry point
 %define MAGIC_IATMCI    0xE2E2E2E2      ; offset to the mciSendCommandA IAT slot
@@ -71,11 +70,47 @@ bits 32
 %define ST_NTRACKS      3
 
 %define MCIERR_OUTOFRANGE 0x112
+%define MCIERR_INTERNAL   0x115
+
+; The worker's operations. D_ARG is the track for OPEN, ms for PLAY.
+%define OP_OPEN         1
+%define OP_PLAY         2
+%define OP_STOP         3
+%define OP_PAUSE        4
+%define OP_RESUME       5
+%define OP_CLOSE        6
+%define OP_POS          7               ; D_RESULT = ms into the track
+%define OP_VOL          8
+
+%define BYTES_PER_SEC   176400          ; 44100 * 2 * 2
+%define WAV_HEADER      44
+
+; IDirectSound
+%define DS_CREATEBUFFER 0x0c
+%define DS_SETCOOP      0x18
+%define DSSCL_NORMAL    1
+; IDirectSoundBuffer
+%define DSB_RELEASE     0x08
+%define DSB_GETPOS      0x10
+%define DSB_GETSTATUS   0x24
+%define DSB_LOCK        0x2c
+%define DSB_PLAY        0x30
+%define DSB_SETPOS      0x34
+%define DSB_SETVOLUME   0x3c
+%define DSB_STOP        0x48
+%define DSB_UNLOCK      0x4c
+%define DSBCAPS         0x18088         ; LOCSOFTWARE | CTRLVOLUME | GLOBALFOCUS | GETCURRENTPOSITION2
+%define DSBSTATUS_PLAYING 1
+%define DSBVOLUME_MIN   -10000
+
+; The buffer's state, for the position: a stopped buffer that was playing
+; ran out, and is at the track's end.
+%define ST_IDLE         0
+%define ST_PLAYING      1
+%define ST_PAUSED       2
 
 %define MAXTRACK        99
 %define PATHLEN         272
-%define CMDLEN          512
-%define RETLEN          32
 
 ; ---------------------------------------------------------------- thunks
 
@@ -161,6 +196,32 @@ trace:
         popad
         ret
 
+; Trace mode, the worker's side: "sr2 op <op> <arg> <result> <last HRESULT>".
+optrace:
+        pushad
+        lea     edi, [ebx + D_TRC]
+        lea     esi, [ebx + S_OPTRACE]
+        call    scat
+        mov     eax, [ebx + D_OP]
+        call    putnum
+        mov     byte [edi], ' '
+        inc     edi
+        mov     eax, [ebx + D_ARG]
+        call    putnum
+        mov     byte [edi], ' '
+        inc     edi
+        mov     eax, [ebx + D_RESULT]
+        call    putnum
+        mov     byte [edi], ' '
+        inc     edi
+        mov     eax, [ebx + D_LASTHR]
+        call    putnum
+        lea     eax, [ebx + D_TRC]
+        push    eax
+        call    dword [ebx + D_ODS]
+        popad
+        ret
+
 ; eax = value, written in decimal at edi, NUL-terminated, edi on the NUL.
 putnum:
         push    ebx
@@ -183,67 +244,36 @@ putnum:
         pop     ebx
         ret
 
-; esi -> decimal text, eax = value.
-getnum:
-        xor     eax, eax
-        xor     ecx, ecx
-.next:
-        mov     cl, [esi]
-        sub     cl, '0'
-        cmp     cl, 9
-        ja      .done
-        imul    eax, 10
-        add     eax, ecx
-        inc     esi
-        jmp     .next
-.done:
-        ret
-
-; Sends D_CMD as an MCI string command through the worker. eax = MCIERROR.
-; ebx = base. The answer, if any, is in D_RET.
-mcistr:
+; Asks the worker for operation eax with argument ecx. eax = its result.
+; ebx = base; the other registers kept. One caller at a time: the exe
+; fades on one thread while another changes screen, and two requests
+; at once left one of them unrun. A mutex rather than a critical
+; section, since MGAudio terminates its threads: an abandoned mutex
+; is handed on, an abandoned critical section is held for ever.
+request:
+        push    ecx
+        push    edx
+        push    eax
+        push    -1
+        push    dword [ebx + D_HMUTEX]
+        call    dword [ebx + D_WAIT]
+        pop     eax
+        mov     ecx, [esp + 4]          ; the argument, as pushed; the wait keeps nothing
+        mov     [ebx + D_OP], eax
+        mov     [ebx + D_ARG], ecx
         push    dword [ebx + D_HREQ]
         call    dword [ebx + D_SETEVENT]
         push    -1                      ; INFINITE
         push    dword [ebx + D_HDONE]
         call    dword [ebx + D_WAIT]
         mov     eax, [ebx + D_RESULT]
-        ret
-
-; The worker thread: waits for a request, sends it, answers. Never returns.
-worker:
-        call    getbase
-.loop:
-        push    -1
-        push    dword [ebx + D_HREQ]
-        call    dword [ebx + D_WAIT]
-        push    0
-        push    RETLEN
-        lea     eax, [ebx + D_RET]
         push    eax
-        lea     eax, [ebx + D_CMD]
-        push    eax
-        call    dword [ebx + D_MCISTR]
-        mov     [ebx + D_RESULT], eax
-        push    dword [ebx + D_HDONE]
-        call    dword [ebx + D_SETEVENT]
-        cmp     dword [ebx + D_PLAYED], 0
-        je      .loop
-        mov     dword [ebx + D_PLAYED], 0
-        cmp     dword [ebx + D_SLEEP], 0
-        je      .loop
-        mov     ecx, 100                ; up to 400 ms for the stream to appear
-.settle:
-        call    applyvol
-        test    eax, eax
-        jz      .loop
-        push    ecx
-        push    4
-        call    dword [ebx + D_SLEEP]
+        push    dword [ebx + D_HMUTEX]
+        call    dword [ebx + D_RELMUTEX]
+        pop     eax
+        pop     edx
         pop     ecx
-        dec     ecx
-        jnz     .settle
-        jmp     .loop
+        ret
 
 ; eax = TMSF (track, min, sec, frame), returns ecx = ms into the track,
 ; eax = track.
@@ -326,71 +356,433 @@ trackpath:
         call    scat
         ret
 
-; Opens track eax as sr2bgm. eax = 0 or MCIERROR.
-opentrack:
-        mov     [ebx + D_CUR], eax
+; ---------------------------------------------------------------- worker
+; Waits for a request, does it, answers. Never returns. Every DirectSound
+; and file call is made here.
+
+worker:
+        call    getbase
+.loop:
+        push    -1
+        push    dword [ebx + D_HREQ]
+        call    dword [ebx + D_WAIT]
+        mov     eax, [ebx + D_OP]
+        cmp     eax, OP_OPEN
+        je      .open
+        cmp     eax, OP_PLAY
+        je      .play
+        cmp     eax, OP_STOP
+        je      .stop
+        cmp     eax, OP_PAUSE
+        je      .pause
+        cmp     eax, OP_RESUME
+        je      .resume
+        cmp     eax, OP_CLOSE
+        je      .close
+        cmp     eax, OP_POS
+        je      .pos
+        cmp     eax, OP_VOL
+        je      .vol
+        xor     eax, eax
+.answer:
+        mov     [ebx + D_RESULT], eax
+        cmp     dword [ebx + D_TRACE], 0
+        je      .signal
+        call    optrace
+.signal:
+        push    dword [ebx + D_HDONE]
+        call    dword [ebx + D_SETEVENT]
+        jmp     .loop
+
+.open:
+        call    op_close
+        call    op_open
+        jmp     .answer
+.play:
+        call    op_play
+        jmp     .answer
+.stop:
+        call    op_stop
+        xor     eax, eax
+        jmp     .answer
+.pause:
+        call    dev_pause
+        xor     eax, eax
+        jmp     .answer
+.resume:
+        call    dev_restart
+        xor     eax, eax
+        jmp     .answer
+.close:
+        call    op_close
+        xor     eax, eax
+        jmp     .answer
+.pos:
+        call    op_pos
+        jmp     .answer
+.vol:
+        call    op_vol
+        xor     eax, eax
+        jmp     .answer
+
+; The DirectSound object, made on the first open: DirectSoundCreate and
+; the cooperative level, normal, on the desktop window - the buffers are
+; GLOBALFOCUS, so no window of the game's is needed. eax = 0 or
+; MCIERR_INTERNAL.
+dsound:
+        cmp     dword [ebx + D_DS], 0
+        jne     .have
+        push    0
+        lea     eax, [ebx + D_DS]
         push    eax
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_CLOSE]
-        call    scat
-        call    mcistr
-        mov     dword [ebx + D_OPEN], 0
-        pop     eax
-        call    trackpath
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_OPEN]
-        call    scat
-        lea     esi, [ebx + D_PATH]
-        call    scat
-        lea     esi, [ebx + S_OPEN2]
-        call    scat
-        call    mcistr
+        push    0
+        call    dword [ebx + D_DSCREATE]
+        mov     [ebx + D_LASTHR], eax
+        test    eax, eax
+        jnz     .fail
+        push    DSSCL_NORMAL
+        call    dword [ebx + D_DESKTOP]
+        push    eax
+        mov     eax, [ebx + D_DS]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DS_SETCOOP]
+        mov     [ebx + D_LASTHR], eax
+        test    eax, eax
+        jnz     .fail
+.have:
+        xor     eax, eax
+        ret
+.fail:
+        mov     eax, MCIERR_INTERNAL
+        ret
+
+; Opens track D_ARG: the file read into a buffer of its size, the volume
+; set. eax = 0 or MCIERR_INTERNAL, with everything released on failure.
+op_open:
+        call    dsound
         test    eax, eax
         jnz     .out
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_SETMS]
-        call    scat
-        call    mcistr
-        mov     dword [ebx + D_OPEN], 1
+        mov     eax, [ebx + D_ARG]
+        call    trackpath
+        push    0
+        push    0x80                    ; FILE_ATTRIBUTE_NORMAL
+        push    3                       ; OPEN_EXISTING
+        push    0
+        push    1                       ; FILE_SHARE_READ
+        push    0x80000000              ; GENERIC_READ
+        lea     eax, [ebx + D_PATH]
+        push    eax
+        call    dword [ebx + D_CREATEF]
+        cmp     eax, -1
+        je      .fail
+        mov     [ebx + D_FILE], eax
+        push    0
+        push    eax
+        call    dword [ebx + D_GETSIZE]
+        sub     eax, WAV_HEADER
+        jbe     .fail
+        and     eax, ~3                 ; whole frames
+        mov     [ebx + D_DATASIZE], eax
+        mov     [ebx + D_DESC + 8], eax ; dwBufferBytes
+        push    0
+        push    0
+        push    0
+        push    2                       ; PAGE_READONLY
+        push    0
+        push    dword [ebx + D_FILE]
+        call    dword [ebx + D_CREATEMAP]
+        test    eax, eax
+        jz      .fail
+        mov     [ebx + D_MAP], eax
+        push    0
+        push    0
+        push    0
+        push    4                       ; FILE_MAP_READ
+        push    eax
+        call    dword [ebx + D_MAPVIEW]
+        test    eax, eax
+        jz      .fail
+        mov     [ebx + D_VIEW], eax
+        lea     eax, [ebx + D_FMT]
+        mov     [ebx + D_DESC + 16], eax
+        push    0
+        lea     eax, [ebx + D_BUF]
+        push    eax
+        lea     eax, [ebx + D_DESC]
+        push    eax
+        mov     eax, [ebx + D_DS]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DS_CREATEBUFFER]
+        mov     [ebx + D_LASTHR], eax
+        test    eax, eax
+        jnz     .fail
+        push    0
+        lea     eax, [ebx + D_LOCK + 12]
+        push    eax                     ; n2
+        lea     eax, [ebx + D_LOCK + 8]
+        push    eax                     ; p2
+        lea     eax, [ebx + D_LOCK + 4]
+        push    eax                     ; n1
+        lea     eax, [ebx + D_LOCK]
+        push    eax                     ; p1
+        push    dword [ebx + D_DATASIZE]
+        push    0
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_LOCK]
+        mov     [ebx + D_LASTHR], eax
+        test    eax, eax
+        jnz     .fail
+        mov     esi, [ebx + D_VIEW]
+        add     esi, WAV_HEADER
+        mov     edi, [ebx + D_LOCK]
+        mov     ecx, [ebx + D_LOCK + 4]
+        rep movsb
+        mov     edi, [ebx + D_LOCK + 8]
+        mov     ecx, [ebx + D_LOCK + 12]
+        rep movsb
+        push    dword [ebx + D_LOCK + 12]
+        push    dword [ebx + D_LOCK + 8]
+        push    dword [ebx + D_LOCK + 4]
+        push    dword [ebx + D_LOCK]
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_UNLOCK]
+        call    unmap
+        call    op_vol
+        mov     dword [ebx + D_STATE], ST_IDLE
         xor     eax, eax
 .out:
         ret
+.fail:
+        call    op_close
+        mov     eax, MCIERR_INTERNAL
+        ret
 
-; waveOutSetVolume(h, D_VOL) for every h in S_HANDLES. eax = 0 if any
-; took it; other registers kept.
-applyvol:
-        mov     eax, -1
-        cmp     dword [ebx + D_SETVOL], 0
-        je      .none
-        push    ecx
-        push    edx
-        push    esi
-        push    edi
-        mov     edi, -1
-        lea     esi, [ebx + S_HANDLES]
-.each:
-        push    dword [ebx + D_VOL]
-        push    dword [esi]
-        call    dword [ebx + D_SETVOL]
+; Releases the view, the mapping and the file, whichever are held.
+unmap:
+        mov     eax, [ebx + D_VIEW]
         test    eax, eax
-        jnz     .next
-        xor     edi, edi
-.next:
-        add     esi, 4
-        cmp     dword [esi], -1
-        jne     .each
-        mov     eax, edi
-        pop     edi
-        pop     esi
-        pop     edx
-        pop     ecx
+        jz      .noview
+        push    eax
+        call    dword [ebx + D_UNMAP]
+        mov     dword [ebx + D_VIEW], 0
+.noview:
+        mov     eax, [ebx + D_MAP]
+        test    eax, eax
+        jz      .nomap
+        push    eax
+        call    dword [ebx + D_CLOSEH]
+        mov     dword [ebx + D_MAP], 0
+.nomap:
+        mov     eax, [ebx + D_FILE]
+        test    eax, eax
+        jz      .nofile
+        push    eax
+        call    dword [ebx + D_CLOSEH]
+        mov     dword [ebx + D_FILE], 0
+.nofile:
+        ret
+
+; Stops and releases the buffer, and whatever an open left half done. A
+; buffer released while playing is not stopped cleanly on Windows.
+op_close:
+        call    unmap
+        mov     eax, [ebx + D_BUF]
+        test    eax, eax
+        jz      .nobuf
+        call    dev_stop
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_RELEASE]
+        mov     dword [ebx + D_BUF], 0
+.nobuf:
+        mov     dword [ebx + D_STATE], ST_IDLE
+        ret
+
+; Plays from ms D_ARG. eax = 0 or MCIERR_INTERNAL.
+op_play:
+        cmp     dword [ebx + D_BUF], 0
+        je      .nobuf
+        mov     eax, [ebx + D_ARG]
+        imul    eax, BYTES_PER_SEC / 200
+        xor     edx, edx
+        mov     ecx, 5
+        div     ecx                     ; ms * 176400 / 1000
+        and     eax, ~3
+        cmp     eax, [ebx + D_DATASIZE]
+        jb      .inside
+        mov     eax, [ebx + D_DATASIZE]
+        sub     eax, 4
+.inside:
+        push    eax
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_SETPOS]
+        mov     [ebx + D_LASTHR], eax
+        test    eax, eax
+        jnz     .nobuf
+        call    dev_play
+        test    eax, eax
+        jnz     .nobuf
+        ret
+.nobuf:
+        mov     eax, MCIERR_INTERNAL
+        ret
+
+; Stops and goes back to the start.
+op_stop:
+        cmp     dword [ebx + D_BUF], 0
+        je      .none
+        call    dev_stop
+        push    0
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_SETPOS]
+        mov     dword [ebx + D_STATE], ST_IDLE
 .none:
+        ret
+
+; eax = ms into the track: the play cursor, or the end once a play has
+; run out - DirectSound stops the buffer there and no longer says where.
+op_pos:
+        xor     eax, eax
+        cmp     dword [ebx + D_BUF], 0
+        je      .done
+        cmp     dword [ebx + D_STATE], ST_PLAYING
+        jne     .cursor
+        lea     eax, [ebx + D_STATUS]
+        push    eax
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_GETSTATUS]
+        test    eax, eax
+        jnz     .cursor
+        test    dword [ebx + D_STATUS], DSBSTATUS_PLAYING
+        jnz     .cursor
+        mov     eax, [ebx + D_DATASIZE]
+        jmp     .ms
+.cursor:
+        push    0
+        lea     eax, [ebx + D_STATUS]
+        push    eax
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_GETPOS]
+        test    eax, eax
+        jnz     .zero
+        mov     eax, [ebx + D_STATUS]
+.ms:
+        mov     ecx, 200
+        mul     ecx
+        mov     ecx, BYTES_PER_SEC / 5
+        div     ecx                     ; bytes * 1000 / 176400
+        ret
+.zero:
+        xor     eax, eax
+.done:
+        ret
+
+op_vol:
+        cmp     dword [ebx + D_BUF], 0
+        je      .none
+        push    dword [ebx + D_VOL]
+        call    setvol
+.none:
+        ret
+
+; SetVolume(the dword pushed), stdcall.
+setvol:
+        push    dword [esp + 4]
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_SETVOLUME]
+        ret     4
+
+; A pause keeps the cursor; a resume plays on from it.
+dev_pause:
+        cmp     dword [ebx + D_STATE], ST_PLAYING
+        jne     .none
+        call    dev_stop
+        mov     dword [ebx + D_STATE], ST_PAUSED
+.none:
+        ret
+
+dev_restart:
+        cmp     dword [ebx + D_STATE], ST_PAUSED
+        jne     .none
+        call    dev_play
+.none:
+        ret
+
+; Play(0, 0, 0), no loop, at the slider's volume. eax = its result; the
+; state playing on success.
+dev_play:
+        call    op_vol
+        push    0
+        push    0
+        push    0
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_PLAY]
+        mov     [ebx + D_LASTHR], eax
+        test    eax, eax
+        jnz     .out
+        mov     dword [ebx + D_STATE], ST_PLAYING
+.out:
+        ret
+
+; Silence first: Windows' mixer holds audio mixed ahead of the cursor and
+; remixes it on a volume change, so the stop is clean.
+dev_stop:
+        push    DSBVOLUME_MIN
+        call    setvol
+        mov     eax, [ebx + D_BUF]
+        push    eax
+        mov     ecx, [eax]
+        call    dword [ecx + DSB_STOP]
         ret
 
 ; ------------------------------------------------- setvolume, getvolume
 ; Replace the CD-volume methods: stdcall (this, values, flags), where
 ; values is the game's struct - +8 the channel count, +0xc and +0x10 the
 ; channels, 0..10000. Both return S_OK; the mixer is never touched.
+;
+; The exe reaches setvolume from four places, each with its own idea of
+; the value, a percentage of the level getvolume gave it at startup
+; (10000, so v = percent x 100):
+;
+;   the menu's level, the slider's step x 11.11 (0x473c5c), flags 0x40 by
+;     the cdlevel patch, which the music patch requires;
+;   the race's level, the step x 9 (0x473f11), flags 0x80000000;
+;   the mute when a race starts, 0 (0x474210), flags 0x80000000;
+;   the fade before a stop, 100 down to 10 (0x4741bc), flags 0.
+;
+; A level is the step on the mix's curve plus CD_DB, in hundredths of a
+; dB, and is remembered; the mute is off without forgetting it. The fade
+; was written for a mixer line that took amplitude, from full whatever
+; the slider said: on the curve that would start up to 30 dB above the
+; level, so it is taken as a percentage of the level in amplitude, the
+; level plus 20 log10(v / 10000), counting from its start at 100.
+;
+; A fade runs on its own thread and a screen change can cut across it:
+; the new screen sets the level and plays, and the fade's last steps
+; land on the new track. So a fade counts from its start, 100, and ends
+; at any level or mute; a step arriving outside one is dropped.
+;
+; The original DLL used only bit 31 of the flags, to wait for the
+; previous set's thread; bit 6 is free for the mark.
 
 setvolume:
         push    ebx
@@ -405,39 +797,83 @@ setvolume:
         jbe     .scale
         mov     eax, 10000
 .scale:
-        mov     [ebx + D_VOL10K], eax
-        add     eax, 555                ; the slider step, 0..9, the value was made from
+        mov     edx, [esp + 16]         ; flags
+        test    edx, 0x40
+        jnz     .menu
+        test    edx, 0x80000000
+        jz      .fadeof
+        test    eax, eax
+        jz      .mute
         xor     edx, edx
-        mov     ecx, 1111
-        div     ecx
+        mov     ecx, 900
+        div     ecx                     ; the race's level: step x 9 percent
+        jmp     .level
+.fadeof:
+        cmp     eax, 10000
+        je      .fadestart
+        mov     ecx, eax
+        jmp     .fadestep
+.menu:
+        xor     edx, edx
+        mov     ecx, 1100
+        div     ecx                     ; the menu's level: step x 11.11 percent
+.level:
         cmp     eax, 9
         jbe     .step
         mov     eax, 9
 .step:
-        movzx   eax, word [ebx + S_CURVE + eax * 2]
-        mov     edx, eax
-        shl     edx, 16
-        or      eax, edx                ; both channels
-        mov     [ebx + D_VOL], eax
-        call    applyvol
+        mov     ecx, DSBVOLUME_MIN      ; step 0: off
+        test    eax, eax
+        jz      .setlevel
+        imul    eax, MIX_STEP
+        lea     ecx, [eax + MIX_BOTTOM + CD_DB]   ; the mix curve plus the CD offset
+.setlevel:
+        mov     [ebx + D_SLIDER], ecx
+        mov     dword [ebx + D_FADING], 0
+        jmp     .have
+.fadestart:
+        mov     dword [ebx + D_FADING], 1
+        mov     ecx, [ebx + D_SLIDER]
+        jmp     .have
+.fadestep:
+        cmp     dword [ebx + D_FADING], 0
+        je      .ok                     ; a step of a fade that is over
+        mov     eax, ecx                ; the value
+        xor     edx, edx
+        mov     ecx, 100
+        div     ecx                     ; eax = percent
+        movsx   eax, word [ebx + S_PCTDB + eax * 2]
+        mov     ecx, [ebx + D_SLIDER]
+        add     ecx, eax
+        cmp     ecx, DSBVOLUME_MIN
+        jge     .have
+        mov     ecx, DSBVOLUME_MIN
+        jmp     .have
+.mute:
+        mov     dword [ebx + D_FADING], 0
+        mov     ecx, DSBVOLUME_MIN
+.have:
+        mov     [ebx + D_VOL], ecx
+        cmp     dword [ebx + D_NTRACKS], 0
+        je      .ok                     ; no worker: nothing to set it on
+        mov     eax, OP_VOL             ; ecx, the value, for the trace only
+        call    request
 .ok:
         xor     eax, eax
         pop     ebx
         ret     12
 
+; Full, always: the exe reads this once at startup and scales every
+; percentage it sends by it.
 getvolume:
-        push    ebx
-        call    getbase
-        mov     eax, [esp + 12]         ; values
+        mov     eax, [esp + 8]          ; values
         test    eax, eax
         jz      .ok
-        mov     ecx, [ebx + D_VOL10K]
         mov     dword [eax + 8], 2
-        mov     [eax + 12], ecx
-        mov     [eax + 16], ecx
+        mov     dword [eax + 12], 10000
+        mov     dword [eax + 16], 10000
 .ok:
         xor     eax, eax
-        pop     ebx
         ret     12
 
 ; ------------------------------------------------------------------ hook
@@ -488,20 +924,20 @@ hook:
         jmp     .ok                     ; MCI_SET and anything else: fine
 
 .close:
-        lea     esi, [ebx + S_CLOSE]
+        mov     eax, OP_CLOSE
         call    .simple
         mov     dword [ebx + D_OPEN], 0
         jmp     .ok
 .stop:
-        lea     esi, [ebx + S_STOP]
+        mov     eax, OP_STOP
         call    .simple
         jmp     .ok
 .pause:
-        lea     esi, [ebx + S_PAUSE]
+        mov     eax, OP_PAUSE
         call    .simple
         jmp     .ok
 .resume:
-        lea     esi, [ebx + S_RESUME]
+        mov     eax, OP_RESUME
         call    .simple
         jmp     .ok
 
@@ -521,23 +957,19 @@ hook:
         ja      .range
         cmp     dword [ebx + D_TOC + eax * 4], 0
         je      .range
+        mov     [ebx + D_CUR], eax
+        mov     dword [ebx + D_OPEN], 0
         push    ecx
-        call    opentrack
+        mov     ecx, eax
+        mov     eax, OP_OPEN
+        call    request
         pop     ecx
         test    eax, eax
         jnz     .ret
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_PLAY]
-        call    scat
-        test    ecx, ecx
-        jz      .go
-        lea     esi, [ebx + S_FROM]
-        call    scat
-        mov     eax, ecx
-        call    putnum
+        mov     dword [ebx + D_OPEN], 1
 .go:
-        mov     dword [ebx + D_PLAYED], 1  ; the worker settles the volume after this one
-        call    mcistr
+        mov     eax, OP_PLAY
+        call    request
         jmp     .ret
 .range:
         mov     eax, MCIERR_OUTOFRANGE
@@ -545,9 +977,8 @@ hook:
 
 ; The exe seeks with the track its play adds one to - at "Go!" it seeks
 ; the course track, playing as N+1, to track N at 0:00 - so a seek to the
-; open track or the one below it is a seek within the open track. mciwave
-; stops on a seek, and no play follows, so the hook plays again from
-; there.
+; open track or the one below it is a seek within the open track, and
+; no play follows, so the hook plays from there.
 .seek:
         test    dword [ebp + 16], MCI_TO
         jz      .ok
@@ -558,21 +989,10 @@ hook:
         cmp     dword [ebx + D_OPEN], 0
         je      .seeklater
         cmp     eax, [ebx + D_CUR]
-        je      .seekopen
+        je      .go
         inc     eax
         cmp     eax, [ebx + D_CUR]
-        jne     .seeklater
-.seekopen:
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_SEEK]
-        call    scat
-        mov     eax, ecx
-        call    putnum
-        call    mcistr
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_PLAY]
-        call    scat
-        jmp     .go
+        je      .go
 .seeklater:
         mov     [ebx + D_CUR], eax      ; the next play without FROM starts here
         jmp     .ok
@@ -606,28 +1026,23 @@ hook:
         mov     [edx + 4], eax
         jmp     .ok
 .position:
-        mov     ecx, [ebx + D_CUR]
         xor     eax, eax
         cmp     dword [ebx + D_OPEN], 0
         je      .posdone
-        lea     edi, [ebx + D_CMD]
-        lea     esi, [ebx + S_POS]
-        call    scat
-        call    mcistr
-        lea     esi, [ebx + D_RET]
-        call    getnum
-        mov     ecx, [ebx + D_CUR]
+        mov     eax, OP_POS
+        xor     ecx, ecx
+        call    request
 .posdone:
+        mov     ecx, [ebx + D_CUR]
         call    ms_tmsf
         mov     edx, [ebp + 20]
         mov     [edx + 4], eax
         jmp     .ok
 
-; esi -> a complete command. Sends it.
+; eax = an operation with no argument. Sends it.
 .simple:
-        lea     edi, [ebx + D_CMD]
-        call    scat
-        call    mcistr
+        xor     ecx, ecx
+        call    request
         ret
 
 .ok:
@@ -659,84 +1074,46 @@ startup:
         jne     .done
         mov     dword [ebx + D_INIT], 1
 
-        lea     eax, [ebx + S_WINMM]
-        push    eax
+        ; The imports: S_MODULES names a module and then its functions, an
+        ; empty name ending the list and another the whole; the addresses
+        ; go to D_FN in that order. One missing and there is no music.
+        lea     esi, [ebx + S_MODULES]
+        lea     edi, [ebx + D_FN]
+.module:
+        cmp     byte [esi], 0
+        je      .resolved
+        push    esi
         call    dword [ebx + MAGIC_LOADLIB]
         test    eax, eax
         jz      .done
-        mov     esi, eax
-        lea     ecx, [ebx + S_MCISTR]
-        push    ecx
+        mov     ebp, eax
+.skipname:
+        lodsb
+        test    al, al
+        jnz     .skipname
+.function:
+        cmp     byte [esi], 0
+        je      .modend
         push    esi
+        push    ebp
         call    dword [ebx + MAGIC_GETPROC]
         test    eax, eax
         jz      .done
-        mov     [ebx + D_MCISTR], eax
-        lea     ecx, [ebx + S_SETVOL]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_SETVOL], eax   ; may be 0: then the slider does nothing
-
-        lea     eax, [ebx + S_KERNEL]
-        push    eax
-        call    dword [ebx + MAGIC_LOADLIB]
-        test    eax, eax
-        jz      .done
-        mov     esi, eax
-        lea     ecx, [ebx + S_CREATEF]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_CREATEF], eax
-        lea     ecx, [ebx + S_GETSIZE]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_GETSIZE], eax
-        lea     ecx, [ebx + S_CLOSEH]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_CLOSEH], eax
-        lea     ecx, [ebx + S_CREATETHR]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_CREATETHR], eax
-        lea     ecx, [ebx + S_CREATEEV]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_CREATEEV], eax
-        lea     ecx, [ebx + S_SETEVENT]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_SETEVENT], eax
-        lea     ecx, [ebx + S_WAIT]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_WAIT], eax
-        lea     ecx, [ebx + S_SLEEP]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_SLEEP], eax
-        lea     ecx, [ebx + S_ODS]
-        push    ecx
-        push    esi
-        call    dword [ebx + MAGIC_GETPROC]
-        mov     [ebx + D_ODS], eax
-        lea     esi, [ebx + D_CREATEF]  ; the seven resolved above, in a row
-        mov     ecx, 7
+        stosd
+.skipfn:
+        lodsb
+        test    al, al
+        jnz     .skipfn
+        jmp     .function
+.modend:
+        inc     esi
+        jmp     .module
 .resolved:
-        cmp     dword [esi], 0
-        je      .done
-        add     esi, 4
-        dec     ecx
-        jnz     .resolved
+        lea     eax, [ebx + S_ODS]
+        push    eax
+        push    ebp                     ; kernel32, the last module
+        call    dword [ebx + MAGIC_GETPROC]
+        mov     [ebx + D_ODS], eax      ; may be 0: then no trace
 
         ; the game folder, from the exe's path
         push    260
@@ -804,7 +1181,7 @@ startup:
         push    edi
         call    dword [ebx + D_CLOSEH]
         pop     eax
-        sub     eax, 44
+        sub     eax, WAV_HEADER
         jbe     .next
         xor     edx, edx
         mov     ecx, 2352
@@ -816,7 +1193,15 @@ startup:
         cmp     ebp, MAXTRACK
         jbe     .walk
 
-        ; two auto-reset events and the worker; without them, no tracks
+        ; two auto-reset events, the callers' mutex and the worker;
+        ; without them, no tracks
+        push    0
+        push    0
+        push    0
+        call    dword [ebx + D_CREATEMUT]
+        mov     [ebx + D_HMUTEX], eax
+        test    eax, eax
+        jz      .nothread
         push    0
         push    0
         push    0
@@ -863,64 +1248,84 @@ D_CUR       dd 0
 D_OPEN      dd 0
 D_SEEKMS    dd 0
 D_NNPOS     dd 0                        ; where NN goes in D_PATH
-D_MCISTR    dd 0
-D_CREATEF   dd 0                        ; these seven are checked in a row
+D_ODS       dd 0                        ; OutputDebugStringA, or 0
+D_TRACE     dd 0                        ; music\trace exists: report every command
+D_TRC       times 96 db 0
+D_VOL       dd 0                        ; the level, in hundredths of a dB; full until set
+D_SLIDER    dd 0                        ; the slider's level, what a fade is a fraction of
+D_FADING    dd 0                        ; a fade has started and no level has ended it
+; 2000 log10(p / 100) for p = 0..100: an amplitude percentage in hundredths of a dB, 0 off.
+S_PCTDB:
+            dw -10000, -4000, -3398, -3046, -2796, -2602, -2444, -2310, -2194, -2092
+            dw -2000, -1917, -1842, -1772, -1708, -1648, -1592, -1539, -1489, -1442
+            dw -1398, -1356, -1315, -1277, -1240, -1204, -1170, -1137, -1106, -1075
+            dw -1046, -1017, -990, -963, -937, -912, -887, -864, -840, -818
+            dw -796, -774, -754, -733, -713, -694, -674, -656, -638, -620
+            dw -602, -585, -568, -551, -535, -519, -504, -488, -473, -458
+            dw -444, -429, -415, -401, -388, -374, -361, -348, -335, -322
+            dw -310, -297, -285, -273, -262, -250, -238, -227, -216, -205
+            dw -194, -183, -172, -162, -151, -141, -131, -121, -111, -101
+            dw -92, -82, -72, -63, -54, -45, -35, -26, -18, -9
+            dw 0
+D_HREQ      dd 0
+D_HDONE     dd 0
+D_HMUTEX    dd 0
+D_DS        dd 0                        ; IDirectSound, from the first open on
+D_BUF       dd 0                        ; IDirectSoundBuffer, while a track is open
+D_STATE     dd 0                        ; ST_IDLE, ST_PLAYING, ST_PAUSED
+D_LASTHR    dd 0                        ; the last DirectSound result, for the trace
+D_FILE      dd 0
+D_MAP       dd 0
+D_VIEW      dd 0
+D_DATASIZE  dd 0                        ; sample bytes in the open track
+D_LOCK      times 4 dd 0                ; p1, n1, p2, n2 of the lock
+D_STATUS    dd 0, 0                     ; GetStatus, GetCurrentPosition's two
+D_DESC      dd 36, DSBCAPS, 0, 0, 0     ; DSBUFFERDESC: size, flags, bytes, reserved, format
+            times 4 dd 0                ; guid3DAlgorithm, none
+D_FMT       dw 1, 2                     ; WAVEFORMATEX: PCM, stereo
+            dd 44100, BYTES_PER_SEC
+            dw 4, 16, 0
+D_TOC       times (MAXTRACK + 1) dd 0   ; frames per track
+D_PATH      times PATHLEN db 0
+
+; The imports, in S_MODULES order.
+D_FN:
+D_DSCREATE  dd 0
+D_DESKTOP   dd 0
+D_CREATEF   dd 0
 D_GETSIZE   dd 0
 D_CLOSEH    dd 0
+D_CREATEMAP dd 0
+D_MAPVIEW   dd 0
+D_UNMAP     dd 0
 D_CREATETHR dd 0
 D_CREATEEV  dd 0
 D_SETEVENT  dd 0
 D_WAIT      dd 0
-D_HREQ      dd 0
-D_HDONE     dd 0
-D_SETVOL    dd 0                        ; waveOutSetVolume, or 0
-D_SLEEP     dd 0                        ; Sleep
-D_ODS       dd 0                        ; OutputDebugStringA
-D_PLAYED    dd 0                        ; a play was just sent: settle the volume
-D_TRACE     dd 0                        ; music\trace exists: report every command
-D_TRC       times 96 db 0
-D_VOL       dd CD_FULL                 ; the slider, as a waveOut volume; full until set
-D_VOL10K    dd 10000                    ; the same on the game's scale, for getvolume
-S_CURVE     dw CD_CURVE                 ; the waveOut amplitude per slider step, curve.inc
-S_HANDLES   dd 0                        ; Windows: device 0
-            dd 0xFF00, 0xFF01           ; Wine: mapper streams 0 and 1
-            dd 0xC000                   ; Wine: device 0 stream 0
-            dd -1
-D_TOC       times (MAXTRACK + 1) dd 0   ; frames per track
-D_PATH      times PATHLEN db 0
+D_CREATEMUT dd 0
+D_RELMUTEX  dd 0
 
-S_WINMM     db 'winmm.dll', 0
-S_MCISTR    db 'mciSendStringA', 0
-S_SETVOL    db 'waveOutSetVolume', 0
-S_KERNEL    db 'kernel32.dll', 0
-S_CREATEF   db 'CreateFileA', 0
-S_GETSIZE   db 'GetFileSize', 0
-S_CLOSEH    db 'CloseHandle', 0
-S_CREATETHR db 'CreateThread', 0
-S_CREATEEV  db 'CreateEventA', 0
-S_SETEVENT  db 'SetEvent', 0
-S_WAIT      db 'WaitForSingleObject', 0
-S_SLEEP     db 'Sleep', 0
+S_MODULES   db 'dsound.dll', 0
+            db 'DirectSoundCreate', 0, 0
+            db 'user32.dll', 0
+            db 'GetDesktopWindow', 0, 0
+            db 'kernel32.dll', 0
+            db 'CreateFileA', 0, 'GetFileSize', 0, 'CloseHandle', 0
+            db 'CreateFileMappingA', 0, 'MapViewOfFile', 0
+            db 'UnmapViewOfFile', 0, 'CreateThread', 0, 'CreateEventA', 0
+            db 'SetEvent', 0, 'WaitForSingleObject', 0
+            db 'CreateMutexA', 0, 'ReleaseMutex', 0, 0
+            db 0
 S_ODS       db 'OutputDebugStringA', 0
 S_TRACK     db 'music\track', 0
 S_TRACEF    db 'music\trace', 0
 S_TRACE     db 'sr2 ', 0
+S_OPTRACE   db 'sr2 op ', 0
 S_WAV       db '.wav', 0
-S_CLOSE     db 'close sr2bgm', 0
-S_OPEN      db 'open "', 0
-S_OPEN2     db '" type waveaudio alias sr2bgm', 0
-S_SETMS     db 'set sr2bgm time format milliseconds', 0
-S_PLAY      db 'play sr2bgm', 0
-S_FROM      db ' from ', 0
-S_SEEK      db 'seek sr2bgm to ', 0
-S_STOP      db 'stop sr2bgm', 0
-S_PAUSE     db 'pause sr2bgm', 0
-S_RESUME    db 'resume sr2bgm', 0
-S_POS       db 'status sr2bgm position', 0
 
 ; Last, at known offsets from the end, so the check can find them:
-; D_CMD at -(CMDLEN+RETLEN+4), D_RET at -(RETLEN+4), D_RESULT at -4.
+; D_OP at -12, D_ARG at -8, D_RESULT at -4.
 align 4
-D_CMD       times CMDLEN db 0
-D_RET       times RETLEN db 0
+D_OP        dd 0
+D_ARG       dd 0
 D_RESULT    dd 0

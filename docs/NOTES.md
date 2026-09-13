@@ -15,6 +15,7 @@ Australian releases map onto it; *Builds* says how far.
 | --- | --- | --- | --- |
 | **Windows 9x check** (Australian only) | `SEGA RALLY 2.exe` | `0x4b3b0` | `0x44bfb0`, "Please run on Windows 9x." unless `GetVersionExA` gives `dwPlatformId` 1, returns 0 at once (`sub esp,0x94` → `xor eax,eax; ret`); the other builds have no such check |
 | **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
+| **No card warning** | `SEGA RALLY 2.exe` | `0x26678` (`0x26938` American, `0x4b263` Australian) | `0x427240` shows string 5 of `SR2_MSG.dll`, OK/Cancel, when the chosen device's free video memory is under 4,000,000 bytes or the two capability bits `0x1800` at `+0x34` of its entry are both clear; Cancel makes it return 1 and the caller exit. The `push 5` before the string load → `jmp` to the return-0 tail. The Australian exe has no memory test |
 | **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
 | **Invisible lobby text** | `SEGA RALLY 2.exe` | appended `.sr2c` section; `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96` | the eight `call [__imp__SetTextColor]` → `call stub; nop`, the two `mov esi, [__imp__SetTextColor]` → `mov esi, stub; nop`; the stub masks the colour to RGB; see [asm/README.md](../asm/README.md) |
@@ -26,7 +27,8 @@ Australian releases map onto it; *Builds* says how far.
 | **No mixer needed** (Australian only) | `MUSASHI\MGAudio.dll` | `0x2278` and appended `.sr2v` section | Init looks for a CD line on the mixer for the volume slider; without one the European DLL returns `S_FALSE`, the Australian `E_FAIL`, and Wine has none. The `jne fail` → a stub that zeroes the control count at `+0x84` (uninitialised until the search fills it) and eax, and jumps back to the allocation |
 | **The mix** | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980` and appended `.sr2b` section | the sound manager - in the exe and, as a copy of the same code, in every screen DLL - gives each effect a −40..0 dB range and sets its ceiling at `(step+1)/10` of it from the slider: 4 dB a step, 0 dB at 9. The buffer's `SetRange` (`0x10004380`) loads min and max through asm/mix.asm, each mapped onto `MIX_MIN..MIX_MAX` from asm/mix.inc, −43..−8: 3.5 dB a step, 9 the old 7, for every client. The streamed music - every client ends in the streaming buffer's `SetVolume` (`0x10006940`) with the step × 1111 as a 0..10000 value mapped across the stream's own range - finishes that mapping through the second routine, the step on the same curve plus `STREAM_DB` (200), 0 off |
 | **Effects at full** (Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; `Options.dll` `0xf92a`, `0xf98d`, `0xf9e1` | the volume routine sets each effect's ceiling from its slider and then its level as a percentage of that; the other builds pass 100, the Australian's passes the slider × 11 - the slider twice - in the exe and in its `Options.dll`, which re-applies on the way out of the screen. The setting's load → `mov eax, 9`, which the × 100 × 0.111 after it makes 100; in the DLL the load's relocation entry goes with it. The percentage is also how every build drives the engine's level by throttle, so it stays a percentage |
-| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume`: the slider's 0..10000 becomes a `waveOutSetVolume` amplitude on the mix's curve plus `CD_DB` (800), 0 dB at 9, from the ten-entry table `build.py` derives into `curve.inc`, applied after each play once the stream exists; see [asm/README.md](../asm/README.md) |
+| **Music from files** | `MUSASHI\MGAudio.dll` | appended `.sr2m` section, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume`: the slider's step becomes hundredths of a dB on the mix's curve plus `CD_DB` (600), −2 dB at 9, set on the track's DirectSound buffer; the exe's fade before a stop, from full down by 10% a frame, is taken as amplitude percent of that level; see [asm/README.md](../asm/README.md) |
+| **CD level marked** | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags 0 → `0x40`, a bit the DLL never read, so the music hook tells it from the fade's values without guessing; the race's level and the mute already carry bit 31 |
 | **Device Settings** | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x31cc`, `0x2f0c` (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x593c`, `0x567c`), nine `x` fields and two UV entries in `.data`, appended `.sr2d` section; the TXR grows a thirteenth sheet | a fourth item on the Options menu and the page behind it: the cursor's and the icon set's item counts 3 → 4, the item tables and the top-level state table moved to `.sr2d` with a fourth item and two more states, the dispatch table's fourth slot → a stub that selects the page's state; the page is asm/devices.asm over data the patcher builds. See *The Options screen* |
 | **No registry** | `SEGA RALLY 2.exe` | `0xd07c0`, `0x7e359` | the game's file name string `SR2.CFG` (one, for the read at `0x427740` and the write at `0x427880`) → `SR2.DSP`, so its 100-byte display block - the DirectDraw device name and capability flags recomputed from video memory at every start (`0x426ec0`), the launcher's options, the disc flag and the language - keeps its own stock-shaped file (`carry_display_block` copies a stock `SR2.CFG`'s block there at patch time, once) and `SR2.CFG` is the controls text from byte 0; and `MGameReg`'s Open at `0x47ef59` (21 bytes) → `xor esi,esi`, so `Software\SEGA` is never created. See *Gamepad* |
 | **XInput** | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`) and appended `.sr2p` section | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm, the Australian build's keyboard-poll address pointed at it instead; the section carries the name tables and defaults, then the working area, after the code. See *Gamepad* |
@@ -459,6 +461,19 @@ executed under SEH. No vendor or family test. It passes on every x86 made
 since 1999, so no patch; if `miscdll.dll` were missing the exe would fail
 at `LoadLibrary` first.
 
+### The card check
+
+The device-select routine `0x426ea0` walks the entries MGameD3D
+enumerated (`0x2c0` bytes each), picks the one whose name matches the
+`display` string in `SR2.CFG`, and for entry 0 adds the desktop's
+`bpp × width × height / 8` to its free video memory. `0x427240` then
+warns - string 5, `WARNING`, OK/Cancel - when that memory is under
+4,000,000 bytes or bits `0x1800` of the entry's `+0x34` are clear; bit 0
+of the same word clear returns −1, "No 3D capability". Wine passes the
+bits; a Radeon R9 380 on Windows does not, or wraps the DWORD, and gets
+the box on every start. No card sold since is on the list, so nocardwarn
+skips the box; the −1 path stays.
+
 ## Musashi
 
 The game is written on Sega's *MUSASHI* middleware: in-process COM servers
@@ -679,8 +694,18 @@ Three properties of the DLL shape the patch:
 - MGAudio issues its MCI commands from threads it creates per action
   (`CreateThread`, `TerminateThread`), and Wine's `winmm` refuses commands
   to a device from any thread but the one that opened it
-  (`MCIERR_INVALID_DEVICE_NAME`, `0x107`). The hook therefore sends every
-  string command from one worker thread of its own.
+  (`MCIERR_INVALID_DEVICE_NAME`, `0x107`). The hook therefore makes every
+  device call from one worker thread of its own.
+- The tracks play from a DirectSound buffer of the hook's own rather
+  than through MCI's `waveaudio`, because of the slider. `mciwave`
+  exposes no handle, and winmm's volume - `waveOutSetVolume` by device
+  id, and by handle too - has been the application's audio-session
+  volume on Windows since Vista: it moved the DirectSound effects with
+  the music, and muted them every time the game sent 0, which it does
+  between the loading screen and the start signal, and in Time Trial
+  until the start. Wine treats the same calls as the wave device's, which
+  is why it played correctly there. A buffer's volume is its own on both,
+  and in the mix's units.
 - The DLL is relocated on every load (`SR2_MSG.DLL` holds its preferred
   base). Each rewritten site carried a `.reloc` entry for its absolute
   slot address at `site+2`; `apply_music` drops those, or the loader
@@ -793,10 +818,15 @@ of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
-- Windows has not been tried. Two things to check there: the reported
-  crash on returning to the main menu after saving a replay, which Wine
-  does not show; and the music volume's `waveOutSetVolume(0, …)`, the
-  device-id form Windows takes and Wine does not.
+- Windows, seen once (10, European, Radeon R9 380): stock fullscreen
+  plays. The crash on returning to the main menu after saving a replay
+  is there, as reported for the original; Wine does not show it. With
+  borderless the startup fails with `E_FAIL`, reported through
+  `0x4404b0` from the `jl` at `0x427e05` after `0x421330` - MGameD3D
+  Init, the clear-and-present loop `0x421450`, the MGameGL init
+  `0x4215a0`, `0x421670` - and nothing in MGameD3D's windowed init reads
+  the window size after `MoveWindow`, so it is one of the later three;
+  breakpoints at `0x42134c`, `0x42135b`, `0x421367` would say which.
 - What `LAUNCH.EXE` and `MUSASHI\SR2.dll` offer, and `SR2_SAVE.DAT`'s
   layout beyond the records table.
 - Frame timing, resolution: nothing traced yet. The renderer is

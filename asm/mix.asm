@@ -14,8 +14,8 @@
 ;                its value-to-dB mapping through here: the slider step
 ;                the value was made from, on that same curve plus STREAM_DB.
 ;
-; The CD music's table in music.asm is the same curve plus CD_DB, as
-; waveOut amplitudes. The numbers are in mix.inc. Nothing here is absolute.
+; The CD music in music.asm is on the same curve plus CD_DB, in the same
+; units. The numbers are in mix.inc. Nothing here is absolute.
 
 bits 32
 %include "mix.inc"

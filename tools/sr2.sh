@@ -62,7 +62,7 @@ case "$mode" in
     rip)
         [ -n "$PLAY" ] || die "set $play_var in $CONF"
         exec python3 "$PATCHER" --rip "$PLAY" "$GAME" ;;
-    patch)   exec python3 "$PATCHER" --patch "$GAME" ${2:+"$2"} ;;
+    patch)   shift; exec python3 "$PATCHER" --patch "$GAME" "$@" ;;
     restore) exec python3 "$PATCHER" --restore "$GAME" ;;
     run|debug|show) ;;
     *) die "no such action: $mode" ;;
