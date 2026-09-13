@@ -105,21 +105,21 @@ def main(argv):
     # Import slots -> stubs. Each stub is `ret N` at STUBS + 0x10 * k.
     # The imports, then the two COM vtables' methods (this counted in argc).
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'mciSendCommandA',
-             'CreateFileA', 'GetFileSize', 'CloseHandle', 'CreateFileMappingA', 'MapViewOfFile',
-             'UnmapViewOfFile', 'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject',
+             'CreateFileA', 'GetFileSize', 'CloseHandle', 'SetFilePointer', 'ReadFile',
+             'CreateThread', 'CreateEventA', 'SetEvent', 'WaitForSingleObject',
              'OutputDebugStringA', 'DirectSoundCreate', 'GetDesktopWindow', 'CreateMutexA', 'ReleaseMutex',
              'CreateSoundBuffer', 'SetCooperativeLevel',
              'Release', 'GetCurrentPosition', 'GetStatus', 'Lock', 'Play', 'SetCurrentPosition',
              'SetVolume', 'Stop', 'Unlock']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'mciSendCommandA': 4,
-            'CreateFileA': 7, 'GetFileSize': 2, 'CloseHandle': 1, 'CreateFileMappingA': 6,
-            'MapViewOfFile': 5, 'UnmapViewOfFile': 1, 'CreateThread': 6, 'CreateEventA': 4,
+            'CreateFileA': 7, 'GetFileSize': 2, 'CloseHandle': 1, 'SetFilePointer': 4,
+            'ReadFile': 5, 'CreateThread': 6, 'CreateEventA': 4,
             'SetEvent': 1, 'WaitForSingleObject': 2, 'OutputDebugStringA': 1, 'DirectSoundCreate': 3,
             'GetDesktopWindow': 0, 'CreateMutexA': 3, 'ReleaseMutex': 1, 'CreateSoundBuffer': 4,
             'SetCooperativeLevel': 3,
             'Release': 1, 'GetCurrentPosition': 3, 'GetStatus': 2, 'Lock': 8, 'Play': 4,
             'SetCurrentPosition': 2, 'SetVolume': 2, 'Stop': 1, 'Unlock': 5}
-    HREQ, HDONE, HMUTEX, HMAP, VIEW, DESKTOP = 0x501, 0x502, 0x503, 0x800, 0x06000000, 0x77
+    HREQ, HDONE, HMUTEX, DESKTOP = 0x501, 0x502, 0x503, 0x77
     DS, DSVT, BUF, BUFVT, BUFMEM = SCRATCH + 0x1000, SCRATCH + 0x1010, SCRATCH + 0x1100, SCRATCH + 0x1110, 0x07000000
     OPS = {1: 'open', 2: 'play', 3: 'stop', 4: 'pause', 5: 'resume', 6: 'close', 7: 'pos', 8: 'vol'}
     blob_len = len(patcher.MUSIC_BLOB)
@@ -132,7 +132,6 @@ def main(argv):
         mu.mem_write(BASE + patcher._iat_slot(image, 'kernel32.dll', n), struct.pack('<I', addr[n]))
     mu.mem_write(BASE + patcher._iat_slot(image, 'winmm.dll', 'mciSendCommandA'),
                  struct.pack('<I', addr['mciSendCommandA']))
-    mu.mem_map(VIEW, 0x1000)
     mu.mem_map(BUFMEM, 0x1000)
     # the fake IDirectSound and IDirectSoundBuffer: vtables of stubs
     mu.mem_write(DS, struct.pack('<I', DSVT))
@@ -143,7 +142,6 @@ def main(argv):
                    (0x30, 'Play'), (0x34, 'SetCurrentPosition'), (0x3c, 'SetVolume'), (0x48, 'Stop'),
                    (0x4c, 'Unlock')):
         mu.mem_write(BUFVT + off, struct.pack('<I', addr[n]))
-    mu.mem_write(VIEW + 44, bytes(range(256)) * 4)
 
     # requests: what the hook asked the worker, as (op, arg); calls: what
     # the worker did, as (function, args...). The SetEvent stub answers a
@@ -183,14 +181,13 @@ def main(argv):
         elif name == 'CloseHandle':
             log['calls'].append(('CloseHandle', args[0]))
             ret = 1
-        elif name == 'CreateFileMappingA':
-            log['calls'].append(('CreateFileMappingA', args[0], args[2]))
-            ret = HMAP
-        elif name == 'MapViewOfFile':
-            log['calls'].append(('MapViewOfFile', args[0], args[1]))
-            ret = VIEW
-        elif name == 'UnmapViewOfFile':
-            log['calls'].append(('UnmapViewOfFile', args[0]))
+        elif name == 'SetFilePointer':
+            log['calls'].append(('SetFilePointer', args[0], args[1], args[3]))
+            ret = args[1]
+        elif name == 'ReadFile':
+            log['calls'].append(('ReadFile', args[0], args[1], args[2]))
+            mu.mem_write(args[1], (bytes(range(256)) * 4)[:args[2]])
+            mu.mem_write(args[3], struct.pack('<I', args[2]))
             ret = 1
         elif name == 'CreateThread':
             log['thread'] = args[2]
@@ -437,12 +434,12 @@ def main(argv):
     assert work(6) == 0 and log['calls'] == [], 'close with nothing open'
     assert work(1, 5) == 0
     assert log['calls'] == [('DirectSoundCreate', 0, 0), ('SetCooperativeLevel', DS, DESKTOP, 1),
-                            ('CreateFileMappingA', 0x105, 2), ('MapViewOfFile', HMAP, 4),
+                            ('SetFilePointer', 0x105, 44, 0),
                             ('CreateSoundBuffer', DS, (36, 0x18088, size5, 0), fmt, 0),
-                            ('Lock', BUF, 0, size5, 0), ('Unlock', BUF, BUFMEM, 1000, 0, 0),
-                            ('UnmapViewOfFile', VIEW), ('CloseHandle', HMAP), ('CloseHandle', 0x105),
+                            ('Lock', BUF, 0, size5, 0), ('ReadFile', 0x105, BUFMEM, 1000),
+                            ('Unlock', BUF, BUFMEM, 1000, 0, 0), ('CloseHandle', 0x105),
                             ('SetVolume', BUF, CURVE[9])], log['calls']
-    assert mu.mem_read(BUFMEM, 1000) == mu.mem_read(VIEW + 44, 1000), 'the samples copied'
+    assert mu.mem_read(BUFMEM, 1000) == (bytes(range(256)) * 4)[:1000], 'the samples read in'
     assert work(2, 1000) == 0
     off = 1000 * 1764 // 10
     assert log['calls'] == [('SetCurrentPosition', BUF, off), ('SetVolume', BUF, CURVE[9]), ('Play', BUF, 0, 0, 0)], log['calls']
@@ -468,7 +465,7 @@ def main(argv):
     assert work(2, 0) == 0x115 and log['calls'] == [], 'play with nothing open'
     # an open of a missing file fails and holds nothing; the DirectSound object stays
     assert work(1, 4) == 0x115 and log['calls'] == []
-    assert work(1, 2) == 0 and log['calls'][0] == ('CreateFileMappingA', 0x102, 2)
+    assert work(1, 2) == 0 and log['calls'][0] == ('SetFilePointer', 0x102, 44, 0)
     assert work(1, 3) == 0 and log['calls'][:3] == [('SetVolume', BUF, -10000), ('Stop', BUF), ('Release', BUF)]
     print('musictest OK: startup, hook, worker: open, play, position, seek, pause/resume/stop/close, volume, forwarding')
     return 0

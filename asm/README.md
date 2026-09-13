@@ -54,8 +54,8 @@ eleven call sites, which had one each for their absolute slot address,
 lose theirs, or the loader would corrupt the new relative displacement.
 
 **Setup** runs at `DllMain` on `DLL_PROCESS_ATTACH`, once. It resolves
-`DirectSoundCreate`, `GetDesktopWindow` and the ten `kernel32` functions
-in `S_MODULES` through the DLL's own `LoadLibraryA`/`GetProcAddress`
+`DirectSoundCreate`, `GetDesktopWindow` and the eleven `kernel32`
+functions in `S_MODULES` through the DLL's own `LoadLibraryA`/`GetProcAddress`
 imports, takes the game folder from `GetModuleFileNameA(NULL)`, and walks `music\track02.wav` to
 `track99.wav`. It never reads a track: after the 44-byte header the file
 size is the length in 2352-byte frames. Then it chains to the original
@@ -91,11 +91,11 @@ holder's mutex is handed on.
 
 The operations, on the worker. The first open makes the `IDirectSound`
 (`DirectSoundCreate`, cooperative level normal on the desktop window)
-that lives for the process. `OP_OPEN` releases what is open, opens and
-maps `music\trackNN.wav`, creates a secondary buffer of its sample size -
+that lives for the process. `OP_OPEN` releases what is open, opens
+`music\trackNN.wav`, creates a secondary buffer of its sample size -
 `CTRLVOLUME`, `GLOBALFOCUS` so no window of the game's matters,
-`GETCURRENTPOSITION2`, software - copies the samples in through
-`Lock`/`Unlock`, drops the mapping and sets the volume; `OP_PLAY` is
+`GETCURRENTPOSITION2`, software - reads the samples straight into it
+between `Lock` and `Unlock`, closes the file and sets the volume; `OP_PLAY` is
 `SetCurrentPosition` to the byte the ms names and `Play`, no loop;
 `OP_STOP` is `Stop` and the cursor back to 0; `OP_PAUSE` is `Stop` with the
 cursor kept, `OP_RESUME` `Play` on from it; `OP_POS` is the play cursor,

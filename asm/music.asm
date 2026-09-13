@@ -459,6 +459,7 @@ dsound:
 
 ; Opens track D_ARG: the file read into a buffer of its size, the volume
 ; set. eax = 0 or MCIERR_INTERNAL, with everything released on failure.
+; The samples go straight from ReadFile into the locked buffer.
 op_open:
         call    dsound
         test    eax, eax
@@ -485,25 +486,13 @@ op_open:
         and     eax, ~3                 ; whole frames
         mov     [ebx + D_DATASIZE], eax
         mov     [ebx + D_DESC + 8], eax ; dwBufferBytes
+        push    0                       ; FILE_BEGIN
         push    0
-        push    0
-        push    0
-        push    2                       ; PAGE_READONLY
-        push    0
+        push    WAV_HEADER
         push    dword [ebx + D_FILE]
-        call    dword [ebx + D_CREATEMAP]
-        test    eax, eax
-        jz      .fail
-        mov     [ebx + D_MAP], eax
-        push    0
-        push    0
-        push    0
-        push    4                       ; FILE_MAP_READ
-        push    eax
-        call    dword [ebx + D_MAPVIEW]
-        test    eax, eax
-        jz      .fail
-        mov     [ebx + D_VIEW], eax
+        call    dword [ebx + D_SETFP]
+        cmp     eax, -1
+        je      .fail
         lea     eax, [ebx + D_FMT]
         mov     [ebx + D_DESC + 16], eax
         push    0
@@ -536,14 +525,12 @@ op_open:
         mov     [ebx + D_LASTHR], eax
         test    eax, eax
         jnz     .fail
-        mov     esi, [ebx + D_VIEW]
-        add     esi, WAV_HEADER
-        mov     edi, [ebx + D_LOCK]
-        mov     ecx, [ebx + D_LOCK + 4]
-        rep movsb
-        mov     edi, [ebx + D_LOCK + 8]
-        mov     ecx, [ebx + D_LOCK + 12]
-        rep movsb
+        push    dword [ebx + D_LOCK + 4]
+        push    dword [ebx + D_LOCK]
+        call    readpart
+        push    dword [ebx + D_LOCK + 12]
+        push    dword [ebx + D_LOCK + 8]
+        call    readpart
         push    dword [ebx + D_LOCK + 12]
         push    dword [ebx + D_LOCK + 8]
         push    dword [ebx + D_LOCK + 4]
@@ -552,7 +539,7 @@ op_open:
         push    eax
         mov     ecx, [eax]
         call    dword [ecx + DSB_UNLOCK]
-        call    unmap
+        call    closefile
         call    op_vol
         mov     dword [ebx + D_STATE], ST_IDLE
         xor     eax, eax
@@ -563,22 +550,24 @@ op_open:
         mov     eax, MCIERR_INTERNAL
         ret
 
-; Releases the view, the mapping and the file, whichever are held.
-unmap:
-        mov     eax, [ebx + D_VIEW]
+; ReadFile(D_FILE, the pointer and count pushed) - nothing when the
+; count is 0, as the lock's second part usually is. stdcall.
+readpart:
+        mov     eax, [esp + 8]
         test    eax, eax
-        jz      .noview
+        jz      .none
+        push    0
+        lea     ecx, [ebx + D_READ]
+        push    ecx
         push    eax
-        call    dword [ebx + D_UNMAP]
-        mov     dword [ebx + D_VIEW], 0
-.noview:
-        mov     eax, [ebx + D_MAP]
-        test    eax, eax
-        jz      .nomap
-        push    eax
-        call    dword [ebx + D_CLOSEH]
-        mov     dword [ebx + D_MAP], 0
-.nomap:
+        push    dword [esp + 16]
+        push    dword [ebx + D_FILE]
+        call    dword [ebx + D_READFILE]
+.none:
+        ret     8
+
+; Closes the file, if one is open.
+closefile:
         mov     eax, [ebx + D_FILE]
         test    eax, eax
         jz      .nofile
@@ -591,7 +580,7 @@ unmap:
 ; Stops and releases the buffer, and whatever an open left half done. A
 ; buffer released while playing is not stopped cleanly on Windows.
 op_close:
-        call    unmap
+        call    closefile
         mov     eax, [ebx + D_BUF]
         test    eax, eax
         jz      .nobuf
@@ -1275,10 +1264,9 @@ D_BUF       dd 0                        ; IDirectSoundBuffer, while a track is o
 D_STATE     dd 0                        ; ST_IDLE, ST_PLAYING, ST_PAUSED
 D_LASTHR    dd 0                        ; the last DirectSound result, for the trace
 D_FILE      dd 0
-D_MAP       dd 0
-D_VIEW      dd 0
 D_DATASIZE  dd 0                        ; sample bytes in the open track
 D_LOCK      times 4 dd 0                ; p1, n1, p2, n2 of the lock
+D_READ      dd 0                        ; ReadFile's count
 D_STATUS    dd 0, 0                     ; GetStatus, GetCurrentPosition's two
 D_DESC      dd 36, DSBCAPS, 0, 0, 0     ; DSBUFFERDESC: size, flags, bytes, reserved, format
             times 4 dd 0                ; guid3DAlgorithm, none
@@ -1295,9 +1283,8 @@ D_DESKTOP   dd 0
 D_CREATEF   dd 0
 D_GETSIZE   dd 0
 D_CLOSEH    dd 0
-D_CREATEMAP dd 0
-D_MAPVIEW   dd 0
-D_UNMAP     dd 0
+D_SETFP     dd 0
+D_READFILE  dd 0
 D_CREATETHR dd 0
 D_CREATEEV  dd 0
 D_SETEVENT  dd 0
@@ -1311,8 +1298,8 @@ S_MODULES   db 'dsound.dll', 0
             db 'GetDesktopWindow', 0, 0
             db 'kernel32.dll', 0
             db 'CreateFileA', 0, 'GetFileSize', 0, 'CloseHandle', 0
-            db 'CreateFileMappingA', 0, 'MapViewOfFile', 0
-            db 'UnmapViewOfFile', 0, 'CreateThread', 0, 'CreateEventA', 0
+            db 'SetFilePointer', 0, 'ReadFile', 0
+            db 'CreateThread', 0, 'CreateEventA', 0
             db 'SetEvent', 0, 'WaitForSingleObject', 0
             db 'CreateMutexA', 0, 'ReleaseMutex', 0, 0
             db 0
