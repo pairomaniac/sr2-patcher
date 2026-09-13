@@ -4,7 +4,8 @@
     python3 tools/loudness.py GAMEDIR
 
 Reads every 16-bit PCM .wav under GAMEDIR/music (the CD rips) and
-GAMEDIR/BINDATA/BGM (the streamed music) and prints each file's RMS in
+GAMEDIR/BINDATA/BGM (the streamed music; the cp_*.wav there are the car
+profiles' narration and are left out) and prints each file's RMS in
 dBFS and each folder's mean. The two folders play through two sliders,
 and at equal settings the streamed music sits STREAM_DB above the
 effects' curve and the CD music CD_DB above it (asm/mix.inc). For the
@@ -56,7 +57,7 @@ def folder(path):
     if not os.path.isdir(path):
         return out
     for name in sorted(os.listdir(path)):
-        if name.lower().endswith('.wav'):
+        if name.lower().endswith('.wav') and not name.lower().startswith('cp_'):
             db = rms_db(os.path.join(path, name))
             if db is not None and db > -math.inf:
                 out.append((name, db))
