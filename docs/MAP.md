@@ -179,6 +179,8 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | windowed | 2 + section | exe `0x427fe6` (file `0x273e6`), `0x415271` (file `0x14671`, 20 bytes), the appended `.sr2w` |
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |
 | titlebg | 1 + section | `Title.dll` `0x100014ba` (file `0x8ba`, 22 bytes), the appended `.sr2t` |
+| replayfree | 2 + section | `ReplayGallery.dll` `0x10003b65` (file `0x2f65`, 5 bytes), `0x1000471f` (file `0x3b1f`, 6 bytes), the appended `.sr2g` |
+| texrange | 1 + section | `MGameD3D.dll` `0x10004430` (file `0x4430`, 10 bytes), one relocation entry dropped, the appended `.sr2x` |
 | borderless | 2 + section | `MGameD3D.dll` `0x10004d7b` (6 of 96 bytes, the rest dead), `0x100026be`, ten relocation entries dropped, the appended `.sr2f` |
 | mix | 2 + section | `MGSound.dll` `0x1000439f` (file `0x439f`, 8 bytes), `0x10006980` (file `0x6980`, 6 bytes), the appended `.sr2b` |
 | sfxlevel | 3 | Australian exe `0x4b32cb`, `0x4b332e`, `0x4b3382` (files `0xb26cb`, `0xb272e`, `0xb2782`) |

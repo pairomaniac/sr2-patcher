@@ -39,7 +39,7 @@ IMAGE_BASE = 0x400000                   # the exe is never relocated
 # three. Everything else in the script is written against the European
 # row; the others map it.
 PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll', 'MUSASHI\\MGInput.dll',
-           'Title.dll', 'Options.dll')
+           'Title.dll', 'Options.dll', 'ReplayGallery.dll')
 
 BUILDS = {
     'European': {
@@ -56,6 +56,7 @@ BUILDS = {
             'MUSASHI\\MGInput.dll': (90112, '7aa0b3aede10fd247835ad346c2ecee8'),
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
+            'ReplayGallery.dll': (792576, 'f0db027aa72f43d146859eaef51d74f0'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
@@ -90,6 +91,7 @@ BUILDS = {
             'MUSASHI\\MGInput.dll': (90112, '7aa0b3aede10fd247835ad346c2ecee8'),
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
+            'ReplayGallery.dll': (792576, 'f0db027aa72f43d146859eaef51d74f0'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
@@ -121,6 +123,7 @@ BUILDS = {
             'MUSASHI\\MGInput.dll': (90112, '594a3435f9c2ef6f1ac23cd3ba5dd6b1'),
             'Options.dll': (798720, '0af388650bc11dcd6df2377d3d78a535'),
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
+            'ReplayGallery.dll': (793088, 'be260f94b8791b91cfc3588de5b3473f'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
                   'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c, 0x5da8),   # Options.dll
@@ -182,6 +185,8 @@ RESTORE_RELOCS = 10
 #   windowed    the fullscreen flag cleared; the .bg row copy expands to 32 bits
 #   anydepth    the windowed path's 16-bit desktop check skipped
 #   titlebg     Title.dll's own .bg row copy, the same stub
+#   texrange    the texture release checks its index; VendorLogo releases -128
+#   replayfree  the replay gallery frees only the replay it loaded, not a race's in MainMode's data
 #   borderless  the window covers its monitor, the present letterboxes
 #   altenter    ALT+ENTER toggles a framed window
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
@@ -250,6 +255,9 @@ def patches(build):
         'altenter': (EXE, ((site['altenter'], b'\xe8', None),), 'apply_altenter'),
         'titlebg': ('Title.dll', ((0x8ba, bytes.fromhex('8bc88bf38be98bfac1e902f3a58bcd03d883e103f3a4'), None),),
                     'apply_titlebg'),
+        'texrange': ('MUSASHI\\MGameD3D.dll', ((0x4430, bytes.fromhex('a180250110568b742408'), None),), 'apply_texrange'),
+        'replayfree': ('ReplayGallery.dll', ((0x2f65, bytes.fromhex('e881820000'), None),
+                                             (0x3b1f, bytes.fromhex('50e8bb760000'), None)), 'apply_replayfree'),
         'borderless': ('MUSASHI\\MGameD3D.dll', (
             (0x4d7b, bytes.fromhex('8b0df8230110'), None),
             (0x26be, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
@@ -331,6 +339,8 @@ TEXTCOLOR_SECTION = b'.sr2c'
 BGROW_SECTION = b'.sr2w'
 TITLEROW_SECTION = b'.sr2t'
 FULLWIN_SECTION = b'.sr2f'
+TEXRANGE_SECTION = b'.sr2x'
+REPLAYFREE_SECTION = b'.sr2g'
 ALTENTER_SECTION = b'.sr2k'
 MIXERLESS_SECTION = b'.sr2v'
 XINPUT_SECTION = b'.sr2p'
@@ -562,6 +572,16 @@ FULLWIN_BLOB = bytes.fromhex(
     '7508ff932cf100005f5e5b89ec5dc218007573657233322e646c6c0047657443'
     '7572736f72506f73004d6f6e69746f7246726f6d506f696e74004765744d6f6e'
     '69746f72496e666f4100'
+)
+TEXRANGE_BLOB = bytes.fromhex(
+    'e8000000005a81ea0500000081eae7e7e7e78b4c24043b8a9025010073138b82'
+    '80250100568b74240881c23a440000ffe231c0c20400'
+)
+REPLAYFREE_BLOB = bytes.fromhex(
+    'e905000000e92c000000e8000000005981e90f00000089ca81eae7e7e7e781c2'
+    'ebbd000051ff742408ffd283c4045989816c000000c35a5052e8000000005981'
+    'e93e0000003b816c000000751ec7816c0000000000000089ca81eae7e7e7e781'
+    'c2e0bd000050ffd283c404c300000000'
 )
 ALTENTER_BLOB = bytes.fromhex(
     '8b4424083d040100007521837c240c0d751a8b442410a900000020740fa90000'
@@ -2294,6 +2314,31 @@ def apply_titlebg(buf, _build=None):
     site holds no absolute address, so no relocation entry goes."""
     out, rva = append_section(buf, TITLEROW_SECTION, TITLEROW_BLOB, chars=CODE_SECTION)
     _branch(out, TITLEROW_SITE, rva, TITLEROW_LEN)
+    return out
+
+
+def apply_texrange(buf, _build=None):
+    """texrange.asm in MGameD3D: the texture release's first ten bytes
+    jump to it; the absolute in them loses its relocation entry."""
+    if _drop_relocations(buf, {0x4431}) != 1:
+        raise ValueError('relocation entry for the texture table not found')
+    out, rva = append_section(buf, TEXRANGE_SECTION, TEXRANGE_BLOB, chars=CODE_SECTION)
+    start = _rva_to_off(out, rva)
+    out[start:start + len(TEXRANGE_BLOB)] = TEXRANGE_BLOB.replace(
+        struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    _branch(out, 0x4430, rva, 10, op=b'\xe9')
+    return out
+
+
+def apply_replayfree(buf, _build=None):
+    """replayfree.asm in ReplayGallery: the gallery's new at 0x10003b65
+    calls the first thunk, its End's free of the replay the second."""
+    out, rva = append_section(buf, REPLAYFREE_SECTION, REPLAYFREE_BLOB)
+    start = _rva_to_off(out, rva)
+    out[start:start + len(REPLAYFREE_BLOB)] = REPLAYFREE_BLOB.replace(
+        struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    _branch(out, 0x2f65, rva, 5)
+    _branch(out, 0x3b1f, rva + 5, 6)
     return out
 
 

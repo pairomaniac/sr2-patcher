@@ -16,6 +16,8 @@ Australian releases map onto it; *Builds* says how far.
 | **Windows 9x check** (Australian only) | `SEGA RALLY 2.exe` | `0x4b3b0` | `0x44bfb0`, "Please run on Windows 9x." unless `GetVersionExA` gives `dwPlatformId` 1, returns 0 at once (`sub esp,0x94` → `xor eax,eax; ret`); the other builds have no such check |
 | **No disc required** | `SEGA RALLY 2.exe` | `0x267c0`, `0x7572e` | the startup check returns 0, "found" (`mov eax,[esp+4]` → `xor eax,eax; ret`); the loader constructor's drive scan replaced by `lstrcpyA(disc root, exe dir)` and a jump to its epilogue |
 | **No card warning** | `SEGA RALLY 2.exe` | `0x26678` (`0x26938` American, `0x4b263` Australian) | `0x427240` shows string 5 of `SR2_MSG.dll`, OK/Cancel, when the chosen device's free video memory is under 4,000,000 bytes or the two capability bits `0x1800` at `+0x34` of its entry are both clear; Cancel makes it return 1 and the caller exit. The `push 5` before the string load → `jmp` to the return-0 tail. The Australian exe has no memory test |
+| **Replay freed once** | `ReplayGallery.dll` | `0x2f65`, `0x3b1f` and appended `.sr2g` section | the gallery's End (`0x100046c0`) frees the replay at `+0x50` of the exe's block, which is its own when it loaded it from a file (`new` at `0x10003b65`) and MainMode's static buffer when it came from a race; Windows 9x's HeapFree refused that, the heap since Windows 8 ends the process. The `new` → a thunk that keeps the block, the `push eax; call free` → one that frees only that block; see asm/replayfree.asm |
+| **Texture release checked** | `MUSASHI\MGameD3D.dll` | `0x4430` and appended `.sr2x` section | the release of texture N (`0x10004430`) checks N against the count at `0x10012590`, as the create does; `VendorLogo.dll`'s End (`0x100014e0`) releases −128, 512 bytes before the table, and calls through whatever is there. The first ten bytes → `jmp` asm/texrange.asm, one relocation entry dropped |
 | **Survive ALT+TAB** | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7` and appended `.sr2a` section; DLL `0x3e91`, `0x3eb7`, `0x7710`–`0x778c` | the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume sound) → a stub that calls MGameD3D's restore method first; that method rewritten as `IDirectDraw4::RestoreAllSurfaces`; textures created managed (`dwCaps` `TEXTURE`, `dwCaps2` `TEXTUREMANAGE`) instead of `ALLOCONLOAD\|TEXTURE\|VIDEOMEMORY`; see [asm/README.md](../asm/README.md) |
 | **Z-buffer detach crash** | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | `call [ecx+0x20]` → `add esp,0xc` - `DeleteAttachedSurface(0, NULL)` on the back buffer skipped |
 | **Invisible lobby text** | `SEGA RALLY 2.exe` | appended `.sr2c` section; `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96` | the eight `call [__imp__SetTextColor]` → `call stub; nop`, the two `mov esi, [__imp__SetTextColor]` → `mov esi, stub; nop`; the stub masks the colour to RGB; see [asm/README.md](../asm/README.md) |
@@ -442,9 +444,10 @@ code; its `MGAudio.dll` has the same eleven calls and one load of
 different branch in Init, for which see *No mixer needed* in the table
 above.
 
-Six files are patched in every build - `SEGA RALLY 2.exe`,
+Eight files are patched in every build - `SEGA RALLY 2.exe`,
 `MUSASHI\MGameD3D.dll`, `MUSASHI\MGAudio.dll`, `MUSASHI\MGSound.dll`,
-`Title.dll`, `Options.dll` - and `BINDATA\MISC\OPTIONS.TXR`. Each gets
+`MUSASHI\MGInput.dll`, `Title.dll`, `Options.dll`, `ReplayGallery.dll` -
+and `BINDATA\MISC\OPTIONS.TXR`. Each gets
 a `.bak` beside it, the untouched original; the patcher always starts
 from those, so patching twice is patching once and restoring is a
 rename, and a file that a run with fewer keys leaves alone goes back to
@@ -818,15 +821,14 @@ of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
-- Windows, seen once (10, European, Radeon R9 380): stock fullscreen
-  plays. The crash on returning to the main menu after saving a replay
-  is there, as reported for the original; Wine does not show it. With
-  borderless the startup fails with `E_FAIL`, reported through
-  `0x4404b0` from the `jl` at `0x427e05` after `0x421330` - MGameD3D
-  Init, the clear-and-present loop `0x421450`, the MGameGL init
-  `0x4215a0`, `0x421670` - and nothing in MGameD3D's windowed init reads
-  the window size after `MoveWindow`, so it is one of the later three;
-  breakpoints at `0x42134c`, `0x42135b`, `0x421367` would say which.
+- Windows (10, European, Radeon R9 380) plays. The crash on returning
+  to the main menu after saving a replay was the free above; Wine's
+  heap, like Windows 9x's, let it pass. One start with borderless failed
+  with `E_FAIL` through `0x4404b0` from the `jl` at `0x427e05`; under
+  WinDbg every return in `0x421330` - MGameD3D Init, MGameGL Init, its
+  `+0x18`, `0x421670` - was 0, so it is not deterministic and not yet
+  seen twice. The crash after the vendor logo that turned up instead is
+  the texture release above.
 - What `LAUNCH.EXE` and `MUSASHI\SR2.dll` offer, and `SR2_SAVE.DAT`'s
   layout beyond the records table.
 - Frame timing, resolution: nothing traced yet. The renderer is

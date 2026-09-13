@@ -24,7 +24,7 @@ TARGET = os.path.join(ROOT, 'sr2-patcher.py')
 BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('RESTORE_BLOB', 'restore.asm', ()), ('TEXTCOLOR_BLOB', 'textcolor.asm', ()),
          ('BGROW_BLOB', 'bgrow.asm', ()), ('TITLEROW_BLOB', 'bgrow.asm', ('-DTITLE',)),
-         ('FULLWIN_BLOB', 'fullwin.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ()),
+         ('FULLWIN_BLOB', 'fullwin.asm', ()), ('TEXRANGE_BLOB', 'texrange.asm', ()), ('REPLAYFREE_BLOB', 'replayfree.asm', ()), ('ALTENTER_BLOB', 'altenter.asm', ()),
          ('MIX_BLOB', 'mix.asm', ()), ('VOLTRACE_BLOB', 'voltrace.asm', ()),
          ('DEVICES_BLOB', 'devices.asm', ()), ('PADINPUT_BLOB', 'padinput.asm', ())]
 
@@ -120,7 +120,9 @@ def generated(check=False):
     out = [BEGIN]
     for name, src, defines in BLOBS:
         raw = assemble(src, defines)
-        if name == 'FULLWIN_BLOB' and raw.count(struct.pack('<I', SELF_MAGIC)) != 1:
+        if name in ('FULLWIN_BLOB', 'TEXRANGE_BLOB') and raw.count(struct.pack('<I', SELF_MAGIC)) != 1:
+            raise SystemExit('%s: MAGIC_SELFRVA must occur exactly once' % src)
+        if name == 'REPLAYFREE_BLOB' and raw.count(struct.pack('<I', SELF_MAGIC)) != 2:
             raise SystemExit('%s: MAGIC_SELFRVA must occur exactly once' % src)
         if name == 'MUSIC_BLOB':
             for magic, value in MAGICS.items():

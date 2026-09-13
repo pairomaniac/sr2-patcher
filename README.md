@@ -52,6 +52,8 @@ and refuses anything that is not an unmodified copy of it.
 | **ALT+TAB** | Switching away and back leaves a blank screen or a world with no textures. |
 | **Missing lettering** | The black lettering on the 2D screens - SELECT GAME, SELECT CAR - drawn as outlines. |
 | **Invisible lobby text** | In multiplayer, the name you type, the team list and the chat never appear. |
+| **Crash after saving a replay** | On Windows, back at the menu: the replay gallery frees the race's replay, which lives in another module's data; the heap since Windows 8 ends the process for that. |
+| **Crash after the vendor logo** | On Windows, sometimes: the logo screen asks the renderer to release texture −128, a read past its table that lands on whatever the heap holds. |
 | **Borderless fullscreen** | The game takes the display over at 640x480 and comes back from ALT+TAB on the wrong monitor. It now runs in a borderless window on the monitor it starts on, 4:3, black bars. |
 | **ALT+ENTER** | Toggles a framed window you can move, resize or maximise. |
 | **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there. |
@@ -68,11 +70,9 @@ under Wine and Proton (via umu). Supported: the European, American and
 Australian releases, Pentium III build, told apart by the exe. The
 Japanese release has not been seen.
 
-On Windows (10, European release, AMD): starts and plays in stock
-fullscreen. Known: the game crashes on returning to the menu after
-saving a replay, as the original does; the borderless window fails at
-startup with error code 80004005, so leave `borderless` off there for
-now (`--patch DIR -borderless`).
+On Windows (10, European release, AMD): starts and plays. Known: one
+start with the borderless window failed with error code 80004005 and
+later ones did not.
 
 Planned: native widescreen with split-screen to match, online play
 with a lobby, frame timing, a Windows exe of the patcher.
