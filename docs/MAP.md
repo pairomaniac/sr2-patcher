@@ -34,17 +34,20 @@ In file order:
 | Music patch | `append_section`, `_off_to_rva`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Managed textures | `apply_managed` |
 | Restore-all patch | `apply_restore` |
-| Activation patch | `exe_blob`, `_check_call`, `apply_activate` |
+| Activation patch | `_branch`, `exe_blob`, `_check_call`, `apply_activate` |
 | Text-colour patch | `apply_textcolor` |
 | Windowed patch | `BGROW_LEN`, `apply_windowed` |
 | ALT+ENTER patch | `apply_altenter` |
-| Mix patch | `MIX_STREAM`, `apply_mix`, `apply_sfxoptions` |
+| Gamepad | `apply_xinput` and the pad annex |
 | No-mixer patch | `apply_mixerless` |
+| Mix patch | `MIX_STREAM`, `apply_mix`, `apply_sfxoptions` |
+| Device Settings | `apply_devices`, `patch_txr` and the page's tables |
+| Volume trace | `apply_voltrace` |
 | Title picture patch | `TITLEROW_SITE`, `apply_titlebg` |
-| Borderless patch | `PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`, `apply_fullwin` |
-| Patch | `md5`, `check_build`, `patch`, `restore` |
+| Self-locating sections | `_self_section`; `apply_texrange`, `apply_replayfree`, `apply_fullwin` (`PRESENT_SITE`, `SIZE_SITE`, `FULLWIN_RELOCS`) |
+| Patch | `md5`, `check_build`, `carry_display_block`, `patch`, `restore` |
 | Window | `gui` |
-| CLI | `selfcheck`, `main` |
+| CLI | `NEEDS`, `parse_keys`, `selfcheck`, `main` |
 
 ## 3. `SEGA RALLY 2.exe` (Pentium III, European)
 

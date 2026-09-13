@@ -42,15 +42,15 @@ assets, with the first 16 MB of each `data1.cab`, into the gitignored
 ## The checks
 
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-The first six need nothing and are what CI runs; the rest need the discs
-and games and skip themselves without.
+The first eight need nothing and are what CI runs; the rest need the
+discs and games and skip themselves without.
 
 | Check | Catches |
 | --- | --- |
 | `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, a placeholder left unfilled |
 | `asm` | `asm/` edited without `asm/build.py` being run |
 | `lint` | pyflakes |
-| `bgrow`, `fullwin`, `altenter` | those stubs under Unicorn |
+| `bgrow`, `fullwin`, `altenter`, `texrange`, `replayfree` | those stubs under Unicorn |
 | `cab` | the disc and cabinet readers on a real dump |
 | `offsets` | every original byte string in the file, every combination of patches applying, the all-on result at its pinned MD5; an install older than the tables is noted, not failed |
 | `music` | the music hook under Unicorn, on the build's real `MGAudio.dll` |

@@ -169,29 +169,31 @@ RESTORE_RELOCS = 10
 # the sites and may grow the file. Applied in this order. Addresses are
 # the European build's; docs/NOTES.md has the account of each.
 #
-#   mixerless   MGAudio Init without a mixer CD line (Australian)
-#   mix         MGSound: every buffer's dB range remapped to -43..-8, the streams on the same curve
-#   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian exe)
-#   sfxoptions  the same in the Australian Options.dll, which re-applies on the way out
-#   win9x       the Windows 9x check returns "fine" (Australian)
 #   nodisc      the disc check returns "found"; the loader takes the exe's directory
 #   nocardwarn  the video-card warning box skipped
-#   zdetach     DeleteAttachedSurface(0, NULL) calls removed (Proton crash)
 #   altab       the resume call restores the DirectDraw surfaces first
+#   zdetach     DeleteAttachedSurface(0, NULL) calls removed (Proton crash)
 #   managed     video-memory textures become managed
 #   restoreall  the restore routine becomes RestoreAllSurfaces
 #   texfmt      A1R5G5B5 first in the texture-format preference list
 #   textcolor   the lobby's SetTextColor(-1) masked to RGB
 #   windowed    the fullscreen flag cleared; the .bg row copy expands to 32 bits
 #   anydepth    the windowed path's 16-bit desktop check skipped
+#   altenter    ALT+ENTER toggles a framed window
 #   titlebg     Title.dll's own .bg row copy, the same stub
 #   texrange    the texture release checks its index; VendorLogo releases -128
 #   replayfree  the replay gallery frees only the replay it loaded, not a race's in MainMode's data
 #   borderless  the window covers its monitor, the present letterboxes
-#   altenter    ALT+ENTER toggles a framed window
+#   mix         MGSound: every buffer's dB range remapped to -43..-8, the streams on the same curve
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
 #   devices     a fourth Options item, Device Settings, placed for the controller page; also grows OPTIONS.TXR
+#   noregistry  the controls in SR2.CFG as text; the registry never opened
+#   xinput      XInput pads through MGInput's own action records
+#   win9x       the Windows 9x check returns "fine" (Australian)
+#   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian exe)
+#   sfxoptions  the same in the Australian Options.dll, which re-applies on the way out
+#   mixerless   MGAudio Init without a mixer CD line (Australian)
 #   voltrace    diagnostic, by name only: volume calls reported on +debugstr
 
 # The first bytes of the five volume entry points voltrace hooks.
@@ -2317,26 +2319,30 @@ def apply_titlebg(buf, _build=None):
     return out
 
 
+def _self_section(buf, name, blob, chars=CODE_SECTION | 0x80000040):
+    """Append a section holding a blob that finds the image base from its
+    own RVA, written over its MAGIC_SELFRVA. Returns (buffer, RVA)."""
+    out, rva = append_section(buf, name, blob, chars=chars)
+    start = _rva_to_off(out, rva)
+    out[start:start + len(blob)] = blob.replace(struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    return out, rva
+
+
 def apply_texrange(buf, _build=None):
     """texrange.asm in MGameD3D: the texture release's first ten bytes
     jump to it; the absolute in them loses its relocation entry."""
     if _drop_relocations(buf, {0x4431}) != 1:
         raise ValueError('relocation entry for the texture table not found')
-    out, rva = append_section(buf, TEXRANGE_SECTION, TEXRANGE_BLOB, chars=CODE_SECTION)
-    start = _rva_to_off(out, rva)
-    out[start:start + len(TEXRANGE_BLOB)] = TEXRANGE_BLOB.replace(
-        struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    out, rva = _self_section(buf, TEXRANGE_SECTION, TEXRANGE_BLOB, chars=CODE_SECTION)
     _branch(out, 0x4430, rva, 10, op=b'\xe9')
     return out
 
 
 def apply_replayfree(buf, _build=None):
     """replayfree.asm in ReplayGallery: the gallery's new at 0x10003b65
-    calls the first thunk, its End's free of the replay the second."""
-    out, rva = append_section(buf, REPLAYFREE_SECTION, REPLAYFREE_BLOB)
-    start = _rva_to_off(out, rva)
-    out[start:start + len(REPLAYFREE_BLOB)] = REPLAYFREE_BLOB.replace(
-        struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    calls the first thunk, its End's free of the replay the second. The
+    section is writable: the thunks keep the block's address in it."""
+    out, rva = _self_section(buf, REPLAYFREE_SECTION, REPLAYFREE_BLOB)
     _branch(out, 0x2f65, rva, 5)
     _branch(out, 0x3b1f, rva + 5, 6)
     return out
@@ -2347,10 +2353,7 @@ def apply_fullwin(buf, _build=None):
     thunk, the window sizing calls its second."""
     if _drop_relocations(buf, FULLWIN_RELOCS) != len(FULLWIN_RELOCS):
         raise ValueError('relocation entries for the present not all found')
-    out, rva = append_section(buf, FULLWIN_SECTION, FULLWIN_BLOB, chars=CODE_SECTION)
-    start = _rva_to_off(out, rva)
-    out[start:start + len(FULLWIN_BLOB)] = FULLWIN_BLOB.replace(
-        struct.pack('<I', FULLWIN_MAGIC), struct.pack('<I', rva))
+    out, rva = _self_section(buf, FULLWIN_SECTION, FULLWIN_BLOB, chars=CODE_SECTION)
     _branch(out, PRESENT_SITE, rva, 6, op=b'\xe9')
     _branch(out, SIZE_SITE, rva + 5, 6)
     return out

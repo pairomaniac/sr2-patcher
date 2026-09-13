@@ -510,7 +510,7 @@ Two consequences:
   application manifest beside the exe that depends on assembly `MUSASHI`,
   and `MUSASHI\MUSASHI.manifest` with a `comClass` per DLL. An external
   `.exe.manifest` is honoured because the exe embeds none. Works under
-  Wine and Proton; untested on Windows.
+  Wine, Proton and Windows 10.
 
 ### The registry
 
@@ -821,14 +821,10 @@ of them plays the same music, with the disc's own silence at the loop.
 
 ## What is not done
 
-- Windows (10, European, Radeon R9 380) plays. The crash on returning
-  to the main menu after saving a replay was the free above; Wine's
-  heap, like Windows 9x's, let it pass. One start with borderless failed
-  with `E_FAIL` through `0x4404b0` from the `jl` at `0x427e05`; under
-  WinDbg every return in `0x421330` - MGameD3D Init, MGameGL Init, its
-  `+0x18`, `0x421670` - was 0, so it is not deterministic and not yet
-  seen twice. The crash after the vendor logo that turned up instead is
-  the texture release above.
+- One start on Windows with borderless failed with `E_FAIL` through
+  `0x4404b0` from the `jl` at `0x427e05`; under WinDbg every return in
+  `0x421330` - MGameD3D Init, MGameGL Init, its `+0x18`, `0x421670` -
+  was 0, so it is not deterministic and has not been seen twice.
 - What `LAUNCH.EXE` and `MUSASHI\SR2.dll` offer, and `SR2_SAVE.DAT`'s
   layout beyond the records table.
 - Frame timing, resolution: nothing traced yet. The renderer is
