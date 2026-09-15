@@ -111,7 +111,10 @@ Settings** has an **Aspect Ratio** row - 4:3, 16:10, 16:9, 21:9, 32:9 -
 and its **Resolution** row lists that aspect's sizes, 640x480 to
 5120x1440; the picture takes the new size at the next screen change. The race shows more at the sides; the menus and HUD keep
 their shape in the middle, with the tiled backgrounds carried out to the
-edges and the photo screens left 4:3. **ALT+ENTER** switches to a framed
+edges and the picture screens - the title, the mode select - kept 4:3
+with the picture itself stretched, blurred and dimmed behind them to
+fill the sides; the loading, game-over and logo screens, which have
+nothing at their edges worth stretching, get a plain colour. **ALT+ENTER** switches to a framed
 window you can move, resize or maximise. ALT+TAB works either way.
 
 An XInput pad works as it is: stick to steer, triggers for the pedals,
@@ -145,7 +148,7 @@ The offsets and internals are in [docs/NOTES.md](docs/NOTES.md).
 | **Music** | Silence: the music was audio tracks on the play disc. The patcher rips them to `music\` and the game plays them from there. |
 | **The mix** | The three sliders each followed their own curve - effects in dB, CD music in amplitude, streamed music across a range of its own - so a step meant something different on each, and the Australian release ran its effects at a fraction of the others'. All three now follow one curve, 3.5 dB a step, and the two musics are measured against each other so equal sliders are equally loud. |
 | **Gamepad** | Pads are DirectInput only, set up in a Control Panel applet that no longer installs; an XInput pad does nothing. |
-| **Widescreen** | 640x480 stretched to the monitor. The game renders at the size you choose, with the field of view widened to match and the 2D scaled to the middle, tiled backgrounds carried to the edges; the choice is kept as `[Display]` / `Resolution` in `SR2.CFG`. |
+| **Widescreen** | 640x480 stretched to the monitor. The game renders at the size you choose, with the field of view widened to match and the 2D scaled to the middle, tiled backgrounds carried to the edges and the picture screens given side bars of the picture itself, stretched and blurred; the choice is kept as `[Display]` / `Resolution` in `SR2.CFG`. |
 | **Device Settings** | No way to see or change the controls from inside the game. |
 
 Everything else is the game as it shipped.
@@ -193,6 +196,9 @@ anything that doesn't fit an issue: pairo@segaonline.net.
 - **The lake on Mountain** does not render at a widescreen size; it does at
   640x480 and 800x600. Not yet traced.
 - **Race countdown** edges clip with HUD gauges.
+- **A seam across the mode select's side bars**, where the two halves of
+  the backdrop meet: each half blurs only its own rows, so a step in the
+  picture across that line shows in the bar.
 - **A new size applies at the next screen change**, so the Graphic
   Settings page and the Options menu still show the old one until you
   leave Options.

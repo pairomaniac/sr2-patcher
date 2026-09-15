@@ -11,7 +11,10 @@ one alone, SetPerspective widens the angle for the aspect and leaves it
 at 4:3; the trace lines come out as documented. wide2d.asm: a quad in 640x480 terms comes out scaled and centred
 in a 1920x1080 buffer, a full-width one stretched, one at the left edge
 drawn out to it with its texture coordinate shifted, a 640x480 buffer or
-another FVF untouched, and the lists likewise.
+another FVF untouched, and the lists likewise; the texture create's
+entry reduces an opaque texture to the grid of mean colours the Python
+reference here does, and a strip of it at the edge gets a bar shaded
+down that grid's edge column.
 Needs python3-unicorn; exits 0 with a note when it is missing.
 """
 import importlib.util
@@ -28,11 +31,15 @@ spec.loader.exec_module(patcher)
 try:
     from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UC_HOOK_CODE
     from unicorn.x86_const import (UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX, UC_X86_REG_ESP, UC_X86_REG_EBP,
-                                   UC_X86_REG_EFLAGS)
+                                   UC_X86_REG_ESI, UC_X86_REG_EFLAGS)
 except ImportError:
     print('widetest: skipped, python3-unicorn not installed')
     sys.exit(0)
 
+PASSES, PASSDIM, BLURSTEP = 8, 10, 4    # the passes a bar is drawn in, each one's share of the quad's colour,
+                                        # and the picture's rows between one and the next
+KPICTURE, KBLACK = 1, 2             # what texload makes of a texture: a picture, or one all but black
+DARKPIX, MOSTLY = 6, 3              # a pixel this dark is black, and a texture this many quarters of them
 ROW = patcher.BUILDS['European']
 CODE, STACK, STUBS, VTABLE, RECTS, VERTS = 0x5a0000, 0x3000000, 0x600000, 0x610000, 0x620000, 0x4000000
 ZF = 1 << 6
@@ -284,32 +291,104 @@ def test_2d():
     base, rva = 0x10000000, 0x20000
     blob = patcher.WIDE2D_BLOB.replace(struct.pack('<I', patcher.FULLWIN_MAGIC), struct.pack('<I', rva))
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    mu.mem_map(base, 0x40000)                       # the blob's 64 KB copy fits
+    mu.mem_map(base, 0x100000)                      # the blob, whose grid of colours is the bulk of it
     mu.mem_map(STACK, 0x10000)
     mu.mem_map(VERTS, 0x20000)
     mu.mem_write(base + rva, blob)
-    for site, length in zip(patcher.WIDE2D_SITES, (6, 6, 10, 10, 10, 10, 9, 8)):
+    for site, length in zip(patcher.WIDE2D_SITES, (6, 6, 10, 10, 10, 10, 9, 8, 13)):
         mu.mem_write(base + site + length, b'\xc3')     # the draw resumes: return to the test
     mu.mem_write(base + 0x4d58, b'\x83\xc4\x10\xc3')   # the present resumes: add esp, 0x10; ret
     mu.mem_write(base + 0x1240c, struct.pack('<I', 0xF0F0F0F0))
     mu.mem_write(base + 0x11220, struct.pack('<I', 0x18))
     mu.mem_write(base + 0x12764, struct.pack('<I', 0xD3D3D3D3))
-    device, vtable = VERTS + 0x10000, VERTS + 0x10100          # the draw's `this`, with a stubbed +0xf8
+    device, vtable = VERTS + 0x10000, VERTS + 0x10100          # the draw's `this`, with +0xf8, +0xac and +0xb4 stubbed
     mu.mem_write(device, struct.pack('<I', vtable))
     mu.mem_write(vtable + 0xf8, struct.pack('<I', VERTS + 0x10200))
-    mu.mem_write(VERTS + 0x10200, b'\xc2\x08\x00')
-    wraps = []
+    mu.mem_write(vtable + 0xac, struct.pack('<I', VERTS + 0x10210))
+    mu.mem_write(vtable + 0xb4, struct.pack('<I', VERTS + 0x10220))
+    mu.mem_write(vtable + 0xe8, struct.pack('<I', VERTS + 0x10230))     # alpha blending on or off
+    mu.mem_write(vtable + 0xfc, struct.pack('<I', VERTS + 0x10240))     # its filtering
+    mu.mem_write(vtable + 0xec, struct.pack('<I', VERTS + 0x10250))     # and its blend factors, two arguments
+    for at in (0x10200, 0x10210, 0x10220, 0x10230, 0x10240):
+        mu.mem_write(VERTS + at, b'\xc2\x08\x00')
+    mu.mem_write(VERTS + 0x10250, b'\xc2\x0c\x00')
+    wraps, calls = [], []
 
     def setwrap(mu, address, size_, user):
         esp = mu.reg_read(UC_X86_REG_ESP)
         wraps.append(struct.unpack('<II', mu.mem_read(esp + 4, 8)))
     mu.hook_add(UC_HOOK_CODE, setwrap, begin=VERTS + 0x10200, end=VERTS + 0x10203)
 
-    def draw(entry, verts, fvf=0x1c4, w=1920, h=1080, uv=None):
+    def method(mu, address, size_, user):
+        """The texture select and the quad draw as the bar calls them: the texture's number, or the quad's vertices."""
+        esp = mu.reg_read(UC_X86_REG_ESP)
+        this, arg = struct.unpack('<Ii', mu.mem_read(esp + 4, 8))
+        if address == VERTS + 0x10210:
+            calls.append(('texture', this, arg))
+            mu.mem_write(base + 0x11224, struct.pack('<i', arg))
+        else:
+            calls.append(('quad', this, [(lambda v: (v[0], v[1], v[2], v[3], v[4], v[6], v[7]))(struct.unpack(VERTEX, mu.mem_read(arg + i, 32))) for i in range(0, 128, 32)]))
+    mu.hook_add(UC_HOOK_CODE, method, begin=VERTS + 0x10210, end=VERTS + 0x10223)
+
+    def blending(mu, address, size_, user):
+        esp = mu.reg_read(UC_X86_REG_ESP)
+        this, arg = struct.unpack('<Ii', mu.mem_read(esp + 4, 8))
+        calls.append(('blend' if address == VERTS + 0x10230 else 'filter', this, arg))
+        if address == VERTS + 0x10230:
+            mu.mem_write(base + 0x11234, struct.pack('<i', arg))
+    mu.hook_add(UC_HOOK_CODE, blending, begin=VERTS + 0x10230, end=VERTS + 0x10243)
+
+    def factors(mu, address, size_, user):
+        esp = mu.reg_read(UC_X86_REG_ESP)
+        this, src, dst = struct.unpack('<Iii', mu.mem_read(esp + 4, 12))
+        calls.append(('factors', src, dst))
+    mu.hook_add(UC_HOOK_CODE, factors, begin=VERTS + 0x10250, end=VERTS + 0x10253)
+
+    def texel(v, fmt):
+        """texload's reading of a pixel: five bits a channel, or None when it is not opaque. A format-0 texture is
+        1555 by the time the create sees it, the DLL's loader having expanded its 565 in place."""
+        if fmt == 8:
+            if v >> 12 != 15:
+                return None
+            r, g, b = v >> 8 & 15, v >> 4 & 15, v & 15
+            return r * 2 + (r >> 3), g * 2 + (g >> 3), b * 2 + (b >> 3)
+        if not v & 0x8000:
+            return None
+        return v >> 10 & 31, v >> 5 & 31, v & 31
+
+    def fill(pixels, fmt):
+        """texload's verdict in Python: nothing for a sprite, else a picture, or one all but black."""
+        texels = [texel(v, fmt) for v in pixels]
+        if not texels or None in texels:
+            return 0
+        dark = sum(1 for t in texels if sum(t) <= DARKPIX)
+        return KBLACK if dark * 4 >= len(texels) * MOSTLY else KPICTURE
+
+    def load(index, pixels, fmt, size=None):
+        """The texture create's entry: the fill it leaves in the table."""
+        size = size or int(len(pixels) ** 0.5)
+        where, desc = VERTS + 0x12000, VERTS + 0x11800
+        mu.mem_write(where, struct.pack('<%dH' % len(pixels), *pixels))
+        mu.mem_write(desc, struct.pack('<III', where, size, fmt))
+        esp = STACK + 0x8000
+        mu.mem_write(esp, struct.pack('<I', 0xDEAD0000))
+        mu.mem_write(esp + 0x20, b'\xa5' * 0x7c)
+        mu.reg_write(UC_X86_REG_ESP, esp)
+        mu.reg_write(UC_X86_REG_ESI, index)
+        mu.reg_write(UC_X86_REG_EBP, desc)
+        mu.emu_start(base + rva + 40, 0xDEAD0000, count=3000000)
+        if (mu.reg_read(UC_X86_REG_ESP) != esp + 4 or mu.reg_read(UC_X86_REG_ESI) != index or mu.reg_read(UC_X86_REG_EBP) != desc
+                or mu.reg_read(UC_X86_REG_EAX) != 0 or mu.reg_read(UC_X86_REG_ECX) != 0 or mu.mem_read(esp + 0x20, 0x7c) != bytes(0x7c)):
+            raise SystemExit('widetest: the texture create resumed wrong: esp %x/%x esi %x ebp %x eax %x ecx %x zeroed %r' % (
+                mu.reg_read(UC_X86_REG_ESP), esp + 4, mu.reg_read(UC_X86_REG_ESI), mu.reg_read(UC_X86_REG_EBP), mu.reg_read(UC_X86_REG_EAX),
+                mu.reg_read(UC_X86_REG_ECX), mu.mem_read(esp + 0x20, 0x7c) == bytes(0x7c)))
+        return struct.unpack('<I', mu.mem_read(base + rva + blob.find(b'FILLTABLE') + 12 + index * 4, 4))[0]
+
+    def draw(entry, verts, fvf=0x1c4, w=1920, h=1080, uv=None, diffuse=0xffffffff):
         mu.mem_write(base + 0x1121c, struct.pack('<I', fvf))
         mu.mem_write(base + 0x123fc, struct.pack('<II', w, h))
         uv = uv or [(0.0, 0.0)] * len(verts)
-        data = b''.join(struct.pack(VERTEX, x, y, 0.5, 1.0, 0xffffffff, 0, u, v) for (x, y), (u, v) in zip(verts, uv))
+        data = b''.join(struct.pack(VERTEX, x, y, 0.5, 1.0, diffuse, 0, u, v) for (x, y), (u, v) in zip(verts, uv))
         mu.mem_write(VERTS, data)
         esp = STACK + 0x8000
         # the return, `this`, the vertices, a list's count (an indexed list's vertex count), its indices and index count
@@ -400,6 +479,106 @@ def test_2d():
     copied, got = draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
     if [p[:2] for p in got] != [(1392.0, 0.0), (1680.0, 0.0), (1392.0, 1080.0), (1680.0, 1080.0)]:
         raise SystemExit('widetest: a picture strip came out %r' % (got,))
+    # the texture create's entry says what each texture is: a picture a bar can be drawn from, one so nearly
+    # black that the bar should be black instead, or nothing at all - a sprite, a palette, a render target,
+    # one with no pixels, or a number past the table
+    teal = [0x8000 | (v >> 2) << 10 | (v | (y & 1)) << 5 | v for y in range(32) for x in range(32) for v in ((x * 7 + y * 3) % 20 + 4,)]
+    if load(3, teal, 0) != KPICTURE or fill(teal, 0) != KPICTURE:
+        raise SystemExit('widetest: the teal texture came out %r' % (load(3, teal, 0),))
+    black = [0x8000 | 1 << 10 | 1 << 5 | 1] * 900 + [0x8000 | 0x1f << 10] * 124
+    if load(4, black, 0) != KBLACK or fill(black, 0) != KBLACK:
+        raise SystemExit('widetest: a texture all but black came out %r' % (load(4, black, 0),))
+    clear = [0x8000 | 0x1234] * 1023 + [0x1234]
+    if (load(5, clear, 2) or load(6, teal, 0x102) or load(7, teal, 0x1000) or load(8, [], 2, size=0)
+            or load(200, teal, 0)):
+        raise SystemExit('widetest: a texture counted as a picture that should not have')
+    # a flag the description carries beside the format - anything but a palette or a render target - is no reason to refuse
+    if load(10, teal, 0x10) != KPICTURE or load(11, teal, 0x2000) != KPICTURE:
+        raise SystemExit('widetest: a texture with a flag beside its format was refused')
+    if load(9, [0xf000 | 0xa << 8 | 0x5 << 4 | 0xf] * 1024, 8) != KPICTURE:
+        raise SystemExit('widetest: a plain 4444 texture was not a picture')
+
+    def bar_quad(calls):
+        return [[(v[0], v[1], v[4], round(v[5], 5), round(v[6], 5)) for v in c[2]] for c in calls if c[0] == 'quad']
+
+
+    def want_bar(xouter, xinner, y0, y1, uouter, uinner, v0, v1, left, rows=480.0, diffuse=0xffffffff):
+        """The quads a bar is: the picture's own sliver stretched from its edge out to the screen's, drawn with
+        the texture still on, once for each pass, each shifted a little further down the picture and carrying a
+        pass's share of the quad's diffuse, so the passes add up to a blur down."""
+        d = (diffuse & 0xff000000) | sum(((diffuse >> s & 0xff) * PASSDIM >> 8) << s for s in (0, 8, 16))
+        x0, x1 = (xouter, xinner) if left else (xinner, xouter)
+        a, b = (uouter, uinner) if left else (uinner, uouter)
+        step = (v1 - v0) * BLURSTEP / rows
+        out = []
+        for i in range(PASSES):
+            at = (i - (PASSES - 1) / 2) * step
+            out.append([(x0, y0, d, round(a, 5), round(v0 + at, 5)), (x1, y0, d, round(b, 5), round(v0 + at, 5)),
+                        (x0, y1, d, round(a, 5), round(v1 + at, 5)), (x1, y1, d, round(b, 5), round(v1 + at, 5))])
+        return out
+
+    def u_at(x, x0, x1, u0, u1):
+        return u0 + (x - x0) * (u1 - u0) / (x1 - x0)
+    # a right-edge strip of texture 3: one textured quad from the picture's edge to the screen's, carrying the
+    # 640's own last eighty pixels - a bar's share of the 1920 - stretched across it, and the strip as before
+    mu.mem_write(base + 0x11224, struct.pack('<I', 3))
+    del calls[:]
+    copied, got = draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    bars = want_bar(1920.0, 1680.0, 0.0, 1080.0, u_at(640.0, 512.0, 640.0, 0.0, 1.0),
+                    u_at(560.0, 512.0, 640.0, 0.0, 1.0), 0.0, 1.0, False)
+    if ([c for c in calls if c[0] not in ('quad',)] != [('filter', device, 1), ('factors', 2, 2), ('blend', device, 1),
+                                                       ('blend', device, 0), ('factors', 5, 6)]
+            or bar_quad(calls) != bars
+            or [p[:2] for p in got] != [(1392.0, 0.0), (1680.0, 0.0), (1392.0, 1080.0), (1680.0, 1080.0)]):
+        raise SystemExit('widetest: the bar came out %r, not %r' % (bar_quad(calls)[:1], bars[:1]))
+    # a sprite gets none
+    mu.mem_write(base + 0x11224, struct.pack('<I', 5))
+    del calls[:]
+    draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    if calls:
+        raise SystemExit('widetest: a bar drawn for a sprite: %r' % (calls,))
+    # a texture all but black gets a black bar, drawn with no texture at all and its own put back after
+    mu.mem_write(base + 0x11224, struct.pack('<I', 4))
+    del calls[:]
+    draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    if (calls[0] != ('texture', device, -1) or calls[-1] != ('texture', device, 4)
+            or [v[2] for v in bar_quad(calls)[0]] != [0xff000000] * 4):
+        raise SystemExit('widetest: a black texture\'s bar came out %r' % (calls,))
+    # a tile running past the 640, as the mode select's right-hand ones do: the bar starts at the 640, not at
+    # the tile's own edge, and carries the 640's last eighty pixels as the others do
+    mu.mem_write(base + 0x11224, struct.pack('<I', 3))
+    del calls[:]
+    draw(0, [(512.0, 0.0), (768.0, 0.0), (512.0, 480.0), (768.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    bars = want_bar(1920.0, 1680.0, 0.0, 1080.0, u_at(640.0, 512.0, 768.0, 0.0, 1.0),
+                    u_at(560.0, 512.0, 768.0, 0.0, 1.0), 0.0, 1.0, False)
+    if bar_quad(calls) != bars:
+        raise SystemExit('widetest: a tile past the 640 came out %r, not %r' % (bar_quad(calls), bars))
+    # the left bar: from the screen's edge to the picture's, carrying the 640's own first eighty pixels
+    del calls[:]
+    draw(0, [(0.0, 0.0), (256.0, 0.0), (0.0, 240.0), (256.0, 240.0)], uv=[(0, 0), (1, 0), (0, 0.5), (1, 0.5)])
+    bars = want_bar(0.0, 240.0, 0.0, 540.0, u_at(0.0, 0.0, 256.0, 0.0, 1.0),
+                    u_at(80.0, 0.0, 256.0, 0.0, 1.0), 0.0, 0.5, True, rows=240.0)
+    if bar_quad(calls) != bars:
+        raise SystemExit('widetest: the left bar came out %r, not %r' % (bar_quad(calls), bars))
+    # a plate sliding through the edge - wide, opaque, but not tall - gets no bar
+    del calls[:]
+    draw(0, [(-8.0, 100.0), (265.0, 100.0), (-8.0, 140.0), (265.0, 140.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    if calls:
+        raise SystemExit('widetest: a bar drawn for a plate: %r' % (calls,))
+    # the quad's diffuse is halved into the bar's
+    del calls[:]
+    draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)], diffuse=0x80808080)
+    if [v[2] for v in bar_quad(calls)[0]] != [0x80000000 | sum((0x80 * PASSDIM >> 8) << s for s in (0, 8, 16))] * 4:
+        raise SystemExit('widetest: the bar\'s diffuse came out %r' % (bar_quad(calls),))
+    # the bar's own draw, arriving through the quad entry with the flag set, goes as it is
+    flag = base + rva + blob.find(b'BARFLAG') + 8
+    mu.mem_write(flag, struct.pack('<I', 1))
+    if draw(0, quad)[0]:
+        raise SystemExit('widetest: the bar\'s draw was scaled')
+    mu.mem_write(flag, struct.pack('<I', 0))
+    mu.mem_write(base + 0x11224, struct.pack('<I', 0x80000000))
+    del calls[:]
+
     # a clamped quad wider than a tile at the left edge - a picture - keeps its place; wrapping, it extends
     photo = [(0.0, 0.0), (320.0, 0.0), (0.0, 480.0), (320.0, 480.0)]
     del wraps[:]
@@ -422,6 +601,7 @@ def test_2d():
         raise SystemExit('widetest: a list came out %r' % (got[:3],))
     if draw(10, [(1.0, 1.0)] * 2049)[0]:
         raise SystemExit('widetest: an oversized list copied')
+    mu.mem_write(device, struct.pack('<I', vtable))     # that list's vertices reach the device's own address
     # the trace: the flag set as d3dtrace sets it, kernel32 stubbed; a quad and a list report
     mu.mem_write(base + rva + blob.find(b'D3DTRACE\0') + 9, struct.pack('<I', 1))
     mu.mem_map(STUBS, 0x1000)
@@ -439,9 +619,21 @@ def test_2d():
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x30)
     draw(0, [(10.0, 20.0), (50.0, 20.0), (10.0, 60.0), (50.0, 60.0)], fvf=0x1e2)
     draw(10, text[:6])
-    if lines != ['sr2 d q 000001e2 00000004 dead0000 41200000 41a00000 3f000000 ',
-                 'sr2 d l 000001c4 00000006 dead0000 41200000 41a00000 3f000000 ']:
+    if lines != ['sr2 d q 000001e2 00000004 dead0000 41200000 41a00000 3f000000 80000000 00000000 ',
+                 'sr2 d l 000001c4 00000006 dead0000 41200000 41a00000 3f000000 80000000 00000000 ']:
         raise SystemExit('widetest: the trace said %r' % (lines,))
+    # barquad reports too: a strip at the right edge of a texture with a fill, then of one without
+    del lines[:]
+    mu.mem_write(base + 0x11224, struct.pack('<I', 3))
+    draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    mu.mem_write(base + 0x11224, struct.pack('<I', 5))
+    draw(0, [(512.0, 0.0), (640.0, 0.0), (512.0, 480.0), (640.0, 480.0)], uv=[(0, 0), (1, 0), (0, 1), (1, 1)])
+    bar_lines = [ln for ln in lines if ln.startswith('sr2 b ')]
+    if ([ln.split()[2] for ln in bar_lines] != ['00000005', '00000004']
+            or bar_lines[0].split()[3:5] != ['00000003', '%08x' % KPICTURE]
+            or bar_lines[0].split()[5:] != ['44000000', '44200000', '00000000', '43f00000']):
+        raise SystemExit('widetest: the bar trace said %r' % (bar_lines,))
+    mu.mem_write(base + 0x11224, struct.pack('<I', 0x80000000))
     copied, got = draw(15, text)
     if not copied or any(abs(a - b) > 0.01 for p, (x, y) in zip(got, text) for a, b in zip(p[:2], (x * 2.25 + 240, y * 2.25))):
         raise SystemExit('widetest: an indexed list came out %r' % (got[:3],))

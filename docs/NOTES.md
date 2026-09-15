@@ -39,7 +39,7 @@ grown by each patch that puts code or data there.
 | **No registry** | `SEGA RALLY 2.exe` | `0xd07c0`, `0x7e359` | the game's file name string `SR2.CFG` (one, for the read at `0x427740` and the write at `0x427880`) → `SR2.DSP`, so its 100-byte display block - the DirectDraw device name and capability flags recomputed from video memory at every start (`0x426ec0`), the launcher's options, the disc flag and the language - keeps its own stock-shaped file (`carry_display_block` copies a stock `SR2.CFG`'s block there at patch time, once) and `SR2.CFG` is the controls text from byte 0; and `MGameReg`'s Open at `0x47ef59` (21 bytes) → `xor esi,esi`, so `Software\SEGA` is never created. See *Gamepad* |
 | **Widescreen** (`widescreen`) | `SEGA RALLY 2.exe` | `0x20dfe`, `0x20e18`, `0x5128a` and the annex | the mode setter's `mov eax,[esp+8]; cmp [0x4d5e54],eax`, its literal 640x480/800x600 stores and the screen-change routine's `mov eax,[0x50afdc]; mov ecx,[eax+0x50]` → `call`s into asm/wide.asm, with the size table after it; see *Widescreen* |
 | **Widescreen, the 3D** (`widescreen3d`) | `MUSASHI\MGameGL.dll` | `0x2bc0`, `0x2c70` and the annex | `SetViewport`'s ten-byte and `SetPerspective`'s nine-byte prologues → `jmp` asm/widegl.asm, which scales a 640x480 rect and its centre to the picture and widens the angle for its aspect, then does the prologue and continues |
-| **Widescreen, the 2D** (`widescreen2d`) | `MUSASHI\MGameD3D.dll` | `0x5120`, `0x50d0`, `0x4fe0`, `0x5170`, `0x5030`, `0x5080`, `0x6040`, `0x4d50` and the annex | the quad and triangle draws' first six bytes, the list, indexed-list, strip and fan draws' first ten, the device viewport setter's first nine and the present's first eight → `jmp` asm/wide2d.asm, seven relocation entries dropped |
+| **Widescreen, the 2D** (`widescreen2d`) | `MUSASHI\MGameD3D.dll` | `0x5120`, `0x50d0`, `0x4fe0`, `0x5170`, `0x5030`, `0x5080`, `0x6040`, `0x4d50`, `0x411c` and the annex | the quad and triangle draws' first six bytes, the list, indexed-list, strip and fan draws' first ten, the device viewport setter's first nine, the present's first eight and the texture create's thirteen after its system-memory copy → `jmp` asm/wide2d.asm, seven relocation entries dropped |
 | **Resolution list** (`resolution`) | `Options.dll` | `0x2815`, `0x2826`, `0x2528`, `0x2b01`, `0x2a5b`, six bytes and the annex | the Graphic Settings page's row load, count check, draw loop head, row store and DEFAULT's row store → asm/resolution.asm, the check jumped over, the page's six "7"s made "8" for the aspect row; three relocation entries dropped |
 | **XInput** | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`) and the annex | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm, the Australian build's keyboard-poll address pointed at it instead; the section carries the name tables and defaults, then the working area, after the code. See *Gamepad* |
 
@@ -238,8 +238,9 @@ one edge of the 640 drawn out to the picture's edge on that side with
 its texture coordinate shifted at the quad's own rate for the distance
 the vertex moves, so a tiling texture goes on, scrolling or not: only a
 tile-sized quad (128 px or less each way), a wider or taller one at the
-edge being a picture or a strip of one - the mode select's photo - that
-keeps its 4:3 place; a clamped tile (the texture addressing, `+0xf8`,
+edge being a picture or a strip of one - the mode select's collage -
+that keeps its 4:3 place, with a bar of the picture's average colour
+beside it (below); a clamped tile (the texture addressing, `+0xf8`,
 cached at `0x10011240`) has wrap set for its draw through the method,
 as the Options background needs, the course select's tiles wrapping
 already. A tile is told from a sprite of the same size by the frame
@@ -250,7 +251,79 @@ quad at the edge is drawn out only when its width covered the whole
 640x480 last frame with six quads or more. The Options icons and
 buttons sliding through the edge, and the car select's outgoing car,
 were being repeated across the side area by the same rule that
-carries the tiles out. The `.bg` pictures go through `bgrow.asm`, above: their bars carry the
+carries the tiles out.
+
+The bars: a quad at one edge that is wider or taller than a tile is a
+picture or a strip of one - the mode select's backdrop is
+`BINDATA\MISC\MAINMODE.TXR`, a 640x480 collage in five 256x256 tiles,
+and `TITLE.TXR` is the same layout - and it keeps its 4:3 place. The
+side area beside it gets the picture itself, stretched.
+
+Nothing of the picture has to be kept for that, because the texture is
+still bound when the quad is drawn: the bar is one quad covering the
+side area with that texture on it and its coordinates carried past the
+quad's own edge, so what it shows is the 640's own sliver - a bar's
+share of the picture's width, in from that end, and no further in than
+the quad itself reaches, since a tile holds only its own part of the
+picture - stretched across. That is the mapping `bgrow` uses for the
+`.bg` screens, so the two look alike.
+
+It is drawn eight times over, each pass four of the picture's rows below
+the last and carrying an eighth of the colour, with the device's
+blending turned on (`+0xe8`, its old state cached at `0x10011234`) and
+both factors set to ONE (`+0xec`, source and destination) so the passes
+add and the eight average into a blur. They walk down the picture and
+not across it: across, the stretch itself does the smoothing, and passes
+spaced far enough apart to soften it further show as ghosts of the
+picture. Four rows is the step `bgrow`'s own blur takes, and an even
+number on purpose - every pass lands on the same side of the picture's
+baked scanlines, so they carry into the bar rather than averaging away.
+Where two tiles meet, each blurs only its own rows and clamps at its
+edge, so a step in the picture across that line shows as a seam.
+
+`+0xfc` puts the filtering to linear for the passes and the addressing
+(`+0xf8`) to clamp, so one shifted past the texture's edge carries its
+last column out rather than starting the picture again. Note which
+render states these methods set: `+0xfc` is `TEXTUREMAG` and
+`TEXTUREMIN`, 17 and 18, not the blend factors, which are 19 and 20 and
+belong to `+0xec` - setting the wrong pair leaves the passes
+overwriting one another, which shows as a sharp bar at a quarter of its
+brightness. The factors go back to source-alpha and its inverse
+afterwards, the pair the game's own blending wants; the device caches
+neither, so there is nothing to read back.
+
+What may be drawn from is settled at the load, by the texture create's
+entry (`0x1000411c`, esi the texture's number, ebp its description:
+pixels, size, flags): a picture, one so nearly black that a bar of it
+should be black instead - three quarters of its pixels dark, which is
+`empire.txr` and `segalogo.txr`, black but for the logo - or nothing,
+which is a sprite, a palette or a render target. One word per texture
+number, 128 of them. The logo screens are textures, not `.bg` pictures:
+they come through here and not `bgrow`.
+
+A quad running past the 640 - the mode select's right-hand tiles reach
+768 - has its bar started at the 640, not at its own edge, which would
+be off the picture; one at least 160 tall gets a bar at all, since a
+plate sliding through the edge is wide but not tall. The bar's colour
+is three tenths of the quad's diffuse, so it sits behind the picture.
+
+The description's flags are a bitfield, not the TXR's format alone: bit
+3 is 4444 and the palette and render-target bits (`0x700`, `0x1000`)
+are skipped, everything else read as 1555. By the create a format-0
+texture is 1555 with bit 15 set, not 565 - the screen DLLs' loaders
+(MainMode `0x10006b80`, the others the same library) expand it in place
+- so 0 and 2 read alike.
+
+With `d3dtrace` on, every quad that reaches the bar's decision reports
+it: `sr2 b why tex kind xmin xmax ymin ymax`, why 1 not a quad, 2
+shorter than 160, 3 no texture selected, 4 the texture is not a picture,
+5 the bar drawn; the draw lines carry the selected texture and its kind
+as their last two fields, and every texture create reports `sr2 t why
+slot flags size first bad left kind`, why 1 past the table, 2 paletted
+or a render target, 3 no pixels, 4 a transparent pixel, 5 the kind
+kept.
+
+The `.bg` pictures go through `bgrow.asm`, above: their bars carry the
 picture behind them, as though the whole of it were stretched to the
 surface's width with the drawn one over the middle, so each bar shows
 the sliver past the drawn edge spread across its width - sixty-four

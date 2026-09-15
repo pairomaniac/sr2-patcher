@@ -20,7 +20,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `bgrow.asm` | a .bg picture into the back buffer: a row as it was, expanded to 32 bits when the buffer is, or the whole picture scaled to fit and centred between bars carrying the picture stretched and blurred behind it when the buffer is another size; built twice, for the exe and for `Title.dll` |
 | `wide.asm` | in the exe: the picture's size from `SR2.CFG`; built twice, the American build's size setter has a third size |
 | `widegl.asm` | in `MGameGL.dll`: the 640x480 viewports scaled to the picture and the field of view widened for it, at the two methods every caller goes through |
-| `wide2d.asm` | in `MGameD3D.dll`: the 2D, drawn in 640x480 terms through six draws, scaled to the back buffer, and the device's viewport with it |
+| `wide2d.asm` | in `MGameD3D.dll`: the 2D, drawn in 640x480 terms through six draws, scaled to the back buffer, and the device's viewport with it; a picture's strips at the edges get the picture itself stretched into the side area beside them |
 | `resolution.asm` | in `Options.dll`: the Graphic Settings page's RESOLUTION row as a list over the patcher's table, kept in `SR2.CFG`; `RESOLUTION_MAGICS` are its placeholders |
 | `replayfree.asm` | in `ReplayGallery.dll`: the gallery's `new` remembered, its End freeing that block and no other |
 | `texrange.asm` | in `MGameD3D.dll`: the texture release with its index checked against the count, for VendorLogo's release of −128 |
@@ -201,7 +201,9 @@ resume address in `eax`, which both methods load next. `wide2d.asm`
 finds its own base and the image's, and takes over the six draws'
 first instructions, resuming after them with the vertex argument
 pointing at its scaled copy, and the device's viewport setter, whose
-rect argument it points at a scaled copy the same way. Both carry a
+rect argument it points at a scaled copy the same way; its ninth entry
+sits in the texture create, marks what the texture is for the side
+bars' sake and replays the thirteen bytes it took. Both carry a
 trace, off unless the `gltrace` or `d3dtrace` diagnostic sets its flag
 (the patcher finds it by a marker string in the annex). `resolution.asm` follows `devices.asm`'s pattern
 for Options.dll, its placeholders RVAs; kernel32's two profile routines
