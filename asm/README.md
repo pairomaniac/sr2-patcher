@@ -17,7 +17,7 @@ Never edit the hex by hand; the next build overwrites it.
 | `music.asm` | CD audio from files: the DllMain thunk that builds the track table, the `mciSendCommandA` hook, and the worker that plays a track from a DirectSound buffer |
 | `activate.asm` | calls the renderer's restore when the game regains focus |
 | `textcolor.asm` | `SetTextColor` with the colour masked to RGB, for the lobby's `-1` |
-| `bgrow.asm` | a .bg picture into the back buffer: a row as it was, expanded to 32 bits when the buffer is, or the whole picture scaled to fit when the buffer is another size; built twice, for the exe and for `Title.dll` |
+| `bgrow.asm` | a .bg picture into the back buffer: a row as it was, expanded to 32 bits when the buffer is, or the whole picture scaled to fit and centred between bars carrying the picture stretched and blurred behind it when the buffer is another size; built twice, for the exe and for `Title.dll` |
 | `wide.asm` | in the exe: the picture's size from `SR2.CFG`; built twice, the American build's size setter has a third size |
 | `widegl.asm` | in `MGameGL.dll`: the 640x480 viewports scaled to the picture and the field of view widened for it, at the two methods every caller goes through |
 | `wide2d.asm` | in `MGameD3D.dll`: the 2D, drawn in 640x480 terms through six draws, scaled to the back buffer, and the device's viewport with it |
@@ -179,8 +179,9 @@ reads the lock's description at `0x4e6878`: with the surface the
 picture's size it runs the original copy or expands each 565 pixel to
 XRGB8888 for a 32-bit surface; with another size it draws the whole
 picture on the first row - nearest pixel, the largest size of the
-picture's aspect that fits, centred on black - and nothing on the rows
-after. `eax`, `ebx` and `edx` come out as they went in; the rest were
+picture's aspect that fits, centred between bars carrying the picture
+itself, stretched and blurred, or one flat colour where its sliver has
+none - and nothing on the rows after. `eax`, `ebx` and `edx` come out as they went in; the rest were
 scratch at the site. Assembled again with `-DTITLE` for `Title.dll`'s
 copy of the loop (`0x100014ba`), which keeps its lock description on
 the stack and advances the source itself: that build reads the

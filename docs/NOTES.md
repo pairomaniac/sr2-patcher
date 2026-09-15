@@ -250,8 +250,30 @@ quad at the edge is drawn out only when its width covered the whole
 640x480 last frame with six quads or more. The Options icons and
 buttons sliding through the edge, and the car select's outgoing car,
 were being repeated across the side area by the same rule that
-carries the tiles out. The `.bg` pictures go through `bgrow.asm`, above; split screen
-comes out of the rect scaling.
+carries the tiles out. The `.bg` pictures go through `bgrow.asm`, above: their bars carry the
+picture behind them, as though the whole of it were stretched to the
+surface's width with the drawn one over the middle, so each bar shows
+the sliver past the drawn edge spread across its width - sixty-four
+samples, each the mean of a block twice as wide as the step between
+them, over the rows a sixteenth of the height either side, every fourth
+one - and the pixels between them ramped from one sample to the next.
+The blocks overlap their neighbours both ways, which is what makes it a
+blur rather than a stretch, and the stepping three destination rows to
+a picture row would otherwise leave goes with it, since a window that
+wide hardly moves for one row more or less. Every fourth row is an even
+step, so the picture's baked scanlines carry into the bar rather than
+averaging away. The samples are kept until the picture's row changes
+under them, so they are taken once a row and not once a line, and they
+go into the bar at three tenths of the picture's brightness, so the
+side areas sit behind it.
+
+A sliver fills flat with its mean when its samples sit close to it,
+averaged, and black outright when three quarters of them are black or
+when that mean is dark enough to read as black. The counting rule, not
+the average, is what settles a sliver like the vendor logo's - black
+but for one streak bright enough to pull an average up - though the
+logo screens are textures and never reach here.  Split screen comes out
+of the rect scaling.
 
 The device's viewport, also in `MGameD3D`: the exe draws the countdown
 digit itself, an untransformed indexed list (`0x42bd2f`, FVF `0x1e2`),
