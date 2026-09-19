@@ -29,7 +29,7 @@ In file order:
 
 | Region | Starts with |
 | --- | --- |
-| Constants | `VERSION`; `BUILDS` the three builds' fingerprints, sites, slots and addresses, `build_of`; `patches` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
+| Constants | `VERSION`; `BUILDS` the four builds' fingerprints, sites, slots and addresses, `build_of`; `patches` the patch table; `MUSASHI` the CLSID table; the two manifest templates |
 | Generated | the `*_BLOB`s, `MUSIC_MAGICS`, `EXE_MAGICS`, written by `asm/build.py` |
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
@@ -182,16 +182,16 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 
 | Patch | Sites | Where |
 | --- | --- | --- |
-| nodisc | 2 | exe `0x4273c0` (file `0x267c0`), `0x47632e` (file `0x7572e`) |
+| nodisc | 2 | exe `0x4273c0` (file `0x267c0`), `0x47632e` (file `0x7572e`); MediaKite `0x7571e` |
 | nocardwarn | 1 | exe `0x427278` (file `0x26678`), 2 bytes; American `0x26938`, Australian `0x4b263` |
-| cdlevel | 1 | exe `0x473c48` (file `0x73048`), 1 byte of 4; American `0x73478`, Australian `0xb2668` |
+| cdlevel | 1 | exe `0x473c48` (file `0x73048`), 1 byte of 4; American `0x73478`, Australian `0xb2668`, MediaKite `0x73038` |
 | altab | 1 + section | exe `0x426bf7` (file `0x25ff7`), the annex |
 | zdetach | 4 | `MGameD3D.dll` `0x10002930`, `0x10002b31`, `0x10002d11`, `0x100037f4` (file offsets the same minus the base) |
 | restoreall | 1 | `MGameD3D.dll` `0x10007710`–`0x1000778c` (file `0x7710`), 44 bytes over 124 |
 | texfmt | 1 | `MGameD3D.dll` `0x1000f79c` (file `0xf79c`), 12 bytes |
 | textcolor | 10 + section | exe `0x420fc7`, `0x421166` (`mov esi`), `0x43545f`, `0x43572a`, `0x435afc`, `0x436133`, `0x436cc3`, `0x43b2c0`, `0x43daf4`, `0x43e696` (`call`), the annex |
 | altenter | 1 + section | exe `0x426cbc` (file `0x260bc`), the annex |
-| widescreen | 4 + section | exe `0x4219fe` (file `0x20dfe`, 10 bytes), `0x421a18` (file `0x20e18`, 42; American `0x421aa8`, 73), `0x451e8a` (file `0x5128a`, 8), `0x4010e5` (file `0x4e5`, 6, the element walker's callback call), the annex; American `0x2108e`, `0x210a8`, `0x5160a`, `0x6e5`; Australian `0x40b1e`, `0x40b38`, `0x895c8`, `0x4e5` |
+| widescreen | 4 + section | exe `0x4219fe` (file `0x20dfe`, 10 bytes), `0x421a18` (file `0x20e18`, 42; American `0x421aa8`, 73), `0x451e8a` (file `0x5128a`, 8), `0x4010e5` (file `0x4e5`, 6, the element walker's callback call), the annex; American `0x2108e`, `0x210a8`, `0x5160a`, `0x6e5`; Australian `0x40b1e`, `0x40b38`, `0x895c8`, `0x4e5`; MediaKite `0x20dfe`, `0x20e18`, `0x5127a`, `0x4e5` |
 | widescreen3d | 6 + section | `MGameGL.dll` `0x100037c0` (file `0x2bc0`, 10 bytes), `0x10003870` (file `0x2c70`, 9), `0x100039e0` (file `0x2de0`, 9), `0x100033f0` (file `0x27f0`, 9), `0x10003a80` (file `0x2e80`, 8), `0x10003ae0` (file `0x2ee0`, 8), the annex |
 | hudlast | 3 + section | `SEGA RALLY 2.exe` `0x418ab1`, `0x4280f2` and `0x426930` (11 bytes) (file `0x17eb1`, `0x274f2`, `0x25d30`; American `0x18161`, `0x277b2`, `0x25fe0`; Australian `0x2de01`, `0x4c119`, `0x4a940`), the annex |
 | loadhold | 2 + section | `SEGA RALLY 2.exe` `0x41a7bb` and `0x4195be` (6 bytes each), the annex |
@@ -211,15 +211,15 @@ Image base `0x10000000`, relocated at load (`.reloc` present).
 | mixerless | 1 + section | Australian `MGAudio.dll` `0x10002278` (file `0x2278`), the annex |
 | music | 14 + entry + section | `MGAudio.dll`, the calls and the load above, the entry point, the annex |
 | devices | 6 + section + TXR | `Options.dll` `0x10003ff8`, `0x1000400f`, `0x10003e14`, `0x10003e67`, `0x10003b0c`, `0x10004238` (files `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x2f0c`, `0x3638`; the transform also writes the dispatch entry at `0x10003dcc` (file `0x31c0` + 12) and reads the item tables through `0x1009aa20`), nine `x` floats and UV entries `0xe`, `0x11` in `.data`, the annex with its relocation blocks; `BINDATA\\MISC\\OPTIONS.TXR` grown by a 256x256 sheet |
-| noregistry | 2 | exe `0x5a29c0` (file `0xd07c0`, the 7-byte name string), `0x47ef59` (file `0x7e359`, 21 bytes); American `0xd0bc0`, `0x47f179`; Australian `0x115fd4`, `0xbd959` |
+| noregistry | 2 | exe `0x5a29c0` (file `0xd07c0`, the 7-byte name string), `0x47ef59` (file `0x7e359`, 21 bytes); American `0xd0bc0`, `0x47f179`; Australian `0x115fd4`, `0xbd959`; MediaKite `0xd07c0`, `0x7e349` |
 | xinput | 4 + section | `MGInput.dll` `0x10008130`, `0x10008210` (6 bytes each), `0x10007100` (6), `0x100056c0` (9), files the same minus the base, the annex; Australian `0x10007940`, `0x10007a20`, `0x10006940`, and the dword at `0x100081a8` |
 | dinput8 | 4 + section | `MGInput.dll` `0x10002940` (18 bytes), `0x100039ac` (7), the ids at `0x10010680`, `0x100106c0` (16 each), files the same minus the base, the annex; Australian `0x10002870`, `0x100039f9` (6), `0x10010678`, `0x100106b8` |
 | nogeneric | 1 + section | `MGInput.dll` `0x100026d2` (5 bytes), file the same minus the base, the annex; Australian `0x10002694` |
 
 ## 7. `MUSASHI\MGInput.dll`
 
-Image base `0x10000000`, relocated at load; one build in the European and
-American releases (MD5 `7aa0b3ae…`), an older one in the Australian
+Image base `0x10000000`, relocated at load; one build in the European,
+American and MediaKite releases (MD5 `7aa0b3ae…`), an older one in the Australian
 (`594a3435…`) with the same vtables at `0x1000f764`, `0x1000f7b0`,
 `0x1000f868` and so on, its record update at `0x10008170` dispatching to
 static polls, the keyboard's `0x10007e40`.
@@ -244,7 +244,7 @@ record at `0x1000f918`.
 
 ## 8. `MUSASHI\MGSound.dll`
 
-Image base `0x10000000`, relocated at load; identical in all three builds
+Image base `0x10000000`, relocated at load; identical in all four builds
 (MD5 `a9698c1d…`). The wave and streaming sound engine over DirectSound;
 the exe and `Options.dll` each carry a copy of the same client code for
 it, which is why a fix for the settings-menu music has to live here.
@@ -260,8 +260,8 @@ it, which is why a fix for the settings-menu music has to live here.
 ## 9. `Options.dll`
 
 Image base `0x10000000`, relocated at load; `.text` at RVA `0x1000`, file
-offset `0x400`. The European and American DLLs are one file; the
-Australian is its own build (addresses in `BUILDS`).
+offset `0x400`. The European, American and MediaKite DLLs are one file;
+the Australian is its own build (addresses in `BUILDS`).
 
 | Address | What |
 |---|---|

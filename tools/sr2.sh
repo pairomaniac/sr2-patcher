@@ -11,7 +11,7 @@
 #     tools/sr2.sh BUILD debug [CHANNELS] and WINEDEBUG=+seh,+loaddll,+mci, or the channels given
 #     tools/sr2.sh BUILD show             print the paths it would use and exit
 #
-# BUILD is eu, us or au. logs/ is in the repository root and gitignored.
+# BUILD is eu, us, au or jp. logs/ is in the repository root and gitignored.
 # Under umu, Proton writes Wine's output to a file of its own rather than
 # the terminal (PROTON_LOG); the terminal only shows umu's lines. The file
 # is steam-<id>.log in PROTON_LOG_DIR, which is why that is pointed at
@@ -27,8 +27,8 @@ LOG=$LOGS/sr2.log
 die() { echo "sr2.sh: $*" >&2; exit 1; }
 
 case "${1:-}" in
-    eu|us|au) BUILD=${1^^}; shift ;;
-    *) die "usage: tools/sr2.sh eu|us|au install|rip|patch|restore|run|debug|show" ;;
+    eu|us|au|jp) BUILD=${1^^}; shift ;;
+    *) die "usage: tools/sr2.sh eu|us|au|jp install|rip|patch|restore|run|debug|show" ;;
 esac
 game_var=SR2_GAME_$BUILD
 disc_var=SR2_DISC_$BUILD

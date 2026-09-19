@@ -9,7 +9,7 @@
 
 ~/.sr2-test (template: tools/sr2-test.example, used by tools/sr2.sh too) names, per build, the
 install disc and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the
-same with US and AU. Each that is set runs the checks that need a disc
+same with US, AU and JP. Each that is set runs the checks that need a disc
 or a game on that build, labelled cab/EU and so on. Each check is a script
 of its own; this only decides what to run and reports the result, and
 shows a script's output when it fails.
@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 PY = sys.executable or 'python3'
 CONF = os.path.expanduser('~/.sr2-test')
-BUILDS = ('EU', 'US', 'AU')
+BUILDS = ('EU', 'US', 'AU', 'JP')
 
 # name, what, command, needs: '' for none, 'disc' for the install disc
 # (and the game if there is one), 'game' for the installed game.

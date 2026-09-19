@@ -60,6 +60,17 @@ EXPECTED = {
         'Options.dll': '0ee43c2b35d06214da0c98519dda84c1',
         'ReplayGallery.dll': '38c87f78822e3a6ce762c3003e3b8090',
     },
+    'Japanese (MediaKite)': {
+        'SEGA RALLY 2.exe': 'b5f52c781be9b991bab49f040e90a7c7',
+        'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
+        'MUSASHI\\MGameD3D.dll': '619d324c64d1a0591b7d4b8fcfd15ea8',
+        'MUSASHI\\MGAudio.dll': 'd62b598085dd18757cdd2933efc91166',
+        'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
+        'MUSASHI\\MGInput.dll': '502d02014a5cfbaee4928a271f63f998',
+        'Title.dll': '06dd8522fa81c0c812cc565303820cbf',
+        'Options.dll': '74a132d03e1901f4709b436ae9bdd94b',
+        'ReplayGallery.dll': '5fff3c2a55232543a6278a7f3f6c16ea',
+    },
 }
 
 

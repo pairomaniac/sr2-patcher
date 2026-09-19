@@ -7,9 +7,11 @@ brings the music back, makes an XInput pad work out of the box with the
 controls rebindable in-game, and renders at your monitor's size.
 Windows 10 and 11, Wine and Proton.
 
-**Work in progress.** The game plays start to finish on all three
-releases, but this is a hobby project poking at a 27-year-old binary, and
-things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
+**Work in progress.** The game plays start to finish on the European,
+American and Australian releases; MediaKite's Japanese rerelease installs
+and patches like them but has not been played through yet. This is a
+hobby project poking at a 27-year-old binary, and things will turn up.
+[Reporting a bug](#reporting-a-bug) says what helps.
 
 **Status.** The latest release is
 [v0.2](https://github.com/pairomaniac/sr2-patcher/releases), which adds
@@ -82,28 +84,54 @@ If you have the discs but no images, image them once:
 
 You need both discs: the game is on the first, the music on the second.
 The European, American and Australian releases are supported and told
-apart automatically. The Japanese releases (Sega's HCJ-0145, DigiCube's,
-MediaKite's, the I-O DATA bundle) are not: no verified dump of any of
-them has been seen, and one would be welcome. Sega's own updates for the
+apart automatically, and **this fork adds a fourth**: MediaKite's
+Japanese rerelease, MKW-166. That one is not upstream's - see
+[The Japanese releases](#the-japanese-releases). Japan's three other
+pressings (Sega's own HCJ-0145, DigiCube's DWRPD-00081 and SPB-040, the
+disc I-O DATA bundled with a graphics card) are unknown builds here, and
+a dump of any of them would be welcome. Sega's own updates for the
 Japanese release are documented in `docs/NOTES.md`; the European release
 already carries their final files.
 
 ## Builds
 
-The patcher knows the European, American and Australian releases, each in
-its Pentium III build - the one the original installer chose on any CPU
-of the last twenty-five years, and the one Install always picks. It tells
-them apart by the exe's checksum and then checks the thirteen files of
-that build by size and checksum before it writes anything: the nine it
-patches and the four other files the Pentium III set replaced. If one
-doesn't match you get a line naming it, such as
-`MUSASHI\MGAudio.dll is not the European build's`, and nothing is touched.
+The patcher knows the European, American, Australian and Japanese
+(MediaKite) releases, each in its Pentium III build - the one the
+original installer chose on any CPU of the last twenty-five years, and
+the one Install always picks. It tells them apart by the exe's checksum
+and then checks the thirteen files of that build by size and checksum
+before it writes anything: the nine it patches and the four other files
+the Pentium III set replaced. If one doesn't match you get a line naming
+it, such as `MUSASHI\MGAudio.dll is not the European build's`, and
+nothing is touched.
 That means a modified game, a previous patcher's work, or a mixed install;
 the fix is to install afresh from the disc.
 
 Each patched file gets a `.bak` beside it, the untouched original. Patch
 starts from those every time, so patching twice is the same as once, and
 **Restore original** is just putting them back.
+
+## The Japanese releases
+
+**The MediaKite build is this fork's, not upstream's.** Upstream
+([pairomaniac/sr2-patcher](https://github.com/pairomaniac/sr2-patcher))
+carries the European, American and Australian rows only, and holds the
+four Japanese pressings back until a verified dump of one turns up. That
+is a sound rule: its three rows are checked against Redump dumps, and
+Redump has no MKW-166 sample at all - none as of 20 September 2026 - so
+"verified" is not a state this disc can reach at the moment.
+
+This fork adds the row anyway, from one image of an MKW-166 disc, and
+says so plainly rather than implying upstream's blessing. What stands
+behind it is the disc itself: the exe is the European one relinked
+sixteen bytes shorter, every one of its patch sites was matched byte for
+byte in that exe before the row went in, the other twelve fingerprinted
+files are the European bytes, and the whole of `tools/check.py` passes
+against an install made from the disc, which has also been played. The
+details are in [docs/NOTES.md](docs/NOTES.md), *The Japanese releases*.
+
+So: a problem with the MediaKite build belongs in this fork's issues,
+not upstream's. Japan's other three pressings are not here either way.
 
 ## Playing
 
@@ -193,12 +221,13 @@ do.
 ## Reporting a bug
 
 Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues). Say
-which release you have (European, American, Australian), whether you are
-on Windows or Wine/Proton, and what you were doing just before. For a
-crash on Windows, the entry under Event Viewer → Windows Logs →
-Application names the faulting module and offset, which is usually enough
-to find it. For a disc image of a release the patcher doesn't know, or
-anything that doesn't fit an issue: pairo@segaonline.net.
+which release you have (European, American, Australian, Japanese
+MediaKite), whether you are on Windows or Wine/Proton, and what you were
+doing just before. For a crash on Windows, the entry under Event Viewer →
+Windows Logs → Application names the faulting module and offset, which is
+usually enough to find it. For a disc image of a release the patcher
+doesn't know, or anything that doesn't fit an issue:
+pairo@segaonline.net.
 
 ## Known issues
 
@@ -210,9 +239,25 @@ anything that doesn't fit an issue: pairo@segaonline.net.
   device and Windows' legacy DirectInput. The `dinput8` patch takes the
   game off that DLL; if a start still hangs with it on, please report it
   with the device.
-- **Windows: error 80004005 at start** on one machine with an AMD card;
-  once on Linux with the borderless window, not since. If it happens to
-  you, please report it with the card and driver.
+- **Windows: `Failed to initialize. Error code 80004005`** at start, on
+  two machines so far (one AMD, one NVIDIA). The game's own DirectDraw
+  bring-up fails; a nearly stock build - only `nodisc` and `nocardwarn`
+  applied - fails the same way, so it is not the patching. On the NVIDIA
+  machine it was deterministic and Windows' **8/16-bit DWM mitigation**
+  cleared it: a `.cmd` beside the exe with
+
+  ```
+  set __COMPAT_LAYER=DWM8And16BitMitigation
+  start "" "%~dp0SEGA RALLY 2.exe"
+  ```
+
+  starts the game every time and writes nothing to the registry. The
+  flag is not one the Compatibility tab offers; to have it for good
+  instead, add the exe's full path as a value name under
+  `HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers`
+  with the data `~ DWM8And16BitMitigation`. Why a machine needs it, and
+  why one start can succeed before the rest fail, is not known; please
+  report it with the card and driver.
 
 ## Planned
 
@@ -223,10 +268,11 @@ In no particular order, none of it promised:
 - **Online play** - the game's own multiplayer is DirectPlay over IPX,
   serial and modem. The aim is an internet lobby with a code to share and
   no port forwarding, as v-on-patcher has.
-- **The Japanese releases** - once a verified dump turns up. The
-  European exe is Sega's UPDATE250 exe byte for byte, so the 2.50-patched
-  original is probably a small row; the unpatched original and the two
-  rereleases are unknown builds.
+- **Japan's other three pressings** - Sega's HCJ-0145, DigiCube's and the
+  I-O DATA bundle - once a dump of one turns up. The European exe is
+  Sega's UPDATE250 exe byte for byte, so the 2.50-patched original is
+  probably a small row; the unpatched original and DigiCube's are
+  unknown builds.
 
 ## Working on it
 
