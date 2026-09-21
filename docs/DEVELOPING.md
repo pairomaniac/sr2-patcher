@@ -37,6 +37,7 @@ here needs pip. None of it is needed to run the patcher.
 | `gcc-mingw-w64-i686` | `net/build.py`, the network DLL |
 | a C compiler (`cc`) | the `nettest` check |
 | `tkinter` | the window |
+| `xvfb` | the `gui` check |
 
 `~/.sr2-test` names, per build, the install disc, the play disc, the
 installed game and the Wine prefix: `SR2_DISC_EU`, `SR2_PLAY_EU`,
@@ -335,7 +336,55 @@ refs/tags/v0.4.0`) changes neither of the others: `gh release edit
 --notes-file` for the notes, `gh release upload --clobber` for a
 re-stamped script. `gh release view` shows all three as they stand.
 
+## The window
+
+`run_tk` and the tables above it are the whole of it: `FEATURES` is what
+the window lists and the README describes - one row per thing somebody
+would say the patcher does, with the patch keys it takes - and
+`group_keys` turns the boxes into the key set `patch` is given, dropping
+anything whose `NEEDS` went with it. `--selfcheck` holds the two
+together: every patch in exactly one row, every diagnostic with a label.
+
+`tools/assets.py` bakes `assets/SR2PatcherLogo2.png` and
+`assets/SR2PatcherIcon.png` into the script as the logo and the window
+icon, and writes `assets/icon.ico` for the exe. Run it after changing
+the artwork; never edit the blob by hand.
+
+`tools/guitest.py` drives the window under xvfb - what each button is
+offered for, which cards start open, that every description opens. It
+skips with no display, and the CI job installs xvfb so it does not. Its
+first pass needs no display: every pair of `PALETTE` colours that
+carries meaning, against the contrast WCAG asks of it - 4.5:1 for text,
+3:1 for a border or a tick, and 1.25:1 between each surface and the one
+behind it - the card, the band under a heading, the window, and the
+boxes text is typed into - so they can be told apart. The colours
+themselves are quantised out of the box art, the Stratos watercolour and
+the cabinet: a neutral paper white, a neutral near-black, cool greys,
+the badge's red, the livery's green for the window behind everything -
+the car's own arrangement, white panels on green, with the paper
+ruling the logo off from the rest.
+The band behind the logo is an image rather than canvas items: the
+canvas does not antialias, and the cut across it is a shallow diagonal.
+It is redrawn on a resize, which takes a fifth of a second at width, so
+it waits for the dragging to stop. The wheels' gold is far too light to
+read as text, so the step numbers take a darkened one. Pick a new colour
+from the artwork and then measure it; nothing in the palette is judged
+by eye.
+
+How tall the window opens is `LINE_CAP`, in lines of its own text, and
+that is the bound that does the work. The screen is the other one and is
+not much use: `winfo_screenheight` is every monitor together, so on a
+desktop with more than one it is not the height of anything anybody is
+looking at. Lines are, because they scale with the display. 48 lines
+puts the heading of the last numbered card on screen.
+
+`_settle_height` sets that height once the window is up. Nothing
+measured before it is mapped can be trusted - a line was 15 pixels and
+the screen 931 on a desktop that a moment later said 22 and 2160 - so it
+re-measures for the first half second and then stops. It has to stop, or
+the window cannot be dragged. Neither bound limits dragging: `maxsize`
+is the screen and the content.
+
 ## Not there yet
 
 - A Windows build (PyInstaller spec and the release job).
-- A `gui` check under xvfb.
