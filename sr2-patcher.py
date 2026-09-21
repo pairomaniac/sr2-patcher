@@ -15,18 +15,22 @@ The version is the VERSION line below and nowhere else.
 https://github.com/pairomaniac/sr2-patcher
 """
 import base64
+import errno
 import hashlib
 import io
 import json
 import os
 import queue
 import re
+import shutil
 import ssl
 import struct
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
+import webbrowser
 import zipfile
 import zlib
 
@@ -605,6 +609,199 @@ BYNAME = DIAGNOSTIC
 
 # Every patch any build has, in table order.
 PATCH_KEYS = tuple(k for k in dict.fromkeys(k for b in BUILDS for k in patches(b)) if k not in BYNAME)
+
+
+# What the window shows, and what the README lists. One row is one thing
+# somebody would say the patcher does; the patch keys behind it are the
+# edits it takes, which is a table matter and not theirs. A row is
+# (group, label, description, keys); the description is prose, then
+# `heading<TAB>meaning` rows for the bubble's table. selfcheck() checks
+# that every key is in exactly one row.
+FEATURES = (
+    ('nodisc', 'No disc required',
+     'The game\'s data read from the folder it is installed in, in place\n'
+     'of the play disc it used to scan your drives for. Every mode is open\n'
+     'with nothing in the drive.', ('nodisc',)),
+
+    ('start', 'Skip the start-up checks',
+     'The four checks the game makes before it opens its window, and what\n'
+     'each one now allows.\n'
+     '\n'
+     'Video card\tAny card. The check weighed yours against a 1999 list\n'
+     '\tand 4 MB of video memory, and put up an OK/Cancel box\n'
+     '\teither way.\n'
+     'Display mode\tAny mode list. It wanted 640x480 at 16 bits offered,\n'
+     '\tand stopped at "Failed to initialize. Error code\n'
+     '\t80004005" without it.\n'
+     'Desktop depth\tAny depth. The windowed path wanted a 16-bit desktop.\n'
+     'Windows version\tAny version. The Australian release wanted 98 or\n'
+     '\tolder.', ('nocardwarn', 'anymode', 'anydepth', 'win9x')),
+
+    ('crashes', 'Crash fixes',
+     'Three reads and frees past the end of something, each of which\n'
+     'Windows ends the process for.\n'
+     '\n'
+     'Starting up\tThe back buffer detached from its Z-buffer, which\n'
+     '\tclosed the game before its window appeared under Proton.\n'
+     'After the logos\tA texture released from outside the table\'s range,\n'
+     '\ton the logo screen.\n'
+     'The gallery\tA buffer freed that was not the replay gallery\'s own,\n'
+     '\twhich the heap has ended the process for since Windows 8.',
+     ('zdetach', 'texrange', 'replayfree')),
+
+    ('altab', 'Fix the picture after ALT+TAB',
+     'The game\'s surfaces, rebuilt as the window comes back to the front.\n'
+     'A stock game carried on drawing to the ones the driver threw away\n'
+     'while it was in the background, and came back to a blank screen.',
+     ('altab', 'restoreall')),
+
+    ('devicescan', 'Fix the device scan',
+     'The device list, asked for through dinput8 - the one Windows still\n'
+     'ships - and filtered to keyboards, mice and controllers. A stock\n'
+     'game went through the legacy dinput and read every HID device on the\n'
+     'machine, which is where the white window on start came from: lit\n'
+     'keyboards, composite pads, some wheels.',
+     ('dinput8', 'nogeneric')),
+
+    ('window', 'Windowed and borderless',
+     'The game in a window, in place of taking over the display at\n'
+     '640x480.\n'
+     '\n'
+     'Borderless\tHow it starts: the monitor it opens on, no frame, no\n'
+     '\tmode change.\n'
+     'ALT+ENTER\tA framed window to move, resize or maximise, and back.\n'
+     'ALT+TAB\tEither mode, and the window comes back where it was.\n'
+     'The picture\tFitted to the window: 4:3 with black bars until a\n'
+     '\twidescreen size is picked.',
+     ('windowed', 'borderless', 'altenter', 'titlebg', 'clearsize')),
+
+    ('lettering', 'Lettering fixes',
+     'Two screens\' worth of text the game drew and the card did not show.\n'
+     '\n'
+     'Menu screens\tThe black lettering of SELECT GAME, SELECT CAR and\n'
+     '\tthe rest, which came out as hollow outlines.\n'
+     'Multiplayer\tThe name you type, the team list and the chat, which\n'
+     '\tdid not appear at all.', ('texfmt', 'textcolor')),
+
+    ('hud', 'Fix the HUD over the scenery',
+     'The HUD drawn after the scene rather than in the middle of it. The\n'
+     'tachometer\'s plate blanked the lake behind it on Mountain, and the\n'
+     'ten-year championship\'s credits ran behind the replay\'s frame.',
+     ('hudlast',)),
+
+    ('sound', 'Sound fixes',
+     'One curve behind all three volume sliders - music, effects and\n'
+     'engine - with the two musics matched to it, so equal settings are\n'
+     'equally loud. Each slider had a curve of its own, and the Australian\n'
+     'release ran its effects at a fraction of the others\' and wanted a\n'
+     'mixer device before it would start at all.',
+     ('mix', 'sfxlevel', 'sfxoptions', 'mixerless')),
+
+    ('settings', 'No registry',
+     'The game\'s settings as plain files beside the exe: SR2.DSP for the\n'
+     'display, SR2.CFG for the controls. Nothing in the registry and\n'
+     'nothing an installer has to write, so the folder can be copied as it\n'
+     'is.', ('noregistry',)),
+
+    ('widescreen', 'Native widescreen',
+     'The game renders at the size you pick, 640x480 to 3840x2160, in\n'
+     'place of 640x480 stretched to the window.\n'
+     '\n'
+     'Aspect Ratio\tA row under Options - Graphic Settings: 4:3, 16:10,\n'
+     '\t16:9, 21:9 and 32:9.\n'
+     'Resolution\tThe sizes of that aspect, listed for it.\n'
+     'The race\tMore of the stage at the sides, rather than a stretched\n'
+     '\tmiddle.\n'
+     'Menus and HUD\tTheir own shape in the middle of the screen, with the\n'
+     '\tbackgrounds carried out to the edges.',
+     ('widescreen', 'widescreen2d', 'widescreen3d', 'resolution')),
+
+    ('music', 'Music from files',
+     'The soundtrack as files - music\\track02.wav onward beside the game -\n'
+     'in place of the audio tracks on the play disc. Rip soundtrack above\n'
+     'writes them, about 550 MB, and the in-game slider drives them.',
+     ('music', 'cdlevel')),
+
+    ('gamepad', 'XInput gamepad support',
+     'A modern pad wherever the game takes input, with every control\n'
+     'rebindable from inside it.\n'
+     '\n'
+     'Driving\tStick to steer, triggers for the pedals, Start to pause.\n'
+     'Menus\tD-pad or stick to move, A and Start to choose, B to go\n'
+     '\tback.\n'
+     'Device Settings\tA page of its own under Options: both players\'\n'
+     '\tcontrols, keyboard and pad side by side. Press a key or\n'
+     '\ta button to rebind it.\n'
+     'Multiplayer\tThe team room takes the pad as well, with Back where\n'
+     '\tTAB was.', ('xinput', 'devices', 'padmenu')),
+
+    ('internet', 'Internet play',
+     'Play over the internet, in place of the DirectPlay the game shipped\n'
+     'with and with nobody forwarding a port. The team room, the chat, the\n'
+     'car and course selection and the race are the game\'s own; up to four\n'
+     'players, all on the same patcher version.\n'
+     '\n'
+     'INTERNET\tSHOW TEAMS, the teams open anywhere.\n'
+     'DIRECT IP\tThe host\'s address, or host:port. The host forwards UDP\n'
+     '\t47626.\n'
+     'LAN\tThe local network, searched.\n'
+     'In place of\tIPX, TCP/IP, modem and serial.', ('netplay', 'lobby')),
+
+    ('loading', 'Loading screens',
+     'The stage\'s card - its artwork and its name - held for three\n'
+     'seconds. The course loads in well under one on a machine of today,\n'
+     'so the card was gone before you had read it.', ('loadhold',)),
+)
+
+
+# Display order. Essential fixes what is broken on a modern system and
+# has no trade-off, so it is applied without tick boxes; extra is taste,
+# and starts ticked.
+ESSENTIAL = ('nodisc', 'start', 'crashes', 'altab', 'devicescan', 'window',
+             'lettering', 'hud', 'sound', 'settings')
+EXTRA = ('widescreen', 'music', 'gamepad', 'internet', 'loading')
+
+BY_GROUP = {group: (label, tip, keys) for group, label, tip, keys in FEATURES}
+
+# The diagnostics, which are patches applied only by name or by their box
+# in the window. Each writes a log beside the game for a bug report; see
+# docs/DEVELOPING.md.
+DIAGNOSTIC_INFO = {
+    'voltrace': ('Volume calls', 'Reports every call into the five volume '
+                 'routines on +debugstr, for a slider that is not doing what '
+                 'it says. The European release only.'),
+    'frametrace': ('Frame pacing', 'Logs every drawn frame to '
+                   'logs\\frames.log: when it started, how long it took and '
+                   'what it waited for. For stutter and for a frame rate that '
+                   'is not 60.'),
+    'gltrace': ('MGameGL draws', 'Reports the 3D renderer\'s viewports, '
+                'angles and projections on +debugstr. For a picture that is '
+                'the wrong shape at a widescreen size.'),
+    'd3dtrace': ('MGameD3D draws', 'Reports every draw MGameD3D makes on '
+                 '+debugstr. The loudest of them; for something drawn in the '
+                 'wrong place.'),
+    'd3dtrace2d': ('MGameD3D 2D draws', 'The same for the 2D lists, strips '
+                   'and fans only - the menus, the HUD and the text.'),
+    'd3dinit': ('Direct3D bring-up', 'Logs every step of MGameD3D\'s '
+                'start-up with its HRESULT to logs\\d3dinit.log. This is '
+                'the one to send for "Failed to initialize. Error code '
+                '80004005".'),
+}
+
+
+def group_keys(groups, extra=()):
+    """The patch keys for a set of feature groups, plus anything named in
+    extra - a diagnostic, the dgvoodoo add-on. Essential groups are in
+    whether they were asked for or not, and a key whose NEEDS is missing
+    goes out with it."""
+    wanted = set(ESSENTIAL) | set(groups)
+    keys = [k for k in PATCH_KEYS
+            if any(k in BY_GROUP[g][2] for g in wanted if g in BY_GROUP)]
+    keys += [k for k in extra if k not in keys]
+    for _ in range(len(NEEDS)):             # a dropped need may drop another
+        keys = [k for k in keys if all(need in keys
+                                       for key, need in NEEDS if key == k)]
+    return tuple(keys)
 
 # The mciSendCommandA sites in MGAudio.dll: 11 `call dword [slot]`, and
 # one `mov esi, dword [slot]` in the open routine, which then calls esi.
@@ -4779,8 +4976,12 @@ def audio_spans(tracks):
             yield t, t['start'], end
 
 
-def rip(cue, dest, log=print):
-    """Every audio track of the play disc into DEST\\music\\trackNN.wav."""
+def rip(cue, dest, log=print, progress=None):
+    """Every audio track of the play disc into DEST\\music\\trackNN.wav.
+
+    progress(track, done, total) is called as each track is written, in
+    the bytes of that one track; raising out of it throws the part-written
+    track away with the WavWriter."""
     if not cue:
         raise DiscError('No play disc given.')
     tracks = parse_cue(cue)
@@ -4793,15 +4994,19 @@ def rip(cue, dest, log=print):
         out = os.path.join(outdir, 'track%02d.wav' % t['no'])
         with open(t['bin'], 'rb') as src, WavWriter(out) as dst:
             src.seek(start * RAW)
-            left = (end - start) * RAW
+            total = (end - start) * RAW
+            left = total
             while left > 0:
                 chunk = src.read(min(left, RAW * 512))
                 if not chunk:
                     raise DiscError('%s ends early.' % os.path.basename(t['bin']))
                 dst.write(chunk)
                 left -= len(chunk)
+                if progress:
+                    progress(t['no'], total - left, total)
         log('rip: track %02d, %d:%02d' % (t['no'], (end - start) // 75 // 60, (end - start) // 75 % 60))
     log('rip: %d tracks in %s' % (len(spans), outdir))
+    return [t['no'] for t, _s, _e in spans]
 
 
 class DataTrack:
@@ -5039,10 +5244,15 @@ def write_manifests(dest):
         fh.write(''.join(lines))
 
 
-def install(src, dest, lang='English', log=print, keys=None):
+def install(src, dest, lang='English', log=print, progress=None):
+    """Copy the game out of the disc into dest. Returns the file count.
+
+    Patching is a separate step: --install does it after this, and the
+    window has its own button for it."""
     if lang not in LANGUAGES:
         raise ValueError('unknown language %s' % lang)
     fh, close = open_source(src)
+    written = 0
     try:
         cab = Cabinet(fh)
         groups = install_groups(lang)
@@ -5051,18 +5261,23 @@ def install(src, dest, lang='English', log=print, keys=None):
             raise ValueError('this disc has no %s' % ', '.join(missing))
         total = sum(e.size for g in groups for e in cab.groups[g])
         log('install: %d MB to %s' % (total // 1000000, dest))
+        done = 0
         for g in groups:
             for e in cab.groups[g]:
                 out = os.path.join(dest, *e.path.split('\\'))
                 os.makedirs(os.path.dirname(out), exist_ok=True)
                 with open(out, 'wb') as dst:
                     dst.write(cab.read(e))
+                done += e.size
+                written += 1
+                if progress:
+                    progress(done, total)
             log('install: %s, %d files' % (g, len(cab.groups[g])))
     finally:
         close()
     write_manifests(dest)
     log('install: manifests written')
-    patch(dest, log, keys)
+    return written
 
 
 # The annex: one section appended to a file, grown by each patch
@@ -6826,149 +7041,2353 @@ def restore(dest, log=print):
         raise FileNotFoundError('no backups in %s' % dest)
 
 
+# What the window needs to describe a disc, a folder or a failure. None
+# of it writes anything, so it runs on a pick rather than on a press.
+
+# The play disc's audio: tracks 2 to 14 on every pressing, and the game
+# asks for them by number, so a different layout is a different disc.
+SR2_AUDIO = tuple(range(2, 15))
+MUSIC_SUBDIR = 'music'
+WAV_HEADER = 44
+
+
+class Cancelled(Exception):
+    """Raised out of a progress callback to stop a copy or a rip.
+
+    It travels the same path as a real failure, so WavWriter's context
+    manager discards the part-written track on the way out."""
+
+
+def describe(text):
+    """Split a description into prose and any 'key<TAB>meaning' rows.
+
+    A blank line starts a paragraph; the breaks stay in the prose so it
+    can go into one wrapped label."""
+    paragraphs, para, rows = [], [], []
+    for line in text.split('\n'):
+        if '\t' in line:
+            key, _, meaning = line.partition('\t')
+            if not key.strip() and rows:
+                # A continuation of the row above. The source wraps long
+                # meanings to keep its own lines short; the bubble wraps
+                # them again at its own width, so join them back up first.
+                rows[-1] = (rows[-1][0], rows[-1][1] + ' ' + meaning.strip())
+            else:
+                rows.append((key.strip(), meaning.strip()))
+        elif line.strip():
+            para.append(line.strip())
+        elif para:
+            paragraphs.append(' '.join(para))
+            para = []
+    if para:
+        paragraphs.append(' '.join(para))
+    return '\n\n'.join(paragraphs), rows
+
+
+def why_unwritable(folder, exc, name=None, elsewhere=None):
+    """Turn a failed write into advice.
+
+    Windows is checked first, because it folds several different causes
+    into EACCES: a write-protected drive, a file another process has
+    open, and an actual permission problem all arrive as errno 13, and
+    the answer to each is different."""
+    elsewhere = elsewhere or ('Copy the game folder somewhere you own - your '
+                              'home or Documents - and patch it there.')
+    # The caller passes both rather than this guessing from the path:
+    # splitting a Windows path on a Linux box gets it wrong, and the
+    # sentences need the folder in some cases and the file in others.
+    name = name or folder
+    win = getattr(exc, 'winerror', None)
+    if win == 32 or win == 33:              # SHARING_VIOLATION, LOCK_VIOLATION
+        return ('Something else has %s open. Close the game and any launcher '
+                'or anti-virus scanning it, then try again.' % name)
+    if win == 19:                           # WRITE_PROTECT
+        return ('%s is write protected. If the game is on a mounted disc '
+                'image, copy it to your hard drive first.' % folder)
+    if exc.errno in (errno.EACCES, errno.EPERM):
+        # Deliberately not "run as administrator": that writes files the
+        # player then cannot delete, and Program Files is the usual cause.
+        return 'No permission to write in %s. %s' % (folder, elsewhere)
+    if exc.errno == errno.EROFS:
+        return ('%s is read-only. If the game is on a mounted disc image, '
+                'copy it to your hard drive first.' % folder)
+    if exc.errno == errno.ENOSPC:
+        return 'No space left on the drive holding %s.' % folder
+    if exc.errno == errno.ENOENT:
+        return ('%s is gone. Has the folder been moved, or a drive '
+                'disconnected, since it was selected?' % folder)
+    if exc.errno == errno.ETXTBSY:          # the same thing on Linux
+        return '%s is in use. Close the game and try again.' % name
+    return 'Cannot write in %s: %s.' % (folder, exc.strerror or exc)
+
+
+def copy_failure(folder, exc):
+    """What to say when a copy or a rip stops part way.
+
+    The destination is checked before either one starts, so anything that
+    gets here happened during the write - a disk that filled up, a drive
+    pulled out - and reads as a bare OSError otherwise."""
+    if isinstance(exc, OSError):
+        return why_unwritable(folder, exc)
+    return str(exc)
+
+
+def writable(folder):
+    """Can a file actually be created here? Returns (ok, why not).
+
+    A real write, not os.access: on Windows os.access(W_OK) only reports
+    the read-only attribute and says nothing about ACLs, so a folder
+    under Program Files passes it and then fails on the first file."""
+    probe = os.path.join(folder, '.sr2-patcher-write-test')
+    try:
+        with open(probe, 'wb') as fh:
+            fh.write(b'x')
+        os.remove(probe)
+    except OSError as exc:
+        return False, why_unwritable(
+            folder, exc, elsewhere='Choose a folder you own - your home, '
+                                   'Documents or Games.')
+    return True, ''
+
+
+def room_for(folder, needed, what=''):
+    """A message if `folder` cannot take `needed` more bytes, else ''.
+
+    The folder may not exist yet - it is often the one about to be
+    created - so the nearest parent that does is what gets asked. No
+    answer at all is not the same as a bad one, and gets out of the way."""
+    if not needed:
+        return ''
+    while folder and not os.path.isdir(folder):
+        parent = os.path.dirname(folder)
+        if parent == folder:
+            return ''
+        folder = parent
+    try:
+        free = shutil.disk_usage(folder or '.').free
+    except OSError:
+        return ''
+    if free >= needed:
+        return ''
+    return ('Not enough room%s: %d MB free, %d MB needed.'
+            % (' for ' + what if what else '', free >> 20, needed >> 20))
+
+
+def dest_problem(path, needed):
+    """(message, level) for an install folder, or (None, None).
+
+    Checked before the copy starts: filling a disk and then failing on
+    the last file leaves half a game and no clue why."""
+    if not path:
+        return None, None
+    exists = os.path.isdir(path)
+    probe = path if exists else os.path.dirname(os.path.abspath(path)) or '.'
+    if not os.path.isdir(probe):
+        return 'There is no %s to create that folder in.' % probe, 'bad'
+    ok, why = writable(probe)
+    if not ok:
+        return why, 'bad'
+    short = room_for(probe, needed)
+    if short:
+        return short, 'bad'
+    if exists and os.path.exists(os.path.join(path, EXE)):
+        return ('A game is already installed there. Installing replaces it, '
+                'settings and patches included.'), 'warn'
+    if exists and os.listdir(path):
+        return ('That folder is not empty. Files with the same name are '
+                'replaced.'), 'warn'
+    return None, None
+
+
+def music_dir(gamedir):
+    return os.path.join(gamedir, MUSIC_SUBDIR)
+
+
+def music_status(gamedir):
+    """One line on the music folder. It names the folder either way:
+    where the tracks are going is the thing somebody with the game
+    already installed cannot otherwise see."""
+    if not gamedir:
+        return ''
+    out = music_dir(gamedir)
+    found = ([f for f in os.listdir(out)
+              if re.match(r'track\d+\.wav$', f, re.I)]
+             if os.path.isdir(out) else [])
+    if not found:
+        return 'No tracks yet. They go to %s' % out
+    mb = sum(os.path.getsize(os.path.join(out, f)) for f in found) >> 20
+    return '%d tracks in %s (%d MB)' % (len(found), out, mb)
+
+
+def probe_install_disc(src):
+    """What is on the install disc, without writing anything: which
+    build, how many files an install takes and how big it is, and the
+    languages the disc carries.
+
+    Only the exe is decompressed, and only to name the build."""
+    fh, close = open_source(src)
+    try:
+        cab = Cabinet(fh)
+        languages = [name for name in LANGUAGES if name in cab.groups]
+        groups = install_groups(languages[0] if languages else 'English')
+        missing = [g for g in groups if g not in cab.groups]
+        if missing:
+            raise DiscError('This disc has no %s, so it is not a SEGA RALLY '
+                            '2 install disc.' % ', '.join(missing))
+        files = [e for g in groups for e in cab.groups[g]]
+        # Later groups overwrite earlier ones, so the last one wins - the
+        # Pentium III exe over the base one, which is the one installed.
+        entry = None
+        for e in files:
+            if e.path.lower() == EXE.lower():
+                entry = e
+        build = build_of(hashlib.md5(cab.read(entry)).hexdigest()) if entry else None
+        return {'build': build, 'languages': languages,
+                'default_language': languages[0] if languages else 'English',
+                'count': len(files), 'bytes': sum(e.size for e in files)}
+    finally:
+        close()
+
+
+def probe_play_disc(cue):
+    """The audio tracks of the play disc and what they rip to."""
+    spans = list(audio_spans(parse_cue(cue)))
+    return {'tracks': tuple(t['no'] for t, _s, _e in spans),
+            'bytes': sum((end - start) * RAW + WAV_HEADER
+                         for _t, start, end in spans)}
+
+
+def installed_build(dest):
+    """(build, patched) for a game folder. Raises with the reason a
+    folder cannot be patched, which is what the window shows."""
+    if not dest or not os.path.isdir(dest):
+        raise FileNotFoundError('There is no folder at that path.')
+    if not os.path.isfile(os.path.join(dest, EXE)):
+        raise FileNotFoundError('No %s in that folder.' % EXE)
+    build = check_build(dest)
+    patched = any(os.path.isfile(os.path.join(dest, *name.split('\\')) + '.bak')
+                  for name in PATCHED)
+    return build, patched
+
+
+def in_background(work, done):
+    """Run work() on a thread; done(error, result) fires off the UI
+    thread either way, and the window polls a queue for it."""
+    def body():
+        try:
+            result = work()
+        except Exception as exc:                # any failure, one path
+            done(exc, None)
+        else:
+            done(None, result)
+
+    thread = threading.Thread(target=body, daemon=True)
+    thread.start()
+    return thread
+
+
 # Window
+#
+# Painted rather than themed: clam with every colour set, from the game's
+# own artwork. The layout is two columns of cards where there is room and
+# one where there is not, in a canvas that scrolls only when the content
+# outgrows the screen.
 
-def gui():
+# Sampled off the box art, the Stratos watercolour and the cabinet: a
+# neutral paper white, a neutral near-black, cool greys, the badge's red
+# and the deep green of the Lancia's livery. The green is the window
+# behind everything, which is the car's own arrangement - white panels
+# on green - with the paper ruling the logo off from the rest.
+# The band behind the logo is that green cut by a lighter one along a
+# stripe in the livery's white and red. None of it does any reading:
+# that is left to the greys on the paper, and to the wheels' gold taken
+# down far enough to read, for the step numbers.
+#
+# Four surfaces, each a step apart so they can be told from one another:
+# the card is the paper, the band under a heading sits below it, the
+# boxes text is typed into are recessed into a card, and the window is
+# behind the lot. Every pair that carries meaning is at least 4.5:1,
+# every border and tick at least 3:1, and every surface 1.25:1 from the
+# one behind it - measured in tools/guitest.py rather than judged by
+# eye.
+PALETTE = {
+    'ink': '#24503a',       # window: the livery's green, the one strong colour
+    'trough': '#1c3e2d',    # the scrollbar, which sits on the window
+    'sweep': '#327a52',     # the lighter green the banner is cut with
+    'frame': '#fafbfb',     # the rule under the logo, the car's own
+                            # white
+    'field': '#bdc1c8',     # a box text is typed into, and the log
+    'card': '#fafbfb',      # panel
+    'head': '#dfe2e6',      # section header and status bar
+    'line': '#8c929a',      # borders
+    'text': '#15171a',
+    'dim': '#474c53',       # hints, disabled, the log
+    'red': '#ab1c1f',       # the step numbers, a refusal, a bubble title
+    'go': '#1f5b3c',        # Apply, ticks, links, prompts
+    'go_hi': '#256d48',     # hovered
+    'go_lo': '#174630',     # pressed
+    'amber': '#7e5d14',     # the step numbers, the key column of a
+                            # description, warnings: the wheels' gold
+                            # taken down until it reads on paper
+    'ok': '#1f5b3c',
+    'bad': '#ab1c1f',
+}
+
+# The version is in the title because it is the only place somebody who
+# double-clicked the script can see it, and it is the first thing worth
+# knowing about a bug report.
+TITLE = '%s %s' % (LABEL, VERSION)
+REPO_URL = 'https://github.com/pairomaniac/sr2-patcher'
+LOGO_CREDIT = 'Logo by SirRockEmSockEm'
+# How long after the last resize event the static widgets are redrawn, in
+# milliseconds. See App._nudge.
+NUDGE_MS = 60
+# How tall the window opens, in lines of its own text. The screen is
+# the other bound, but not a useful one: it is reported as every
+# monitor together, so on a desktop with more than one it is not the
+# height of anything anybody is looking at. A count of lines is, since
+# lines are scaled by whatever the display is. 48 puts the heading of
+# the last numbered card on screen, which is as much as needs to be
+# showing - the rest is a scroll away. Neither bounds how far the
+# window can then be dragged: that is the screen and the content.
+LINE_CAP = 48
+
+# Column widths in characters of the hint font, not pixels, so they hold
+# at any display scaling. 60-90 characters is the readable range for a
+# line of prose.
+MIN_CHARS = 68                  # per column; narrower and hints wrap badly
+MAX_CHARS = 88                  # wider only makes lines harder to read
+GUTTER_CHARS = 2                # between the two columns
+ALPHABET = 'abcdefghijklmnopqrstuvwxyz'
+# One character of the default font on an unscaled display. Every fixed
+# gap in this window was chosen against it, so those numbers stay written
+# as the pixel counts they were and are scaled by how far the real font
+# has moved.
+BASE_EM = 6.8
+# The logo across the top of the window, in pixels at 100%. The image is
+# drawn at twice this and subsampled below 200%.
+LOGO_HEIGHT = 120
+# The logo and the window icon, as PNG. Baked in so the script is one
+# file; tools/assets.py makes them from the artwork in assets/.
+# ASSETS BLOB BEGIN - tools/assets.py
+LOGO_PNG = (
+    'iVBORw0KGgoAAAANSUhEUgAAAS8AAADwCAMAAABmHxKkAAADAFBMVEXeMSz+/v7+/v4AAAD+'
+    '/Pz9/f39/f3+/v7dKSQBAQHcIh3hKSPgNTDsiIXkWFTulpTmYFzqeHT9/Pz56OcXFxfiSUXx'
+    'qKb419b2yMfnaWXzt7bvmJUlJSXhQT3Hx8eIiIg2Nja6urq6urrY2NhGRkaYmJj8/Px4eHjx'
+    '6OhWVlZnZ2enp6fCwsLsiIX41tX1x8brgX7v7+/Z2dnqeXbxqKZoaGhYWFjztrR2dnbDw8Pq'
+    '6uqIiIj64N+VlZXW1tbwoJ7u7u7u7u5GRkanp6e1tbXwoJ7o6OiZmZmmpqbX19f1wL7bHBbo'
+    'bmr0urmGhobGxsbrgX70wL/1wL7n5+cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABs'
+    'u0JYAAABAHRSTlP+/goAjk9uLf7+///+//3P/v+p/vv8////+///9/2z0e+xxrHuzcvUru3r'
+    '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'
+    'OF41LwAAAABJRU5ErkJggg=='
+)
+ICON_PNG = (
+    'iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAADAFBMVEXeMSwAAAD+/v7dKiXn'
+    'NC/cIx341dTiS0a/Pz/eMCv2ysnkV1P75+f0ubjul5TnaWbsiYbxqKb/AADpdnP/VVXhQT3m'
+    'YV30OjjeMCvcMSveMCviMSyqVQDrgX7hMSvdMSviMSziMSzbGxbiMSzVKir1wL7hLivwoJ7i'
+    'MSzUMyzeMCuqAAB/AADlKyuqVVXbLSr64N/dLivdLyv/VQDUVSr/f3/fHx/eLyz/Hx8AAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADm'
+    'r/PTAAABAHRSTlP+AP///v///wSM//////////8B/wP//wmvMHGvA/9UTzKU/9MQ/zP/cQ/S'
+    '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'
+)
+# ASSETS BLOB END
+
+
+def scaled(value, em):
+    """A gap chosen at 100%, in the pixels it should be now.
+
+    Takes a number or a pack/grid pair and gives back the same shape, so
+    a call site keeps reading as the spacing it asks for."""
+    if isinstance(value, tuple):
+        return tuple(scaled(part, em) for part in value)
+    return max(1, int(round(value * em / BASE_EM))) if value else value
+
+
+# What the window says. Kept together so the wording can be read as a
+# whole rather than hunted through the layout.
+
+INSTALL_HINT = ('Copies the game off your disc images into the folder '
+                'above. Nothing to mount, and no disc in the drive '
+                'afterwards. Skip it if the game is already there.')
+
+INSTALL_TIP = ('Install disc\tDisc 1, as a .cue with its .bin beside it, an '
+               '.iso, a folder you have already copied the disc to, or '
+               'data1.cab out of one.\n'
+               'Play disc\tDisc 2, as a .cue with its .bin files. The music '
+               'is on this one, and an .iso will not do - it drops the '
+               'audio tracks.\n'
+               'Manual\tWhich of the six languages the manual, the readme '
+               'and the menus are in. The game itself is the same either '
+               'way.\n'
+               'Room\tThe game takes about 800 MB in the folder above, and '
+               'the soundtrack another 550 MB.')
+
+INSTALL_PICK = 'Pick the install disc to start.'
+INSTALL_NEEDS_DEST = 'Choose a game folder above to install it into.'
+INSTALL_BUSY = 'Copying\u2026'
+INSTALL_CANCELLED = 'Cancelled. The folder holds a part-written copy.'
+INSTALL_OK = 'Installed %d files to %s.'
+INSTALL_NO_PATH = 'There is nothing at that path.'
+# What a good disc looks like, in one line: which build, and how much of
+# your disk it is about to take.
+INSTALL_FOUND = '%s release. %d files, %d MB.'
+# The copy is the same work whichever build is on the disc; only the
+# patches need one the patcher has tables for.
+INSTALL_FOUND_OTHER = ('Not a release the patcher knows. %d files, %d MB - '
+                       'installs, does not patch.')
+
+GAME_HINT = ('Where the game is, or an empty folder to put it in. '
+             'Everything below works on this one folder.')
+NO_GAME = 'No game folder selected'
+# Not a refusal: an empty folder is where an install is about to go, and
+# the card below is what fills it.
+NO_GAME_YET = 'Nothing installed there yet. Install it below.'
+GAME_TO_CREATE = 'That folder does not exist yet. Install game creates it.'
+GAME_READY = 'READY - %s release. %d patches selected. Press Apply patches.'
+GAME_PATCHED = 'Already patched - %s release. Apply patches writes it again.'
+GAME_HELP = ('Only an untouched Pentium III install is accepted - the build '
+             'the original installer chose on any modern CPU. A modified or '
+             'mixed copy is refused; install afresh from the disc.')
+
+ESSENTIAL_HINT = ('Always applied. Each fixes something that is broken on a '
+                  'modern system, and none of them has a trade-off.')
+EXTRA_HINT = 'Optional. Untick what you do not want.'
+
+ADDONS_HINT = ('An extra file beside the game rather than an edit to it. '
+               'Applied with the patches: tick it and press Apply patches.')
+
+DGVOODOO_LINK = ('dgVoodoo 2', 'dege-diosg/dgVoodoo2',
+                 'https://github.com/dege-diosg/dgVoodoo2',
+                 'dege\'s DirectDraw on Direct3D 11. Windows\' own '
+                 'DirectDraw refuses a picture over 2048 a side and has '
+                 'grown slow and erratic with this game on some machines; '
+                 'this has neither problem. Apply downloads the latest '
+                 'release and puts it beside the game.')
+DGVOODOO_WINE = ('Wine and Proton have wined3d, which has no such limit, so '
+                 'this is off and not needed there.')
+DGVOODOO_CAPPED = ('Without it the resolution list stops at 2048 a side.')
+
+DIAGNOSTICS_HINT = ('Off unless asked for. Each writes a log beside the game '
+                    'for a bug report; none of them changes how it plays.')
+
+MUSIC_HINT = ('Rips the play disc to music\\ beside the game, where the '
+              'Music from files patch reads it. About 550 MB.')
+MUSIC_NEEDS_DEST = 'Choose a game folder above.'
+MUSIC_BUSY = 'Track %02d  %d%%'
+MUSIC_NO_AUDIO = ('This image has no audio tracks - the music is not in it. '
+                  'The play disc is the one with them.')
+# The game asks for tracks by number, so a different count is a different
+# disc. Said rather than refused: it is their disc and their call.
+MUSIC_ODD_AUDIO = ('This image has %d audio tracks; the play disc has %d. '
+                   'Ripping it will not give the right music.')
+
+# %d is the number of patches written. The count is the one thing anybody
+# can check against what they ticked, and it is what a bug report needs.
+DONE = 'Done - %d patches written. Restore original puts the game back.'
+FAILED = 'Nothing was written and the game is untouched - see the log below.'
+RESTORED = 'Restored. The game is as it was installed.'
+BUSY = 'Working\u2026'
+
+ABOUT_NOTE = ('Every patched file is backed up as a .bak beside it, and '
+              'patching starts from those, so patching twice is the same '
+              'as patching once and Restore original is putting them '
+              'back.')
+
+
+def win_dpi():
+    """Ask Windows not to scale our window, and report the real DPI.
+
+    A process that has not declared awareness gets its window rendered at
+    96 DPI and bitmap-stretched to whatever the display is set to, which
+    softens every border and glyph. This has to happen before the first
+    window exists. Returns the DPI so Tk can be told, or None off Windows
+    and on releases without the call."""
+    if sys.platform != 'win32':
+        return None
+    import ctypes
+    for dll, call, arg in (('shcore', 'SetProcessDpiAwareness', 2),
+                           ('user32', 'SetProcessDPIAware', None)):
+        try:
+            fn = getattr(getattr(ctypes.windll, dll), call)
+            fn() if arg is None else fn(arg)
+            break
+        except (AttributeError, OSError):
+            continue
+    else:
+        return None
+    try:
+        dc = ctypes.windll.user32.GetDC(0)
+        dpi = ctypes.windll.gdi32.GetDeviceCaps(dc, 88)      # LOGPIXELSX
+        ctypes.windll.user32.ReleaseDC(0, dc)
+        return dpi or None
+    except (AttributeError, OSError):
+        return None
+
+
+def run_tk():
     import tkinter as tk
-    from tkinter import filedialog, messagebox, ttk
+    import tkinter.font as tkfont
+    from tkinter import ttk, filedialog
 
-    root = tk.Tk()
-    root.title(LABEL)
-    root.resizable(True, False)
-    msgs = queue.Queue()
+    showing = []
 
-    src = tk.StringVar()
-    cue = tk.StringVar()
-    dest = tk.StringVar()
-    lang = tk.StringVar(value=LANGUAGES[0])
-    diagnostics = {k: tk.BooleanVar() for k in DIAGNOSTIC}
-    addons = {k: tk.BooleanVar(value=windows_native()) for k in ADDONS}
+    def close_info(_event=None):
+        for bubble in list(showing):
+            bubble.hide()
 
-    def keys():
-        return (PATCH_KEYS + tuple(k for k in ADDONS if addons[k].get())
-                + tuple(k for k in DIAGNOSTIC if diagnostics[k].get()))
+    class Info:
+        """Click-to-open description bubble; Tk has no popover."""
 
-    def browse_src():
-        p = filedialog.askopenfilename(
-            title='Install disc image',
-            filetypes=[('Disc image', '*.cue *.iso *.bin'), ('data1.cab', 'data1.cab'), ('All', '*')])
-        if p:
-            src.set(p)
+        def __init__(self, parent, title, text, app):
+            self.app, self.title, self.text, self.win = app, title, text, None
+            self.btn = app._static_label(ttk.Label(
+                parent, text='\u24d8', style='Card.TLabel',
+                foreground=PALETTE['dim'], cursor='question_arrow'))
+            self.btn.bind('<Button-1>', self.toggle)
+            self.btn.bind('<Enter>', lambda _e: self.btn.config(
+                foreground=PALETTE['text']))
+            self.btn.bind('<Leave>', lambda _e: self.btn.config(
+                foreground=PALETTE['dim']))
 
-    def browse_cue():
-        p = filedialog.askopenfilename(title='Play disc image (cue sheet)',
-                                       filetypes=[('Cue sheet', '*.cue'), ('All', '*')])
-        if p:
-            cue.set(p)
+        def toggle(self, _event=None):
+            was_open = self.win is not None
+            close_info()
+            if not was_open:
+                self.show()
+            return 'break'                  # keep close_info from undoing it
 
-    def browse_dest():
-        p = filedialog.askdirectory(title='Install folder')
-        if p:
-            dest.set(p)
+        def show(self):
+            prose, rows = describe(self.text)
+            self.win = win = tk.Toplevel(self.app.root)
+            win.wm_overrideredirect(True)
+            frame = tk.Frame(win, background=PALETTE['card'], borderwidth=0,
+                             highlightbackground=PALETTE['line'],
+                             highlightthickness=1)
+            frame.pack()
+            body = tk.Frame(frame, background=PALETTE['card'])
+            body.pack(padx=11, pady=10)     # one margin, the same on all sides
+            # One text width for the whole bubble, measured in the font
+            # rather than fixed in pixels so it holds at any scaling. Two
+            # widths wrap the prose and the table differently and let a
+            # long meaning run off the screen.
+            em = self.app.small.measure(ALPHABET) / float(len(ALPHABET))
+            gap = 12
+            keys = max([self.app.bold.measure(key) for key, _ in rows] or [0])
+            widest = max([self.app.small.measure(m) for _, m in rows] or [0])
+            # Let the table widen the bubble if it only wants a little
+            # more: a fixed split leaves one row wrapping on its own among
+            # short ones, which reads worse than a slightly wider box.
+            wrap = min(int(em * 62), max(int(em * 58), keys + gap + widest))
+            self._line(body, self.title, self.app.bold,
+                       colour=PALETTE['red']).pack(anchor='w')
+            if prose:
+                self._line(body, prose, self.app.small, wrap=wrap).pack(
+                    anchor='w', pady=(4, 0))
+            if rows:
+                table = tk.Frame(body, background=PALETTE['card'])
+                table.pack(anchor='w', pady=(8, 0))
+                for line, (key, meaning) in enumerate(rows):
+                    self._line(table, key, self.app.bold,
+                               colour=PALETTE['amber']).grid(
+                                   row=line, column=0, sticky='nw',
+                                   padx=(0, gap), pady=1)
+                    self._line(table, meaning, self.app.small,
+                               wrap=max(140, wrap - keys - gap)).grid(
+                        row=line, column=1, sticky='w', pady=1)
+            win.update_idletasks()
+            wide, high = win.winfo_reqwidth(), win.winfo_reqheight()
+            x = self.btn.winfo_rootx() + self.btn.winfo_width() - wide
+            x = max(4, min(x, self.btn.winfo_screenwidth() - wide - 4))
+            # Below the button by preference. The tall ones are 350px and
+            # more, so from a checkbox low on the screen there is no room
+            # below: flip above, and clamp only if neither side fits.
+            below = self.btn.winfo_rooty() + self.btn.winfo_height() + 3
+            screen = self.btn.winfo_screenheight()
+            if below + high > screen - 4:
+                above = self.btn.winfo_rooty() - high - 3
+                y = above if above >= 4 else max(4, screen - high - 4)
+            else:
+                y = below
+            win.wm_geometry('+%d+%d' % (x, y))
+            showing.append(self)
 
-    def log(text):
-        msgs.put(text)
+        @staticmethod
+        def _line(parent, text, font, wrap=0, colour=None):
+            return tk.Label(parent, text=text, background=PALETTE['card'],
+                            fg=colour or PALETTE['text'], font=font,
+                            justify='left', wraplength=wrap)
 
-    def run(fn, *args):
-        def body():
+        def hide(self):
+            if self.win:
+                self.win.destroy()
+                self.win = None
+            if self in showing:
+                showing.remove(self)
+
+    def _blend(a, b, t):
+        a, b = int(a[1:], 16), int(b[1:], 16)
+        return '#%02x%02x%02x' % tuple(
+            round(((a >> shift) & 255) * (1 - t) + ((b >> shift) & 255) * t)
+            for shift in (16, 8, 0))
+
+    TICK = (((4.0, 8.0), (6.6, 10.8)), ((6.6, 10.8), (11.6, 4.8)))
+
+    def _rounded(width_px, height_px, back, fill, edge, tick=None,
+                 radius=4.0, line=1.4, corners='nw ne sw se', scale=1.0):
+        """A rounded rectangle, which is how the checkboxes are drawn. It
+        works by coverage rather than by pixels, each point blending by
+        its distance to the shape's edge, because Tk has no drawing API
+        past put() and its -subsample does not average.
+
+        clam has no border radius and its checkbox is a flat square with
+        two settable colours, so anything rounded has to be an image."""
+        def cover(distance):
+            return min(1.0, max(0.0, 0.5 - distance))
+
+        img = tk.PhotoImage(width=width_px, height=height_px)
+        cx, cy = (width_px - 1) / 2.0, (height_px - 1) / 2.0
+        hw, hh = width_px / 2.0 - 0.5, height_px / 2.0 - 0.5
+        rows = []
+        for y in range(height_px):
+            row = []
+            for x in range(width_px):
+                vert = 'n' if y < cy else 's'
+                horz = 'w' if x < cx else 'e'
+                r = radius if vert + horz in corners else 0.0
+                dx = abs(x - cx) - (hw - r)
+                dy = abs(y - cy) - (hh - r)
+                # distance to the edge: the corner arc where both axes are
+                # past it, the nearer side otherwise. Taking only the first
+                # term leaves every square corner at zero, which paints
+                # that whole quadrant a half blend instead of the fill.
+                edge_d = ((max(dx, 0.0) ** 2 + max(dy, 0.0) ** 2) ** 0.5
+                          + min(max(dx, dy), 0.0) - r)
+                px = _blend(back, edge, cover(edge_d))
+                px = _blend(px, fill, cover(edge_d + line))
+                for (x0, y0), (x1, y1) in (
+                        [[(a * scale, b * scale) for a, b in seg]
+                         for seg in TICK] if tick else ()):
+                    vx, vy = x1 - x0, y1 - y0
+                    along = max(0.0, min(1.0, ((x - x0) * vx + (y - y0) * vy)
+                                         / (vx * vx + vy * vy)))
+                    ex, ey = x - x0 - vx * along, y - y0 - vy * along
+                    px = _blend(px, tick,
+                                cover((ex * ex + ey * ey) ** 0.5
+                                      - 1.1 * scale))
+                row.append(px)
+            rows.append('{%s}' % ' '.join(row))
+        img.put(' '.join(rows))
+        return img
+
+    def _em(font):
+        """The width of one character of a font, which everything laid out
+        in pixels is measured against."""
+        return max(1.0, font.measure(ALPHABET) / len(ALPHABET))
+
+    def _hint(parent, text, colour, font, pady=0, gutter=0):
+        """The quiet explanatory line under a section heading; most of the
+        cards have one and they only differ in their text.
+
+        The width is taken from a holder frame rather than the card body.
+        A ttk frame's winfo_width() counts its own padding, so wrapping to
+        that made every hint wider than the space it had and clipped the
+        last word against the card edge. An empty frame filled to the
+        content area measures it exactly.
+
+        Packs itself, because the holder is nobody else's business."""
+        em = _em(font)
+        holder = ttk.Frame(parent, style='Card.TFrame')
+        holder.pack(fill='x', pady=scaled(pady, em))
+        label = ttk.Label(holder, text=text, style='Card.TLabel',
+                          foreground=colour, font=font, justify='left')
+
+        def fit(_event=None):
+            # Written on every event: setting wraplength is also what
+            # marks the label for redraw. Skip it and an unpainted label
+            # stays blank.
+            width = holder.winfo_width()
+            if width > 1:
+                edge = gutter() if callable(gutter) else gutter
+                label.configure(wraplength=min(
+                    int(MAX_CHARS * em),
+                    max(int(20 * em), width - 2 - edge)))
+        holder.bind('<Configure>', fit, add='+')
+        label.bind('<Map>', fit, add='+')       # a collapsed card gets no
+        #                                         Configure until it reopens
+        label.pack(anchor='w')
+        return label
+
+    def _gap(image, extra, colour):
+        """Widen an image with blank space on its right. A layout cannot
+        carry padding on an element, so the gap between a checkbox and its
+        label has to be part of the picture."""
+        wide = tk.PhotoImage(width=image.width() + extra,
+                             height=image.height())
+        wide.put(colour, to=(0, 0, wide.width(), wide.height()))
+        wide.tk.call(wide, 'copy', image, '-to', 0, 0)
+        return wide
+
+    class App:
+
+        def __init__(self, root):
+            self.root = root
+            self.vars, self.checks = {}, {}
+            self.diagnostics = {}
+            self._bodies = []
+            self._openers = {}
+            self._worker = None
+            self._busy = None               # 'install', 'music', 'patch'
+            self._cancel = False
+            self._disc_after = self._game_after = None
+            self._status_text, self._status_font = NO_GAME, None
+            # Widgets whose text is written once and never touched again;
+            # the ones left blank after a resize, see _nudge.
+            self._static, self._nudge_after = [], None
+            self._nudge_at = 0.0
+            self._cut_after, self._cut_at = None, 0.0
+            self._settle_tries = 0
+            self._settle_rounds = 0
+            root.title(TITLE)
+            root.minsize(430, 0)
+            root.maxsize(root.winfo_screenwidth(), root.winfo_screenheight())
+
+            root.bind_all('<Button-1>', close_info, add='+')
+            root.bind_all('<Escape>', close_info, add='+')
+            root.protocol('WM_DELETE_WINDOW', self._close)
+
+            self._styles()
+            self._icon(root)
+
+            outer = ttk.Frame(root, style='Ink.TFrame')
+            outer.pack(fill='both', expand=True)
+            self._statusbar(outer)                  # pinned before the body
+            self._logo_h = self._logo(outer)        # fixed above it
+            left, right, band, foot_left, foot_right = self._body(outer)
+
+            # In the order the work is done: the folder first, because
+            # everything else is done to it - the install writes into it,
+            # the rip beside it, the patches inside it. Two columns where
+            # there is room - getting the game in place is one job,
+            # patching it another; on a narrow screen _body gives back
+            # the same frame five times and it stacks.
+            self._section(left, '1  GAME FOLDER', self._game_body)
+            self._section(left, '2  INSTALL', self._install_body)
+            self._section(right, '3  ESSENTIAL PATCHES',
+                          lambda p: self._feature_body(p, ESSENTIAL,
+                                                       ESSENTIAL_HINT))
+            self._section(right, '4  EXTRA PATCHES',
+                          lambda p: self._feature_body(p, EXTRA, EXTRA_HINT))
+            self._section(band, '5  ADD-ONS', self._addons_body)
+            self._section(band, 'DIAGNOSTICS', self._diagnostics_body,
+                          expanded=False)
+            # Side by side at the foot, on the same split as the columns
+            # above, so the two headings line up whatever is open.
+            self._section(foot_left, 'LOG', self._log_body, expanded=False)
+            self._section(foot_right, 'ABOUT', self._about_body,
+                          expanded=False)
+
+            # The last card in each column stretches to the bottom of it.
+            # The columns are as tall as the taller one, so without this
+            # the shorter column stops early and its last card's lower
+            # edge sits opposite nothing.
+            for column in (left, right, foot_left, foot_right):
+                cards = column.winfo_children()
+                if cards and column is not self.inner:
+                    last = cards[-1]
+                    last.fills = True
+                    if last.winfo_children()[-1].winfo_manager():
+                        last.pack_configure(fill='both', expand=True)
+
+            # Set the width before measuring. Unconstrained, a paragraph
+            # asks for its longest line unwrapped, and the window's
+            # minimum came out as wide as the longest sentence in it.
+            wide = self.min_content * self.columns \
+                + (self.gutter if self.columns > 1 else 0)
+            self.canvas.itemconfigure(self.window, width=wide)
+            root.update_idletasks()
+
+            # Every section open, which is as tall as the window may be
+            # dragged and no taller.
+            for body, shown in self._bodies:
+                if not shown:
+                    body.pack(fill='x')
+            root.update_idletasks()
+            full = self.inner.winfo_reqheight()
+            wide = max(wide, self.inner.winfo_reqwidth())
+            for body, shown in self._bodies:
+                if not shown:
+                    body.pack_forget()
+            # A starting height only. The hints wrap on a Configure,
+            # which is a real event rather than an idle task, so before
+            # the window is on screen a paragraph still counts the lines
+            # it had at some other width - _settle_height takes the
+            # measurement again once that has happened.
+            root.update_idletasks()
+            natural = self.inner.winfo_reqheight()
+            self.canvas.configure(width=wide, height=min(natural, self.cap))
+            # the minimum has to leave room for the scrollbar as well
+            bar = self.vbar.winfo_reqwidth()
+            root.minsize(wide + bar, self.px(320))
+            # And a maximum, so that maximising lands on the largest size
+            # that is any use rather than on the size of the screen.
+            root.update_idletasks()
+            chrome = root.winfo_reqheight() - min(natural, self.cap)
+            root.maxsize(
+                min(root.winfo_screenwidth() - self.px(40),
+                    max(wide + int(8 * self.em),
+                        self.max_content * self.columns
+                        + (self.gutter if self.columns > 1 else 0)) + bar),
+                min(root.winfo_screenheight() - self.px(60),
+                    full + chrome))
+            self._fit()
+            self._sync_buttons()
+            root.after_idle(self._settle_height)
+            # Everything above is a starting size. What the window can
+            # really have is only known once it is on screen, which
+            # _settle_height sees to.
+
+        def _settle_height(self):
+            """Give the body the height it should open at, once the
+            window is on screen.
+
+            Everything measured before that is a guess: a widget that
+            has never been mapped reports what it would like rather than
+            what it needs, and what the banner and the status bar cost
+            around the body cannot be known at all.
+
+            Runs for the first half second and then stops. It has to
+            stop: a window that answers every resize with a size of its
+            own cannot be dragged anywhere."""
+            # Measured again rather than trusted from build time. A line
+            # was 15 pixels and the screen 931 on a desktop that a
+            # moment later said 22 and 2160, and the window had already
+            # sized itself against the first of those.
+            self.row = self.small.metrics('linespace')
+            high, seen = self.root.winfo_height(), self.canvas.winfo_height()
+            if high <= 1 or seen <= 1:
+                # Not on screen yet; ask again shortly. The count is
+                # there so a window that never appears stops asking.
+                if self._settle_tries < 40:
+                    self._settle_tries += 1
+                    self.root.after(25, self._settle_height)
+                return
+            chrome = max(high - seen, 0)
+            self.cap = min(
+                max(self.px(360),
+                    self.root.winfo_screenheight() - self.px(150) - chrome),
+                self.row * LINE_CAP)
+            want = min(self.inner.winfo_reqheight(), self.cap)
+            if abs(seen - want) > 2:
+                self.canvas.configure(height=want)
+                # And say it as a window size too, rather than leaving it
+                # to propagate out of the canvas: a mapped toplevel is
+                # the window manager's, and not all of them take a late
+                # request from a widget inside it.
+                self.root.geometry('%dx%d' % (self.root.winfo_width(),
+                                              want + chrome))
+                self._fit()
+            # Once is not enough. The height a paragraph needs depends on
+            # the width it wraps at, the width depends on the scrollbar,
+            # and the scrollbar depends on the height - and the hints are
+            # rewritten on a timer after a resize besides. So this runs
+            # for the first half second and then stops, because a window
+            # that keeps answering with a size of its own cannot be
+            # dragged anywhere.
+            if self._settle_rounds < 8:
+                self._settle_rounds += 1
+                self.root.after(60, self._settle_height)
+
+        def _body(self, parent):
+            """Size to the content, scrolling only if it outgrows the
+            screen.
+
+            Returns the two columns, the full-width band under them, and
+            the two half-width feet under that. With one column they are
+            all the same frame and the sections simply stack."""
+            holder = ttk.Frame(parent, style='Ink.TFrame')
+            holder.pack(fill='both', expand=True)
+            self.canvas = tk.Canvas(holder, highlightthickness=0,
+                                    borderwidth=0,
+                                    background=PALETTE['ink'])
+            self.vbar = ttk.Scrollbar(holder, orient='vertical',
+                                      style='Sr2.Vertical.TScrollbar',
+                                      command=self.canvas.yview)
+            # The bar is packed first so pack reserves its width. The
+            # other way round the canvas expands into the whole row and
+            # the bar is squeezed off the edge at the minimum width.
+            self.vbar.pack(side='right', fill='y')
+            self.canvas.pack(side='left', fill='both', expand=True)
+            self.canvas.configure(yscrollcommand=self.vbar.set)
+
+            self.inner = ttk.Frame(self.canvas, padding=self.px(12),
+                                   style='Ink.TFrame')
+            self.window = self.canvas.create_window((0, 0), window=self.inner,
+                                                    anchor='nw')
+            # How tall the window may grow before the content scrolls
+            # instead. Settled properly in _settle_height; this is only
+            # a floor to build against.
+            self.row = self.small.metrics('linespace')
+            self.cap = min(max(self.px(360),
+                               parent.winfo_screenheight() - self.px(150)
+                               - self._logo_h),
+                           self.row * LINE_CAP)
+            self.inner.bind('<Configure>', self._fit)
+            self.canvas.bind('<Configure>', self._fit)
+            self.canvas.bind('<Configure>', self._nudge, add='+')
+            for seq in ('<MouseWheel>', '<Button-4>', '<Button-5>'):
+                self.canvas.bind_all(seq, self._wheel)
+
+            # Two columns need both of them at the readable width plus the
+            # padding, the gutter and the scrollbar. Below that, one
+            # column and the sections stack - a squeezed pair wraps every
+            # hint to three lines and reads worse than scrolling.
+            self.columns = 2 if (parent.winfo_screenwidth() - 80
+                                 >= 2 * self.min_content + self.gutter
+                                 + int(6 * self.em)) else 1
+            if self.columns == 1:
+                self.left = self.right = self.band = self.inner
+                self.foot_left = self.foot_right = self.inner
+                return (self.inner,) * 5
+            self.inner.columnconfigure(0, weight=1, uniform='col')
+            self.inner.columnconfigure(1, weight=1, uniform='col')
+            self.left = ttk.Frame(self.inner, style='Ink.TFrame')
+            self.left.grid(row=0, column=0, sticky='nsew',
+                           padx=(0, self.gutter // 2))
+            self.right = ttk.Frame(self.inner, style='Ink.TFrame')
+            self.right.grid(row=0, column=1, sticky='nsew',
+                            padx=(self.gutter // 2, 0))
+            self.band = ttk.Frame(self.inner, style='Ink.TFrame')
+            self.band.grid(row=1, column=0, columnspan=2, sticky='ew')
+            self.foot_left = ttk.Frame(self.inner, style='Ink.TFrame')
+            self.foot_left.grid(row=2, column=0, sticky='nsew',
+                                padx=(0, self.gutter // 2))
+            self.foot_right = ttk.Frame(self.inner, style='Ink.TFrame')
+            self.foot_right.grid(row=2, column=1, sticky='nsew',
+                                 padx=(self.gutter // 2, 0))
+            return (self.left, self.right, self.band,
+                    self.foot_left, self.foot_right)
+
+        def _fit(self, _event=None):
+            """Answer a resize, in the event that caused it, doing the
+            same work every time. Tk repaints as part of handling the
+            event, and these calls are what mark the canvas and its window
+            item as needing it."""
+            need = self.inner.winfo_reqheight()
+            wide = self.canvas.winfo_width()
+            if wide > 1:
+                self.canvas.itemconfigure(self.window, width=wide)
+            # Only the scroll extent. Height is settled at startup and
+            # left alone: driving it from here resizes the window on every
+            # expand and collapse.
+            self.canvas.configure(
+                scrollregion=(0, 0, self.inner.winfo_reqwidth(), need))
+            # The bar stays packed whether it is needed or not. Showing
+            # and hiding it moves the window by its own width the moment
+            # the content outgrows the cap.
+            if need <= max(self.canvas.winfo_height(), 1) + 1:
+                self.canvas.yview_moveto(0)
+
+        def _wheel(self, event):
+            # bind_all reaches every toplevel, so an open description
+            # bubble would otherwise scroll the window behind it.
+            if event.widget.winfo_toplevel() is not self.root:
+                return
+            # The log scrolls itself, and so does its scrollbar. Tk widget
+            # names are paths, so one prefix covers the pair.
+            log = getattr(self, 'log_wrap', None)
+            if log is not None and str(event.widget).startswith(str(log)):
+                return
+            if self.inner.winfo_reqheight() <= self.canvas.winfo_height():
+                return
+            step = -1 if getattr(event, 'num', 0) == 4 or \
+                getattr(event, 'delta', 0) > 0 else 1
+            self.canvas.yview_scroll(step, 'units')
+
+        # -- look
+
+        def _styles(self):
+            """Theme the widgets. clam is the only stock theme where every
+            colour can be set.
+
+            These must all stay *named* styles. Setting the root '.' style
+            also repaints Tk's file dialog, whose file list is a canvas
+            iconlist.tcl hardcodes to white."""
+            p = PALETTE
+            style = ttk.Style()
+            if 'clam' in style.theme_names():
+                style.theme_use('clam')
+            self.root.configure(background=p['ink'])
+            # clam draws its border two pixels wide and bevels it with
+            # lightcolor and darkcolor. One flat pixel of 'line' instead:
+            # a box is told from the card by its own fill, so the border
+            # is only there to close the shape.
+            edges = dict(bordercolor=p['line'], darkcolor=p['line'],
+                         lightcolor=p['line'], troughcolor=p['card'],
+                         borderwidth=1)
+            style.configure('Ink.TFrame', background=p['ink'])
+            style.configure('Card.TFrame', background=p['card'])
+            style.configure('Card.TLabel', background=p['card'],
+                            foreground=p['text'])
+            style.configure('Dim.TLabel', background=p['card'],
+                            foreground=p['dim'])
+            style.configure('Link.TLabel', background=p['card'],
+                            foreground=p['go'])
+            style.configure('Head.TFrame', background=p['head'])
+            style.configure('Head.TLabel', background=p['head'],
+                            foreground=p['text'])
+            style.configure('Bar.TFrame', background=p['head'])
+            style.configure('Bar.TLabel', background=p['head'],
+                            foreground=p['dim'])
+
+            style.configure('Card.TCheckbutton', background=p['card'],
+                            foreground=p['text'], focuscolor=p['dim'],
+                            indicatorbackground=p['field'],
+                            indicatorforeground=p['field'], **edges)
+            style.map(
+                'Card.TCheckbutton',
+                background=[('active', p['card'])],
+                foreground=[('disabled', p['dim'])],
+                # ttk takes the first spec that matches, so the disabled
+                # pairs go first or a disabled tick paints itself bright.
+                indicatorbackground=[('disabled', 'selected', p['line']),
+                                     ('disabled', p['field']),
+                                     ('selected', p['go']),
+                                     ('!selected', p['field'])],
+                indicatorforeground=[('disabled', 'selected', p['dim']),
+                                     ('selected', p['field'])])
+
+            style.configure('Sr2.TButton', background=p['head'],
+                            foreground=p['text'], focuscolor=p['dim'],
+                            **edges)
+            style.map('Sr2.TButton',
+                      background=[('pressed', p['field']),
+                                  ('active', p['field']),
+                                  ('disabled', p['card'])],
+                      foreground=[('disabled', p['dim'])])
+            style.configure('Go.TButton', background=p['go'],
+                            foreground=p['card'], focuscolor=p['card'],
+                            **edges)
+            style.map('Go.TButton',
+                      background=[('pressed', p['go_lo']),
+                                  ('active', p['go_hi']),
+                                  ('disabled', p['card'])],
+                      foreground=[('pressed', p['card']),
+                                  ('active', p['card']),
+                                  ('disabled', p['dim'])])
+
+            style.configure('Sr2.TEntry', fieldbackground=p['field'],
+                            foreground=p['text'], insertcolor=p['go'],
+                            **edges)
+            style.map('Sr2.TEntry',
+                      fieldbackground=[('readonly', p['field'])],
+                      foreground=[('readonly', p['dim'])])
+            style.configure('Sr2.TCombobox', fieldbackground=p['field'],
+                            background=p['head'], foreground=p['text'],
+                            arrowcolor=p['dim'], **edges)
+            style.map('Sr2.TCombobox',
+                      fieldbackground=[('readonly', p['field'])],
+                      foreground=[('readonly', p['text'])],
+                      selectbackground=[('readonly', p['field'])],
+                      selectforeground=[('readonly', p['text'])])
+            # The dropdown is a plain Tk listbox that ttk does not theme,
+            # so its colours have to be set through the option database.
+            for option, colour in (('background', p['field']),
+                                   ('foreground', p['text']),
+                                   ('selectBackground', p['go']),
+                                   ('selectForeground', p['field'])):
+                self.root.option_add('*TCombobox*Listbox.%s' % option, colour)
+            # The scrollbar is the one widget that sits on the window
+            # rather than on a card, so its trough follows the window and
+            # not the paper: a light trough against the green read as a
+            # strip of something else down the edge.
+            style.configure('Sr2.Vertical.TScrollbar', background=p['head'],
+                            arrowcolor=p['dim'],
+                            **dict(edges, troughcolor=p['trough']))
+            style.map('Sr2.Vertical.TScrollbar',
+                      background=[('active', p['card'])])
+
+            default = tkfont.nametofont('TkDefaultFont')
+            small = max(7, abs(default.cget('size')) - 1)
+            self.head_font = default.copy()
+            self.head_font.configure(size=small, weight='bold')
+            self.small = default.copy()
+            self.small.configure(size=small)
+            self.bold = default.copy()
+            self.bold.configure(weight='bold')
+            self.mono = tkfont.nametofont('TkFixedFont').copy()
+            self.mono.configure(size=small)
+            self.dim = p['dim']
+
+            self.em = _em(self.small)
+            self.min_content = int(MIN_CHARS * self.em)
+            self.max_content = int(MAX_CHARS * self.em)
+            self.gutter = max(2, int(GUTTER_CHARS * self.em))
+
+            # Drawn last, because the tick box is sized against the text it
+            # sits beside: a fixed 16px box next to 27px letters at 200%
+            # looked like a mistake.
+            self._draw_indicator(style, p)
+
+        def px(self, value):
+            """A gap written as pixels at 100%, in this display's pixels."""
+            return scaled(value, self.em)
+
+        def _draw_indicator(self, style, p):
+            """Swap clam's indicator for drawn images. Keep the
+            references: Tk does not own them, and a collected image leaves
+            a blank box."""
+            side = max(16, int(round(self.em * 2.4)))
+            scale = side / 16.0
+            gap = max(6, int(round(self.em)))
             try:
-                fn(*args)
-                log('done')
-            except Exception as exc:
-                log('error: %s' % exc)
-            finally:
-                log(None)
-        for b in buttons:
-            b.state(['disabled'])
-        threading.Thread(target=body, daemon=True).start()
+                self._boxes = tuple(
+                    _gap(box, gap, p['card']) for box in (
+                        _rounded(side, side, p['card'], p['field'],
+                                 p['line'],
+                                 radius=4.0 * scale, line=1.4 * scale),
+                        _rounded(side, side, p['card'], p['go'], p['go'],
+                                 tick=p['field'], radius=4.0 * scale,
+                                 line=1.4 * scale, scale=scale),
+                        _rounded(side, side, p['card'], p['field'],
+                                 p['card'],
+                                 radius=4.0 * scale, line=1.4 * scale),
+                        _rounded(side, side, p['card'], p['line'], p['line'],
+                                 tick=p['dim'], radius=4.0 * scale,
+                                 line=1.4 * scale, scale=scale)))
+                off, on, off_off, on_off = self._boxes
+                style.element_create(
+                    'Sr2.indicator', 'image', off,
+                    ('disabled', 'selected', on_off),
+                    ('disabled', off_off),
+                    ('selected', on), sticky='')
+                style.layout('Card.TCheckbutton', [
+                    ('Checkbutton.padding', {'sticky': 'nswe', 'children': [
+                        ('Sr2.indicator', {'side': 'left', 'sticky': ''}),
+                        ('Checkbutton.focus', {
+                            'side': 'left', 'sticky': 'w', 'children': [
+                                ('Checkbutton.label',
+                                 {'sticky': 'nswe'})]})]})])
+                style.configure('Card.TCheckbutton',
+                                padding=self.px((0, 3, 0, 3)))
+            except tk.TclError:
+                pass            # keep clam's square rather than no box at all
 
-    def do_install():
-        if not src.get() or not dest.get():
-            messagebox.showwarning(LABEL, 'Pick the install disc image and an install folder.')
-            return
-        run(install, src.get(), dest.get(), lang.get(), log, keys())
+        def _section(self, parent, title, build, expanded=True):
+            card = ttk.Frame(parent, style='Card.TFrame')
+            card.pack(fill='x', pady=self.px((0, 8)))
 
-    def do_rip():
-        if not cue.get() or not dest.get():
-            messagebox.showwarning(LABEL, 'Pick the play disc cue sheet and the install folder.')
-            return
-        run(rip, cue.get(), dest.get(), log)
+            head = ttk.Frame(card, style='Head.TFrame',
+                             padding=self.px((10, 6)))
+            head.pack(fill='x')
+            arrow = self._static_label(ttk.Label(
+                head, style='Head.TLabel',
+                text='\u25be' if expanded else '\u25b8'))
+            arrow.pack(side='left', padx=self.px((0, 8)))
+            # The step number is set apart from the name, in the gold
+            # the description tables already use for a key. It is the one
+            # thing in the heading that is a sequence rather than a label.
+            number, _, rest = title.partition('  ')
+            labels = [arrow]
+            if rest:
+                step = self._static_label(ttk.Label(
+                    head, text=number, style='Head.TLabel',
+                    foreground=PALETTE['amber'], font=self.head_font))
+                step.pack(side='left', padx=self.px((0, 8)))
+                labels.append(step)
+            else:
+                rest = number
+            name = self._static_label(ttk.Label(
+                head, text=rest, style='Head.TLabel', font=self.head_font))
+            name.pack(side='left')
+            labels.append(name)
 
-    def do_patch():
-        if not dest.get():
-            messagebox.showwarning(LABEL, 'Pick the install folder.')
-            return
-        run(patch, dest.get(), log, keys())
+            inner = ttk.Frame(card, style='Card.TFrame',
+                              padding=self.px((12, 8, 10, 10)))
+            self._bodies.append((inner, expanded))
+            if expanded:
+                inner.pack(fill='x')
+            build(inner)
 
-    def do_restore():
-        if not dest.get():
-            messagebox.showwarning(LABEL, 'Pick the install folder.')
-            return
-        run(restore, dest.get(), log)
+            def set_open(flag):
+                # Drives the widget rather than trusting a flag: the sizing
+                # pass hides bodies by their starting state, so anything
+                # that opened one before that ran would be left marked open
+                # and packed away.
+                arrow.config(text='\u25be' if flag else '\u25b8')
+                if flag:
+                    inner.pack(fill='x')
+                else:
+                    inner.pack_forget()
+                # The last card in a column takes up the slack so the two
+                # sides end level - but only while it has something in it.
+                if getattr(card, 'fills', False):
+                    card.pack_configure(fill='both' if flag else 'x',
+                                        expand=flag)
 
-    frame = ttk.Frame(root, padding=8)
-    frame.grid(sticky='nsew')
-    root.columnconfigure(0, weight=1)
-    frame.columnconfigure(1, weight=1)
+            def toggle(_event=None):
+                set_open(not inner.winfo_manager())
 
-    ttk.Label(frame, text='Disc 1 image').grid(row=0, column=0, sticky='w')
-    ttk.Entry(frame, textvariable=src, width=60).grid(row=0, column=1, sticky='ew', padx=4)
-    ttk.Button(frame, text='Browse', command=browse_src).grid(row=0, column=2)
-    ttk.Label(frame, text='Disc 2 cue').grid(row=1, column=0, sticky='w')
-    ttk.Entry(frame, textvariable=cue).grid(row=1, column=1, sticky='ew', padx=4)
-    ttk.Button(frame, text='Browse', command=browse_cue).grid(row=1, column=2)
-    ttk.Label(frame, text='Install to').grid(row=2, column=0, sticky='w')
-    ttk.Entry(frame, textvariable=dest).grid(row=2, column=1, sticky='ew', padx=4)
-    ttk.Button(frame, text='Browse', command=browse_dest).grid(row=2, column=2)
-    ttk.Label(frame, text='Language').grid(row=3, column=0, sticky='w')
-    ttk.Combobox(frame, textvariable=lang, values=LANGUAGES, state='readonly',
-                 width=12).grid(row=3, column=1, sticky='w', padx=4)
+            for widget in [head] + labels:
+                widget.bind('<Button-1>', toggle)
 
-    ttk.Label(frame, text='Diagnostics').grid(row=4, column=0, sticky='w')
-    row = ttk.Frame(frame)
-    row.grid(row=4, column=1, columnspan=2, sticky='w')
-    for k in DIAGNOSTIC:
-        ttk.Checkbutton(row, text=k, variable=diagnostics[k]).pack(side='left', padx=2)
+            self._openers[title] = lambda: set_open(True)
+            return inner
 
-    ttk.Label(frame, text='Add-ons').grid(row=5, column=0, sticky='w')
-    row = ttk.Frame(frame)
-    row.grid(row=5, column=1, columnspan=2, sticky='w')
-    box = ttk.Checkbutton(row, text='dgVoodoo 2 - Direct3D 11 in place of Windows\' DirectDraw; full-size rendering',
-                          variable=addons['dgvoodoo'])
-    box.pack(side='left', padx=2)
-    if not windows_native():
-        box.state(['disabled'])                 # Wine and Proton have wined3d
+        def _field(self, grid, line, label, var, browse):
+            """One labelled path row. They share a grid so the entries line
+            up rather than each starting after its own word."""
+            self._static_label(ttk.Label(
+                grid, text=label, style='Card.TLabel', font=self.small,
+                width=12, anchor='w')).grid(row=line, column=0, sticky='w',
+                                            padx=(0, 8), pady=(0, 5))
+            # width=12 on purpose: it expands into whatever the row has
+            # spare, and a larger request only widens the window.
+            entry = ttk.Entry(grid, textvariable=var, style='Sr2.TEntry',
+                              width=12)
+            entry.grid(row=line, column=1, sticky='ew', pady=(0, 5))
+            ttk.Button(grid, text='Browse\u2026', style='Sr2.TButton',
+                       command=browse).grid(row=line, column=2, sticky='w',
+                                            padx=(8, 0), pady=(0, 5))
+            return entry
 
-    row = ttk.Frame(frame)
-    row.grid(row=6, column=0, columnspan=3, pady=6, sticky='w')
-    buttons = [ttk.Button(row, text='Install', command=do_install),
-               ttk.Button(row, text='Rip soundtrack', command=do_rip),
-               ttk.Button(row, text='Patch', command=do_patch),
-               ttk.Button(row, text='Restore original', command=do_restore)]
-    for b in buttons:
-        b.pack(side='left', padx=2)
+        # -- 2 INSTALL
 
-    text = tk.Text(frame, height=12, width=80, state='disabled')
-    text.grid(row=7, column=0, columnspan=3, sticky='nsew')
+        def _install_body(self, parent):
+            """Both discs in; the folder above is where they go.
 
-    def poll():
-        while True:
+            The play disc sits here rather than in a card of its own: it
+            is the same job - getting the game onto the disk - and asking
+            for it later is how people end up with no music."""
+            _hint(parent, INSTALL_HINT, self.dim, self.small, pady=(0, 6))
+
+            grid = ttk.Frame(parent, style='Card.TFrame')
+            grid.pack(fill='x')
+            grid.columnconfigure(1, weight=1)
+
+            self.disc_var = tk.StringVar()
+            self._field(grid, 0, 'Install disc', self.disc_var,
+                        self._pick_disc)
+            Info(grid, 'INSTALL', INSTALL_TIP, self).btn.grid(
+                row=0, column=3, sticky='e', padx=(6, 2))
+            self.play_var = tk.StringVar()
+            self._field(grid, 1, 'Play disc', self.play_var, self._pick_play)
+
+            # Only shown once a disc has been read and offers a choice.
+            self.lang_row = ttk.Frame(grid, style='Card.TFrame')
+            # The note absorbs the slack, not the box: with the weight on
+            # column 1 the row overflowed and the combobox was squeezed.
+            self.lang_row.columnconfigure(2, weight=1)
+            self._static_label(ttk.Label(
+                self.lang_row, text='Manual', style='Card.TLabel',
+                font=self.small, width=12, anchor='w')).grid(
+                    row=0, column=0, sticky='w', padx=(0, 8))
+            self.lang_var = tk.StringVar(value=LANGUAGES[0])
+            self.lang_box = ttk.Combobox(self.lang_row, state='readonly',
+                                         style='Sr2.TCombobox', width=14,
+                                         textvariable=self.lang_var)
+            self.lang_box.grid(row=0, column=1, sticky='w')
+
+            self.disc_note = _hint(parent, INSTALL_PICK, PALETTE['go'],
+                                   self.small, pady=(8, 0))
+            self.dest_note = _hint(parent, '', self.dim, self.small,
+                                   pady=(4, 0))
+
+            buttons = ttk.Frame(parent, style='Card.TFrame')
+            buttons.pack(fill='x', pady=(10, 0))
+            self.install_btn = ttk.Button(buttons, text='Install game',
+                                          style='Sr2.TButton',
+                                          state='disabled',
+                                          command=self._install)
+            self.install_btn.pack(side='left')
+            self.rip_btn = ttk.Button(buttons, text='Rip soundtrack',
+                                      style='Sr2.TButton', state='disabled',
+                                      command=self._rip)
+            self.rip_btn.pack(side='left', padx=(8, 0))
+
+            _hint(parent, MUSIC_HINT, self.dim, self.small, pady=(8, 0))
+            self.music_note = _hint(parent, '', self.dim, self.small,
+                                    pady=(4, 0))
+            self.disc_ok = False
+            self.rip_ok = False
+            self._audio_warning = ''
+            self._disc_bytes = self._rip_bytes = 0
+            # Typing a path counts as picking one. Reading a disc opens
+            # files, so it waits for a pause rather than running on every
+            # keystroke.
+            self.disc_var.trace_add('write', lambda *_a: self._later(
+                '_disc_after', lambda: self._check_disc(self.disc_var.get())))
+            self.play_var.trace_add('write', lambda *_a: self._later(
+                '_disc_after', lambda: self._check_play(self.play_var.get())))
+
+        def _later(self, slot, call, delay=400):
+            """Run call once the typing has stopped."""
+            pending = getattr(self, slot)
+            if pending:
+                self.root.after_cancel(pending)
+            setattr(self, slot, self.root.after(delay, call))
+
+        def _pick_disc(self):
+            path = filedialog.askopenfilename(
+                title='Select the install disc image',
+                filetypes=[('Disc image', '*.cue *.iso *.bin *.CUE *.ISO'),
+                           ('Cabinet', 'data1.cab'), ('All files', '*')])
+            if path:
+                self.disc_var.set(path)       # the trace runs the check
+
+        def _pick_play(self):
+            path = filedialog.askopenfilename(
+                title='Select the play disc cue sheet',
+                filetypes=[('Cue sheet', '*.cue *.CUE'), ('All files', '*')])
+            if path:
+                self.play_var.set(path)
+
+        def _check_disc(self, source):
+            """Read the disc and say what is on it, or what is wrong.
+
+            Only the cabinet's index and the exe are read - a second or so
+            - so it runs the moment a source is picked and the buttons
+            below light up or do not."""
+            self.disc_ok = False
+            self._disc_bytes = 0
+            self.lang_row.grid_forget()
+            source = (source or '').strip()
+            if not source:
+                self._disc_note(INSTALL_PICK, PALETTE['go'])
+            elif not os.path.exists(source):
+                self._disc_note(INSTALL_NO_PATH, PALETTE['bad'])
+            else:
+                try:
+                    info = probe_install_disc(source)
+                except (DiscError, OSError, ValueError, struct.error) as exc:
+                    self._disc_note(str(exc), PALETTE['bad'])
+                else:
+                    self._describe_disc(info)
+            self._sync_buttons()
+
+        def _describe_disc(self, info):
+            self.disc_ok = True
+            self._disc_bytes = info['bytes']
+            if len(info['languages']) > 1:
+                self.lang_box.config(values=info['languages'])
+                if self.lang_var.get() not in info['languages']:
+                    self.lang_var.set(info['default_language'])
+                self.lang_row.grid(row=2, column=0, columnspan=3,
+                                   sticky='ew', pady=(0, 6))
+            if info['build']:
+                self._disc_note(INSTALL_FOUND % (info['build'], info['count'],
+                                                 info['bytes'] >> 20),
+                                PALETTE['ok'])
+                self._log('disc: %s release, %d files, %d MB'
+                          % (info['build'], info['count'],
+                             info['bytes'] >> 20))
+            else:
+                # Copying is the same work whichever build is on the disc,
+                # so it runs; only the patches need one with tables.
+                self._disc_note(INSTALL_FOUND_OTHER % (info['count'],
+                                                       info['bytes'] >> 20),
+                                PALETTE['amber'])
+                self._log('disc: %s is not a build the patcher knows' % EXE)
+
+        def _check_play(self, source):
+            """The play disc, which the ripper reads and nothing else."""
+            self.rip_ok = False
+            self._audio_warning = ''
+            self._rip_bytes = 0
+            source = (source or '').strip()
+            if source:
+                try:
+                    info = probe_play_disc(source)
+                except (DiscError, OSError, ValueError) as exc:
+                    self._audio_warning = str(exc)
+                else:
+                    self.rip_ok = bool(info['tracks'])
+                    self._rip_bytes = info['bytes']
+                    if not info['tracks']:
+                        self._audio_warning = MUSIC_NO_AUDIO
+                    elif tuple(info['tracks']) != SR2_AUDIO:
+                        self._audio_warning = MUSIC_ODD_AUDIO % (
+                            len(info['tracks']), len(SR2_AUDIO))
+                    else:
+                        self._log('play disc: %d tracks, %d MB'
+                                  % (len(info['tracks']),
+                                     info['bytes'] >> 20))
+            self._sync_buttons()
+
+        def _disc_note(self, text, colour):
+            self.disc_note.config(text=text, foreground=colour)
+
+        def _target(self):
+            """The one folder: what the install writes, what the rip goes
+            beside, and what the patches are applied to."""
+            return self.game_var.get().strip()
+
+        def _sync_buttons(self, *_args):
+            """One place decides what is clickable, because three things
+            feed it: both discs and the folder."""
+            path = self._target()
+            # What is wrong with the folder as somewhere to install, asked
+            # only while there is a disc to install from: with no disc,
+            # "that folder is not empty" is a complaint about a game that
+            # is already there and working.
+            if self.disc_ok and path:
+                why, level = dest_problem(path, self._disc_bytes)
+            elif self.disc_ok:
+                why, level = INSTALL_NEEDS_DEST, 'warn'
+            else:
+                why, level = None, None
+            self.dest_note.config(
+                text=why or '',
+                foreground=PALETTE['bad'] if level == 'bad'
+                else PALETTE['amber'] if level == 'warn' else self.dim)
+
+            # In order of importance: no room stops the rip, the wrong
+            # tracks are a reason not to press the button, otherwise say
+            # where they go.
+            target = self._target()
+            short = (room_for(target, self._rip_bytes, 'the soundtrack')
+                     if self.rip_ok and target else '')
+            if short:
+                self.music_note.config(text=short, foreground=PALETTE['bad'])
+            elif self._audio_warning:
+                self.music_note.config(text=self._audio_warning,
+                                       foreground=PALETTE['amber'])
+            elif self.rip_ok and not target:
+                self.music_note.config(text=MUSIC_NEEDS_DEST,
+                                       foreground=PALETTE['go'])
+            else:
+                self.music_note.config(text=music_status(target),
+                                       foreground=self.dim)
+
+            for button in (self.install_btn, self.rip_btn, self.apply_btn,
+                           self.restore_btn):
+                button.state(['disabled'])
+            if self._busy:
+                return
+            if self.disc_ok and path and level != 'bad':
+                self.install_btn.state(['!disabled'])
+            if self.rip_ok and target and not short:
+                self.rip_btn.state(['!disabled'])
+            if self.game_ok:
+                self.apply_btn.state(['!disabled'])
+            if self._restorable():
+                self.restore_btn.state(['!disabled'])
+
+        def _restorable(self):
+            game = self.game_var.get().strip()
+            return bool(game) and any(
+                os.path.isfile(os.path.join(game, *name.split('\\')) + '.bak')
+                for name in PATCHED)
+
+        # -- 1 GAME FOLDER
+
+        def _game_body(self, parent):
+            """The one folder every other card works on: installed into,
+            ripped beside, patched, restored."""
+            _hint(parent, GAME_HINT, self.dim, self.small, pady=(0, 6))
+            grid = ttk.Frame(parent, style='Card.TFrame')
+            grid.pack(fill='x')
+            grid.columnconfigure(1, weight=1)
+            self.game_var = tk.StringVar()
+            self._field(grid, 0, 'Game folder', self.game_var, self._pick_game)
+            self.game_note = _hint(parent, NO_GAME, self.dim, self.small,
+                                   pady=(8, 0))
+            # Only filled in when a folder was refused. "Cannot patch" on
+            # its own leaves nothing to act on.
+            self.game_help = _hint(parent, '', self.dim, self.small,
+                                   pady=(4, 0))
+            self.game_ok = False
+            self.build = None
+            self.game_var.trace_add('write', lambda *_a: self._later(
+                '_game_after', lambda: self._check_game(
+                    self.game_var.get().strip())))
+
+        def _pick_game(self):
+            path = filedialog.askdirectory(
+                title='The folder holding %s, or an empty one for it' % EXE)
+            if path:
+                self.game_var.set(path)
+
+        def _check_game(self, path):
+            """Name the build, or say what the folder is instead.
+
+            A folder with no game in it is not a refusal: it is where an
+            install is about to go, and INSTALL below is what fills it.
+            Only a folder that holds something the patcher cannot work on
+            is refused, and then the reason is the thing worth saying."""
+            self.game_ok = False
+            self.build = None
+            self.game_help.config(text='')
+            if not path:
+                self._set_status(NO_GAME, None)
+                self._sync_buttons()
+                return
+            if not os.path.isdir(path):
+                self._set_status(GAME_TO_CREATE, None)
+                self._sync_buttons()
+                return
+            if not os.path.isfile(os.path.join(path, EXE)):
+                self._set_status(NO_GAME_YET, None)
+                self._sync_buttons()
+                return
             try:
-                m = msgs.get_nowait()
+                self.build, patched = installed_build(path)
+            except (OSError, ValueError) as exc:
+                self._set_status('CANNOT PATCH - %s' % exc, False)
+                self.game_help.config(text=GAME_HELP, foreground=self.dim)
+                self._log('game: %s' % exc)
+                self._sync_buttons()
+                return
+            self.game_ok = True
+            if patched:
+                self._set_status(GAME_PATCHED % self.build, 'warn')
+            else:
+                self._set_status(GAME_READY % (self.build, self._selected()),
+                                 True)
+            self._log('game: %s release in %s%s'
+                      % (self.build, path, ', patched' if patched else ''))
+            self._sync_buttons()
+
+        # -- 3, 4 PATCHES
+
+        def _feature_body(self, parent, groups, hint):
+            if hint:
+                _hint(parent, hint, self.dim, self.small, pady=(0, 6))
+            for group in groups:
+                label, tip, _keys = BY_GROUP[group]
+                row = ttk.Frame(parent, style='Card.TFrame')
+                row.pack(fill='x', pady=self.px(2))
+                if group in ESSENTIAL:
+                    # A permanently ticked box that cannot be clicked reads
+                    # like something is broken. A plain line does not, and
+                    # the card's own heading says these are always applied.
+                    self._static_label(ttk.Label(
+                        row, text=label, style='Card.TLabel',
+                        padding=(2, 3))).pack(side='left')
+                else:
+                    var = tk.BooleanVar(value=True)
+                    self.vars[group] = var
+                    check = self._static_label(ttk.Checkbutton(
+                        row, text=label, variable=var,
+                        style='Card.TCheckbutton', command=self._retally))
+                    check.pack(side='left')
+                    self.checks[group] = check
+                Info(row, label, tip, self).btn.pack(side='right',
+                                                     padx=(6, 2))
+
+        def _selected(self):
+            """How many patches Apply would write right now."""
+            return len(group_keys(self._groups(), self._extras()))
+
+        def _groups(self):
+            return tuple(g for g in EXTRA if self.vars[g].get())
+
+        def _extras(self):
+            keys = tuple(k for k in DIAGNOSTIC if self.diagnostics[k].get())
+            if self.dgvoodoo.get():
+                keys += ADDONS
+            return keys
+
+        def _retally(self, *_args):
+            """Keep the count honest as boxes are ticked."""
+            if self.game_ok:
+                self._set_status(GAME_READY % (self.build, self._selected()),
+                                 True)
+
+        # -- 5 ADD-ONS, DIAGNOSTICS
+
+        def _addons_body(self, parent):
+            _hint(parent, ADDONS_HINT, self.dim, self.small, pady=(0, 6))
+            row = ttk.Frame(parent, style='Card.TFrame')
+            row.pack(fill='x')
+            native = windows_native()
+            self.dgvoodoo = tk.BooleanVar(value=native)
+            label, name, url, note = DGVOODOO_LINK
+            box = ttk.Checkbutton(row, text=label, variable=self.dgvoodoo,
+                                  style='Card.TCheckbutton',
+                                  command=self._retally)
+            box.pack(side='left')
+            self._static_label(box)
+            link = self._static_label(tk.Label(
+                row, text=name, cursor='hand2', font=self.small,
+                background=PALETTE['card'], foreground=PALETTE['go']))
+            link.pack(side='left', padx=self.px((8, 0)))
+            link.bind('<Button-1>', lambda _e: webbrowser.open(url))
+            link.bind('<Enter>', lambda _e: link.config(
+                foreground=PALETTE['go_hi']))
+            link.bind('<Leave>', lambda _e: link.config(
+                foreground=PALETTE['go']))
+            _hint(parent, note, self.dim, self.small, pady=(6, 0))
+            if native:
+                _hint(parent, DGVOODOO_CAPPED, PALETTE['amber'], self.small,
+                      pady=(4, 0))
+            else:
+                box.state(['disabled'])     # Wine and Proton have wined3d
+                _hint(parent, DGVOODOO_WINE, PALETTE['amber'], self.small,
+                      pady=(4, 0))
+
+        def _diagnostics_body(self, parent):
+            _hint(parent, DIAGNOSTICS_HINT, self.dim, self.small, pady=(0, 6))
+            for key in DIAGNOSTIC:
+                label, tip = DIAGNOSTIC_INFO[key]
+                row = ttk.Frame(parent, style='Card.TFrame')
+                row.pack(fill='x', pady=self.px(2))
+                var = tk.BooleanVar(value=False)
+                self.diagnostics[key] = var
+                check = self._static_label(ttk.Checkbutton(
+                    row, text=label, variable=var, style='Card.TCheckbutton',
+                    command=self._retally))
+                check.pack(side='left')
+                Info(row, label, tip, self).btn.pack(side='right',
+                                                     padx=(6, 2))
+
+        # -- LOG, ABOUT
+
+        def _about_body(self, parent):
+            self._static_label(ttk.Label(
+                parent, text=TITLE, style='Card.TLabel',
+                font=self.bold)).pack(anchor='w')
+            # Without the scheme, which is nine characters of nothing and
+            # makes the line wider than the card wants to be.
+            short = REPO_URL.split('//', 1)[-1]
+            link = self._static_label(ttk.Label(
+                parent, text=short, style='Link.TLabel', font=self.small,
+                cursor='hand2'))
+            link.pack(anchor='w', pady=(1, 0))
+            link.bind('<Button-1>', lambda _e: webbrowser.open(REPO_URL))
+            self._static_label(ttk.Label(
+                parent, text=LOGO_CREDIT, style='Card.TLabel',
+                foreground=self.dim, font=self.small)).pack(anchor='w',
+                                                            pady=(1, 0))
+            # A ttk separator takes the theme's colour, which is not one of
+            # ours; a one pixel frame in the palette's line colour is.
+            tk.Frame(parent, height=1, background=PALETTE['line'],
+                     borderwidth=0, highlightthickness=0).pack(
+                         fill='x', pady=(10, 8))
+            _hint(parent, ABOUT_NOTE, self.dim, self.small)
+
+        def _log_body(self, parent):
+            wrap = self.log_wrap = tk.Frame(parent,
+                                            background=PALETTE['line'],
+                                            borderwidth=0,
+                                            highlightthickness=0)
+            wrap.pack(fill='both', expand=True, padx=1, pady=1)
+            self.log_box = tk.Text(wrap, height=6, width=34, wrap='word',
+                                   state='disabled', relief='flat',
+                                   highlightthickness=0, padx=6, pady=4,
+                                   font=self.small,
+                                   background=PALETTE['field'],
+                                   foreground=PALETTE['dim'],
+                                   insertbackground=PALETTE['go'])
+            self.log_box.pack(side='left', fill='both', expand=True)
+            bar = ttk.Scrollbar(wrap, orient='vertical',
+                                style='Sr2.Vertical.TScrollbar',
+                                command=self.log_box.yview)
+            bar.pack(side='right', fill='y')
+            self.log_box.configure(yscrollcommand=bar.set)
+
+        def _icon(self, root):
+            try:
+                # Kept on self: Tk does not own the image.
+                self._icon_image = tk.PhotoImage(data=ICON_PNG)
+                root.iconphoto(True, self._icon_image)
+            except tk.TclError:
+                pass
+
+        def _cut(self, wide, high):
+            """The band's picture: two greens cut by a shallow diagonal
+            that rises to the right, with the livery's white and red
+            along the cut.
+
+            An image rather than canvas lines because the canvas does
+            not antialias, and at this angle a drawn line comes out as a
+            staircase. Every edge here is a band with a fractional top
+            and bottom, so a pixel takes each colour in proportion to
+            how much of it the band covers - which is all antialiasing
+            is. Only the rows the cut passes through are worked out that
+            way; above and below are flat fills."""
+            def rgb(colour):
+                return tuple(int(colour[i:i + 2], 16) for i in (1, 3, 5))
+
+            def over(colour, under, amount):
+                if amount <= 0.0:
+                    return under
+                if amount >= 1.0:
+                    return colour
+                return tuple(int(round(u + (c - u) * amount))
+                             for c, u in zip(colour, under))
+
+            def covered(low, high_, top):
+                """How much of the pixel row at `top` the band covers."""
+                return max(0.0, min(high_, top + 1.0) - max(low, top))
+
+            ink, sweep = rgb(PALETTE['ink']), rgb(PALETTE['sweep'])
+            white, red = rgb(PALETTE['card']), rgb(PALETTE['red'])
+            image = tk.PhotoImage(width=wide, height=high)
+            # Low on the left, high on the right, and shallow: a steeper
+            # cut reads as a mistake rather than as a stripe.
+            left, right = high - self.px(18), high - self.px(46)
+            half = self.px(4) / 2.0             # the white rule
+            drop = self.px(5)                   # and the red under it
+            under = self.px(5) / 2.0
+            zone = (max(0, int(min(left, right) - half - 1)),
+                    min(high, int(max(left, right) + drop + under + 2)))
+            image.put(PALETTE['ink'], to=(0, 0, wide, zone[0]))
+            image.put(PALETTE['sweep'], to=(0, zone[1], wide, high))
+
+            step = (right - left) / float(max(wide - 1, 1))
+            rows = []
+            for y in range(*zone):
+                row = []
+                for x in range(wide):
+                    edge = left + step * x
+                    pixel = over(sweep, ink, covered(edge, high, y))
+                    pixel = over(white, pixel,
+                                 covered(edge - half, edge + half, y))
+                    pixel = over(red, pixel,
+                                 covered(edge + drop - under,
+                                         edge + drop + under, y))
+                    row.append('#%02x%02x%02x' % pixel)
+                rows.append('{%s}' % ' '.join(row))
+            image.put(' '.join(rows), to=(0, zone[0], wide, zone[1]))
+            return image
+
+        def _logo(self, parent):
+            """The band across the top: the logo over the cut, with a
+            rule under the lot. Returns the height it takes, which the
+            content cap allows for; 0 if Tk cannot read the logo."""
+            try:
+                image = tk.PhotoImage(data=LOGO_PNG)
+            except tk.TclError:
+                return 0
+            # Shipped at twice the size shown at 100%: whole-number
+            # subsampling is all Tk offers.
+            factor = max(1, int(round(image.height()
+                                      / float(self.px(LOGO_HEIGHT)))))
+            if factor > 1:
+                image = image.subsample(factor)
+            self._logo_image = image
+            gap = self.px(12)
+            high = image.height() + gap
+            band = tk.Canvas(parent, height=high, highlightthickness=0,
+                             borderwidth=0, background=PALETTE['ink'])
+            band.pack(side='top', fill='x')
+            rule = self.px(2)
+            tk.Frame(parent, background=PALETTE['frame'], height=rule,
+                     borderwidth=0, highlightthickness=0).pack(side='top',
+                                                               fill='x')
+            cut = band.create_image(0, 0, anchor='nw')
+            logo = band.create_image(0, 0, image=image)
+            self._cut_image, self._cut_wide = None, 0
+
+            def draw():
+                self._cut_after = None
+                wide = max(band.winfo_width(), 1)
+                if wide == self._cut_wide:
+                    return
+                if (time.monotonic() - self._cut_at) * 1000 < NUDGE_MS:
+                    self._cut_after = self.root.after(NUDGE_MS, draw)
+                    return              # still being dragged
+                self._cut_wide = wide
+                # Kept on self: Tk holds no reference of its own, and a
+                # collected image leaves the band empty.
+                self._cut_image = self._cut(wide, high)
+                band.itemconfigure(cut, image=self._cut_image)
+                band.tag_lower(cut, logo)
+
+            def place(_event=None):
+                wide = band.winfo_width()
+                if wide <= 1:
+                    return              # not laid out yet, so not a width
+                band.coords(logo, wide // 2, high // 2 + gap // 2)
+                if wide == self._cut_wide:
+                    return              # a Configure that is not a resize
+                # A fifth of a second to redraw a wide one, and a drag
+                # sends an event a pixel, so the picture waits for the
+                # dragging to stop. It does not wait when the band has
+                # grown well past it - the first draw, or a window
+                # maximised - because what shows in the meantime is a
+                # bare green strip where the picture runs out.
+                self._cut_at = time.monotonic()
+                if self._cut_image is None or wide > self._cut_wide * 1.15:
+                    self._cut_at -= NUDGE_MS
+                    draw()
+                elif self._cut_after is None:
+                    self._cut_after = self.root.after(NUDGE_MS, draw)
+
+            band.bind('<Configure>', place)
+            place()
+            return high + rule
+
+        def _statusbar(self, parent):
+            bar = ttk.Frame(parent, style='Bar.TFrame',
+                            padding=self.px((12, 8)))
+            bar.pack(fill='x', side='bottom')
+            self.apply_btn = ttk.Button(bar, text='Apply patches',
+                                        style='Go.TButton', state='disabled',
+                                        command=self._apply)
+            self.apply_btn.pack(side='right')
+            self.restore_btn = ttk.Button(bar, text='Restore original',
+                                          style='Sr2.TButton',
+                                          state='disabled',
+                                          command=self._restore)
+            self.restore_btn.pack(side='right', padx=(0, 8))
+            # width=1 so a long note cannot widen the window
+            self.status = ttk.Label(bar, text=NO_GAME, style='Bar.TLabel',
+                                    foreground=self.dim, font=self.small,
+                                    width=1, anchor='w')
+            self.status.pack(side='left', fill='x', expand=True)
+            # The font is only known once the styles have run, and the
+            # first <Configure> arrives while the window is being built.
+            self._status_font = self.small
+            self.status.bind('<Configure>', self._fit_status, add='+')
+
+        # -- behaviour
+
+        def _set_status(self, text, ok=None, level='bad'):
+            # ok True/False is green/red; None is a quiet note; 'warn' is a
+            # success worth a second look, in amber.
+            if ok == 'warn':
+                colour = PALETTE['amber']
+            elif ok is None:
+                colour = self.dim
+            else:
+                colour = PALETTE['ok'] if ok else PALETTE[level]
+            font = self.small if ok is None else self.bold
+            self._status_text, self._status_font = text, font
+            self.status.config(foreground=colour, font=font)
+            self.game_note.config(text=text, foreground=colour, font=font)
+            self._fit_status()
+
+        def _static_label(self, widget):
+            """Remember a widget whose text is written once."""
+            self._static.append(widget)
+            return widget
+
+        def _nudge(self, _event=None):
+            """Rewrite the text of every widget that never changes it.
+
+            Resizing this window leaves some widgets undrawn on some X
+            stacks: the pixels are missing while the widget itself is
+            present and the right size. Every widget that survives is one
+            that gets written to during the resize - the hints re-wrap, so
+            they repaint; a section heading is set once at startup, so it
+            does not, and it is the headings that come back blank.
+
+            Writing a widget's own text back to it costs nothing and marks
+            it for redraw, which is the part that was missing."""
+            # A drag sends an event a pixel. Noting the time is free;
+            # cancelling and rescheduling a Tcl timer for each one is not.
+            self._nudge_at = time.monotonic()
+            if self._nudge_after is None:
+                self._nudge_after = self.root.after(NUDGE_MS, self._settled)
+
+        def _settled(self):
+            self._nudge_after = None
+            if (time.monotonic() - self._nudge_at) * 1000 < NUDGE_MS:
+                self._nudge_after = self.root.after(NUDGE_MS, self._settled)
+                return                  # still moving, come back later
+            for widget in self._static:
+                try:
+                    widget.configure(text=widget.cget('text'))
+                except tk.TclError:
+                    pass                # destroyed with the window
+
+        def _fit_status(self, _event=None):
+            """Trim the status line to the room it actually has."""
+            text, font = self._status_text, self._status_font
+            room = self.status.winfo_width()
+            if room <= 1 or font.measure(text) <= room:
+                self.status.config(text=text)
+                return
+            # Bisected rather than walked back a character at a time: each
+            # measure is a call into Tcl, and a long message in a narrow
+            # window cost one per character on every step of a drag.
+            ellipsis = font.measure('\u2026')
+            low, high = 1, len(text)
+            while low < high:
+                mid = (low + high + 1) // 2
+                if font.measure(text[:mid]) + ellipsis <= room:
+                    low = mid
+                else:
+                    high = mid - 1
+            self.status.config(text=text[:low].rstrip() + '\u2026')
+
+        def _log(self, text):
+            # Open the log on the first line written: collapsed to start
+            # with, but "see the log" is useless if the log is hidden.
+            opener = self._openers.get('LOG')
+            if opener:
+                opener()
+            self.log_box.config(state='normal')
+            self.log_box.insert('end', text + '\n')
+            self.log_box.see('end')
+            self.log_box.config(state='disabled')
+
+        # -- the work
+        #
+        # Every job runs on a worker and reports back through a queue the
+        # UI thread drains: Tk is not safe to call from another one. One
+        # queue and one poll for all four, because they differ only in
+        # what they put in it.
+
+        def _start(self, job, work, note):
+            self._busy = job
+            self._cancel = False
+            self._queue = queue.Queue()
+            self._sync_buttons()
+            self._note_for(job, note, self.dim)
+
+            def log(line):
+                self._queue.put(('log', line))
+
+            def done(error, result):
+                self._queue.put(('done', error, result))
+
+            self._worker = in_background(lambda: work(log), done)
+            self._poll()
+
+        def _poll(self):
+            try:
+                while True:
+                    message = self._queue.get_nowait()
+                    if message[0] == 'log':
+                        self._log(message[1])
+                    elif message[0] == 'progress':
+                        self._note_for(self._busy, message[1], self.dim)
+                    else:
+                        job, self._busy = self._busy, None
+                        self._finished(job, message[1], message[2])
+                        return
             except queue.Empty:
-                break
-            if m is None:
-                for b in buttons:
-                    b.state(['!disabled'])
-                continue
-            text.configure(state='normal')
-            text.insert('end', m + '\n')
-            text.see('end')
-            text.configure(state='disabled')
-        root.after(100, poll)
+                pass
+            self.root.after(80, self._poll)
 
-    poll()
-    root.mainloop()
+        def _note_for(self, job, text, colour):
+            """Each job reports where it was started from: the two disc
+            jobs into their own lines in INSTALL, patching into the status
+            bar beside the button that ran it."""
+            if job == 'install':
+                self.disc_note.config(text=text, foreground=colour)
+            elif job == 'music':
+                self.music_note.config(text=text, foreground=colour)
+            else:
+                self._set_status(text, None)
+
+        def _progress(self, text):
+            """Called on the worker. Raising out of it unwinds the copy,
+            which is how closing the window stops one."""
+            if self._cancel:
+                raise Cancelled('cancelled')
+            self._queue.put(('progress', text))
+
+        def _install(self):
+            source = self.disc_var.get().strip()
+            dest = self._install_dest = self._target()
+            language = self.lang_var.get() or LANGUAGES[0]
+            self._log('install: reading %s' % source)
+            last = [-1]
+
+            def progress(done, total):
+                pct = done * 100 // max(total, 1)
+                if pct != last[0]:
+                    last[0] = pct
+                    self._progress('%s %d%%' % (INSTALL_BUSY, pct))
+
+            self._start('install',
+                        lambda log: install(source, dest, language, log,
+                                            progress),
+                        INSTALL_BUSY)
+
+        def _rip(self):
+            source = self.play_var.get().strip()
+            # Captured now: the folder can be changed from under a running
+            # rip, and the finished message names where the tracks went.
+            target = self._rip_dir = self._target()
+            self._log('music: ripping from %s' % source)
+            last = [-1]
+
+            def progress(track, done, total):
+                pct = done * 100 // max(total, 1)
+                if pct != last[0]:
+                    last[0] = pct
+                    self._progress(MUSIC_BUSY % (track, pct))
+
+            self._start('music',
+                        lambda log: rip(source, target, log, progress),
+                        MUSIC_BUSY % (SR2_AUDIO[0], 0))
+
+        def _apply(self):
+            dest = self.game_var.get().strip()
+            keys = group_keys(self._groups(), self._extras())
+            self._written = len(keys)
+            self._log('patch: %d patches to %s' % (len(keys), dest))
+            self._start('patch', lambda log: patch(dest, log, keys), BUSY)
+
+        def _restore(self):
+            dest = self.game_var.get().strip()
+            self._start('restore', lambda log: restore(dest, log), BUSY)
+
+        def _finished(self, job, error, result):
+            if isinstance(error, Cancelled):
+                if job == 'install':
+                    self._note_for(job, INSTALL_CANCELLED, PALETTE['amber'])
+                self._log('%s: cancelled' % job)
+                self._sync_buttons()
+                return
+            if error is not None:
+                self._failed(job, error)
+                self._sync_buttons()
+                return
+            if job == 'install':
+                dest = self._install_dest
+                self._note_for(job, INSTALL_OK % (result, dest),
+                               PALETTE['ok'])
+                self._log('install: %d files written to %s' % (result, dest))
+                # The folder is the one already in the window, so this is
+                # only a re-read: it holds a game now where a moment ago
+                # it did not.
+                self._check_game(dest)
+            elif job == 'music':
+                self._log('music: %d tracks in %s'
+                          % (len(result or ()), music_dir(self._rip_dir)))
+                self._note_for(job, music_status(self._rip_dir), self.dim)
+            else:
+                # Re-read the folder first, so the build and the backups
+                # are what the window says they are, then have the last
+                # word on the status line.
+                self._check_game(self.game_var.get().strip())
+                self._set_status(DONE % self._written if job == 'patch'
+                                 else RESTORED, True)
+            self._sync_buttons()
+
+        def _failed(self, job, error):
+            if job in ('install', 'music'):
+                where = (self._install_dest if job == 'install'
+                         else music_dir(self._rip_dir))
+                why = copy_failure(where, error)
+                self._note_for(job, why, PALETTE['bad'])
+            else:
+                why = str(error)
+                self._set_status(FAILED, False)
+                self._log('%s: %s' % (job, why))
+                return
+            self._log('%s: failed - %s' % (job, why))
+
+        def _close(self):
+            """Stop a running copy or rip before the interpreter goes away.
+
+            Both write files, and a worker still running when the
+            interpreter is torn down leaves whichever one it was on half
+            written. Asking it to stop and waiting a moment is enough:
+            both check on the next chunk."""
+            self._cancel = True
+            if self._worker is not None and self._worker.is_alive():
+                self._worker.join(1.5)
+            self.root.destroy()
+
+    dpi = win_dpi()
+    try:
+        _root = tk.Tk()
+    except tk.TclError as exc:
+        # Tk imports fine on a headless box and then fails here. Only the
+        # window needs a display; --install and --patch do not.
+        return ('Cannot open a window: %s\n'
+                'Set DISPLAY or WAYLAND_DISPLAY, or run --install, --rip '
+                'and --patch from the terminal.' % exc)
+    if dpi:
+        # Tk sizes fonts in points against 72 dpi unless told otherwise.
+        _root.tk.call('tk', 'scaling', dpi / 72.0)
+    _root.app = App(_root)      # where tools/guitest.py reaches it
+    _root.mainloop()
+    return 0
+
 
 
 def selfcheck():
@@ -7003,12 +9422,22 @@ def selfcheck():
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
                     raise ValueError('%s: a placeholder left in a stub' % build)
+    # The window and the README list features, not keys; a key in neither
+    # or in both is a patch nobody is offered or is offered twice.
+    listed = [k for group in ESSENTIAL + EXTRA for k in BY_GROUP[group][2]]
+    if sorted(listed) != sorted(PATCH_KEYS):
+        raise ValueError('FEATURES and the patch table disagree: %s'
+                         % ', '.join(sorted(set(listed) ^ set(PATCH_KEYS))))
+    if len(listed) != len(set(listed)):
+        raise ValueError('a patch is in two feature rows')
+    if set(DIAGNOSTIC_INFO) != set(DIAGNOSTIC):
+        raise ValueError('a diagnostic has no label')
     for table in RESOLUTION_TABLES.values():
         resolution_groups(table)
         if b''.join(b'%d\0%d\0' % (w, h) for w, h, _n in table[1]) not in RESOLUTION_BLOB:
             raise ValueError('resolution.asm names the aspect groups differently from RESOLUTION_TABLES')
-    print('tables OK: %d builds, %d patches, %d sites, %d files'
-          % (len(BUILDS), len(PATCH_KEYS), sites, len(PATCHED)))
+    print('tables OK: %d builds, %d patches in %d features, %d sites, %d files'
+          % (len(BUILDS), len(PATCH_KEYS), len(FEATURES), sites, len(PATCHED)))
     return 0
 
 
@@ -7049,11 +9478,12 @@ def parse_keys(words):
 def main(argv):
     args = argv[1:]
     if not args:
-        gui()
+        run_tk()
         return 0
     try:
         if args[0] == '--install' and 3 <= len(args) <= 4:
             install(*args[1:])
+            patch(args[2])
         elif args[0] == '--patch' and len(args) >= 2:
             patch(args[1], keys=parse_keys(args[2:]))
         elif args[0] == '--rip' and len(args) == 3:
