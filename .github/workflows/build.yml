@@ -20,5 +20,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: sudo apt-get install -y nasm && pip install pyflakes
-      - run: python3 tools/check.py
+      # nasm builds the asm blobs the tables are checked against; xvfb is
+      # what gives tools/guitest.py a display. With nothing here it skips
+      # itself and says so, which would be a green run that tested no
+      # window at all.
+      - run: sudo apt-get install -y nasm xvfb && pip install pyflakes
+      - run: xvfb-run -a -s "-screen 0 1600x1400x24" python3 tools/check.py
