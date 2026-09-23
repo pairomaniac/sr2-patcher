@@ -102,7 +102,7 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x4219f0` | the resolution mode setter: the mode at `0x4d5e54`, the size into the struct, the renderer re-inited; `0x421450` reloads the textures, `0x4216a0` sets the viewport (`0x46bfd0`) and the 84.375° field of view (`0x46bf90`, MGameGL `+0x114`); the rect table at `0x4b12f0` | widescreen |
 | `0x47f2d0` | the input wrapper's update (vtable `0x4a158c` `+8`): the button mask at `+0x34` from `GetActionState` on actions 10, 11, 12, 2-5 to bits 0, 1, 6, 9-12, ±5000 the threshold; `0x43f8e0` packs it into the pad's menu flags at `0x4ef7e4`, `0x4edcb4` the frame's, `0x4d5e08` the keyboard's from `0x41fe20` (NOTES.md, *The menus' directions*) | xinput |
 | `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | windowed |
-| `0x4272b0` | language from `GetUserDefaultLangID`, 1–6 | - |
+| `0x4272b0` | language from `GetUserDefaultLangID`, 0 Japanese to 6 other, into the settings block's `+0x60`; `0x4edcd0` its copy, the lobby's `_US` bitmaps and font when not 0 (NOTES.md, *Invisible lobby text*) | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
 | `0x427450` | `SR2.CFG` exists beside the exe | - |
 | `0x4274e0` | drive scan: CD-ROM, label `SEGARALLY2`, `DISKID.2` | - |

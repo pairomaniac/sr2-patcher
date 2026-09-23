@@ -462,7 +462,7 @@ startup:
 | `+0x50` | the 640x480 / 800x600 choice: the loader switches to the `BINDATA\800x600\` asset set when `[[0x50afdc]+0x50] == 1` (`0x476512`) |
 | `+0x58` | a copy of the live block's `+0x54` |
 | `+0x5c` | the disc flag (below) |
-| `+0x60` | the language from `GetUserDefaultLangID` (`0x4272b0`): 1 English, 2 French, 3 German, 4 Italian, 5 Spanish, 6 Japanese |
+| `+0x60` | the language from `GetUserDefaultLangID` (`0x4272b0`), set at every start (`0x427672`): 0 Japanese, 1 English (UK, New Zealand, Ireland), 2 English (others), 3 French, 4 Spanish, 5 German, 6 any other |
 
 The in-game options live in `SR2_SAVE.DAT`. With *No registry* the
 block's file is `SR2.DSP`.
@@ -707,8 +707,19 @@ what the data is, and leaves the key exact. The copy path is unchanged:
 Every mode DLL draws through MGameD3D; the only GDI text in the game is
 the exe's, and all of it is the multiplayer lobby: the name entry
 (`0x420fa0`), the team and chat list (`0x435400`), the status line, the
-timer and the IP list. One face, Courier New (MS Gothic on the Japanese
-build), three sizes, created at `0x435df4`, `0x435e9b` and `0x435f33`.
+timer and the IP list. One face, Courier New (MS Gothic when Windows is
+Japanese, below), three sizes, created at `0x435df4`, `0x435e9b` and
+`0x435f33`.
+
+The lobby's language follows Windows, not the install. The settings
+block's `+0x60` is copied to `0x4edcd0` (`0x439269`); when it is not 0,
+the network screens load the `_US` bitmaps (`CONNECT2_US.BMP`,
+`WINDOW1_US.BMP`, `MESSAGE_*_US.BMP`, `MENU_TITLE_US.BMP` and the rest)
+over the Japanese ones, and the fonts are Courier New. Only a Japanese
+Windows language shows the Japanese screens and MS Gothic. Both sets are
+in *BINDATA 3* except the chat menu's three `MENU_*_US.BMP`, which come
+with *English Binary*, so a Japanese install on any other Windows
+language does not have them.
 
 The lobby chrome is BMPs (`CHAT_*.BMP`, `MENU_*.BMP`) loaded into 16-bit
 surfaces in the back buffer's format, and the text goes onto them
@@ -1797,13 +1808,13 @@ directly and through a disc image.
 | PentiumIII Modules, AMD Modules | 6 each | 5.1 | the six CPU-specific files |
 | English, French, German, Italian, Spanish, Japanese | ~337 | 5.2 | `SR2_MSG.dll`, `README.txt`, `PICS\`, `HELP\` |
 | * Files | 1 | 0.3 | `SR2_CPL.cpl` per language |
-| BINDATA 0 | 207 | 41.7 | `SEDATA` (sound effects), `BGM` |
+| BINDATA 0 | 207 | 41.7 | `SEDATA` (sound effects; the co-driver's calls, English on every disc), `BGM` |
 | BINDATA 1 | 2354 | 27.9 | small models, tyre textures, `TENYEAR`, `ARCADE`, effects, UI objects |
 | BINDATA 2 | 471 | 74.3 | car body textures, engine samples, `800x600`, root `.bg`/`.txr`/`sky*.mdl` |
 | BINDATA 3 | 512 | 348.0 | course data, `TENYEAR`, `CAR`, `CHAMPAGN`, `connect`, `chat` |
 | English Binary, UK Binary | 24 | 25.2 | `MISC`, `chat`, `meterNNus.txr` (the two are identical) |
 | Japanese Binary | 18 | 23.3 | `MISC` |
-| Carprofile English / Japanese | 18 / 19 | 42 / 59 | `BGM\cp_*.wav` narration |
+| Carprofile English / Japanese | 18 / 19 | 42 / 59 | `BGM\cp_*.wav` narration, the same names in both; `comment.wav` Japanese only |
 | Cabinet Files | 1 | 0.1 | `CABINET.DLL` for Windows 95 |
 
 The four `BINDATA` tiers are one asset set split by size to make the
