@@ -189,7 +189,7 @@ BUILDS = {
     },
     # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
     # one master, the install disc's data track the one Redump lists for
-    # DWRPD-00081.
+    # DWRPD-00081. Sega's own 1999 disc is the Australian build.
     #
     # The exe is the European one rebuilt on 29 Nov 1999 (2.0.0.9): the
     # functions at 0x442180 and 0x443de0 were recompiled, net 0x10 shorter,
@@ -244,6 +244,15 @@ BUILDS = {
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
     },
 }
+
+
+# What the window and the log call a row, where that is not its key. Sega's
+# own Japanese disc is the Australian one, so the two cannot be told apart.
+BUILD_NAMES = {'Australian': 'Australian / Japanese (Sega)'}
+
+
+def build_name(build):
+    return BUILD_NAMES.get(build, build)
 
 
 # The DLL each import slot a row names comes from; kernel32 unless listed.
@@ -6689,7 +6698,7 @@ def patch(dest, log=print, keys=None):
         keys = default_keys()
     build = check_build(dest)
     table = patches(build)
-    log('patch: %s build' % build)
+    log('patch: %s build' % build_name(build))
     capped = windows_native() and 'dgvoodoo' not in keys
     select_resolutions('capped' if capped else 'full')
     if capped:
@@ -8397,11 +8406,11 @@ def run_tk():
                 self.lang_row.grid(row=2, column=0, columnspan=3,
                                    sticky='ew', pady=(0, 6))
             if info['build']:
-                self._disc_note(INSTALL_FOUND % (info['build'], info['count'],
+                self._disc_note(INSTALL_FOUND % (build_name(info['build']), info['count'],
                                                  info['bytes'] >> 20),
                                 PALETTE['ok'])
                 self._log('disc: %s release, %d files, %d MB'
-                          % (info['build'], info['count'],
+                          % (build_name(info['build']), info['count'],
                              info['bytes'] >> 20))
             else:
                 # Copying is the same work whichever build is on the disc,
@@ -8562,12 +8571,12 @@ def run_tk():
                 return
             self.game_ok = True
             if patched:
-                self._set_status(GAME_PATCHED % self.build, 'warn')
+                self._set_status(GAME_PATCHED % build_name(self.build), 'warn')
             else:
-                self._set_status(GAME_READY % (self.build, self._selected()),
+                self._set_status(GAME_READY % (build_name(self.build), self._selected()),
                                  True)
             self._log('game: %s release in %s%s'
-                      % (self.build, path, ', patched' if patched else ''))
+                      % (build_name(self.build), path, ', patched' if patched else ''))
             self._sync_buttons()
 
         # -- 3, 4 PATCHES
@@ -8613,7 +8622,7 @@ def run_tk():
         def _retally(self, *_args):
             """Keep the count honest as boxes are ticked."""
             if self.game_ok:
-                self._set_status(GAME_READY % (self.build, self._selected()),
+                self._set_status(GAME_READY % (build_name(self.build), self._selected()),
                                  True)
 
         # -- 5 ADD-ONS, DIAGNOSTICS

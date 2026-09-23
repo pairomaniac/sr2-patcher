@@ -305,12 +305,13 @@ chose on any CPU of the last twenty-five years.
 | --- | --- | --- | --- |
 | European | 1,469,952 | `51b3da97c3c73611d3516b65bb684cb5` | EI-1183-1 |
 | American | 1,472,000 | `90d1f25110781707a888475ca37e9240` | 40924-0919 |
-| Australian | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` | MK-85078-40 |
+| Australian / Japanese (Sega) | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` | MK-85078-40 |
 | Japanese (DigiCube, MediaKite) | 1,469,952 | `5c0242443ea289d3d461b15eddb63388` | DWRPD-00081 |
 
-The Japanese row covers both DigiCube's and MediaKite's reissues, which
-are the same disc. Sega's own 1999 Japanese disc and the I-O DATA
-bundle's have not been seen; an image of either would be welcome.
+Sega's own 1999 Japanese disc is the Australian one, so that row covers
+both; the Japanese row covers DigiCube's and MediaKite's reissues, which
+are also one disc. The I-O DATA bundle's disc has not been seen; an
+image of it would be welcome.
 
 Before it writes anything the patcher checks every file it knows by
 size and checksum. If one does not match, nothing is touched and you get
@@ -373,8 +374,7 @@ issue: pairo@segaonline.net.
 
 In no particular order:
 
-- **Sega's own Japanese disc and the I-O DATA bundle** - once an image
-  turns up.
+- **The I-O DATA bundle's disc** - once an image turns up.
 - **Proper controller prompts** - right now it's the usual keyboard labels.
 - **Controller rumble** - which the Dreamcast version does have.
 - **Fleshing out the online functionality** - this one's a long term goal,

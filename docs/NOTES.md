@@ -201,7 +201,7 @@ too. The European release is the
 Japanese one at patch level 2.50 with a later `Champagn.dll` (2.0.0.8,
 20 Oct 1999, in no update).
 
-The exe versions in order: 2.0.0.2 Australian,
+The exe versions in order: 2.0.0.2 Australian and HCJ-0145,
 2.0.0.6 UPDATE231, 2.0.0.7 UPDATE240, 2.0.0.8 UPDATE250 and European,
 2.0.0.9 DigiCube and MediaKite, 2.0.1.1 American. The
 Australian is older than every update, by version and by date. 2.0.1.0
@@ -218,9 +218,9 @@ game's folder to pick one; it finds the game through
 So an HCJ-0145 install at 2.50 has the European exe and `build_of`
 places it as European; the check then stops at `Champagn.dll is not the
 European build's`, since 2.50 leaves 2.31's `Champagn.dll` in place. Its
-other DLLs were in no update either, so what an HCJ-0145 install has for
-`Options.dll`, `Title.dll` and `ReplayGallery.dll` is unknown without
-the disc. The same happens to an Australian install run through the
+other DLLs were in no update either, so an HCJ-0145 install keeps the
+Australian `Options.dll`, `Title.dll` and `ReplayGallery.dll` - the disc
+is the Australian one (below). The same happens to an Australian install run through the
 Japanese updater: the European exe over Australian DLLs, refused.
 
 #### The Japanese pressings
@@ -236,14 +236,15 @@ lists the retail game with the GA-TNT2 series.
 
 | Pressing | Build |
 | --- | --- |
-| HCJ-0145 | not seen |
+| HCJ-0145 | Australian: the same data track as the Australian disc, volume made on 4 Jun 1999, and the same audio |
 | DWRPD-00081 | Japanese (DigiCube, MediaKite); Redump [install](https://redump.info/disc/110322) and [play](https://redump.info/disc/110323) disc |
 | MKW-166 | Japanese (DigiCube, MediaKite): the same data tracks |
 | SPB-040 | not seen |
 
-The Australian exe (2.0.0.2) is older than every update, and the
-Australian disc carries only English and Japanese, so HCJ-0145 may well
-be that build; without an image of it, that is a guess. Sega's updates,
+HCJ-0145 and the Australian disc install the same files, so the patcher
+cannot tell them apart and calls the row *Australian / Japanese (Sega)*
+(`BUILD_NAMES`). The Australian exe (2.0.0.2) is older than every
+update, and the disc carries only English and Japanese. Sega's updates,
 as sega.jp published them: `UPDATE231FULL.EXE` 25 Jun 1999,
 `UPDATE232FULL.EXE` 29 Jun, `UPDATE240FULL.EXE` 15 Jul,
 `UPDATE250FULL.EXE` 25 Oct, and `DisplaySettings.exe`, a settings tool,
@@ -1822,8 +1823,9 @@ The pressings hold one soundtrack: stripped of digital silence, the
 American and Australian tracks are bit-identical and the European within
 eleven samples. Europe trims the tail; the other two keep two seconds of
 it per track, and America adds 62 ms of lead. A rip from any of them
-plays the same music, with the disc's own silence at the loop. The
-DigiCube and MediaKite play disc has the same thirteen tracks, 11
+plays the same music, with the disc's own silence at the loop.
+HCJ-0145's play disc is the Australian one. The DigiCube and MediaKite
+play disc has the same thirteen tracks, 11
 samples off the Australian as the European is.
 
 ## What is not done
