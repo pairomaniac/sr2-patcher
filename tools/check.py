@@ -7,12 +7,14 @@
     python3 tools/check.py --list             # what there is
     python3 tools/check.py --only cab,music   # some of it
 
-~/.sr2-test (template: tools/sr2-test.example, used by tools/sr2.sh too) names, per build, the
-install disc and the installed game: SR2_DISC_EU, SR2_GAME_EU, and the
-same with US and AU. Each that is set runs the checks that need a disc
-or a game on that build, labelled cab/EU and so on. Each check is a script
-of its own; this only decides what to run and reports the result, and
-shows a script's output when it fails.
+~/.sr2-test (template: tools/sr2-test.example, used by tools/sr2.sh too)
+names, per build, the install disc and the installed game: SR2_DISC_EU,
+SR2_GAME_EU, and the same with US, AU, JP (Sega's disc) and JP_MK (the
+DigiCube and MediaKite reissue). Each that is set runs the checks that
+need a disc or a game on that build, labelled cab/EU and so on; one that
+is in the file but empty is shown as N/A. Each check is a script of its
+own; this only decides what to run and reports the result, and shows a
+script's output when it fails.
 """
 import argparse
 import os
@@ -26,7 +28,7 @@ ROOT = os.path.dirname(HERE)
 PY = sys.executable or 'python3'
 CONF = os.path.expanduser('~/.sr2-test')
 SKIPPED = 77            # tools/uctest.py's exit code for "could not run"
-BUILDS = ('EU', 'US', 'AU')
+BUILDS = ('EU', 'US', 'AU', 'JP', 'JP_MK')
 
 # name, what, command, needs: '' for none, 'disc' for the install disc
 # (and the game if there is one), 'game' for the installed game.
@@ -132,12 +134,13 @@ def colours(force):
 
 
 def targets(args):
-    """(label, disc, game) per build to check."""
+    """(label, disc, game) per build in ~/.sr2-test. A variable that is
+    absent is None, one that is in the file but empty is ''."""
     if args.source:
         return [('', args.source, args.game)]
     conf = config()
     out = [(b, conf.get('SR2_DISC_' + b), conf.get('SR2_GAME_' + b)) for b in BUILDS]
-    return [t for t in out if t[1] or t[2]]
+    return [t for t in out if t[1] is not None or t[2] is not None]
 
 
 def main():
@@ -156,45 +159,58 @@ def main():
 
     wanted = set(args.only.split(',')) if args.only else None
     builds = targets(args)
+    labels = [b[0] for b in builds if b[0]]
+    width = max([13] + [len(n) + (1 + max(map(len, labels)) if nd and labels else 0)
+                        for n, _w, _c, nd in CHECKS])
+
+    def pad(tag):
+        return tag.ljust(width)
     os.chdir(ROOT)
     results = []
     for name, what, cmd, needs in CHECKS:
         if wanted and name not in wanted:
             continue
         if name == 'asm' and not shutil.which('nasm'):
-            print('  %s%-13s SKIP%s  %s %s(nasm not installed)%s' % (c['warn'], name, c['off'], what, c['dim'], c['off']))
+            print('  %s%s SKIP%s  %s %s(nasm not installed)%s' % (c['warn'], pad(name), c['off'], what, c['dim'], c['off']))
             results.append((name, None))
             continue
-        runs = [(None, None, None)] if not needs else \
-            [t for t in builds if (t[1] if needs == 'disc' else t[2])]
+        col = 1 if needs == 'disc' else 2
+        runs = [(None, None, None)] if not needs else [t for t in builds if t[col] is not None]
         if not runs:
-            print('  %s%-13s SKIP%s  %s %s(no %s in %s)%s'
-                  % (c['warn'], name, c['off'], what, c['dim'], needs, CONF, c['off']))
+            print('  %s%s SKIP%s  %s %s(no %s in %s)%s'
+                  % (c['warn'], pad(name), c['off'], what, c['dim'], needs, CONF, c['off']))
             results.append((name, None))
             continue
         for label, disc, game in runs:
+            tag = name + '/' + label if label else name
+            if needs and not (disc if needs == 'disc' else game):
+                var = 'SR2_%s_%s' % ('DISC' if needs == 'disc' else 'GAME', label)
+                print('  %s%s N/A   %s (%s empty)%s' % (c['dim'], pad(tag), what, var, c['off']))
+                results.append((tag, 'n/a'))
+                continue
             run = [a.replace('{disc}', disc or '').replace('{game}', game or '') for a in cmd]
             run = [a for a in run if a]
             start = time.time()
             proc = subprocess.run(run, capture_output=True, text=True)
             took = time.time() - start
-            tag = name + '/' + label if label else name
             if proc.returncode == SKIPPED:      # the tool said it could not run, which is not a pass
-                print('  %s%-13s SKIP%s  %s %s(%s)%s'
-                      % (c['warn'], tag, c['off'], what, c['dim'],
+                print('  %s%s SKIP%s  %s %s(%s)%s'
+                      % (c['warn'], pad(tag), c['off'], what, c['dim'],
                          (proc.stdout + proc.stderr).strip().split('\n')[-1], c['off']))
                 results.append((tag, None))
                 continue
             good = proc.returncode == 0
             results.append((tag, good))
-            print('  %s%-13s%s %s  %-64s %s%.1fs%s'
-                  % (c['bold'], tag, c['off'],
+            print('  %s%s%s %s  %-64s %s%.1fs%s'
+                  % (c['bold'], pad(tag), c['off'],
                      '%sOK  %s' % (c['ok'], c['off']) if good else '%sFAIL%s' % (c['bad'], c['off']),
                      what, c['dim'], took, c['off']))
             out = (proc.stdout + proc.stderr).strip().split('\n')
             for line in out if not good else [l for l in out if l.startswith('note: ')]:
                 print('      %s%s%s' % (c['dim'], line.replace('note: ', '', 1), c['off']))
 
+    blank = [n for n, r in results if r == 'n/a']
+    results = [(n, r) for n, r in results if r != 'n/a']
     ran = [r for _n, r in results if r is not None]
     failed = [n for n, r in results if r is False]
     skipped = [n for n, r in results if r is None]
@@ -205,6 +221,8 @@ def main():
         print('%sall %d passed%s' % (c['ok'], len(ran), c['off']))
     if skipped:
         print('%s%d skipped: %s%s' % (c['warn'], len(skipped), ' '.join(skipped), c['off']))
+    if blank:
+        print('%s%d n/a: %s%s' % (c['dim'], len(blank), ' '.join(blank), c['off']))
     return 1 if failed else 0
 
 

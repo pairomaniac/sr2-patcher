@@ -48,7 +48,7 @@ IMAGE_BASE = 0x400000                   # the exe is never relocated
 # Pentium III files and the three patched DLLs, the exe's patch sites
 # (file offsets), the import slots those sites name, and the addresses
 # the stubs in asm/ read (VAs). MGameD3D.dll is the same file in all
-# three. Everything else in the script is written against the European
+# four. Everything else in the script is written against the European
 # row; the others map it.
 PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGameGL.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll',
            'MUSASHI\\MGInput.dll', 'MUSASHI\\MGNetWk.dll', 'Title.dll', 'Options.dll', 'ReplayGallery.dll')
@@ -187,6 +187,62 @@ BUILDS = {
                       'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28),
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
     },
+    # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
+    # one master, the install disc's data track the one Redump lists for
+    # DWRPD-00081.
+    #
+    # The exe is the European one rebuilt on 29 Nov 1999 (2.0.0.9): the
+    # functions at 0x442180 and 0x443de0 were recompiled, net 0x10 shorter,
+    # so sites and code addresses past 0x444130 are the European ones less
+    # 0x10 and everything else - data, import slots, the other thirteen
+    # files - is the European. docs/NOTES.md, *The DigiCube and MediaKite
+    # build*.
+    'Japanese (DigiCube, MediaKite)': {
+        'files': {
+            EXE: (1469952, '5c0242443ea289d3d461b15eddb63388'),
+            'AdvTelop.dll': (636928, '977dd8801a281e987c4503c9fb2f8778'),
+            'Champagn.dll': (699392, 'b8dbfe718eef561f12c99223ba7b9ec4'),
+            'MSelect.dll': (1137152, '1e6f713c39efb1558c79b795754d6e3a'),
+            'MUSASHI\\MGameGL.dll': (601600, '3d095385ece996088381dd77a0f5f954'),
+            'MUSASHI\\MGLBackground.dll': (579584, 'e7cc2a9f084a39c6f119fa1a1d769e30'),
+            'MUSASHI\\MGameD3D.dll': (86016, '201a9cc68096231eebcd602a65b7af6e'),
+            'MUSASHI\\MGAudio.dll': (57344, 'b05b9c8e84e8a5b051045e48ea9d6bab'),
+            'MUSASHI\\MGSound.dll': (86016, 'a9698c1d866a34cd632c8d6e7e8f5fbb'),
+            'MUSASHI\\MGNetWk.dll': (121344, '0a9f86f51aa5b864bb56340cacd2b4a5'),
+            'MUSASHI\\MGInput.dll': (90112, '7aa0b3aede10fd247835ad346c2ecee8'),
+            'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
+            'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
+            'ReplayGallery.dll': (792576, 'f0db027aa72f43d146859eaef51d74f0'),
+        },
+        'sites': {'check': 0x267c0, 'loader': 0x7571e, 'activate': 0x25ff7,
+                  'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
+                  'noregistry': (0xd07c0, 0x7e349), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
+                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0),   # MGInput.dll: the create, the type byte's first read, the two interface ids
+                  'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
+                  'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': 0x7e8f6, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
+                  'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
+                  'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
+                  'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
+                  'voldefault': 0xd01a8},  # the defaults block's three sliders, in STATUSDA where the relink left it
+        'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
+                      (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
+                      (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
+        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4,
+                  'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0,
+                  'GetPrivateProfileStringA': 0x4951b8, 'GetModuleFileNameA': 0x495074, 'GetTickCount': 0x495088},
+        'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
+                    'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
+                    'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
+                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
+        'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+                      'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
+                      'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
+                      'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
+    },
 }
 
 
@@ -274,7 +330,7 @@ IID_IDIRECTINPUT2A = bytes.fromhex('62e64459 8aaa cf11 bfc7 444553540000'.replac
 IID_IDIRECTINPUT8A = bytes.fromhex('308079bf 3a48 a24d aa99 5d64ed369700'.replace(' ', ''))
 IID_IDIRECTINPUTDEVICE2A = bytes.fromhex('82e64459 2ec9 cf11 bfc7 444553540000'.replace(' ', ''))
 IID_IDIRECTINPUTDEVICE8A = bytes.fromhex('8010d454 15dc 3348 a41b 748f73a38179'.replace(' ', ''))
-DI_THUNK = {'European': 0x8a30, 'American': 0x8a30, 'Australian': 0x8550}
+DI_THUNK = {'European': 0x8a30, 'American': 0x8a30, 'Australian': 0x8550, 'Japanese (DigiCube, MediaKite)': 0x8a30}
 
 
 def devices_sites(offsets, tables):
@@ -5528,6 +5584,44 @@ HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to 
 HINT_STRIP_TOPS = (130, 150, 170, 190)  # the lines' two halves each on the appended sheet, from x 1
 HINT_SHEET = 4
 
+# The twenty-one letters the hint lines need, cut from sheet 4 of the
+# English OPTIONS.TXR at the boxes above: 565 texels, each glyph
+# (x1 - x0) by HINT_ROWS, the letters in sorted order, deflated. The
+# lettering travels with the patcher rather than being cut from the file
+# being patched because sheet 4 is localised - on a Japanese install
+# every one of the twenty-one is different artwork, and letters cut from
+# there come out as nonsense. Cutting from the English sheet gives these
+# same bytes, so an English install's OPTIONS.TXR is unchanged by this.
+HINT_LETTERING = zlib.decompress(bytes.fromhex(
+    '78dacd983f8eab3010c62928285270058eb057e00689948222558e90928e224514e5045c2147e00a505050440a47c811'
+    'b2fae97b23db6ff769c942a48725c763ecf1fcfd3c647c8e935bf4e7199f557adaaccf45ebbf2ddaa1d93d341e9a38d3'
+    'daf519ba4aa328c92f07666ef7a189a22a65ed6acf8af599b7acebeb24efebae345a6d3a0defdbddd18cba323c0f2943'
+    '799097199ebefe4e9f398dd3ed4972a838eb4a5a5f43394d7ea2ec9146c665685ee3129eee249bafa9f34657bab397a0'
+    '7d39e55d34c09bcbf0f7e9256cb07be0151b9f3692bd4a9923daabb42b99add2f199e4763e3953b4d28ac8bb1c929c28'
+    '64eff1c3f891251607ceafcab7d5de7260f7800ffc9c7eace94ace67ddf83c7e907d45cbbacb41ebc906e35fa5960dbe'
+    '3eef6de88b0c8c0c439016e9567be959b46004abd04072f5b55693b3cc26b9de91e3ecc7ca43a3de283cb0da6fafda27'
+    '3bc7193bb657e93c2fff8595ff1a0f0df829dfca9beaf18f6642cc7d6d4c7e181ff5e824bbcabecb358b8ddb5d3ea8d2'
+    'ed5576c7b671665657fe9ac7cc0be118b9fdf5e2834de2ccf1575cce45e8af3e217734e644df7eebb3c3a1dffa053ef2'
+    '0bde5064dbb9e15dba64131e68acf3a2e8b4199f4800aa284f0c25f44b8fdf841846d1743b3be4c14e6e1f58024ff661'
+    '49ddb08637caa979d1179efe1d65790b75da70af57a96a823893b6d228d476696a9ecf42b4fa7b667a3fbd42995e3f40'
+    'e1d7d346d4edaeea4a14984acda79a8b6808ab173c63379aeca47d420a77027bb757a374272e67d339fd5279e9c76992'
+    'fb714a7500ad98ba1cfedf389d83416082e105b150b43e96086f7fa391cf136f59f505e6992cef435b7786fb32511eec'
+    '1e3e066dafcb79139e20aeb0f9f8e19f273cfc09395fd34ddf4951f0509bf977dd94df57505fb2861cc847ec2b59a809'
+    '5e91801850a528845a2e26acbe53b5b3dc787d160e2aa2e991fdfdd16cdf0eaacff03572e0117efb1afb935d58f37627'
+    '3e407d7dddd84ecb3fa4e6f6d0ff02faf2972f84067e6ce82bddc76f8b5855fba6376f40c9afed13951e448f'
+))
+
+
+def hint_lettering():
+    """{glyph box: its 565 texels, HINT_ROWS rows} from HINT_LETTERING."""
+    out, at = {}, 0
+    for c in sorted(set(''.join(HINT_LINES)) - {' '}):
+        glyph = HINT_GLYPHS[c]
+        n = (glyph[2] - glyph[0]) * HINT_ROWS * 2
+        out[glyph] = HINT_LETTERING[at:at + n]
+        at += n
+    return out
+
 
 def hint_layout(line):
     """The line's letters as (x, glyph) from x 0, its width, and how many
@@ -5925,7 +6019,7 @@ def patch_txr(data):
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
     for y in range(126):
         texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
-    letters = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:HINT_SHEET])   # the frame's messages' lettering
+    letters = hint_lettering()          # the frame's messages' lettering, carried, not cut
     tops = iter(HINT_STRIP_TOPS)
     for line in HINT_LINES:                 # the hint lines, letter by letter, each in two halves
         placed, _width, cut = hint_layout(line)
@@ -5935,10 +6029,11 @@ def patch_txr(data):
             for y in range(HINT_ROWS):          # the strip opaque white, a margin each side, then the letters
                 for x in range(width + 2 * HINT_MARGIN):
                     struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x) * 2, 0xffff)
-            for x, (gx0, gy0, gx1) in half:
+            for x, glyph in half:
+                gx0, _gy0, gx1 = glyph
                 for y in range(HINT_ROWS):
                     for gx in range(gx1 - gx0):
-                        v = struct.unpack_from('<H', data, letters + ((gy0 - 1 + y) * 256 + gx0 + gx) * 2)[0]   # 565 to 4444, opaque
+                        v = struct.unpack_from('<H', letters[glyph], (y * (gx1 - gx0) + gx) * 2)[0]   # 565 to 4444, opaque
                         texel = 0xf000 | (v >> 12) << 8 | (v >> 7 & 15) << 4 | (v >> 1 & 15)
                         struct.pack_into('<H', texture, ((top + y) * 256 + 1 + HINT_MARGIN + x - x0 + gx) * 2, texel)
     out = bytearray(data)

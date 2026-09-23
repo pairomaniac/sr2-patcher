@@ -14,7 +14,7 @@ port forwarding. Windows 10 and 11, Wine and Proton.
 
 <img src="https://github.com/user-attachments/assets/6b1f92c1-9f66-407a-a0a5-181b7f205aae" alt="Lancia Stratos on a coastal stage at 32:9" width="100%" />
 
-**Work in progress.** The game plays start to finish on all three
+**Work in progress.** The game plays start to finish on all four
 releases, but this is a hobby project poking at a 27-year-old binary and
 things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
 
@@ -297,19 +297,21 @@ the same recording.
 
 ## Builds
 
-The patcher knows the European, American and Australian releases, tells
-them apart by itself, and installs and patches the Pentium III build of
-each - the one the original installer chose on any CPU of the last
-twenty-five years.
+The patcher knows the European, American and Australian releases and
+the Japanese reissue, tells them apart by itself, and installs and
+patches the Pentium III build of each - the one the original installer
+chose on any CPU of the last twenty-five years.
 
-| Release | `SEGA RALLY 2.exe` | MD5 |
-| --- | --- | --- |
-| European | 1,469,952 | `51b3da97c3c73611d3516b65bb684cb5` |
-| American | 1,472,000 | `90d1f25110781707a888475ca37e9240` |
-| Australian | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` |
+| Release | `SEGA RALLY 2.exe` | MD5 | Redump |
+| --- | --- | --- | --- |
+| European | 1,469,952 | `51b3da97c3c73611d3516b65bb684cb5` | EI-1183-1 |
+| American | 1,472,000 | `90d1f25110781707a888475ca37e9240` | 40924-0919 |
+| Australian | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` | MK-85078-40 |
+| Japanese (DigiCube, MediaKite) | 1,469,952 | `5c0242443ea289d3d461b15eddb63388` | DWRPD-00081 |
 
-The Japanese releases are not known: no verified dump of one has been
-seen, and one would be welcome.
+Every row is checked against a disc that matches its Redump dump. Sega's
+own 1999 Japanese disc and the I-O DATA bundle's are not in Redump and
+have not been seen; an image of either would be welcome.
 
 Before it writes anything the patcher checks every file it knows by
 size and checksum. If one does not match, nothing is touched and you get
@@ -354,7 +356,7 @@ window nor puts up the compatibility-assistant box about it.
 ## Reporting a bug
 
 Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues). Say
-which release you have (European, American, Australian) - the window
+which release you have (European, American, Australian, Japanese) - the window
 names it - whether you are on Windows or Wine/Proton, and what you were
 doing just before. For a crash on Windows, the entry under Event Viewer →
 Windows Logs → Application names the faulting module and offset, which is
@@ -371,7 +373,8 @@ not know, or anything that does not fit an issue: pairo@segaonline.net.
 
 In no particular order:
 
-- **The Japanese releases** - once a verified dump turns up.
+- **The other Japanese pressings** - DigiCube's and I-O DATA's, once an
+  image turns up.
 - **Proper controller prompts** - right now it's the usual keyboard labels.
 - **Controller rumble** - which the Dreamcast version does have.
 - **Fleshing out the online functionality** - this one's a long term goal,
@@ -396,6 +399,7 @@ unmodified build it has tables for.
 ## Credits and licence
 
 Successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher).
-The logo and icon are the work of SirRockEmSockEm. The game is SEGA's.
+The logo and icon are the work of SirRockEmSockEm. The DigiCube and
+MediaKite support is by [chmcl95](https://github.com/chmcl95). The game is SEGA's.
 `LICENSE` (MIT) covers the patcher, its tools and its documentation, not
 the game or the bytes quoted from it.

@@ -11,7 +11,10 @@
 #     tools/sr2.sh BUILD debug [CHANNELS] and WINEDEBUG=+seh,+loaddll,+mci, or the channels given
 #     tools/sr2.sh BUILD show             print the paths it would use and exit
 #
-# BUILD is eu, us or au. logs/ is in the repository root and gitignored.
+# BUILD is eu, us, au, jp (Sega's disc) or jp_mk (the DigiCube and
+# MediaKite reissue). A variable that is empty in ~/.sr2-test shows as N/A
+# in show; an action that needs it stops. logs/ is in the repository
+# root and gitignored.
 # Under umu, Proton writes Wine's output to a file of its own rather than
 # the terminal (PROTON_LOG); the terminal only shows umu's lines. The file
 # is steam-<id>.log in PROTON_LOG_DIR, which is why that is pointed at
@@ -27,8 +30,8 @@ LOG=$LOGS/sr2.log
 die() { echo "sr2.sh: $*" >&2; exit 1; }
 
 case "${1:-}" in
-    eu|us|au) BUILD=${1^^}; shift ;;
-    *) die "usage: tools/sr2.sh eu|us|au install|rip|patch|restore|run|debug|show" ;;
+    eu|us|au|jp|jp_mk) BUILD=${1^^}; shift ;;
+    *) die "usage: tools/sr2.sh eu|us|au|jp|jp_mk install|rip|patch|restore|run|debug|show" ;;
 esac
 game_var=SR2_GAME_$BUILD
 disc_var=SR2_DISC_$BUILD
@@ -52,19 +55,42 @@ find_proton() {
     echo "$newest"
 }
 
-[ -n "$GAME" ] || die "set $game_var in $CONF"
+need() { [ -n "${!1:-}" ] || die "$1 is empty or missing in $CONF"; }
+
+# Empty or unset, in grey when on a terminal.
+na() {
+    if [ -n "$1" ]; then echo "$1"
+    elif [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then printf '\033[90mN/A\033[0m\n'
+    else echo N/A; fi
+}
 
 mode=${1:-run}
+if [ "$mode" = show ]; then
+    echo "  build:  $BUILD"
+    echo "  disc:   $(na "$DISC")"
+    echo "  play:   $(na "$PLAY")"
+    echo "  game:   $(na "$GAME")"
+    echo "  prefix: $(na "$PFX")"
+    if [ -n "$WINE" ]; then
+        echo "  wine:   $WINE"
+    else
+        echo "  umu:    $(na "$UMU")"
+        echo "  proton: $(na "$(find_proton 2>/dev/null)")"
+    fi
+    exit 0
+fi
+
+need "$game_var"
 case "$mode" in
     install)
-        [ -n "$DISC" ] || die "set $disc_var in $CONF"
+        need "$disc_var"
         exec python3 "$PATCHER" --install "$DISC" "$GAME" "${2:-English}" ;;
     rip)
-        [ -n "$PLAY" ] || die "set $play_var in $CONF"
+        need "$play_var"
         exec python3 "$PATCHER" --rip "$PLAY" "$GAME" ;;
     patch)   shift; exec python3 "$PATCHER" --patch "$GAME" "$@" ;;
     restore) exec python3 "$PATCHER" --restore "$GAME" ;;
-    run|debug|show) ;;
+    run|debug) ;;
     *) die "no such action: $mode" ;;
 esac
 
@@ -72,21 +98,6 @@ esac
 [ -n "$PFX" ] || die "set SR2_PFX or $pfx_var in $CONF"
 debug=""
 [ "$mode" = debug ] && debug="${2:-+seh,+loaddll,+mci}"
-
-if [ "$mode" = show ]; then
-    echo "  build:  $BUILD"
-    echo "  disc:   ${DISC:-unset}"
-    echo "  play:   ${PLAY:-unset}"
-    echo "  game:   $GAME"
-    echo "  prefix: $PFX"
-    if [ -n "$WINE" ]; then
-        echo "  wine:   $WINE"
-    else
-        echo "  umu:    ${UMU:-not found}"
-        echo "  proton: $(find_proton)"
-    fi
-    exit 0
-fi
 
 mkdir -p "$LOGS"
 cd "$GAME"
