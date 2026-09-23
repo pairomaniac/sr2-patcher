@@ -7454,9 +7454,9 @@ INSTALL_TIP = ('Install disc\tDisc 1, as a .cue with its .bin beside it, an '
                'Play disc\tDisc 2, as a .cue with its .bin files. The music '
                'is on this one, and an .iso will not do - it drops the '
                'audio tracks.\n'
-               'Manual\tWhich of the six languages the manual, the readme '
-               'and the menus are in. The game itself is the same either '
-               'way.\n'
+               'Language\tThe language of the menus, the messages and the '
+               'readme; Japanese also brings the Japanese car narration. The '
+               'game itself is the same either way.\n'
                'Room\tThe game takes about 800 MB in the folder above, and '
                'the soundtrack another 550 MB.')
 
@@ -8316,7 +8316,7 @@ def run_tk():
             # column 1 the row overflowed and the combobox was squeezed.
             self.lang_row.columnconfigure(2, weight=1)
             self._static_label(ttk.Label(
-                self.lang_row, text='Manual', style='Card.TLabel',
+                self.lang_row, text='Language', style='Card.TLabel',
                 font=self.small, width=12, anchor='w')).grid(
                     row=0, column=0, sticky='w', padx=(0, 8))
             self.lang_var = tk.StringVar(value=LANGUAGES[0])
