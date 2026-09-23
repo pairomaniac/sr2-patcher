@@ -226,21 +226,16 @@ over Australian DLLs, refused.
 
 #### The Japanese pressings
 
-HCJ-0145 (Sega, 25 Jun 1999), DWRPD-00081
-(DigiCube, 22 Nov 2000), MKW-166 (MediaKite, 2 Mar 2001) and SPB-040
-(bundled with I-O DATA's GA-TNT2), per
-[sega.jp's patch page](https://web.archive.org/web/20080611152022/https:/sega.jp/pc/rally2/patch_old.shtml)
-and [its library index](https://web.archive.org/web/20010823045326/http://www.sega.co.jp/sega/pc/lib/lib.html).
-SPB-040's play disc is printed `GA-TNT216専用`; I-O DATA's
-[card page](https://www.iodata.jp/products/graphics/tnt2/stage4.htm)
-lists the retail game with the GA-TNT2 series.
+Japan had HCJ-0145 (Sega, 25 Jun 1999), DWRPD-00081 (DigiCube, 22 Nov
+2000) and MKW-166 (MediaKite, 2 Mar 2001). I-O DATA also bundled the game
+with its GA-TNT2 graphics cards in 1999.
 
 | Pressing | Build |
 | --- | --- |
 | HCJ-0145 | Australian: its own barcode, the Australian disc's contents - the same data track, volume made on 4 Jun 1999, and the same audio |
-| DWRPD-00081 | Japanese (DigiCube, MediaKite); Redump [install](https://redump.info/disc/110322) and [play](https://redump.info/disc/110323) disc |
+| DWRPD-00081 | Japanese (DigiCube, MediaKite) |
 | MKW-166 | Japanese (DigiCube, MediaKite): the same data tracks |
-| SPB-040 | not seen |
+| I-O DATA bundle | not seen |
 
 HCJ-0145 and the Australian disc install the same files, so the patcher
 cannot tell them apart and calls the row *Australian / Japanese (Sega)*
