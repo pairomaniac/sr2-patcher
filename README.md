@@ -311,8 +311,7 @@ chose on any CPU of the last twenty-five years.
 
 Sega's own 1999 Japanese disc (HCJ-0145) carries the same contents as
 the Australian one, so that row covers both; the Japanese row covers
-DigiCube's and MediaKite's reissues, whose discs are also the same. The I-O DATA bundle's disc has not been seen; an
-image of it would be welcome.
+DigiCube's and MediaKite's reissues, whose discs are also the same.
 
 Before it writes anything the patcher checks every file it knows by
 size and checksum. If one does not match, nothing is touched and you get
@@ -382,7 +381,6 @@ issue: pairo@segaonline.net.
 
 In no particular order:
 
-- **The I-O DATA bundle's disc** - once an image turns up.
 - **Proper controller prompts** - right now it's the usual keyboard labels.
 - **Controller rumble** - which the Dreamcast version does have.
 - **Fleshing out the online functionality** - this one's a long term goal,
