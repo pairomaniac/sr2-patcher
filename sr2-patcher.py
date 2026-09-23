@@ -6502,10 +6502,13 @@ DGVOODOO_FILES = (('ms/x86/ddraw.dll', 'MUSASHI\\ddraw.dll'),   # the archive me
 DGVOODOO_STAMP = 'MUSASHI\\dgVoodoo.version'                     # the release installed, and the mark of ours
 # The archive's own dgVoodoo.conf, its [DirectX] section changed once,
 # when the file is first written: the textures come up white or as noise
-# without the fast access, the watermark off, ALT+ENTER left to the game.
+# without the fast access, the watermark off, ALT+ENTER left to the game,
+# and each frame presented on the display's refresh (docs/NOTES.md, Frame
+# timing).
 DGVOODOO_SETTINGS = (('FastVideoMemoryAccess', 'true'),
                      ('dgVoodooWatermark', 'false'),
-                     ('DisableAltEnterToToggleScreenMode', 'false'))
+                     ('DisableAltEnterToToggleScreenMode', 'false'),
+                     ('ForceVerticalSync', 'true'))
 ADDONS = ('dgvoodoo',)
 
 

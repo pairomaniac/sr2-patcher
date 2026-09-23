@@ -182,7 +182,8 @@ scanner may have something to say - see
 **dgVoodoo 2** is [dege's](https://github.com/dege-diosg/dgVoodoo2)
 DirectDraw on Direct3D 11. Windows' own DirectDraw refuses a picture over
 2048 a side and has grown slow and erratic with this game on some
-machines; this has neither problem. It is ticked by default on Windows
+machines; this has neither problem, and it waits for the display's
+refresh before showing a frame. It is ticked by default on Windows
 and off under Wine and Proton, which have no such limit. Untick it and
 Apply to take it out again, your settings kept; **Restore original**
 takes those as well.
@@ -370,10 +371,12 @@ issue: pairo@segaonline.net.
   happens, tick **Direct3D bring-up** under DIAGNOSTICS, Apply, start the
   game, and send `logs\d3dinit.log` with the card and driver.
 - **Choppy on a 144 or 165 Hz display.** The game runs at a fixed 60
-  frames a second, and those cannot land evenly on a refresh that is not
-  a multiple of 60. Set the desktop to 120 or 60 Hz, or use G-SYNC or
-  FreeSync with windowed mode enabled. A frame cap does not help: the
-  game is already at 60.
+  frames a second. On Windows, dgVoodoo 2 now waits for the display's
+  refresh; if you installed it with an earlier version, delete
+  `MUSASHI\dgVoodoo.conf` in the game folder and press **Apply patches**
+  to get that. 60 frames still cannot land evenly on a refresh that is
+  not a multiple of 60: a 120 or 60 Hz desktop, or G-SYNC or FreeSync
+  with windowed mode enabled, makes it even.
 
 ## Planned
 

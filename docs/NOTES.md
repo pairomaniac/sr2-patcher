@@ -557,6 +557,13 @@ the vertical blank in it did exactly that on Windows and is not there;
 calls. On Windows the layer renders the frame after the blit returns, on
 its own thread; the loop never sees the render.
 
+There the patcher turns on dgVoodoo's `ForceVerticalSync` (the
+`[DirectX]` one; its default is off): each frame goes up on a refresh,
+no tearing, and on a display at a multiple of 60 Hz every frame stays
+up equally long. The wait is meant to be dgVoodoo's, on its thread, not
+the loop's; `frametrace` shows whether it ever holds a present and costs
+a catch-up.
+
 The gate's four flags:
 
 | Flag | Meaning |

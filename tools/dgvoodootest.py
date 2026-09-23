@@ -21,17 +21,21 @@ import zipfile
 from uctest import patcher
 
 CONF = ('Version = 0x287\r\n\r\n[General]\r\n\r\nFullScreenMode                       = true\r\n\r\n'
+        '[Glide]\r\n\r\nForceVerticalSync                   = false\r\n\r\n'
         '[DirectX]\r\n\r\n; a comment with FastVideoMemoryAccess = false in it\r\n'
         'VideoCard                           = internal3D\r\n'
         'DisableAltEnterToToggleScreenMode   = true\r\n'
         'dgVoodooWatermark                   = true\r\n'
+        'ForceVerticalSync                   = false\r\n'
         'FastVideoMemoryAccess               = false\r\n\r\n'
         '[DirectXExt]\r\n\r\nFastVideoMemoryAccess               = false\r\n')
 WANT = ('Version = 0x287\r\n\r\n[General]\r\n\r\nFullScreenMode                       = true\r\n\r\n'
+        '[Glide]\r\n\r\nForceVerticalSync                   = false\r\n\r\n'
         '[DirectX]\r\n\r\n; a comment with FastVideoMemoryAccess = false in it\r\n'
         'VideoCard                           = internal3D\r\n'
         'DisableAltEnterToToggleScreenMode   = false\r\n'
         'dgVoodooWatermark                   = false\r\n'
+        'ForceVerticalSync                   = true\r\n'
         'FastVideoMemoryAccess               = true\r\n\r\n'
         '[DirectXExt]\r\n\r\nFastVideoMemoryAccess               = false\r\n')
 
