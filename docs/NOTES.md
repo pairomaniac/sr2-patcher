@@ -219,9 +219,10 @@ So an HCJ-0145 install at 2.50 has the European exe and `build_of`
 places it as European; the check then stops at `Champagn.dll is not the
 European build's`, since 2.50 leaves 2.31's `Champagn.dll` in place. Its
 other DLLs were in no update either, so an HCJ-0145 install keeps the
-Australian `Options.dll`, `Title.dll` and `ReplayGallery.dll` - the disc
-is the Australian one (below). The same happens to an Australian install run through the
-Japanese updater: the European exe over Australian DLLs, refused.
+Australian `Options.dll`, `Title.dll` and `ReplayGallery.dll` - its
+disc carries the Australian contents (below). The same happens to an
+Australian install run through the Japanese updater: the European exe
+over Australian DLLs, refused.
 
 #### The Japanese pressings
 
@@ -236,7 +237,7 @@ lists the retail game with the GA-TNT2 series.
 
 | Pressing | Build |
 | --- | --- |
-| HCJ-0145 | Australian: the same data track as the Australian disc, volume made on 4 Jun 1999, and the same audio |
+| HCJ-0145 | Australian: its own barcode, the Australian disc's contents - the same data track, volume made on 4 Jun 1999, and the same audio |
 | DWRPD-00081 | Japanese (DigiCube, MediaKite); Redump [install](https://redump.info/disc/110322) and [play](https://redump.info/disc/110323) disc |
 | MKW-166 | Japanese (DigiCube, MediaKite): the same data tracks |
 | SPB-040 | not seen |
@@ -1824,9 +1825,9 @@ American and Australian tracks are bit-identical and the European within
 eleven samples. Europe trims the tail; the other two keep two seconds of
 it per track, and America adds 62 ms of lead. A rip from any of them
 plays the same music, with the disc's own silence at the loop.
-HCJ-0145's play disc is the Australian one. The DigiCube and MediaKite
-play disc has the same thirteen tracks, 11
-samples off the Australian as the European is.
+HCJ-0145's play disc carries the Australian audio. The DigiCube and
+MediaKite play disc has the same thirteen tracks, 11 samples off the
+Australian as the European is.
 
 ## What is not done
 

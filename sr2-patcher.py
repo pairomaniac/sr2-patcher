@@ -247,7 +247,8 @@ BUILDS = {
 
 
 # What the window and the log call a row, where that is not its key. Sega's
-# own Japanese disc is the Australian one, so the two cannot be told apart.
+# own Japanese disc carries the Australian contents, so the two cannot be
+# told apart.
 BUILD_NAMES = {'Australian': 'Australian / Japanese (Sega)'}
 
 

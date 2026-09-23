@@ -308,9 +308,9 @@ chose on any CPU of the last twenty-five years.
 | Australian / Japanese (Sega) | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` | MK-85078-40 |
 | Japanese (DigiCube, MediaKite) | 1,469,952 | `5c0242443ea289d3d461b15eddb63388` | DWRPD-00081 |
 
-Sega's own 1999 Japanese disc is the Australian one, so that row covers
-both; the Japanese row covers DigiCube's and MediaKite's reissues, which
-are also one disc. The I-O DATA bundle's disc has not been seen; an
+Sega's own 1999 Japanese disc (HCJ-0145) carries the same contents as
+the Australian one, so that row covers both; the Japanese row covers
+DigiCube's and MediaKite's reissues, whose discs are also the same. The I-O DATA bundle's disc has not been seen; an
 image of it would be welcome.
 
 Before it writes anything the patcher checks every file it knows by
