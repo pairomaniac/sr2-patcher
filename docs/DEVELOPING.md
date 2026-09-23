@@ -41,8 +41,8 @@ here needs pip. None of it is needed to run the patcher.
 
 `~/.sr2-test` names, per build, the install disc, the play disc, the
 installed game and the Wine prefix: `SR2_DISC_EU`, `SR2_PLAY_EU`,
-`SR2_GAME_EU`, `SR2_PFX_EU`, and `US`, `AU`, `JP` (Sega's disc) and
-`JP_MK` (the DigiCube and MediaKite reissue) likewise. The example file describes each variable.
+`SR2_GAME_EU`, `SR2_PFX_EU`, and `US`, `AU` and `JP` (the DigiCube and
+MediaKite reissue) likewise. The example file describes each variable.
 One left empty is shown as N/A, grey, by `check.py` and `sr2.sh BUILD
 show`, and is not counted as a skip.
 
@@ -55,7 +55,7 @@ tools/sr2.sh au run             # play it
 ```
 
 `tools/sr2.sh BUILD ACTION` works on one build with the paths from
-`~/.sr2-test`; BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`:
+`~/.sr2-test`; BUILD is `eu`, `us`, `au` or `jp`:
 
 | Action | Does |
 | --- | --- |
@@ -121,7 +121,8 @@ as a passing test.
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
 | `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, the input objects and the annex's poll stubbed |
 
-A truncated `data1.cab` works for `cab` (`head -c 16M`). To exercise the
+A truncated `data1.cab` works for `cab` (`head -c 16M`), as long as it
+keeps the `.cab` name. To exercise the
 disc reader without a dump:
 
 ```bash
@@ -180,8 +181,8 @@ masked, and read the hit back in a disassembler. `check_build` compares
 the row with the exe's import table and the `call` sites, so a wrong row
 fails before anything is written.
 
-A rebuild of a known exe is the easy case; `Japanese (DigiCube, MediaKite)` is the
-example. Search it for each European site's bytes unmasked first: the
+A rebuild of a known exe is the easy case; `Japanese (DigiCube,
+MediaKite)` is the example. Search it for each European site's bytes unmasked first: the
 hits come back at the old offset or at a constant delta, which shows
 where code moved. Data addresses stay put if the sections do.
 `tools/selftest.py` on an install from the disc then checks every site

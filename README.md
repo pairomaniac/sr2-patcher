@@ -292,8 +292,7 @@ Or from a terminal:
 python3 sr2-patcher.py --rip "Sega Rally 2 (Disc 2).cue" ~/games/sr2
 ```
 
-Any pressing's disc 2 will do: stripped of digital silence the three are
-the same recording.
+Any pressing's disc 2 will do: they all carry the same recording.
 
 ## Builds
 
@@ -309,9 +308,9 @@ chose on any CPU of the last twenty-five years.
 | Australian | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` | MK-85078-40 |
 | Japanese (DigiCube, MediaKite) | 1,469,952 | `5c0242443ea289d3d461b15eddb63388` | DWRPD-00081 |
 
-Every row is checked against a disc that matches its Redump dump. Sega's
-own 1999 Japanese disc and the I-O DATA bundle's are not in Redump and
-have not been seen; an image of either would be welcome.
+The Japanese row covers both DigiCube's and MediaKite's reissues, which
+are the same disc. Sega's own 1999 Japanese disc and the I-O DATA
+bundle's have not been seen; an image of either would be welcome.
 
 Before it writes anything the patcher checks every file it knows by
 size and checksum. If one does not match, nothing is touched and you get
@@ -356,12 +355,13 @@ window nor puts up the compatibility-assistant box about it.
 ## Reporting a bug
 
 Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues). Say
-which release you have (European, American, Australian, Japanese) - the window
-names it - whether you are on Windows or Wine/Proton, and what you were
-doing just before. For a crash on Windows, the entry under Event Viewer →
-Windows Logs → Application names the faulting module and offset, which is
-usually enough to find it. For a disc image of a release the patcher does
-not know, or anything that does not fit an issue: pairo@segaonline.net.
+which release you have (European, American, Australian, Japanese) - the
+window names it - whether you are on Windows or Wine/Proton, and what
+you were doing just before. For a crash on Windows, the entry under
+Event Viewer → Windows Logs → Application names the faulting module and
+offset, which is usually enough to find it. For a disc image of a
+release the patcher does not know, or anything that does not fit an
+issue: pairo@segaonline.net.
 
 ## Known issues
 
@@ -373,8 +373,8 @@ not know, or anything that does not fit an issue: pairo@segaonline.net.
 
 In no particular order:
 
-- **The other Japanese pressings** - DigiCube's and I-O DATA's, once an
-  image turns up.
+- **Sega's own Japanese disc and the I-O DATA bundle** - once an image
+  turns up.
 - **Proper controller prompts** - right now it's the usual keyboard labels.
 - **Controller rumble** - which the Dreamcast version does have.
 - **Fleshing out the online functionality** - this one's a long term goal,
@@ -398,8 +398,9 @@ unmodified build it has tables for.
 
 ## Credits and licence
 
-Successor to [v-on-patcher](https://github.com/pairomaniac/v-on-patcher).
-The logo and icon are the work of SirRockEmSockEm. The DigiCube and
-MediaKite support is by [chmcl95](https://github.com/chmcl95). The game is SEGA's.
+Successor to
+[v-on-patcher](https://github.com/pairomaniac/v-on-patcher). The logo
+and icon are the work of SirRockEmSockEm. The DigiCube and MediaKite
+support is by [chmcl95](https://github.com/chmcl95). The game is SEGA's.
 `LICENSE` (MIT) covers the patcher, its tools and its documentation, not
 the game or the bytes quoted from it.

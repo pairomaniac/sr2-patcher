@@ -646,7 +646,7 @@ def patches(build):
     # by several routes, so the annex answers the inputs that keep the
     # menus navigable only while the exe's car table (CARS) is empty: the
     # cars exist from a race's setup to its teardown, whatever the mode.
-    # The European and American MGInput.dll hook the device's poll; the
+    # Every MGInput.dll but the Australian hooks the device's poll; the
     # Australian, an older build with static polls, the keyboard poll's
     # address in the record update's dispatch (a relocated immediate).
     if len(site['xinput']) == 4:
@@ -662,8 +662,8 @@ def patches(build):
         (save, bytes.fromhex('81ec04010000'), None),
         (update, prologue, None),
         hook), 'apply_xinput')
-    # The kind site is the type byte's first read: a seven-byte cmp in the
-    # European and American MGInput.dll, a six-byte load in the Australian.
+    # The kind site is the type byte's first read: a seven-byte cmp in every
+    # MGInput.dll but the Australian, where it is a six-byte load.
     create, kind, iid_di, iid_dev = site['dinput8']
     table['dinput8'] = ('MUSASHI\\MGInput.dll', (
         (create, bytes.fromhex('8d4424106a00506800050000') + b'\x53\xe8' + struct.pack('<i', DI_THUNK[build] - (create + 18)), None),
@@ -5372,9 +5372,9 @@ def apply_xinput(buf, build):
     """padinput.asm in MGInput.dll, its tables and working area after the
     code: the registry helper's load and save and the config's update each
     jump to it, their displaced bytes copied into its replay slots; the
-    device's poll too on the European and American build, while on the
-    Australian the keyboard poll's address in the record update's dispatch
-    is pointed at the annex's five-argument entry."""
+    device's poll too on every build but the Australian, where the keyboard
+    poll's address in the record update's dispatch is pointed at the
+    annex's five-argument entry."""
     sites = BUILDS[build]['sites']['xinput']
     load, save, update, poll = sites[:4]
     blob = PADINPUT_BLOB + annex_tables() + b'\0' * (ANNEX_END - ANNEX_TABLES)

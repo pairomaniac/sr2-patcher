@@ -234,32 +234,31 @@ SPB-040's play disc is printed `GA-TNT216専用`; I-O DATA's
 [card page](https://www.iodata.jp/products/graphics/tnt2/stage4.htm)
 lists the retail game with the GA-TNT2 series.
 
-| Pressing | Build | What it rests on |
-| --- | --- | --- |
-| HCJ-0145 | not seen | no Redump entry |
-| DWRPD-00081 | Japanese (DigiCube, MediaKite) | Redump's [install](https://redump.info/disc/110322) and [play](https://redump.info/disc/110323) disc dumps, whose data tracks an image of the reissue matches |
-| MKW-166 | Japanese (DigiCube, MediaKite) | the same image |
-| SPB-040 | not seen | |
+| Pressing | Build |
+| --- | --- |
+| HCJ-0145 | not seen |
+| DWRPD-00081 | Japanese (DigiCube, MediaKite); Redump [install](https://redump.info/disc/110322) and [play](https://redump.info/disc/110323) disc |
+| MKW-166 | Japanese (DigiCube, MediaKite): the same data tracks |
+| SPB-040 | not seen |
 
 The Australian exe (2.0.0.2) is older than every update, and the
 Australian disc carries only English and Japanese, so HCJ-0145 may well
-be that build; without an image of it, that is a guess. Sega's updates, as sega.jp published them:
-`UPDATE231FULL.EXE` 25 Jun 1999, `UPDATE232FULL.EXE` 29 Jun,
-`UPDATE240FULL.EXE` 15 Jul, `UPDATE250FULL.EXE` 25 Oct, and
-`DisplaySettings.exe`, a settings tool, 14 Jul.
+be that build; without an image of it, that is a guess. Sega's updates,
+as sega.jp published them: `UPDATE231FULL.EXE` 25 Jun 1999,
+`UPDATE232FULL.EXE` 29 Jun, `UPDATE240FULL.EXE` 15 Jul,
+`UPDATE250FULL.EXE` 25 Oct, and `DisplaySettings.exe`, a settings tool,
+14 Jul.
 
 #### The DigiCube and MediaKite build
 
-The install disc's volume was made at 16:06 on 29 Nov 1999, the play
-disc's on 2 Nov 1999; the image here is two sectors longer than Redump's
-208,827, and its first 208,827 are Redump's DWRPD-00081 track. So the
-DigiCube and MediaKite reissues are one master, or the image is a
-DigiCube disc: either way the row covers both.
+The MediaKite disc's data tracks are the DigiCube ones Redump lists: one
+master, the install disc's volume made on 29 Nov 1999 and the play
+disc's on 2 Nov 1999, so one row covers both.
 
-The exe is the European one rebuilt five weeks later: 2.0.0.9, linked 29 Nov 1999,
-language 0x0411, the same sections at the same addresses and sizes bar
-`.text`, the same import slots. The code is the European code but for
-two functions:
+The exe is the European one rebuilt five weeks later: 2.0.0.9, linked 29
+Nov 1999, language 0x0411, the same sections at the same addresses and
+sizes bar `.text`, the same import slots. The code is the European code
+but for two functions:
 
 | Where | What |
 | --- | --- |
@@ -955,7 +954,7 @@ every Options page's DEFAULT reads back (`Options.dll` `0x10005143`
 takes `+0x58` to `+0x68`). The three volume sliders are its `+0x60`,
 `+0x64` and `+0x68`, 9 each, the top. `voldefault` makes them 6: a first
 start, or DEFAULT, sits 10.5 dB below the top on the mix's curve. The
-block is the same in the three builds.
+block is the same in every build.
 
 ### Effects at full
 
@@ -1474,7 +1473,7 @@ when they differ. Nothing a pad sends reaches an accelerator.
 So the pad is read where the sort is used. The `sortpad` patch
 (asm/sortpad.asm) makes the two instructions after the list's row
 update in that state (`0x10002764`, `mov ecx, [esi+0x50]; and edi,
-0xff`, the same in the three builds) a call that asks the annex's page
+0xff`, the same in every build) a call that asks the annex's page
 poll for side 0's LB and RB, keeps what was down, steps the mode left on
 a press of LB and right on RB, round at both ends, and makes the two
 instructions; the compare after them sorts the list as an F key would.
@@ -1537,7 +1536,7 @@ the next and previous camera; the left stick's halves left and right;
 RT 0x80 and LT 0x100, the zoom; Y 0x30, the meter; X 0x40, the switch),
 sets the analog from the left stick's x when the keyboard left it at 0,
 and makes the two loads. The D-pad, right stick, A and B are left out.
-The routine is the same in the three builds. `tools/replaypadtest.py`
+The routine is the same in every build. `tools/replaypadtest.py`
 runs the real update on the patched exe under Unicorn with the input
 objects stubbed.
 
@@ -1819,16 +1818,13 @@ Every cabinet checked (`root`, `serial`, `adv`) contains exactly the
 files the tiers hold. `diskid.2` is the text `Please enjoy SEGA RALLY
 2.` The disc is not needed by a full install.
 
-The three pressings hold one soundtrack: stripped of digital silence,
-the American and Australian tracks are bit-identical and the European
-within eleven samples. Europe trims the tail; the other two keep two
-seconds of it per track, and America adds 62 ms of lead. A rip from any
-of them plays the same music, with the disc's own silence at the loop.
-The DigiCube and MediaKite play disc has the same thirteen tracks under the
-same label, 11 samples off the Australian as the European is, but the
-one image here is not a clean read: tracks 2, 10 and 14 match, the rest
-have three-sector skips and bursts of read errors. Rip the music from
-another pressing's disc 2.
+The pressings hold one soundtrack: stripped of digital silence, the
+American and Australian tracks are bit-identical and the European within
+eleven samples. Europe trims the tail; the other two keep two seconds of
+it per track, and America adds 62 ms of lead. A rip from any of them
+plays the same music, with the disc's own silence at the loop. The
+DigiCube and MediaKite play disc has the same thirteen tracks, 11
+samples off the Australian as the European is.
 
 ## What is not done
 

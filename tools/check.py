@@ -9,12 +9,12 @@
 
 ~/.sr2-test (template: tools/sr2-test.example, used by tools/sr2.sh too)
 names, per build, the install disc and the installed game: SR2_DISC_EU,
-SR2_GAME_EU, and the same with US, AU, JP (Sega's disc) and JP_MK (the
-DigiCube and MediaKite reissue). Each that is set runs the checks that
-need a disc or a game on that build, labelled cab/EU and so on; one that
-is in the file but empty is shown as N/A. Each check is a script of its
-own; this only decides what to run and reports the result, and shows a
-script's output when it fails.
+SR2_GAME_EU, and the same with US, AU and JP (the DigiCube and MediaKite
+reissue). Each that is set runs the checks that need a disc or a game on
+that build, labelled cab/EU and so on; one that is in the file but empty
+is shown as N/A. Each check is a script of its own; this only decides
+what to run and reports the result, and shows a script's output when it
+fails.
 """
 import argparse
 import os
@@ -28,7 +28,7 @@ ROOT = os.path.dirname(HERE)
 PY = sys.executable or 'python3'
 CONF = os.path.expanduser('~/.sr2-test')
 SKIPPED = 77            # tools/uctest.py's exit code for "could not run"
-BUILDS = ('EU', 'US', 'AU', 'JP', 'JP_MK')
+BUILDS = ('EU', 'US', 'AU', 'JP')
 
 # name, what, command, needs: '' for none, 'disc' for the install disc
 # (and the game if there is one), 'game' for the installed game.

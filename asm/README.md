@@ -448,11 +448,11 @@ to its teardown.
 
 The registry helper's load and save become the `SR2.CFG` text store: a
 save whose name starts `DZ` takes the digits after it as that player's
-deadzone, and source 0x3f reads it back. The European and American
-builds' device poll is hooked at the same site; the Australian build has
-no such method, so its keyboard poll's address in the per-type dispatch
-is pointed at the annex instead. The Device Settings page polls the pad
-through an entry whose address the annex writes to an exe slot.
+deadzone, and source 0x3f reads it back. The European, American and
+Japanese builds' device poll is hooked at the same site; the Australian
+build has no such method, so its keyboard poll's address in the per-type
+dispatch is pointed at the annex instead. The Device Settings page polls
+the pad through an entry whose address the annex writes to an exe slot.
 `tools/padinputtest.py`.
 
 ## dinput8.asm
