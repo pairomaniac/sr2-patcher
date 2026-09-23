@@ -383,16 +383,18 @@ RESOLUTION_RELOCS = {0x3416, 0x3427, 0x3703}   # the absolutes in the replaced i
 # picks by the system and the dgvoodoo add-on; the full list otherwise.
 RESOLUTION_TABLES = {
     'full': (((640, 480), (800, 600), (1024, 768), (1280, 960), (1600, 1200),
-              (1280, 800), (1440, 900), (1680, 1050), (1920, 1200), (2560, 1600),
-              (1280, 720), (1600, 900), (1920, 1080), (2560, 1440), (3840, 2160),
-              (2560, 1080), (3440, 1440), (3840, 1080), (5120, 1440)),
-             ((4, 3, 5), (16, 10, 5), (16, 9, 5), (21, 9, 2), (32, 9, 2))),
+              (1280, 800), (1440, 900), (1680, 1050), (1920, 1200), (2560, 1600), (2880, 1800), (3840, 2400),
+              (1280, 720), (1366, 768), (1600, 900), (1920, 1080), (2560, 1440), (3200, 1800), (3840, 2160),
+              (5120, 2880),
+              (2560, 1080), (3440, 1440), (3840, 1600), (5120, 2160),
+              (3840, 1080), (5120, 1440), (7680, 2160)),
+             ((4, 3, 5), (16, 10, 7), (16, 9, 8), (21, 9, 4), (32, 9, 3))),
     'capped': (((640, 480), (800, 600), (1024, 768), (1280, 960), (1600, 1200),
                 (1280, 800), (1440, 900), (1680, 1050), (1920, 1200),
-                (1280, 720), (1600, 900), (1920, 1080),
+                (1280, 720), (1366, 768), (1600, 900), (1920, 1080),
                 (1280, 540), (1720, 720),
                 (1920, 540)),
-               ((4, 3, 5), (16, 10, 4), (16, 9, 3), (21, 9, 2), (32, 9, 1))),
+               ((4, 3, 5), (16, 10, 4), (16, 9, 4), (21, 9, 2), (32, 9, 1))),
 }
 RESOLUTIONS, RESOLUTION_GROUPS = RESOLUTION_TABLES['full']   # (aspect, sizes), in the list's order; resolution.asm names the groups
 
@@ -405,12 +407,12 @@ def select_resolutions(which):
 
 def resolution_groups(table=None):
     """(first entry, entries) per aspect group; the sizes checked against
-    the aspect loosely (the 21:9 sizes are 64:27 and 43:18)."""
+    the aspect loosely (the 21:9 sizes are 64:27, 43:18 and 12:5)."""
     sizes, groups = table or (RESOLUTIONS, RESOLUTION_GROUPS)
     out, start = [], 0
     for w, h, n in groups:
         for rw, rh in sizes[start:start + n]:
-            if abs(rw / rh - w / h) > 0.06:
+            if abs(rw / rh - w / h) > 0.07:
                 raise ValueError('%dx%d is not %d:%d' % (rw, rh, w, h))
         out.append((start, n))
         start += n

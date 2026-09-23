@@ -146,8 +146,9 @@ def main(argv):
     def page(off):
         return struct.unpack('<I', mu.mem_read(PAGE + off, 4))[0]
 
-    G16_9 = 2                                               # the 16:9 group, 1920x1080 its third
+    G16_9 = 2                                               # the 16:9 group
     N16_9 = patcher.RESOLUTION_GROUPS[G16_9][2]              # and its sizes
+    I1080 = patcher.RESOLUTIONS.index((1920, 1080)) - sum(n for _w, _h, n in patcher.RESOLUTION_GROUPS[:G16_9])
     # init: the stock choice 1 with no file: 4:3, its second; then a wide size in the file: its group and entry
     mu.mem_write(SETTINGS + 0x50, struct.pack('<I', 1))
     call(0, ebx=1, ecx=2)
@@ -155,7 +156,7 @@ def main(argv):
         raise SystemExit('resolutiontest: init from the stock choice gave %r' % ((page(0x30), page(0x34), page(0x70), page(0x74)),))
     state['answer'] = b'1920x1080'
     call(0, ebx=1, ecx=2)
-    if (page(0x30), page(0x34), page(0x70)) != (2, G16_9, N16_9):
+    if (page(0x30), page(0x34), page(0x70)) != (I1080, G16_9, N16_9):
         raise SystemExit('resolutiontest: init from the file gave %r' % ((page(0x30), page(0x34), page(0x70)),))
     state['answer'] = b'1234x567'
     call(0, ebx=1, ecx=2)
@@ -214,7 +215,7 @@ def main(argv):
         raise SystemExit('resolutiontest: the aspect row off the cursor drawn as %r %r' % (state['plate'], state['texts']))
     # leave: a wide row stores 0 and writes the group's size; a stock row stores itself
     mu.mem_write(PAGE + 0x34, struct.pack('<I', G16_9))
-    mu.mem_write(PAGE + 0x30, struct.pack('<I', 2))
+    mu.mem_write(PAGE + 0x30, struct.pack('<I', I1080))
     call(10)
     if struct.unpack('<I', mu.mem_read(SETTINGS + 0x50, 4))[0] != 0 or state['written'] != '1920x1080':
         raise SystemExit('resolutiontest: leaving with a wide size gave %r' % ((state['written'],)))

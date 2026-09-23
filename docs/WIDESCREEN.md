@@ -570,7 +570,7 @@ The page (`0x10003370` exec, `0x10002f20` draw; the page object at
 
 `resolution.asm` makes the row a list and adds an ASPECT RATIO row under
 it. The table is grouped by aspect (`RESOLUTION_GROUPS`, five groups,
-the 21:9 sizes 64:27 and 43:18); row 7 holds the group and row
+the 21:9 sizes 64:27, 43:18 and 12:5); row 7 holds the group and row
 6 the index within it, its count the group's; a change of aspect puts
 row 6 to the group's first at the next draw.
 

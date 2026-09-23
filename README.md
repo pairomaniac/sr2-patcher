@@ -205,8 +205,8 @@ the game plays. What each one writes is in
 
 **Options → Graphic Settings** gains an **Aspect Ratio** row - 4:3,
 16:10, 16:9, 21:9, 32:9 - and a **Resolution** row listing that shape's
-sizes, up to 3840x2160 and 5120x1440. The picture changes at the next
-screen.
+sizes, up to 5120x2880 at 16:9, 3840x2400 at 16:10, 5120x2160 at 21:9
+and 7680x2160 at 32:9. The picture changes at the next screen.
 
 A wide screen shows more at the sides rather than stretching the middle.
 The menus and the HUD keep their shape in the centre; the title and mode
@@ -369,6 +369,11 @@ issue: pairo@segaonline.net.
 - **Windows: error 80004005 at start.** One cause is fixed. If it still
   happens, tick **Direct3D bring-up** under DIAGNOSTICS, Apply, start the
   game, and send `logs\d3dinit.log` with the card and driver.
+- **Choppy on a 144 or 165 Hz display.** The game runs at a fixed 60
+  frames a second, and those cannot land evenly on a refresh that is not
+  a multiple of 60. Set the desktop to 120 or 60 Hz, or use G-SYNC or
+  FreeSync with windowed mode enabled. A frame cap does not help: the
+  game is already at 60.
 
 ## Planned
 
