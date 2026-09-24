@@ -106,7 +106,7 @@ absent resolver holds the list, not the game; the search reports
 Every datagram to the server carries a four-byte token the DLL made up
 when the connection opened, and the server echoes it in every answer;
 an answer without it - from a forged server address, say - is dropped.
-The server still answers the form from before the token in kind.
+The form from before the token (0.7.0) is not answered.
 
 A host registers its session with all three every second (`H`: the
 session's id, the record the list shows with the wire version, and a
