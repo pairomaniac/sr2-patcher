@@ -396,7 +396,10 @@ static int pack_roster(const sr2_net *n, uint8_t *out)
 static void take_roster(sr2_net *n, const uint8_t *data, int len)
 {
     player fresh[SR2_MAX_PLAYERS];
-    int i, c = data[0], pos = 1;
+    int i, c, pos = 1;
+    if (len < 1)
+        return;
+    c = data[0];
     memset(fresh, 0, sizeof fresh);
     for (i = 0; i < c && pos + 2 + SR2_NAME_LEN <= len; i++) {
         int idx = data[pos];
@@ -603,8 +606,8 @@ static void handle_message(sr2_net *n, peer *p, const uint8_t *pkt, int len, uin
         }
         break;
     case T_WELCOME:
-        if (n->is_host || blen < 2 + SR2_MAX_PLAYERS + 1 || body[0] >= SR2_MAX_PLAYERS)
-            break;                      /* an index past the table is no seat */
+        if (n->is_host || blen < 2 + SR2_MAX_PLAYERS + 1 || body[0] >= SR2_MAX_PLAYERS || body[1] >= SR2_MAX_PLAYERS)
+            break;                      /* an index past the table is no seat, the host's included */
         n->my_index = body[0];
         p->index = body[1];
         memcpy(n->reserved, body + 2, SR2_MAX_PLAYERS);
@@ -901,7 +904,7 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
     if (n->sock == SOCK_INVALID)
         return SR2_ERR;
     n->kind = kind;
-    n->rnd ^= now ^ (n->port << 16);
+    n->rnd ^= now ^ ((uint32_t)n->port << 16);
     n->have_target = 0;
     n->target.addr = htonl(INADDR_BROADCAST);
     n->target.port = SR2_PORT;
@@ -1056,7 +1059,7 @@ int sr2_join(sr2_net *n, const sr2_session *s, uint32_t now)
     n->join_last = now;
     memcpy(n->guid, s->guid, 16);
     copy_name(n->session_name, s->name);
-    n->max_players = s->max_players;
+    n->max_players = s->max_players > SR2_MAX_PLAYERS ? SR2_MAX_PLAYERS : s->max_players;
     peer_reset(&n->peers[0], &host, -1, now);
     nlog(n, "joining '%s' at %08x:%u", s->name, ntohl(host.addr.addr), host.addr.port);
     send_join(n, now);

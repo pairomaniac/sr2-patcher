@@ -58,6 +58,8 @@ static void log_open(void)
         return;
     while (n && path[n - 1] != '\\')
         n--;
+    if (n + sizeof "sr2-net.log" > sizeof path)
+        return;
     strcpy(path + n, "sr2-net.log");
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES)
         g_log = fopen(path, "a");

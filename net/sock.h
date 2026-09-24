@@ -14,6 +14,10 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <mstcpip.h>
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
 typedef SOCKET sock_t;
 #define SOCK_INVALID INVALID_SOCKET
 #else
@@ -82,7 +86,12 @@ static inline sock_t sock_open(uint16_t port, uint16_t *bound)
 #ifdef _WIN32
     {
         u_long nb = 1;
+        BOOL off = FALSE;
+        DWORD got = 0;
         ioctlsocket(s, FIONBIO, &nb);
+        /* an ICMP unreachable from a peer that went away would otherwise
+           make the next recvfrom fail with WSAECONNRESET */
+        WSAIoctl(s, SIO_UDP_CONNRESET, &off, sizeof off, NULL, 0, &got, NULL, NULL);
     }
 #else
     fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK);
