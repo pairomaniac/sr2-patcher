@@ -25,8 +25,8 @@
 ; The entries sit at fixed offsets. Load, save and update are reached by
 ; a jmp from the site; update's displaced bytes, and the poll's, the
 ; patcher copies into the replay slots here, load and save being
-; replaced whole. The European and American build's device poll is
-; hooked the same way; the Australian build, an older one, has no such
+; replaced whole. The European, American and DigiCube/MediaKite builds'
+; device poll is hooked the same way; the Australian build, an older one, has no such
 ; method - its record update calls a static poll per device type - so
 ; there the keyboard poll's address in that dispatch is pointed at
 ; pollau instead. The Device Settings page polls the pad through
@@ -803,8 +803,8 @@ keyboard:       db 'Keyboard', 0
 deadzone_name:  db 'Deadzone =', 0
 equals:         db ' = ', 0
 
-; open_cfg(access, disposition): SR2.CFG beside the exe, positioned at the
-; tail. eax = the handle, or INVALID_HANDLE.
+; open_cfg(access, disposition): SR2.CFG beside the exe, positioned at
+; CFG_STOCK, where the text starts. eax = the handle, or INVALID_HANDLE.
 open_cfg:
         push    esi
         push    edi

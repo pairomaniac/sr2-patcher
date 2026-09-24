@@ -47,7 +47,7 @@ bits 32
 %define DELAY       30                  ; frames a direction is held before it walks
 %define PERIOD      2                   ; frames a step then, the keyboard's
 %define INPUTS      12                  ; the inputs asked for
-%define SKIP        13                  ; the two stores after the site, returned past
+%define SKIP        13                  ; the site's nop and the two six-byte stores after it, returned past
 
 ; ecx = the level packed so far, edx = the edge the site made from it
 entry:  add     dword [esp], SKIP

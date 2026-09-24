@@ -37,8 +37,9 @@ Under the `netplay` key, with the stock DLL kept as `.bak`. `lobby` and
 
 The DLL is committed rather than carried inside the script: a whole DLL
 written out as a blob in the middle of a Python file is what a scanner
-calls a dropper. The patcher reads it from `net/` or from beside itself
-and checks it against `MGNETWK_SHA` before installing it.
+calls a dropper. The patcher reads it from `net/` or from beside itself - the Windows
+build from its `_internal` folder - and checks it against `MGNETWK_SHA`
+before installing it.
 
 ## The wire
 
@@ -108,6 +109,6 @@ which no sender makes, and a welcome whose index is past the player table.
 ```bash
 sudo tools/directory-install.sh install [PORT]   # /opt/sr2-netplay, sr2-directory.service, udp/47627
 sudo tools/directory-install.sh update           # after a git pull
-sudo tools/directory-install.sh remove           # the unit, the firewall rule and the files
+sudo tools/directory-install.sh remove           # the unit and the files; the firewall rule is left
      tools/directory-install.sh status           # systemctl, and the last week's sessions from the journal
 ```

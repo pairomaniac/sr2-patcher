@@ -4,9 +4,9 @@
     python3 tools/assets.py
 
 Writes the logo and the window icon as base64 PNG between the ASSETS BLOB
-markers in sr2-patcher.py, and assets/icon.ico for the exe. Both are
-reduced to a 256-colour palette, which the artwork fits and which is a
-fifth of the size. Needs Pillow.
+markers in sr2-patcher.py, and assets/icon.ico for the exe. The two
+PNGs are reduced to a 256-colour palette, which the artwork fits and
+which is a fifth of the size; the icon keeps the full RGBA. Needs Pillow.
 """
 
 import base64

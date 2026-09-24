@@ -21,7 +21,7 @@ Wire format, one UDP datagram each, all starting with the magic "SR2D":
     server -> client
         S <n> {<guid> <ep> <record>}...   the open sessions
         P <ep>                    the other side's endpoint
-        N                         no such session
+        N                         no such session (the DLL does not read it yet)
         D <ep> <data>             to a host: relayed from the guest at <ep>
         D <data>                  to a guest: relayed from the host
 

@@ -527,7 +527,7 @@ static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, in
         return;
     }
     nonce = rd32(pkt + HDR + 16);
-    if (!p)                             /* the same guest by another road: a NAT gave it another address */
+    if (!p)                             /* the same guest by another road: a NAT gave it another address, or a direct join reached a relayed one */
         for (i = 0; i < SR2_MAX_PLAYERS; i++)
             if (n->peers[i].used && n->peers[i].nonce == nonce) {
                 p = &n->peers[i];

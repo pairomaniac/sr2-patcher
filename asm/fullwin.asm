@@ -180,7 +180,7 @@ present:
         push    eax
         call    [ecx + BLT]
         mov     [ebx + LASTHR], eax
-        call    getbase                 ; esi was the picture's height by now
+        call    getbase                 ; esi was the client width by now
         call    stamp
         mov     [esi + t_blt], eax
         mov     eax, [ebx + LASTHR]     ; the blit's result, as the original returned it

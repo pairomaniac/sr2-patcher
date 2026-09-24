@@ -35,7 +35,7 @@ SR2_PFX_JP=
 SR2_PFX_JP_MK=
 
 # How to run: umu with a Proton, or plain wine. Unset, umu-run is taken
-# from PATH and the newest Proton-CachyOS under
+# from PATH and the last Proton-CachyOS by name under
 # ~/.steam/root/compatibilitytools.d.
 SR2_UMU=/usr/bin/umu-run
 SR2_PROTON="$HOME/.steam/root/compatibilitytools.d/Proton-CachyOS Latest"

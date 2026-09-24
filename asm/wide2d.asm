@@ -76,9 +76,9 @@
 ; With `trace` set (the d3dtrace diagnostic) every present reports
 ; "sr2 p", a frame's end, and every draw through the six
 ; draw entries reports itself on OutputDebugStringA and to
-; logs\d3dtrace.log beside the exe, the first 60000 -
+; logs\d3dtrace.log beside the exe, the first 400000 -
 ; at 2 (d3dtrace2d) only the 2D that is not a quad, the lists, strips
-; and fans, since the menus' quads fill the 60000 before a race starts:
+; and fans, since the menus' quads fill the 400000 in a couple of minutes:
 ; "sr2 d e fvf count ret x0 y0 z0 tex kind", e the entry (q, t, l, i, s,
 ; f), ret the draw's return address (the loaddll lines say whose), the
 ; first vertex in hex before any scaling, the texture selected and what
@@ -1158,7 +1158,7 @@ clip:
         sub     esi, 4
         sub     edi, 4
         ret
-.axis:  push    ecx                     ; the limits: [esp] the far, [esp+4] the near
+.axis:  push    ecx                     ; the limits: [esp+4] the far, [esp] the near
         push    eax
         mov     eax, [edi + 8]          ; the destination's span, and the source's
         sub     eax, [edi]

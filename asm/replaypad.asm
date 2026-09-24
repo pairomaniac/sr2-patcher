@@ -24,8 +24,8 @@
 ; left it at 0, then does the two loads.
 ;
 ; esi = the player's level word (the object + 0x20 + player * 4), edi =
-; the player. Everything but edx and eax, which the loads set, comes
-; back as it was.
+; the player. Everything but edx and eax, which the loads set, and the
+; flags comes back as it was.
 
 bits 32
 

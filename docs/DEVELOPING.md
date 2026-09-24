@@ -33,7 +33,7 @@ here needs pip. None of it is needed to run the patcher.
 | `python3-pyflakes` | the `lint` check |
 | `python3-unicorn` | the checks that run the stubs |
 | `python3-pefile` | the `clearsize` and `replaypad` checks |
-| `python3-pil`, `fonts-urw-base35` | `tools/txrdump.py`; `tools/labels.py` and its check |
+| `python3-pil`, `fonts-urw-base35` | `tools/txrdump.py`, `tools/assets.py`; `tools/labels.py` and its check |
 | `gcc-mingw-w64-i686` | `net/build.py`, the network DLL |
 | a C compiler (`cc`) | the `nettest` check |
 | `tkinter` | the window |
@@ -55,7 +55,8 @@ tools/sr2.sh au run             # play it
 ```
 
 `tools/sr2.sh BUILD ACTION` works on one build with the paths from
-`~/.sr2-test`; BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`:
+`~/.sr2-test`; BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`, and ACTION
+is `run` when left out:
 
 | Action | Does |
 | --- | --- |
@@ -91,12 +92,14 @@ Two more tools for the daily work:
 ## The checks
 
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-There are 29. The first nineteen, down to `gui`, need nothing but nasm,
-pyflakes, Unicorn, Pillow, tkinter and a C compiler, and CI installs
-nasm, pyflakes and xvfb and runs the lot. The last ten need the discs
-and the games and skip themselves without. A tool that cannot run exits
-77 and is reported SKIP rather than OK, so a missing package never reads
-as a passing test.
+There are 33. The first 21, down to `gui`, need nothing but nasm,
+pyflakes, Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C
+compiler, and CI installs those and runs them. The last twelve need the
+discs and the games and skip themselves without; `devices` also needs
+nasm, whose listing it reads. A tool that cannot run exits 77 and is
+reported SKIP rather than OK, so a missing package never reads as a
+passing test. `clearsize` is Australian only and says so as a note on
+the other builds.
 
 | Check | Catches |
 | --- | --- |
@@ -345,8 +348,9 @@ git push origin v0.4.0
 ```
 
 `VERSION` stays `dev` in the repository - the workflow stamps it from the
-tag name, so the tag, the exe's filename, its Windows file properties and
-`--version` cannot disagree. A push that is not a tag builds the same two
+tag name less its `v`, so the tag, the exe's filename, its Windows file
+properties and `--version` cannot disagree; the zips carry the tag as it
+is. A push that is not a tag builds the same two
 zips as an artifact, named with the short SHA, and leaves the release
 page alone.
 
@@ -431,6 +435,7 @@ PyInstaller's bootloader from source rather than taking the wheel's,
 which every PyInstaller exe ever shipped has in common; stamps the
 version from the tag, or the short SHA otherwise; checks that tkinter,
 the certifi CA list and the netplay DLL are in the bundle; and runs the
-exe's `--selfcheck`, which is the only thing that catches an over-eager
-entry in the spec's `EXCLUDES`. A tag also uploads both zips to the
-release page.
+exe's `--selfcheck`, which catches an over-eager entry in the spec's
+`EXCLUDES` among the modules the tables import - not tkinter, certifi
+or ctypes, which are imported later and only the window exercises. A tag
+also uploads both zips to the release page.

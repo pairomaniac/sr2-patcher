@@ -6,7 +6,7 @@
 D3DINIT_BLOB is mapped as the patcher would place it in a relocated
 MGameD3D.dll, with the three kernel32 import slots pointing at stubs
 here that play GetModuleHandleA, GetProcAddress, GetModuleFileNameA,
-CreateDirectoryA, CreateFileA and WriteFile. Three calls from three
+CreateDirectoryA, CreateFileA and WriteFile. Four calls from four
 sites must store each HRESULT in the last-HRESULT slot, make logs\
 beside the exe, write the header and one line per call to a file in it,
 and return with every register and the flags as they were. Needs python3-unicorn; exits 77 with a note when

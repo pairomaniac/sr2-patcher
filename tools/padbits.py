@@ -3,7 +3,7 @@
 (0x43f8e0) under Unicorn with MGInput's GetActionState stubbed to answer
 one action at a time, and print which menu flag each action lands on.
 
-    python3 padbits.py GAMEDIR
+    python3 tools/padbits.py GAMEDIR      # a European install; the addresses are that build's
 """
 import struct
 import sys

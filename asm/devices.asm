@@ -157,12 +157,12 @@ init:
 .ready:
         lea     eax, [ebx + MAGIC_BINDDATA]
         cmp     byte [eax + D_LIVE], 0
-        je      .live
+        je      .shown                  ; live already: the values stand
         push    ebp
         mov     ebp, edi
         call    refresh                 ; the values from the records
         pop     ebp
-.live:
+.shown:
         inc     dword [esi + STATE]
         pop     edi
         pop     ebx
@@ -401,7 +401,7 @@ exec:
         test    ecx, ecx
         jz      .out
         mov     edx, [ecx]
-        push    1
+        push    1                       ; player 1's
         call    [edx + 0x14]            ; the frame's key bits
         mov     edi, eax
         cmp     dword [ebp + binding - $$], 0
@@ -722,8 +722,8 @@ rowof:
         movzx   edx, byte [ebx + MAGIC_BINDDATA + D_ROWACTS + ecx]
 .done:  ret
 
-; eax = the cursor's player, ecx = its row: the pad input eax pressed
-; now. edi kept.
+; eax = the cursor's player, ecx = a pad input, 0..25: eax = 1 while
+; that input of the player's side is pressed, else 0. edi kept.
 padpressed:
         push    ecx
         lea     ecx, [eax * 8]
@@ -1001,7 +1001,8 @@ defaults:
         pop     eax
         ret
 
-; eax = a deadzone, 0..10000: edx = "DZnnnn" for Persist.
+; eax = a deadzone, 0..9999 (DEADZONE_MAX is 9000): edx = "DZnnnn" for
+; Persist.
 dzname:
         push    eax
         push    ecx

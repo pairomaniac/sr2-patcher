@@ -16,7 +16,7 @@
 #define SR2_DIRECTORIES     {"segaonline.net", "us.segaonline.net", "jp.segaonline.net", 0}
 #define SR2_MAX_PLAYERS     4
 #define SR2_NAME_LEN        64      /* the game's name fields, NUL included */
-#define SR2_MAX_PAYLOAD     1024    /* the game's largest message is 0x136 */
+#define SR2_MAX_PAYLOAD     1024    /* the game's largest message is 0x134, 0x136 with the stock DLL's header */
 #define SR2_MAX_SESSIONS    16
 
 /* OpenConnection kinds as the exe passes them: rows 0, 1, 2 of the screen. */

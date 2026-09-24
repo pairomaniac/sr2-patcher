@@ -10,7 +10,7 @@ it was called from, and leave the arguments where the caller's own
 `add esp, 8` will take them off - the clear is cdecl. Anything else and
 the site's return address is not where the game left it.
 
-Nothing to do on the other two builds, which pass the height already.
+Nothing to do on the other three builds, which pass the height already.
 Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct

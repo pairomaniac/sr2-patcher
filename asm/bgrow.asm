@@ -134,9 +134,6 @@ bits 32
 %endif
         ret
 
-; The bars each side of the drawn picture, in the mean colour of the
-; picture's own edge columns: ebp = the frame, the picture drawn. Nothing
-; to do when it fills the width.
 ; The picture into the .bg surface MGameD3D's annex keeps, at source
 ; size: the picture in the middle, the side areas either side as their
 ; slivers - the same sliver each bar shows, at one source column to

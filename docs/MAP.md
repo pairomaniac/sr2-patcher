@@ -8,7 +8,7 @@ Addresses are the European build's; the American and Australian rows in
 file in every build unless a section says otherwise.
 
 Six DLLs have a section here. `MGameGL.dll`'s addresses are in
-WIDESCREEN.md, `ReplayGallery.dll` has two sites and no section of its
+WIDESCREEN.md, `ReplayGallery.dll` has three sites and no section of its
 own, and `MGNetWk.dll` is replaced whole rather than patched
 (NETWORK.md). Section 10 lists every patch's sites whatever file they
 are in.
@@ -286,7 +286,7 @@ given.
 | netplay | the file | `MUSASHI\MGNetWk.dll` replaced whole (stock 121344 bytes, MD5 `0a9f86f5…`, the same in every build) |
 | lobby | 11 + art | exe `0x43bd58`, `0x43bd76` (50 bytes), `0x43bda8`, `0x43bdcc`, `0x43bddd`, `0x43bf57`, `0x43bf77`, `0x43bf85`, `0x43bfcf`, `0x4400dd`, `0x43efe0` (files `0x3b158`, `0x3b176`, `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; the other builds' anchors in `BUILDS`); `BINDATA\connect\PROTOCOL\CONNECT.BMP` repainted, `CONNECT_{IPX,TCPIP,MODEM}_{OFF,ON,ON2}.BMP` rewritten |
 | loadhold | 2 + section | `SEGA RALLY 2.exe` `0x41a7bb` and `0x4195be` (6 bytes each), the annex |
-| padmenu | 1 + section | `SEGA RALLY 2.exe` `0x43f94f` (6 bytes), the annex |
+| padmenu | 1 + section | `SEGA RALLY 2.exe` `0x43f94f` (file `0x3ed4f`, 6 bytes; American `0x3f07f`, Australian `0x6d63f`, DigiCube/MediaKite `0x3ed4f`), the annex |
 | sortpad | 1 + section | `ReplayGallery.dll` `0x10002764` (file `0x1b64`, 9 bytes; the same in every build), the annex |
 | pagepad | 1 + section | `SEGA RALLY 2.exe` `0x47f506` (file `0x7e906`, 6 bytes; American `0x7ed26`, Australian `0xbdef8`, DigiCube/MediaKite `0x7e8f6`), the annex |
 | replaypad | 1 + section | `SEGA RALLY 2.exe` `0x440cea` (file `0x400ea`, 5 bytes; American `0x4047a`, Australian `0x6e99a`, DigiCube/MediaKite `0x400ea`), the annex |

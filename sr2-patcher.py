@@ -2,7 +2,7 @@
 """SEGA RALLY 2 (PC, 1999) patcher. See README.md.
 
     python3 sr2-patcher.py                          the window
-    python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab
+    python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab, then patch with the defaults
     python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game: every patch, the ones KEYS names, or all but the ones it names with a minus (-music);
                                                     the dgvoodoo add-on with them on Windows, named or -dgvoodoo elsewhere or not
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
@@ -44,12 +44,12 @@ CAB = 'data1.cab'
 IMAGE_BASE = 0x400000                   # the exe is never relocated
 
 # Builds. The exe's MD5 picks the row, and the row holds everything a
-# patch needs that moves between builds: the fingerprints of the six
-# Pentium III files and the three patched DLLs, the exe's patch sites
-# (file offsets), the import slots those sites name, and the addresses
-# the stubs in asm/ read (VAs). MGameD3D.dll is the same file in all
-# four. Everything else in the script is written against the European
-# row; the others map it.
+# patch needs that moves between builds: the fingerprints of fourteen
+# files (the six the Pentium III build replaces and the eight more the
+# patches touch), the exe's patch sites (file offsets), the import slots
+# those sites name, and the addresses the stubs in asm/ read (VAs).
+# MGameD3D.dll is the same file in all four. Everything else in the
+# script is written against the European row; the others map it.
 PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGameGL.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll',
            'MUSASHI\\MGInput.dll', 'MUSASHI\\MGNetWk.dll', 'Title.dll', 'Options.dll', 'ReplayGallery.dll')
 
@@ -80,7 +80,7 @@ BUILDS = {
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': 0x7e906, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
-                  'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European build only: the diagnostic was never sited elsewhere
+                  'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
                   'voldefault': 0xd01a8},  # the defaults block's three sliders
@@ -276,8 +276,10 @@ RESTORE_RELOCS = 10
 # Patch table: key -> (file, sites, transform). A site is (file offset,
 # original, replacement); a replacement of None means the bytes are only
 # verified, the transform writes them. The transform, if any, runs after
-# the sites and may grow the file. Applied in this order. Addresses are
-# the European build's; docs/NOTES.md has the account of each.
+# the sites and may grow the file. Applied in the order the keys are
+# given, which parse_keys and group_keys keep as this table's; devices
+# has to come before resolution (_next_section_rva). Addresses are the
+# European build's; docs/NOTES.md has the account of each.
 #
 #   nodisc      the disc check returns "found"; the loader takes the exe's directory
 #   nocardwarn  the video-card warning box skipped
@@ -717,12 +719,12 @@ FEATURES = (
      '\tand stopped at "Failed to initialize. Error code\n'
      '\t80004005" without it.\n'
      'Desktop depth\tAny depth. The windowed path wanted a 16-bit desktop.\n'
-     'Windows version\tAny version. The Australian release wanted 98 or\n'
-     '\tolder.', ('nocardwarn', 'anymode', 'anydepth', 'win9x')),
+     'Windows version\tAny version. The Australian release wanted\n'
+     '\tWindows 9x.', ('nocardwarn', 'anymode', 'anydepth', 'win9x')),
 
     ('crashes', 'Crash fixes',
      'Three reads and frees past the end of something, each of which\n'
-     'Windows ends the process for.\n'
+     'ends the game.\n'
      '\n'
      'Starting up\tThe back buffer detached from its Z-buffer, which\n'
      '\tclosed the game before its window appeared under Proton.\n'
@@ -772,8 +774,7 @@ FEATURES = (
 
     ('hud', 'Fix the HUD over the scenery',
      'The HUD drawn after the scene rather than in the middle of it. The\n'
-     'tachometer\'s plate blanked the lake behind it on Mountain, and the\n'
-     'ten-year championship\'s credits ran behind the replay\'s frame.',
+     'tachometer\'s plate blanked the lake behind it on Mountain.',
      ('hudlast',)),
 
     ('sound', 'Sound fixes',
@@ -792,7 +793,7 @@ FEATURES = (
      'is.', ('noregistry',)),
 
     ('widescreen', 'Native widescreen',
-     'The game renders at the size you pick, 640x480 to 3840x2160, in\n'
+     'The game renders at the size you pick, 640x480 to 7680x2160, in\n'
      'place of 640x480 stretched to the window.\n'
      '\n'
      'Aspect Ratio\tA row under Options - Graphic Settings: 4:3, 16:10,\n'
@@ -861,7 +862,7 @@ BY_GROUP = {group: (label, tip, keys) for group, label, tip, keys in FEATURES}
 DIAGNOSTIC_INFO = {
     'voltrace': ('Volume calls', 'Reports every call into the five volume '
                  'routines on +debugstr, for a slider that is not doing what '
-                 'it says. The European release only.'),
+                 'it says. The European and DigiCube/MediaKite releases only.'),
     'frametrace': ('Frame pacing', 'Logs every drawn frame to '
                    'logs\\frames.log: when it started, how long it took and '
                    'what it waited for. For stutter and for a frame rate that '
@@ -900,9 +901,10 @@ def group_keys(groups, extra=()):
 MCI_CALL_SITES = 11
 MCI_LOAD_SITES = 1
 
-# The section each transform appends, one per patch so any one can be
-# left out. Code that keeps no data of its own is read-only.
-ANNEX = b'.sr2'                         # the one section the patches append to a file, each growing it
+# The one section the patches append to a file, the first transform that
+# needs it making it and the rest growing it, so any patch can be left
+# out. Code that keeps no data of its own is read-only.
+ANNEX = b'.sr2'
 CODE_SECTION = 0x60000020               # IMAGE_SCN_CNT_CODE | MEM_EXECUTE | MEM_READ
 
 
@@ -4432,7 +4434,7 @@ LOBBY_LABELS = {
 # MUSASHI\MGNetWk.dll, built from net/ and carried beside the patcher
 # rather than inside it; MGNETWK_SRC the sources' hash, MGNETWK_SHA the
 # file's.
-MGNETWK_SRC = '709eb91341fb718b26ac57c9e1cc1887a9c15df353e7944c0a6ccfc5e258c913'
+MGNETWK_SRC = '6524bc456f18f061995bdf4b5efcfbb9f4e957cc09aeb6d290091b30e8722c10'
 MGNETWK_SHA = 'b93e2a17a4e0d1e8edfb6080df4e373fa4268c015bccf6ed035bcd939edee8f3'
 # --- GENERATED by net/build.py: END ---
 
@@ -4802,8 +4804,9 @@ class Cabinet:
         sig, self.version, _vol, desc_off, desc_size = struct.unpack('<5I', self.fh.read(0x14))
         if sig != IS_SIGNATURE:
             raise ValueError('not an InstallShield cabinet')
-        # 0x01000004 (the European disc) stores a compressed file as one
-        # deflate stream; the later engine (0x01005100 on the other two)
+        # 0x01000004 (the European and the DigiCube/MediaKite discs) stores
+        # a compressed file as one deflate stream; the later engine
+        # (0x01005100 on the American and Australian)
         # as chunks, each a u16 length and a stream of its own.
         self.chunked = self.version != IS_UNCHUNKED
         self.fh.seek(desc_off)
@@ -4902,7 +4905,7 @@ def install(src, dest, lang='English', log=print, progress=None):
         if missing:
             raise ValueError('this disc has no %s' % ', '.join(missing))
         total = sum(e.size for g in groups for e in cab.groups[g])
-        log('install: %d MB to %s' % (total // 1000000, dest))
+        log('install: %d MB to %s' % (total >> 20, dest))
         done = 0
         for g in groups:
             for e in cab.groups[g]:
@@ -6429,7 +6432,8 @@ def apply_sortpad(buf, build):
 def apply_fullwin(buf, _build=None):
     """fullwin.asm in MGameD3D: the windowed present jumps to its first
     thunk, the window sizing calls its second. The section is writable:
-    the present keeps its answer on the monitor's refresh rate in it."""
+    the present keeps the counter after its blit and the resolved
+    QueryPerformanceCounter in it, for frametrace."""
     if _drop_relocations(buf, FULLWIN_RELOCS) != len(FULLWIN_RELOCS):
         raise ValueError('relocation entries for the present not all found')
     out, rva = _self_section(buf, FULLWIN_BLOB)
@@ -7472,8 +7476,8 @@ INSTALL_TIP = ('Install disc\tDisc 1, as a .cue with its .bin beside it, an '
                'Language\tThe language of the menus, the messages and the '
                'readme; Japanese also brings the Japanese car narration. The '
                'game itself is the same either way.\n'
-               'Room\tThe game takes about 800 MB in the folder above, and '
-               'the soundtrack another 550 MB.')
+               'Room\tThe game takes about 550 MB in the folder above, and '
+               'the soundtrack about as much again.')
 
 INSTALL_PICK = 'Pick the install disc to start.'
 INSTALL_NEEDS_DEST = 'Choose a game folder above to install it into.'
@@ -7538,7 +7542,7 @@ MUSIC_ODD_AUDIO = ('This image has %d audio tracks; the play disc has %d. '
 # can check against what they ticked, and it is what a bug report needs.
 DONE = 'Done - %d patches written. Restore original puts the game back.'
 FAILED = 'Failed - see the log below. Every file written has its .bak beside it; Apply starts from those.'
-RESTORED = 'Restored. The game is as it was installed.'
+RESTORED = 'Restored. The original files are back in place.'
 BUSY = 'Working\u2026'
 
 ABOUT_NOTE = ('Every patched file is backed up as a .bak beside it, and '
@@ -9258,7 +9262,8 @@ def parse_keys(words):
     listed, less any given with a leading minus; a diagnostic named is
     added to either, the windowed mode to any list, and the dgvoodoo
     add-on where it is the default unless named with a minus. Words may be
-    separated by commas or spaces (PowerShell hands a,b over as two)."""
+    separated by commas or spaces (PowerShell hands a,b over as two). A
+    list that names a patch without what it needs is refused by patch()."""
     keys = [('-' if k.startswith('-') else '') + k.lstrip('-') for w in words for k in w.split(',') if k]
     unknown = [k for k in keys if k.lstrip('-') not in PATCH_KEYS + BYNAME + ADDONS]
     if unknown:

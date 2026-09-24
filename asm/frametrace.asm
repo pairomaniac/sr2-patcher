@@ -24,8 +24,9 @@
 ; are kept as pointers in the data. 0xE7E7E7E1 and 0xE7E7E7E2 are dwords
 ; after the blob the patcher fills with the counter routine's address and
 ; the gate's sixth byte; 0xE7E7E7E3 it replaces with the stamp's offset
-; from the present. kernel32's GetModuleFileNameA, CreateDirectoryA,
-; CreateFileA and WriteFile and user32's wsprintfA are resolved once. If anything fails
+; from the present. kernel32's GetModuleHandleA, GetModuleFileNameA,
+; CreateDirectoryA, CreateFileA and WriteFile and user32's wsprintfA are
+; resolved once. If anything fails
 ; the handle is -1 and nothing is logged.
 
 bits 32

@@ -13,7 +13,7 @@ more; both pressed at once, LB; other inputs and side 1's ignored; the
 order never touched; the site's two instructions made as before; an
 empty poll slot or no sort block passed over.
 
-Needs python3-unicorn and pefile; exits 77 with a note when missing.
+Needs python3-unicorn; exits 77 with a note when missing.
 """
 import struct
 import sys

@@ -11,8 +11,9 @@
 ; init struct's copy and the device's largest texture from the
 ; D3DDEVICEDESC the device enumeration kept (0 before it) - so the
 ; last line with a negative hr names the call that failed. After the
-; store at Init's tail (FMTSITE, the texture formats enumerated and one
-; picked) one more line, "fmt <slots> <chosen> <not565>": which of the
+; store that follows Init's bring-up tree (FMTSITE, the second of its
+; five stores, the texture formats enumerated and one picked by then)
+; one more line, "fmt <slots> <chosen> <not565>": which of the
 ; DLL's thirteen format slots the device filled (bit n for slot n: 0
 ; P8, 1 X1R5G5B5, 2 R5G6B5, 3 A1R5G5B5, 4 A4R4G4B4, 5 P4, 6-10 DXT, 11
 ; X8R8G8B8, 12 a 16-bit RGB), the slot picked for the 16-bit textures
@@ -34,7 +35,7 @@ bits 32
 %define HEIGHT          0x12400
 %define MAXTEXW         0x124e4         ; the chosen device's D3DDEVICEDESC at 0x12430: dwMaxTextureWidth, Height
 %define MAXTEXH         0x124e8
-%define FMTSITE         0x20c5          ; a store at Init's tail, after the texture formats are enumerated and one picked
+%define FMTSITE         0x20c5          ; the second of Init's five stores, after the texture formats are enumerated and one picked
 %define FMTSLOTS        0x12594         ; the thirteen slots, a DDPIXELFORMAT copy each, 32 bytes; dwSize 0 when empty
 %define FMTSLOTN        13
 %define FMTCHOSEN       0x12740         ; the slot picked for the 16-bit textures

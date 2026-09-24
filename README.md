@@ -109,7 +109,7 @@ You need both discs: the game is on the first, the music on the second.
 - **Play disc** - a `.cue` with its `.bin` files. An `.iso` will not do
   here: it drops the audio tracks, and those are the music.
 
-The game takes about 800 MB and the soundtrack another 550 MB.
+The game takes about 550 MB and the soundtrack about as much again.
 
 ### If you have the discs, not images
 
@@ -139,7 +139,7 @@ What each one changes, down to the byte, is in
 - **No disc required** - every mode plays with nothing in the drive.
 - **Skip the start-up checks** - a 1999 video card, a 640x480 16-bit
   display mode, a 16-bit desktop and, on the Australian release, Windows
-  98. Nothing today passes them.
+  9x. Nothing today passes them.
 - **Crash fixes** - on start-up, on the logo screen, and on the way out
   of the replay gallery.
 - **Fix the picture after ALT+TAB** - it comes back instead of staying
@@ -395,12 +395,18 @@ made; `tools/check.py` runs every check. The Windows build is
 
 ## AI disclaimer
 
-LLMs are part of the toolchain, alongside pefile, capstone, unshield,
-Unicorn, Wine's tracing and WinDbg on the running game. Scope, testing and
-debugging are human: every change is read before it goes in and played
-before it ships. Offsets are verified against the originals before
-anything is written, and the patcher refuses any file that is not an
-unmodified build it has tables for.
+Much of the assembly and the documentation was written with an LLM.
+The reverse engineering was not: the addresses and behaviour each
+patch relies on come from tracing and debugging the running game with
+pefile, capstone, unshield, Unicorn, Wine's channels and WinDbg, and
+the LLM writes to that brief. This edits a few hundred bytes of an
+existing binary, not a reimplementation of it.
+
+Everything it writes is read line by line before it goes in, and every
+patch is play-tested on every supported build before it ships. Offsets
+are verified against the originals before anything is written, and the
+patcher refuses any file that is not an unmodified build it has tables
+for.
 
 ## Credits and licence
 

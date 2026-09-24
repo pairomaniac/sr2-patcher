@@ -66,7 +66,9 @@ Two rules every blob follows:
 The `mixerless` stub is three instructions, written by `apply_mixerless`
 in the patcher rather than assembled here. Each file's placeholders are
 named after it: `DEVICES_MAGICS`, `PADINPUT_MAGICS`, `DINPUT8_MAGICS`,
-`NOGENERIC_MAGICS`, `RESOLUTION_MAGICS`.
+`NOGENERIC_MAGICS`, `RESOLUTION_MAGICS`; sortpad's one (`SORTPAD_MAGICS`
+here) and voltrace's and frametrace's return slots (`0xE7E7E7E1` on)
+the patcher fills by their values.
 
 The trace formats the diagnostics and the widescreen blobs print are in
 [docs/DEVELOPING.md](../docs/DEVELOPING.md), *Diagnostics*.
@@ -228,7 +230,8 @@ dropped by the patcher. `tools/activatetest.py` runs it relocated.
 
 ## texrange.asm
 
-Ten bytes over MGameD3D's texture release at `0x10004430`, which took
+A `jmp` over the first ten bytes of MGameD3D's texture release at
+`0x10004430`, into this routine in the annex. The release took
 the pointer at `[table + N*4]`, released it and cleared the slot without
 looking at `N`. VendorLogo's End releases texture −128, the dword 512
 bytes before the table: whatever the heap left there. Zero and nothing
@@ -271,9 +274,11 @@ reads the lock's description at `0x4e6878`:
   expands each 565 pixel to XRGB8888 for a 32-bit surface;
 - with another size it draws the whole picture on the first row -
   nearest pixel, the largest size of the picture's aspect that fits,
-  centred between bars carrying the picture itself, motion-blurred and
-  stretched - composed at source size into `MGameD3D`'s surface, or
-  drawn here when there is none - and nothing on the rows after.
+  centred between bars - the picture itself, motion-blurred and
+  stretched, in the `Title.dll` build; each side filled with the
+  picture's corner pixel in the exe's - composed at source size into
+  `MGameD3D`'s surface, or drawn here when there is none - and nothing
+  on the rows after.
 
 `eax`, `ebx` and `edx` come out as they went in; the rest were scratch
 at the site.
@@ -299,8 +304,8 @@ path.
 
 **`widegl.asm`** takes over `SetViewport`, `SetPerspective` and
 `SetCentre` at their prologues, adjusts the arguments on the stack, does
-the prologue itself and jumps on with the resume address in `eax`, which
-the methods load next. The projection and the parameter getter it takes
+the prologue itself and jumps on with the resume address in `eax`, dead
+at that point of the methods. The projection and the parameter getter it takes
 at their entries, calls the rest as a routine with the arguments pushed
 again and converts what it wrote; the inverse projection continues into
 the method with its point argument at a converted copy.
@@ -311,9 +316,10 @@ argument pointing at its scaled copy. The device's viewport setter is
 taken the same way, its rect argument pointed at a scaled copy - the
 rect into the picture's 4:3 box, both by the height, and its fractions
 taking the box's share of the screen so the countdown digit keeps its
-4:3 size. Its ninth entry sits in the texture create, marks what the
-texture is for the side bars' sake and replays the thirteen bytes it
-took.
+4:3 size. Its eighth entry is the present: it closes the frame's tile
+table, hooks ddraw's `Blt` for the lobby's stretch and keeps the `.bg`
+surface. Its ninth sits in the texture create, marks what the texture
+is for the side bars' sake and replays the thirteen bytes it took.
 
 `widegl` and `wide2d` each carry a trace, off unless the `gltrace` or
 `d3dtrace` diagnostic sets its flag; the patcher finds the flag by a
@@ -532,8 +538,9 @@ the jump the borderless patch put at MGameD3D's present - opening it on
 the first frame with a header `budget <ticks> qpc <0|1>` from the timer
 object in `esi`, then leaves as the gate did.
 
-`GetModuleFileNameA`, `CreateFileA`, `WriteFile` and `wsprintfA` are
-resolved once through the IAT placeholders and kept in the section,
+`GetModuleHandleA`, `GetModuleFileNameA`, `CreateDirectoryA`,
+`CreateFileA`, `WriteFile` and `wsprintfA` are resolved once through the
+IAT placeholders and kept in the section,
 which is writable for them and the handle; any failure leaves the handle
 -1 and nothing is logged. `tools/frametracetest.py` runs it under
 Unicorn, `tools/frames.py` reads the log.
@@ -563,8 +570,9 @@ before it). Flags and registers are kept,
 since the site's `jl` reads the `test` before the store; the absolute
 in each replaced store loses its relocation entry.
 
-`CreateFileA` and `WriteFile` are resolved on the first call through
-the DLL's own `GetModuleHandleA` and `GetProcAddress` imports, the path
-from its `GetModuleFileNameA`; any failure leaves the handle -1 and
+`CreateDirectoryA`, `CreateFileA` and `WriteFile` are resolved on the
+first call through the DLL's own `GetModuleHandleA` and `GetProcAddress`
+imports, the path from its `GetModuleFileNameA`; any failure leaves the
+handle -1 and
 nothing is logged. The lines stop at 4096. `tools/d3dinittest.py` runs
 it under Unicorn.
