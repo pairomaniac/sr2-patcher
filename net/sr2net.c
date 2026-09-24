@@ -1093,25 +1093,18 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
 #else
         static const char *const defaults[] = SR2_DIRECTORIES;
 #endif
+        const char *const one[] = {address};
+        const char *const *names = address && address[0] ? one : defaults;   /* one server named, or the built-in list */
         int c = 0;
-        if (address && address[0]) {
-            if (sock_parse(address, SR2_PORT + 1, &n->servers[0]) == 0)
-                n->nservers = 1;
-            else {
-                nlog(n, "open: %s is not an address", address);
-                return SR2_ERR;
-            }
-        } else {
-            /* the names are looked up off this thread: a resolver that is
-               slow or absent would otherwise hold the game for as long as
-               it takes to give up */
-            while (defaults[c])
-                c++;
-            n->resolving = sock_resolve(defaults, c, SR2_PORT + 1);
-            if (!n->resolving) {
-                nlog(n, "open: the directory lookup could not be started");
-                return SR2_ERR;
-            }
+        while (names == defaults ? defaults[c] != NULL : c < 1)
+            c++;
+        /* the names are looked up off this thread: a resolver that is slow
+           or absent would otherwise hold the game for as long as it takes
+           to give up */
+        n->resolving = sock_resolve(names, c, SR2_PORT + 1);
+        if (!n->resolving) {
+            nlog(n, "open: the directory lookup could not be started");
+            return SR2_ERR;
         }
     }
     nlog(n, "open: kind %d, port %u, %s", kind, n->port, n->have_target ? address : "search");

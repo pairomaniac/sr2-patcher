@@ -14,6 +14,7 @@
 
 #define SR2_PORT            47626   /* the game; the directory is SR2_PORT+1 */
 #define SR2_DIRECTORIES     {"segaonline.net", "us.segaonline.net", "jp.segaonline.net", 0}
+#define SR2_STAGING_DIRECTORY "test.segaonline.net"   /* used instead when sr2-staging.txt is beside the exe */
 #define SR2_MAX_PLAYERS     4
 #define SR2_NAME_LEN        64      /* the game's name fields, NUL included */
 #define SR2_MAX_PAYLOAD     1024    /* the game's largest message is 0x134, 0x136 with the stock DLL's header */

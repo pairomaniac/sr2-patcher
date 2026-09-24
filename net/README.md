@@ -99,8 +99,9 @@ that long.
 
 INTERNET goes through `net/directory.py` on UDP 47627, on Sega Online's
 three servers: `segaonline.net`, `us.segaonline.net`, `jp.segaonline.net`.
-The list is `SR2_DIRECTORIES` in `sr2net.h`, the one place to change
-when a server moves; a rebuilt DLL carries the new list.
+The list is `SR2_DIRECTORIES` in `sr2net.h`, the staging server
+`SR2_STAGING_DIRECTORY` beside it: the one place to change when a
+server moves; a rebuilt DLL carries the new list.
 Their names are looked up on a thread of the DLL's own, so a slow or
 absent resolver holds the list, not the game; the search reports
 "connecting" until the lookup is done.
@@ -108,7 +109,7 @@ absent resolver holds the list, not the game; the search reports
 Every datagram to the server carries a four-byte token the DLL made up
 when the connection opened, and the server echoes it in every answer;
 an answer without it - from a forged server address, say - is dropped.
-The server still answers the form from before the token in kind.
+The form from before the token (0.7.0) is not answered.
 
 A host registers its session with all three every second (`H`: the
 session's id, the record the list shows with the wire version, and a
@@ -148,6 +149,19 @@ there.
 
 The DLL drops a datagram longer than a header and the largest payload,
 which no sender makes, and a welcome whose index is past the player table.
+
+## Trying a new directory
+
+A change to `directory.py` or to the wire between it and the DLL goes to
+the staging server first: `test.segaonline.net` (`SR2_STAGING_DIRECTORY`
+in `sr2net.h`). An empty file named `sr2-staging.txt` beside the exe sends
+INTERNET there instead of the live three; `sr2-net.log` says so. Run
+the new `directory.py` there (`tools/directory-install.sh install`),
+put the file on two machines, host, list, join direct and through the
+relay, and read both logs and the server's journal. Then update the
+live servers and delete the file. A DLL from before the change is the
+other thing to try against it: it should get nothing, and the journal
+should show nothing odd.
 
 ## Running a directory server
 

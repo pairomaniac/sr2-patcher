@@ -275,5 +275,7 @@ dropped, and a directory started for the run.
 
 The game on UDP 47626 (a host forwards it for DIRECT IP; a guest needs
 nothing), the directory on 47627 on Sega Online's three servers,
-`segaonline.net`, `us.segaonline.net` and `jp.segaonline.net`.
+`segaonline.net`, `us.segaonline.net` and `jp.segaonline.net`; an empty
+`sr2-staging.txt` beside the exe sends the game to `test.segaonline.net`
+instead, for trying a change.
 net/README.md, *The directory*.

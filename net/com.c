@@ -47,22 +47,36 @@ static void log_line(void *ctx, const char *line)
     }
 }
 
+/* The path of a file beside the exe, or 0 when it does not fit. */
+static int beside_exe(const char *name, char *path, size_t size)
+{
+    DWORD n = GetModuleFileNameA(NULL, path, (DWORD)size);
+    if (n == 0 || n >= size)
+        return 0;
+    while (n && path[n - 1] != '\\')
+        n--;
+    if (n + strlen(name) + 1 > size)
+        return 0;
+    strcpy(path + n, name);
+    return 1;
+}
+
 static void log_open(void)
 {
     char path[MAX_PATH];
-    DWORD n;
-    if (g_log)
+    if (g_log || !beside_exe("sr2-net.log", path, sizeof path))
         return;
-    n = GetModuleFileNameA(NULL, path, sizeof path);
-    if (n == 0 || n >= sizeof path)
-        return;
-    while (n && path[n - 1] != '\\')
-        n--;
-    if (n + sizeof "sr2-net.log" > sizeof path)
-        return;
-    strcpy(path + n, "sr2-net.log");
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES)
         g_log = fopen(path, "a");
+}
+
+/* An empty file named sr2-staging.txt beside the exe sends INTERNET to the
+ * staging directory instead of the live ones: how a new server is tried
+ * before the live ones take it. */
+static int staging(void)
+{
+    char path[MAX_PATH];
+    return beside_exe("sr2-staging.txt", path, sizeof path) && GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
 }
 
 static int guid_eq(const GUID *a, const GUID *b) { return memcmp(a, b, sizeof(GUID)) == 0; }
@@ -473,7 +487,13 @@ static HRESULT __stdcall Network_OpenConnection(network *n, const DWORD *spec)
         return E_FAIL;
     switch (spec[0]) {
     case 1: kind = SR2_KIND_DIRECT; address = (const char *)spec[1]; break;
-    case 2: kind = SR2_KIND_INTERNET; break;
+    case 2:
+        kind = SR2_KIND_INTERNET;
+        if (staging()) {
+            address = SR2_STAGING_DIRECTORY;
+            log_line(NULL, "directory: " SR2_STAGING_DIRECTORY ", sr2-staging.txt is beside the exe");
+        }
+        break;
     case 3: kind = SR2_KIND_LAN; break;
     default: return E_FAIL;
     }
