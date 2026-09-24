@@ -107,6 +107,39 @@ def generated(labels):
     return ''.join(lines)
 
 
+# A font rasterises a little differently from one FreeType or font build
+# to the next, so the check does not ask for the baked bytes: a rendering
+# is the same lettering when, for every state, the mean difference is
+# under MEAN_TOLERANCE of 255 and at most FAR_TOLERANCE of the pixels are
+# more than FAR apart.
+MEAN_TOLERANCE, FAR_TOLERANCE, FAR = 2.0, 0.03, 64
+
+
+def carried(region):
+    """The masks the script carries: the generated region run as Python."""
+    ns = {}
+    exec(region, ns)
+    return {slot: (text,) + tuple(zlib.decompress(base64.b64decode(m)) for m in masks)
+            for slot, (text, *masks) in ns['LOBBY_LABELS'].items()}
+
+
+def compare(a, b):
+    """The worst (mean difference, share of pixels FAR apart, where) over
+    every slot and state of two label sets."""
+    worst = (0.0, 0.0, '')
+    for slot in LABELS:
+        slot = slot[0]
+        for i, state in enumerate(STATES):
+            x, y = a[slot][1 + i], b[slot][1 + i]
+            if len(x) != len(y):
+                return (255.0, 1.0, '%s %s: sizes differ' % (slot, state))
+            diffs = [abs(p - q) for p, q in zip(x, y)]
+            mean, far = sum(diffs) / len(diffs), sum(d > FAR for d in diffs) / len(diffs)
+            if (mean, far) > worst[:2]:
+                worst = (mean, far, '%s %s' % (slot, state))
+    return worst
+
+
 def write_bmps(labels, folder):
     from PIL import Image
     os.makedirs(folder, exist_ok=True)
@@ -134,10 +167,17 @@ def main(argv):
         write_bmps(labels, argv[argv.index('--show') + 1])
     new = generated(labels)
     if check:
-        if pattern.search(text).group(0) == new:
+        baked = pattern.search(text).group(0)
+        if baked == new:
             print('labels match')
             return 0
-        print('labels differ: run tools/labels.py')
+        worst = compare(carried(baked), labels)
+        if worst[0] <= MEAN_TOLERANCE and worst[1] <= FAR_TOLERANCE:
+            print('note: labels match within the rasteriser\'s tolerance: mean %.2f/255 off, %.1f%% of pixels far off at worst (%s)'
+                  % (worst[0], worst[1] * 100, worst[2]))
+            return 0
+        print('labels differ: mean %.2f/255 off, %.1f%% of pixels far off (%s); run tools/labels.py on the machine the masks come from'
+              % (worst[0], worst[1] * 100, worst[2]))
         return 1
     text = pattern.sub(lambda _m: new, text)
     with open(TARGET, 'w', encoding='utf-8', newline='\n') as fh:

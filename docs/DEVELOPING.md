@@ -105,7 +105,7 @@ the other builds.
 | --- | --- |
 | `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, a placeholder left unfilled |
 | `asm` | `asm/` edited without `asm/build.py` being run |
-| `labels` | `tools/labels.py` edited without being run (skips without Pillow and the font) |
+| `labels` | `tools/labels.py` edited without being run: the labels rendered here against the baked ones, a rasteriser's few pixels of difference allowed (skips without Pillow and the font) |
 | `net` | `net/` edited without `net/build.py` being run |
 | `nettest` | the network core: a host and five guests over loopback, a third of the datagrams dropped - joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going, an oversized reliable datagram and a welcome with a seat past the table; then a directory server started for the run, a session found through it, a direct join and a relayed one (skips without a C compiler) |
 | `directorytest` | the directory server's list limit per address, with a hand-set clock |
