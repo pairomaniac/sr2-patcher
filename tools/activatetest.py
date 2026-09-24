@@ -43,7 +43,7 @@ def main(argv):
         return 1
     row = patcher.BUILDS[build]
     gamed3d, resume = row['addresses']['GAMED3D'], row['addresses']['RESUME']
-    site = BASE + 0x1000 + row['sites']['activate'] - patcher._rva_to_off(image, 0x1000)
+    site = BASE + patcher._off_to_rva(image, row['sites']['activate'])
     image = patcher.apply_activate(image, build)
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     uctest.map_image(mu, image, BASE)

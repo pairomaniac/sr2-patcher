@@ -19,13 +19,9 @@ import sys
 from uctest import patcher
 import uctest
 
-try:
-    import pefile
-    from unicorn import Uc, UC_ARCH_X86, UC_MODE_32
-    from unicorn.x86_const import UC_X86_REG_ESP
-except ImportError:
-    print('clearsizetest: skipped, python3-unicorn or pefile not installed')
-    sys.exit(77)
+uctest.unicorn('clearsizetest')
+from unicorn import Uc, UC_ARCH_X86, UC_MODE_32
+from unicorn.x86_const import UC_X86_REG_ESP
 
 WIDTH, HEIGHT = 5120, 1440
 STACK = 0x900000
@@ -44,14 +40,12 @@ def main(argv):
 
     row = patcher.BUILDS[build]['addresses']
     site = patcher.BUILDS[build]['sites']['clearsize']
-    pe = pefile.PE(data=bytes(out))
-    base = pe.OPTIONAL_HEADER.ImageBase
-    image = pe.get_memory_mapped_image()
-    resume = base + 0x1000 + site - patcher._rva_to_off(out, 0x1000) + patcher.CLEARSIZE_LEN - 7
+    base = patcher._image_base(out)
+    site_va = base + patcher._off_to_rva(out, site)
+    resume = site_va + patcher.CLEARSIZE_LEN - 7
 
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    mu.mem_map(base, (len(image) + 0xfff) & ~0xfff)
-    mu.mem_write(base, bytes(image))
+    uctest.map_image(mu, out, base)
     mu.mem_map(STACK, 0x10000)
     mu.mem_write(row['WIDTH'], struct.pack('<I', WIDTH))
     mu.mem_write(row['HEIGHT'], struct.pack('<I', HEIGHT))
@@ -59,7 +53,7 @@ def main(argv):
     esp = STACK + 0x8000
     mu.mem_write(esp, struct.pack('<I', 0xDEAD0000))
     mu.reg_write(UC_X86_REG_ESP, esp)
-    mu.emu_start(base + 0x1000 + site - patcher._rva_to_off(out, 0x1000), row['CLEAR'], timeout=2000000)
+    mu.emu_start(site_va, row['CLEAR'], timeout=2000000)
 
     sp = mu.reg_read(UC_X86_REG_ESP)
     ret, width, height = struct.unpack('<III', mu.mem_read(sp, 12))

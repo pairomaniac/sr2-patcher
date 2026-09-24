@@ -24,7 +24,7 @@ from unicorn.x86_const import (UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, U
                                UC_X86_REG_EBP, UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EFLAGS)
 
 CODE, STUBS, STACK, WRAP = 0x900000, 0xa00000, 0xb00000, 0xc00000
-LB, RB, BTN_A = 8, 9, 12
+LB, RB, BTN_A = patcher.PAD_LB, patcher.PAD_RB, patcher.PAD_A
 ZF = 0x40
 
 

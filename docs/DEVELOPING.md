@@ -32,7 +32,6 @@ here needs pip. None of it is needed to run the patcher.
 | `nasm` | rebuilding `asm/` |
 | `python3-pyflakes` | the `lint` check |
 | `python3-unicorn` | the checks that run the stubs |
-| `python3-pefile` | the `clearsize` and `replaypad` checks |
 | `python3-pil`, `fonts-urw-base35` | `tools/txrdump.py`, `tools/assets.py`; `tools/labels.py` and its check |
 | `gcc-mingw-w64-i686` | `net/build.py`, the network DLL |
 | a C compiler (`cc`) | the `nettest` check |
@@ -94,7 +93,8 @@ Two more tools for the daily work:
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
 There are 33. The first 21, down to `gui`, need nothing but nasm,
 pyflakes, Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C
-compiler, and CI installs those and runs them. The last twelve need the
+compiler, and CI installs those and runs them; every test that maps a
+PE image does it through `tools/uctest.py`. The last twelve need the
 discs and the games and skip themselves without; `devices` also needs
 nasm, whose listing it reads. A tool that cannot run exits 77 and is
 reported SKIP rather than OK, so a missing package never reads as a

@@ -5,13 +5,18 @@ one action at a time, and print which menu flag each action lands on.
 
     python3 tools/padbits.py GAMEDIR      # a European install; the addresses are that build's
 """
+import os
 import struct
 import sys
+
+import uctest
+
+uctest.unicorn('padbits')
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_32
 from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_ECX
 
-EXE = 'SEGA RALLY 2.exe'
-BASE = 0x400000
+EXE = uctest.patcher.EXE
+BASE = uctest.patcher.IMAGE_BASE
 UPDATE = 0x47f2d0        # wrapper vtable +8: the frame's masks from GetActionState
 POLL = 0x43f8e0          # the pad flags from the wrapper's +0x1c
 WRAPPER_VTBL = 0x4a158c
@@ -26,28 +31,11 @@ RET = 0x900000
 MASK = SCRATCH + 0xff0   # the actions GetActionState answers with 10000
 
 
-def load(path):
-    with open(path, 'rb') as fh:
-        raw = fh.read()
-    pe = struct.unpack_from('<I', raw, 0x3c)[0]
-    nsec = struct.unpack_from('<H', raw, pe + 6)[0]
-    opt = struct.unpack_from('<H', raw, pe + 20)[0]
-    size = struct.unpack_from('<I', raw, pe + 24 + 56)[0]
-    hdr = struct.unpack_from('<I', raw, pe + 24 + 60)[0]
-    img = bytearray(size)
-    img[:hdr] = raw[:hdr]
-    for i in range(nsec):
-        s = pe + 24 + opt + i * 40
-        rva, rsz, ptr = struct.unpack_from('<III', raw, s + 12)
-        img[rva:rva + rsz] = raw[ptr:ptr + rsz]
-    return bytes(img)
-
-
 def probe(game):
-    img = load(game + '/' + EXE)
+    with open(os.path.join(game, EXE), 'rb') as fh:
+        raw = fh.read()
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    mu.mem_map(BASE, (len(img) + 0xfff) & ~0xfff | 0x1000)
-    mu.mem_write(BASE, img)
+    uctest.map_image(mu, raw, BASE)
     mu.mem_map(STACK - 0x10000, 0x20000)
     mu.mem_map(SCRATCH, 0x1000)
     mu.mem_map(RET, 0x1000)
@@ -100,7 +88,7 @@ def probe(game):
             mu.reg_write(UC_X86_REG_ESP, STACK)
             mu.reg_write(UC_X86_REG_ECX, wrapper)
             mu.mem_write(STACK, struct.pack('<I', RET))
-            mu.emu_start(entry, RET)
+            mu.emu_start(entry, RET, timeout=2000000)
         edge = struct.unpack('<I', mu.mem_read(FLAGS_EDGE, 4))[0]
         bits = [b for b in range(32) if edge >> b & 1]
         print('%-4d %-11s %-10s %s' % (act, names.get(act, '?'),
@@ -109,4 +97,9 @@ def probe(game):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print(__doc__.strip())
+        sys.exit(2)
+    if uctest.build_of(open(os.path.join(sys.argv[1], EXE), 'rb').read(), EXE) != 'European':
+        sys.exit('padbits: the addresses are the European build\'s')
     probe(sys.argv[1])

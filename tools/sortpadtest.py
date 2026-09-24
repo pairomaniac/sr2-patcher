@@ -30,7 +30,7 @@ BASE = 0x20000000                       # not the DLL's own, so a missed relocat
 HEAP, STACK, STUBS = 0x3000000, 0x3100000, 0x3200000
 BLOCK, LIST = HEAP + 0x100, HEAP + 0x200
 SORTBLOCK_RVA = 0xbe620
-LB, RB, BTN_A = 0x308, 0x309, 0x30c
+LB, RB, BTN_A = (patcher.PAD_BASE + i for i in (patcher.PAD_LB, patcher.PAD_RB, patcher.PAD_A))
 
 
 def main(argv):
@@ -46,7 +46,7 @@ def main(argv):
     for addr in (HEAP, STACK, STUBS):
         mu.mem_map(addr, 0x10000)
     mu.mem_map(slot & ~0xfff, 0x1000)
-    site = BASE + 0x1000 + patcher.SORTPAD_SITE - patcher._rva_to_off(out, 0x1000)
+    site = BASE + patcher._off_to_rva(out, patcher.SORTPAD_SITE)
     w = lambda a, v: mu.mem_write(a, struct.pack('<I', v & 0xffffffff))
     r = lambda a: struct.unpack('<I', mu.mem_read(a, 4))[0]
 

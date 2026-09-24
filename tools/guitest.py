@@ -21,7 +21,6 @@ run that tested no window at all should not look like one that did.
 No copy of the game is needed. What the window does to real files is
 selftest.py's and cabtest.py's.
 """
-import importlib.util
 import os
 import sys
 import tempfile
@@ -81,7 +80,7 @@ def contrast(a, b):
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
 
 FAILED = []
 
@@ -91,14 +90,6 @@ def check(label, condition, detail=''):
                          '' if condition else '   <- %s' % (detail,)))
     if not condition:
         FAILED.append(label)
-
-
-def load_patcher():
-    spec = importlib.util.spec_from_file_location(
-        'patcher', os.path.join(ROOT, 'sr2-patcher.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def build_window(patcher, tk):
@@ -138,7 +129,7 @@ def text_of(widget):
 def main():
     # The palette first: it needs no display, so it is checked even where
     # the rest of this skips.
-    patcher = load_patcher()
+    from uctest import patcher
     for a, b, what, want in PAIRS:
         got = contrast(patcher.PALETTE[a], patcher.PALETTE[b])
         check('%s reads (%s on %s)' % (what, a, b), got >= want,

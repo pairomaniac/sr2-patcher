@@ -61,7 +61,7 @@ def main(argv):
             raise SystemExit('resolutiontest: the site at 0x%x changed under relocation' % site)
 
     row = patcher.BUILDS[build]
-    optbase = 0x10000000
+    optbase = patcher._image_base(image)          # the DLL's preferred base, the row's addresses' own
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'GetPrivateProfileStringA',
              'WritePrivateProfileStringA', 'text', 'draw']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'GetPrivateProfileStringA': 6,
@@ -196,10 +196,10 @@ def main(argv):
         opt = patcher.BUILDS[build]['options']
         w = 0.0
         for ch in text.encode():
-            g = struct.unpack('<b', mu.mem_read(BASE + opt['CHARMAP'] - 0x10000000 + ch, 1))[0]
+            g = struct.unpack('<b', mu.mem_read(BASE + opt['CHARMAP'] - optbase + ch, 1))[0]
             if g < 0:
                 continue
-            glyph = struct.unpack('<I', mu.mem_read(BASE + opt['GLYPHS'] - 0x10000000 + g * 4, 4))[0]
+            glyph = struct.unpack('<I', mu.mem_read(BASE + opt['GLYPHS'] - optbase + g * 4, 4))[0]
             w += struct.unpack('<f', mu.mem_read(glyph + 0xc, 4))[0] if glyph else 10.0
         return w
     colon = 270.0 - 30.0 + width('21')

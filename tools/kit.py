@@ -9,7 +9,6 @@ patched file replaced by its .bak so the kit holds the originals, and the
 first 16 MB of the install disc's data1.cab as data1.head. Not the
 repository's to distribute; the tarball is gitignored.
 """
-import importlib.util
 import io
 import os
 import sys
@@ -18,10 +17,7 @@ import tarfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from check import BUILDS, CONF, config  # noqa: E402
-
-spec = importlib.util.spec_from_file_location('patcher', os.path.join(HERE, '..', 'sr2-patcher.py'))
-patcher = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(patcher)
+from uctest import patcher  # noqa: E402
 
 OUT = os.path.join(HERE, 'sr2-kit.tar.gz')
 SKIP = ('bindata', 'music')

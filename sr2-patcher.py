@@ -5072,8 +5072,7 @@ def apply_music(buf, build):
     if len(sites) != MCI_CALL_SITES or len(loads) != MCI_LOAD_SITES:
         raise ValueError('expected %d calls and %d loads of mciSendCommandA, found %d and %d'
                          % (MCI_CALL_SITES, MCI_LOAD_SITES, len(sites), len(loads)))
-    text_off = _rva_to_off(buf, 0x1000)                 # .text is the first section
-    site_rvas = {0x1000 + off - text_off for off in sites + loads}
+    site_rvas = {_off_to_rva(buf, off) for off in sites + loads}
     if _drop_relocations(buf, {r + 2 for r in site_rvas}) != len(site_rvas):
         raise ValueError('relocation entries for the sites not all found')
     out, rva = append_section(buf, MUSIC_BLOB)
@@ -5086,9 +5085,7 @@ def apply_music(buf, build):
     start = _rva_to_off(out, rva)
     out[start:start + len(blob)] = blob
     for off, thunk in [(o, 0) for o in sites] + [(o, 10) for o in loads]:
-        site_rva = 0x1000 + off - text_off
-        rel = rva + thunk - (site_rva + 5)
-        out[off:off + 6] = b'\xe8' + struct.pack('<i', rel) + b'\x90'
+        _branch(out, off, rva + thunk, 6)
     _branch(out, BUILDS[build]['sites']['volume'], rva + 15, 6, op=b'\xe9')
     _branch(out, BUILDS[build]['sites']['getvolume'], rva + 20, 6, op=b'\xe9')
     struct.pack_into('<I', out, opt + 16, rva + 5)
@@ -5114,7 +5111,7 @@ def _branch(buf, off, target_rva, length=5, op=b'\xe8'):
     """A near call (or jump, op e9) at file offset off to target_rva, padded
     with nops to the length of what it replaces. The site's own RVA comes
     from the section table, since .text need not start at its file offset."""
-    site_rva = 0x1000 + off - _rva_to_off(buf, 0x1000)
+    site_rva = _off_to_rva(buf, off)
     buf[off:off + length] = (op + struct.pack('<i', target_rva - (site_rva + 5))).ljust(length, b'\x90')
 
 
@@ -5139,7 +5136,7 @@ def _image_base(buf):
 
 def _call_target(buf, off):
     """The VA a `call rel32` at a file offset in .text goes to."""
-    rva = 0x1000 + off - _rva_to_off(buf, 0x1000) + 5 + struct.unpack_from('<i', buf, off + 1)[0]
+    rva = _off_to_rva(buf, off) + 5 + struct.unpack_from('<i', buf, off + 1)[0]
     return rva + _image_base(buf)
 
 
@@ -5161,7 +5158,7 @@ def apply_textcolor(buf, build):
     """The SetTextColor stub in the exe; the eight calls and two loads of
     the import slot become a call to it and a load of its address."""
     out, rva = append_section(buf, exe_blob(TEXTCOLOR_BLOB, build), chars=CODE_SECTION)
-    base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
+    base = _image_base(out)
     for off, op in BUILDS[build]['textcolor']:
         if op == 'ff15':
             _branch(out, off, rva, 6)
@@ -5199,7 +5196,7 @@ def apply_clearsize(buf, build):
              + b'\x50'                                            # push eax, the return back on top
              + b'\xe9' + b'\0' * 4)                               # jmp the clear
     out, rva = append_section(buf, thunk, chars=CODE_SECTION)
-    base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
+    base = _image_base(out)
     struct.pack_into('<i', out, _rva_to_off(out, rva) + 15, row['CLEAR'] - (base + rva + len(thunk)))
     _branch(out, site, rva, CLEARSIZE_LEN)
     return out
@@ -5470,7 +5467,7 @@ def apply_mixerless(buf, build):
     flags, then jumps back to that allocation. Nothing absolute, so no
     relocation entries change."""
     site = BUILDS[build]['sites']['mixer']
-    site_rva = 0x1000 + site - _rva_to_off(buf, 0x1000)
+    site_rva = _off_to_rva(buf, site)
     stub = bytes.fromhex('31c0') + bytes.fromhex('898684000000')      # xor eax,eax; mov [esi+0x84],eax
     out, rva = append_section(buf, stub + b'\xe9' + b'\0' * 4, chars=CODE_SECTION)
     start = _rva_to_off(out, rva)
@@ -6196,10 +6193,9 @@ def apply_voltrace(buf, build):
     blob = exe_blob(VOLTRACE_BLOB, build)
     out, rva = append_section(buf, blob + b'\0' * (4 * len(sites)), chars=CODE_SECTION)
     start = _rva_to_off(out, rva)
-    text_off = _rva_to_off(out, 0x1000)
     for i, (off, length) in enumerate(sites):
         slot_va = IMAGE_BASE + rva + len(blob) + 4 * i
-        struct.pack_into('<I', out, start + len(blob) + 4 * i, IMAGE_BASE + 0x1000 + off - text_off + length)
+        struct.pack_into('<I', out, start + len(blob) + 4 * i, IMAGE_BASE + _off_to_rva(out, off) + length)
         out[start:start + len(blob)] = bytes(out[start:start + len(blob)]).replace(
             struct.pack('<I', 0xE7E7E7E1 + i), struct.pack('<I', slot_va))
         _branch(out, off, rva + 5 * i, length, op=b'\xe9')
@@ -6230,13 +6226,12 @@ def apply_frametrace(buf, build):
             raise ValueError('the frame gate does not read %s where the row says' % name)
     if buf[exit_site - 5] != 0xe8:
         raise ValueError('no call before the frame gate\'s exit')
-    text_off = _rva_to_off(buf, 0x1000)
-    counter = IMAGE_BASE + 0x1000 + exit_site - text_off + struct.unpack_from('<i', buf, exit_site - 4)[0]
+    counter = _call_target(buf, exit_site - 5)
     blob = exe_blob(FRAMETRACE_BLOB, build)
     out, rva = append_section(buf, blob + b'\0' * 8)
     start = _rva_to_off(out, rva)
     slots = IMAGE_BASE + rva + len(blob)
-    struct.pack_into('<II', out, start + len(blob), counter, IMAGE_BASE + 0x1000 + entry_site - text_off + 5)
+    struct.pack_into('<II', out, start + len(blob), counter, IMAGE_BASE + _off_to_rva(out, entry_site) + 5)
     out[start:start + len(blob)] = blob.replace(struct.pack('<I', 0xE7E7E7E1), struct.pack('<I', slots)) \
         .replace(struct.pack('<I', 0xE7E7E7E2), struct.pack('<I', slots + 4)) \
         .replace(struct.pack('<I', 0xE7E7E7E3), struct.pack('<I', FRAMETRACE_STAMP + fullwin_stamp()))

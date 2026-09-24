@@ -30,7 +30,9 @@ CODE, STUBS, STACK = 0x900000, 0xa00000, 0xb00000
 ROW = patcher.BUILDS['European']
 A = ROW['addresses']
 LEVEL, EDGE, PREV, KEYS, SLOT = A['PADLEVEL'], A['PADEDGE'], A['PADPREV'], A['MENUKEYS'], A['PADPOLL']
-UP, DOWN, LEFT, RIGHT, START, BACK, LS_LEFT, LS_RIGHT, LS_UP, LS_DOWN, BTN_A, BTN_B = 0, 1, 2, 3, 4, 5, 18, 19, 20, 21, 12, 13
+UP, DOWN, LEFT, RIGHT, START, BACK = patcher.PAD_UP, patcher.PAD_DOWN, patcher.PAD_LEFT, patcher.PAD_RIGHT, patcher.PAD_START, patcher.PAD_BACK
+LS_LEFT, LS_RIGHT, LS_UP, LS_DOWN = patcher.PAD_LS_LEFT, patcher.PAD_LS_RIGHT, patcher.PAD_LS_UP, patcher.PAD_LS_DOWN
+BTN_A, BTN_B = patcher.PAD_A, patcher.PAD_B
 
 
 def main():

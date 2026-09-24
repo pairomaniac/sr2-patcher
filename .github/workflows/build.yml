@@ -22,12 +22,12 @@ jobs:
         with:
           python-version: '3.12'
       # nasm builds the asm blobs the tables are checked against and the
-      # devices check reads its listing; Unicorn runs the stubs; pefile the
-      # clearsize and replaypad checks; Pillow and the URW fonts the labels
-      # check; xvfb gives tools/guitest.py a display. A check whose tool is
+      # devices check reads its listing; Unicorn runs the stubs; Pillow and
+      # the URW fonts the labels check; xvfb gives tools/guitest.py a
+      # display. A check whose tool is
       # missing skips itself and says so, and check.py counts a skip as a
       # pass, so a package left out here is a green run that tested less.
-      - run: sudo apt-get update && sudo apt-get install -y nasm xvfb fonts-urw-base35 && pip install pyflakes unicorn pefile pillow
+      - run: sudo apt-get update && sudo apt-get install -y nasm xvfb fonts-urw-base35 && pip install pyflakes unicorn pillow
       - run: xvfb-run -a -s "-screen 0 1600x1400x24" python3 tools/check.py --colour always
 
       # Separately, prove the C still builds and still exports what the

@@ -106,9 +106,10 @@ def main(argv):
     mu.mem_map(publish & ~0xfff, 0x1000)
     mu.mem_write(publish, struct.pack('<I', addr['Poll']))
     opt_row = patcher.BUILDS[build]['options']
-    mu.mem_write(BASE + opt_row['INPUT'] - 0x10000000, struct.pack('<I', HOLDER))
-    mu.mem_write(BASE + opt_row['SOUNDOBJ'] - 0x10000000, struct.pack('<I', SCRATCH))
-    mu.mem_write(BASE + opt_row['PLAYSOUND'] - 0x10000000, b'\xc2\x10\x00')     # a `ret 0x10` in place of the sound
+    optbase = patcher._image_base(image)          # the DLL's preferred base, the row's addresses' own
+    mu.mem_write(BASE + opt_row['INPUT'] - optbase, struct.pack('<I', HOLDER))
+    mu.mem_write(BASE + opt_row['SOUNDOBJ'] - optbase, struct.pack('<I', SCRATCH))
+    mu.mem_write(BASE + opt_row['PLAYSOUND'] - optbase, b'\xc2\x10\x00')     # a `ret 0x10` in place of the sound
 
     # the records: per config a ring of nodes, each node (next, prev, record)
     recs = {}

@@ -15,7 +15,7 @@ left out; the edge made from the level; the left stick's x as the
 analog when the keyboard's is 0 and the keyboard's kept when not;
 player 2 on side 1's sources and its own keys.
 
-Needs python3-unicorn and pefile; exits 77 with a note when missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 import sys
@@ -23,20 +23,19 @@ import sys
 from uctest import patcher
 import uctest
 
-try:
-    import pefile
-    from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UC_HOOK_CODE
-    from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_ECX, UC_X86_REG_EAX
-except ImportError:
-    print('replaypadtest: skipped, python3-unicorn or pefile not installed')
-    sys.exit(77)
+uctest.unicorn('replaypadtest')
+from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UC_HOOK_CODE
+from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_ECX, UC_X86_REG_EAX
 
 HEAP, STACK, STUBS = 0x2000000, 0x2100000, 0x2200000
 HOLDER, WRAPPER, INPUT, DEVICE, KEYS, OBJ = (HEAP + 0x100 * i for i in range(1, 7))
 KEYARRAY = HEAP + 0x1000
 UPDATE_TO_SITE = 0xba                   # the join from the routine's start, every build
-UP, DOWN, LEFT, RIGHT, LS_LEFT, LS_RIGHT, LS_UP, LS_DOWN, BTN_A, BTN_B, BTN_X, BTN_Y = 0, 1, 2, 3, 18, 19, 20, 21, 12, 13, 14, 15
-LB, RB, LT, RT, RS_LEFT, RS_RIGHT = 8, 9, 16, 17, 22, 23
+UP, DOWN, LEFT, RIGHT = patcher.PAD_UP, patcher.PAD_DOWN, patcher.PAD_LEFT, patcher.PAD_RIGHT
+LS_LEFT, LS_RIGHT, LS_UP, LS_DOWN = patcher.PAD_LS_LEFT, patcher.PAD_LS_RIGHT, patcher.PAD_LS_UP, patcher.PAD_LS_DOWN
+BTN_A, BTN_B, BTN_X, BTN_Y = patcher.PAD_A, patcher.PAD_B, patcher.PAD_X, patcher.PAD_Y
+LB, RB, LT, RT = patcher.PAD_LB, patcher.PAD_RB, patcher.PAD_LT, patcher.PAD_RT
+RS_LEFT, RS_RIGHT = 22, 23          # the right stick's halves, which the patcher names nowhere: it binds none of them
 
 
 def main(argv):
@@ -47,19 +46,17 @@ def main(argv):
     buf = uctest.stock(argv[1], patcher.EXE)
     out = patcher.apply_replaypad(buf, build)
     row = patcher.BUILDS[build]
-    pe = pefile.PE(data=bytes(out))
-    base = pe.OPTIONAL_HEADER.ImageBase
-    image = pe.get_memory_mapped_image()
-    site = base + 0x1000 + row['sites']['replaypad'] - patcher._rva_to_off(out, 0x1000)
+    base = patcher._image_base(out)
+    site = base + patcher._off_to_rva(out, row['sites']['replaypad'])
     update = site - UPDATE_TO_SITE
-    if image[update - base:update - base + 4] != bytes.fromhex('83ec10a1'):
+    update_off = row['sites']['replaypad'] - UPDATE_TO_SITE
+    if out[update_off:update_off + 4] != bytes.fromhex('83ec10a1'):
         raise SystemExit('replaypadtest: the update routine is not 0x%x before the site' % UPDATE_TO_SITE)
-    holder_slot = struct.unpack_from('<I', image, update - base + 4)[0]
+    holder_slot = struct.unpack_from('<I', out, update_off + 4)[0]
     slot = row['addresses']['PADPOLL']
 
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    mu.mem_map(base, (len(image) + 0xfff) & ~0xfff)
-    mu.mem_write(base, bytes(image))
+    uctest.map_image(mu, out, base)
     for addr in (HEAP, STACK, STUBS):
         mu.mem_map(addr, 0x10000)
     w = lambda a, *v: mu.mem_write(a, struct.pack('<%dI' % len(v), *v))
