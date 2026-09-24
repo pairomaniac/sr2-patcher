@@ -76,11 +76,14 @@ gets 20 bytes and no seat. Then `WELCOME` (the guest's index, the
 host's, the reserved slots, the roster and the version) or `REFUSE`
 (closed, full, not that session, or another version).
 
-The version is in the join, the welcome and the session record, so two
-patchers of different wire versions refuse each other with a reason in
-`sr2-net.log` rather than misunderstand each other; a session listed
-with another version is refused before a join goes out. `SR2_PROTO` in
-`sr2net.h` is bumped when the wire changes.
+The version is in the join, the welcome and the session record, and
+each link keeps the one the other side gave. The intent is that a later
+version adds fields rather than changing them and reads a peer's by its
+version, so versions from `SR2_PROTO_MIN` up keep playing together; a
+change that cannot be made that way raises `SR2_PROTO_MIN`. A patcher
+from before the version, which sends none (0.7.0 and earlier), is
+refused, with a reason in `sr2-net.log` on both sides, or before a join
+goes out when its record says so.
 
 `sr2-net.log` beside the exe, created empty, turns on a log of what the
 core did.

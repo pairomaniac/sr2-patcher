@@ -23,9 +23,9 @@
  * across a change of address), the wire version and a cookie: the host
  * answers a join without its cookie with T_CHALLENGE carrying it, so a
  * forged source address never gets a seat or a reply worth reflecting.
- * The welcome and the session record carry the version too, so a host
- * or guest of another version is refused with a reason, not left to
- * misunderstand each other.
+ * The welcome and the session record carry the version too, and each
+ * link keeps the one the other side gave; a peer from before the
+ * version, which sends none, is refused with a reason.
  *
  * The directory speaks "SR2E": op, a four-byte token the client made
  * up, then the body; the server echoes the token in every answer and the
@@ -102,6 +102,7 @@ typedef struct {
     route     rt;
     uint8_t   nonce[8];             /* the join's, so a second route to one guest is one guest */
     int       index;                /* the player at the other end, -1 until known */
+    int       version;              /* the wire version it gave */
     uint32_t  send_seq;             /* last reliable sequence sent */
     uint32_t  recv_seq;             /* last taken in order */
     rmsg      unacked[WINDOW];      /* by seq % WINDOW */
@@ -582,9 +583,9 @@ static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, in
         send_raw(n, from, T_REFUSE, my_index_byte(n), NOBODY, 0, &reason, 1);
         return;
     }
-    if (len < HDR + JOIN_LEN || pkt[HDR + 24] != SR2_PROTO) {
-        reason = 4;                     /* another version of the wire: an older guest sends 20 bytes */
-        nlog(n, "a join of another version (%d) from %08x:%u refused",
+    if (len < HDR + JOIN_LEN || pkt[HDR + 24] < SR2_PROTO_MIN) {
+        reason = 4;                     /* from before the wire's version: a guest of 0.7.0 sends 20 bytes */
+        nlog(n, "a join from before the wire's version (%d) from %08x:%u refused",
              len < HDR + JOIN_LEN ? 0 : pkt[HDR + 24], ntohl(from->addr.addr), from->addr.port);
         send_raw(n, from, T_REFUSE, my_index_byte(n), NOBODY, 0, &reason, 1);
         return;
@@ -626,6 +627,7 @@ static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, in
         p = &n->peers[idx];
         peer_reset(p, from, idx, now);
         memcpy(p->nonce, nonce, 8);
+        p->version = pkt[HDR + 24];
         memset(&n->players[idx], 0, sizeof(player));
         n->players[idx].used = 1;
         nlog(n, "player %d joined from %08x:%u%s", idx, ntohl(from->addr.addr), from->addr.port,
@@ -682,14 +684,15 @@ static void handle_message(sr2_net *n, peer *p, const uint8_t *pkt, int len, uin
         if (n->is_host || blen < 2 + SR2_MAX_PLAYERS + 1 || body[0] >= SR2_MAX_PLAYERS || body[1] >= SR2_MAX_PLAYERS)
             break;                      /* an index past the table is no seat, the host's included */
         rlen = 1 + body[2 + SR2_MAX_PLAYERS] * (2 + SR2_NAME_LEN);     /* the roster; the version after it */
-        if (blen < 2 + SR2_MAX_PLAYERS + rlen + 1 || body[2 + SR2_MAX_PLAYERS + rlen] != SR2_PROTO) {
+        if (blen < 2 + SR2_MAX_PLAYERS + rlen + 1 || body[2 + SR2_MAX_PLAYERS + rlen] < SR2_PROTO_MIN) {
             if (n->joining) {
-                nlog(n, "the host runs another version of the wire (%d): refused",
+                nlog(n, "the host is from before the wire's version (%d): refused",
                      blen < 2 + SR2_MAX_PLAYERS + rlen + 1 ? 0 : body[2 + SR2_MAX_PLAYERS + rlen]);
                 n->join_refused = 1;
             }
             break;
         }
+        p->version = body[2 + SR2_MAX_PLAYERS + rlen];
         n->my_index = body[0];
         p->index = body[1];
         memcpy(n->reserved, body + 2, SR2_MAX_PLAYERS);
@@ -1186,8 +1189,8 @@ int sr2_join(sr2_net *n, const sr2_session *s, uint32_t now)
     int i;
     if (n->sock == SOCK_INVALID)
         return SR2_ERR;
-    if (s->version != SR2_PROTO) {
-        nlog(n, "'%s' is hosted on another version of the wire (%d): not joined", s->name, s->version);
+    if (s->version < SR2_PROTO_MIN) {
+        nlog(n, "'%s' is hosted from before the wire's version (%d): not joined", s->name, s->version);
         return SR2_REFUSED;
     }
     session_reset(n);

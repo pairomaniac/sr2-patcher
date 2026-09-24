@@ -18,7 +18,10 @@
 #define SR2_NAME_LEN        64      /* the game's name fields, NUL included */
 #define SR2_MAX_PAYLOAD     1024    /* the game's largest message is 0x134, 0x136 with the stock DLL's header */
 #define SR2_MAX_SESSIONS    16
-#define SR2_PROTO           1       /* the wire's version: in the join, the welcome and the session record; a mismatch is refused */
+#define SR2_PROTO           1       /* the wire's version, in the join, the welcome and the session record: raised when a field
+                                       is added; a peer's is kept, to read what it sends by. A peer from before the version (none
+                                       in its join) is refused */
+#define SR2_PROTO_MIN       1       /* the oldest version still spoken to */
 
 /* OpenConnection kinds as the exe passes them: rows 0, 1, 2 of the screen. */
 #define SR2_KIND_DIRECT     1       /* an address typed; empty = LAN search */
@@ -44,7 +47,7 @@ typedef struct {
     int      max_players;
     int      players;
     int      closed;                /* joins refused */
-    int      version;               /* the host's SR2_PROTO; 0 from a host older than it */
+    int      version;               /* the host's SR2_PROTO; 0 from a host from before it */
     char     name[SR2_NAME_LEN];
     uint32_t addr;                  /* the host, network order */
     uint16_t port;                  /* host order */

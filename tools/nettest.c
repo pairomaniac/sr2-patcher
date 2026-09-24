@@ -389,7 +389,7 @@ int main(void)
     ok("a welcome with a seat past the table is not taken; one in it is");
     if (fake_host(5, 1, 1) != SR2_REFUSED || sr2_my_index(nets[5]) >= 0)
         fail("an older host's welcome taken");
-    ok("a host of another wire version is refused, not joined");
+    ok("a host from before the wire's version is refused, not joined");
     {
         sr2_session s;
         memset(&s, 0, sizeof s);
@@ -399,7 +399,7 @@ int main(void)
         s.version = 0;
         if (sr2_join(nets[5], &s, now) != SR2_REFUSED)
             fail("a listed session of another version joined");
-        ok("a listed session of another wire version is refused before a join goes out");
+        ok("a listed session from before the wire's version is refused before a join goes out");
     }
 
     /* a fifth: full */
