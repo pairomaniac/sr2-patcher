@@ -87,19 +87,19 @@ entry:
         mov     al, ' '
         stosb
         mov     eax, [ebx + WIDTH]
-        call    dec
+        call    decimal
         mov     al, 'x'
         stosb
         mov     eax, [ebx + HEIGHT]
-        call    dec
+        call    decimal
         mov     al, ' '
         stosb
         mov     eax, [ebx + MAXTEXW]
-        call    dec
+        call    decimal
         mov     al, 'x'
         stosb
         mov     eax, [ebx + MAXTEXH]
-        call    dec
+        call    decimal
         mov     al, 13
         stosb
         mov     al, 10
@@ -177,7 +177,7 @@ hex8:
         ret
 
 ; eax in decimal at edi.
-dec:
+decimal:
         push    ecx
         push    edx
         push    ebx

@@ -57,7 +57,7 @@ def survey(src):
     """{(group, path): (size, md5)} for every valid file in the cab."""
     fh, close = patcher.open_source(src)
     try:
-        sig, ver = struct.unpack('<2I', fh.read(8))
+        ver = struct.unpack('<2I', fh.read(8))[1]
         fh.seek(0)
         cab = patcher.Cabinet(fh)
         print('  %d files, %d groups, cabinet version 0x%08x' % (len(cab.entries), len(cab.groups), ver))

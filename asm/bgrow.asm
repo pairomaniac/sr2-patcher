@@ -203,6 +203,10 @@ compose:
         jbe     .sliverfits
         mov     eax, [ebp + 0]
 .sliverfits:
+        cmp     eax, SCRATCH            ; and never more than the scratch row holds
+        jbe     .sliverheld
+        mov     eax, SCRATCH
+.sliverheld:
         mov     [ebp + 0x130], eax
         mov     eax, [ebp + 0x1c]
         shl     eax, 16

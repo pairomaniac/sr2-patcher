@@ -354,6 +354,9 @@ pairo@segaonline.net.
 - **Windows: error 80004005 at start.** One cause is fixed. If it still
   happens, tick **Direct3D bring-up** under DIAGNOSTICS, Apply, start the
   game, and send `logs\d3dinit.log` with the card and driver.
+- **A LAN team nobody can see.** The game uses UDP port 47626; if
+  something else has it on the host (a second copy of the game, say),
+  LAN search cannot find that host. DIRECT IP and INTERNET still work.
 - **Choppy on a 144 or 165 Hz display.** The game runs at a fixed 60
   frames a second. On Windows, dgVoodoo 2 now waits for the display's
   refresh; if you installed it with an earlier version, delete

@@ -43,9 +43,7 @@ jobs:
       - name: Netplay DLL compiles
         run: |
           sudo apt-get install -y gcc-mingw-w64-i686 binutils-mingw-w64-i686
-          i686-w64-mingw32-gcc -O2 -s -shared -Wall -Wextra -I net \
-              -o /tmp/MGNetWk.dll net/com.c net/sr2net.c net/mgnetwk.def \
-              -lws2_32 -Wl,--enable-stdcall-fixup
+          python3 net/build.py --out /tmp --dry     # the same flags as a release build, nothing written to the repo
           for sym in DllGetClassObject DllCanUnloadNow DllRegisterServer \
                      DllUnregisterServer _CreateGameNetwork@4; do
             i686-w64-mingw32-objdump -p /tmp/MGNetWk.dll | grep -qF "$sym" \
@@ -87,7 +85,8 @@ jobs:
         shell: bash
         run: |
           git clone -q --depth 1 --branch v6.21.0 https://github.com/pyinstaller/pyinstaller.git pyi
-          cd pyi/bootloader && python ./waf all
+          cd pyi && test "$(git rev-parse HEAD)" = 1cda34561015a90b6e1ae31dc89703799adaf13e   # v6.21.0, the tag pinned to its commit
+          cd bootloader && python ./waf all
           cd .. && pip install -q .
           cd .. && pip install -q certifi
           python -c "import PyInstaller; print(PyInstaller.__version__)"

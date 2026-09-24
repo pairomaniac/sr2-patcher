@@ -1052,7 +1052,7 @@ refresh:
         xor     ecx, ecx
 .row:   push    eax
         push    ecx
-        lea     edi, [ecx * 2]          ; the value strings: row * 2, its pad one after
+        lea     edi, [ecx + ecx]        ; the value strings: row * 2, its pad one after (spelt so nasm has one encoding)
         shl     edi, 4
         lea     edi, [ebx + MAGIC_BINDDATA + edi]
         add     edi, D_VALUES

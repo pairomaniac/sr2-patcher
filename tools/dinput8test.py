@@ -53,7 +53,7 @@ def main(argv):
         if new is not None:
             raw[off:off + len(new)] = new
     image = patcher.apply_dinput8(raw, build)
-    create, kind = patcher.BUILDS[build]['sites']['dinput8'][:2]
+    create = patcher.BUILDS[build]['sites']['dinput8'][0]
 
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     annex = uctest.map_image(mu, image, BASE)

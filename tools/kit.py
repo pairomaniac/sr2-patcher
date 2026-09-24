@@ -16,7 +16,7 @@ import tarfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from check import BUILDS, CONF, config  # noqa: E402
+from check import BUILDS, CONF, config  # noqa: E402  (after the sys.path line above)
 from uctest import patcher  # noqa: E402
 
 OUT = os.path.join(HERE, 'sr2-kit.tar.gz')

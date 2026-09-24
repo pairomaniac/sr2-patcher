@@ -176,6 +176,16 @@ def main():
     check_present((1000, 1000), (0, 0, 1000, 1000), (0, 125, 1000, 875),
                   [(0, 0, 1000, 125), (0, 875, 1000, 1000)])
     check_stamp()
+    # an empty source rect: no blit, no bars, no division, DD_OK
+    m = Machine((1920, 1080), (0, 0, 1920, 1080))
+    m.mu.mem_write(BASE + SRCRECT, struct.pack('<4i', 0, 0, 0, 0))
+    esp = STACK + 0x8000
+    m.mu.mem_write(esp + 0x10, struct.pack('<II', RETURN, 0))
+    m.mu.reg_write(UC_X86_REG_ESP, esp)
+    m.mu.emu_start(BASE + SELF, RETURN, timeout=2000000)
+    if m.mu.reg_read(UC_X86_REG_ESP) != esp + 0x18 or m.mu.reg_read(UC_X86_REG_EAX) != 0 \
+            or [c for c in m.calls if c[0] == 'Blt']:
+        raise SystemExit('fullwintest: an empty source rect: %r' % (m.calls,))
     calls = [c for c in Machine((640, 480), (2560, 0, 1920, 1080)).sizewindow() if c[0] != 'LoadLibraryA']
     if calls != [('MonitorFromPoint', 2565, 5, 2), ('MoveWindow', 0x1234, 2560, 0, 1920, 1080, 1)]:
         raise SystemExit('fullwintest: sizewindow: %r' % calls)

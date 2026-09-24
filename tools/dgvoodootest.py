@@ -53,6 +53,11 @@ def archive():
     return blob.getvalue()
 
 
+def read(path, mode='rb'):
+    with open(path, mode) as fh:
+        return fh.read()
+
+
 def main():
     fetched = []
 
@@ -75,7 +80,7 @@ def main():
         tag = patcher.install_dgvoodoo(dest, log.append)
         if tag != 'v2.87.5' or fetched != [patcher.DGVOODOO_RELEASE, 'zip']:
             raise SystemExit('dgvoodootest: the install fetched %r and gave %r' % (fetched, tag))
-        files = {name: open(os.path.join(dest, *name.split('\\')), 'rb').read()
+        files = {name: read(os.path.join(dest, *name.split('\\')))
                  for _m, name in patcher.DGVOODOO_FILES}
         if files['MUSASHI\\ddraw.dll'] != b'ddraw32' or files['D3DImm.dll'] != b'd3dimm32':
             raise SystemExit('dgvoodootest: the wrong DLLs: %r' % (files,))
@@ -95,12 +100,12 @@ def main():
             raise SystemExit('dgvoodootest: the removal did not take')
         if os.path.exists(os.path.join(dest, 'D3DImm.dll')) or os.path.exists(os.path.join(dest, 'MUSASHI', 'ddraw.dll')):
             raise SystemExit('dgvoodootest: a DLL was left behind')
-        if open(conf).read() != 'mine':
+        if read(conf, 'r') != 'mine':
             raise SystemExit('dgvoodootest: the removal took the config')
         if patcher.remove_dgvoodoo(dest, log.append):
             raise SystemExit('dgvoodootest: removed what was not there')
         patcher.install_dgvoodoo(dest, log.append)
-        if open(conf).read() != 'mine':
+        if read(conf, 'r') != 'mine':
             raise SystemExit('dgvoodootest: the install rewrote the config')
         # a stamp without the files is no install
         os.remove(os.path.join(dest, 'D3DImm.dll'))
@@ -142,11 +147,16 @@ def main():
     finally:
         shutil.rmtree(dest)
 
-    default = 'dgvoodoo' in patcher.default_keys()
-    if default != patcher.windows_native():
-        raise SystemExit('dgvoodootest: the default does not follow the system')
-    if ('dgvoodoo' in patcher.parse_keys([])) != default or ('dgvoodoo' in patcher.parse_keys(['nodisc'])) != default:
-        raise SystemExit('dgvoodootest: parse_keys does not follow the default')
+    native = patcher.windows_native
+    try:
+        for default in (True, False):               # the default follows the system: on under Windows itself, off elsewhere
+            patcher.windows_native = lambda: default
+            if ('dgvoodoo' in patcher.default_keys()) != default:
+                raise SystemExit('dgvoodootest: the default does not follow the system')
+            if ('dgvoodoo' in patcher.parse_keys([])) != default or ('dgvoodoo' in patcher.parse_keys(['nodisc'])) != default:
+                raise SystemExit('dgvoodootest: parse_keys does not follow the default')
+    finally:
+        patcher.windows_native = native
     if 'dgvoodoo' not in patcher.parse_keys(['dgvoodoo']) or 'dgvoodoo' not in patcher.parse_keys(['nodisc,dgvoodoo']):
         raise SystemExit('dgvoodootest: parse_keys drops the add-on named')
     if 'dgvoodoo' in patcher.parse_keys(['-dgvoodoo']) or 'nodisc' not in patcher.parse_keys(['-dgvoodoo']):

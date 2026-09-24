@@ -87,10 +87,21 @@ reason in `sr2-net.log` on both sides.
 `sr2-net.log` beside the exe, created empty, turns on a log of what the
 core did.
 
+The game's socket is UDP 47626. When that port is taken - a second copy
+of the game on the machine, say - the DLL binds any free port and says
+so in the log; INTERNET and DIRECT IP with `host:port` still work, but
+a LAN search, which asks 47626, will not find that machine. A join
+waits up to 4 s for a direct road and 5 s more for the host's answer
+before giving up, and the game's own join call holds the screen for
+that long.
+
 ## The directory
 
 INTERNET goes through `net/directory.py` on UDP 47627, on Sega Online's
 three servers: `segaonline.net`, `us.segaonline.net`, `jp.segaonline.net`.
+Their names are looked up on a thread of the DLL's own, so a slow or
+absent resolver holds the list, not the game; the search reports
+"connecting" until the lookup is done.
 
 Every datagram to the server carries a four-byte token the DLL made up
 when the connection opened, and the server echoes it in every answer;
@@ -98,9 +109,13 @@ an answer without it - from a forged server address, say - is dropped.
 The server still answers the form from before the token in kind.
 
 A host registers its session with all three every second (`H`: the
-session's id and the record the list shows, with the wire version) and
-takes it down when it leaves (`X`); it expires after five seconds
-without a refresh. A guest asks all three (`L`) and merges the answers,
+session's id, the record the list shows with the wire version, and a
+cookie) and takes it down when it leaves (`X`); it expires after five
+seconds without a refresh. The cookie is the server's, made from the
+host's address and the session's id and sent back (`C`) to a
+registration without it: a registration from a forged address never
+sees its cookie, so it is never listed. A guest asks all three (`L`)
+and merges the answers,
 so a host anywhere is seen from anywhere; the list puts open sessions
 first and the newest first among them.
 

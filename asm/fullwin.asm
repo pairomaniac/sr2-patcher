@@ -102,6 +102,10 @@ present:
         mov     edx, [ebx + SRCRECT + 12]
         sub     edx, [ebx + SRCRECT + 4]
         mov     [ebp - 0x44], edx       ; sh
+        test    ecx, ecx                ; an empty source rect: nothing to fit, nothing to divide by
+        jz      .none
+        test    edx, edx
+        jz      .none
         mov     eax, esi
         imul    eax, edx                ; cw * sh
         mov     ecx, edi
@@ -184,13 +188,15 @@ present:
         call    stamp
         mov     [esi + t_blt], eax
         mov     eax, [ebx + LASTHR]     ; the blit's result, as the original returned it
-        pop     edi
+.out:   pop     edi
         pop     esi
         pop     ebx
         mov     esp, ebp
         pop     ebp
         add     esp, 0x10               ; the frame 0x10004d55 made
         ret     4
+.none:  xor     eax, eax                ; nothing to present: DD_OK
+        jmp     .out
 
 ; eax = the counter's low dword, 0 without QueryPerformanceCounter.
 stamp:

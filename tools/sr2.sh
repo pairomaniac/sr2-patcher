@@ -20,6 +20,7 @@
 # is steam-<id>.log in PROTON_LOG_DIR, which is why that is pointed at
 # logs/.
 set -e
+set -o pipefail
 
 CONF=$HOME/.sr2-test
 [ -f "$CONF" ] && . "$CONF"
@@ -103,7 +104,7 @@ mkdir -p "$LOGS"
 cd "$GAME"
 if [ -n "$WINE" ]; then
     WINEPREFIX="$PFX" WINEDEBUG="${debug:-err+all}" \
-        "$WINE" "$GAME/$EXE" 2>&1 | tee "$LOG"
+        "$WINE" "$GAME/$EXE" 2>&1 | tee "$LOG" || true     # the game's own exit status is not the script's
 else
     [ -n "$UMU" ] || die "umu-run not found; set SR2_UMU or SR2_WINE"
     proton=$(find_proton)

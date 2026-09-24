@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define N 6
 static sr2_net *nets[N];
@@ -504,6 +505,33 @@ int main(void)
     if (!expect_event(1, SR2_EV_LOST, -1))
         fail("the dropped guest hears it");
     ok("and hears it is out when it comes back");
+
+    /* the directory's names are looked up off the caller's thread */
+    {
+        static const char *const rnames[] = {"127.0.0.1:1234", "localhost", "no-such-host.invalid"};
+        sock_resolver *rs = sock_resolve(rnames, 3, 47627);
+        sock_addr got[SOCK_RESOLVE_MAX];
+        sr2_session found[SR2_MAX_SESSIONS];
+        int c = -1, t;
+        for (t = 0; t < 3000 && (c = sock_resolved(rs, got, SOCK_RESOLVE_MAX)) < 0; t++)
+            usleep(10000);
+        if (c < 1 || c > 2 || got[0].addr != htonl(INADDR_LOOPBACK) || got[0].port != 1234)
+            fail(c < 0 ? "the resolver never finished" : "the resolver's addresses");
+        sock_resolve_drop(rs);
+        sr2_leave(nets[5], now);
+        if (sr2_open(nets[5], SR2_KIND_INTERNET, "", now) != SR2_OK)
+            fail("open internet with the names");
+        if (sr2_enum(nets[5], now, found, SR2_MAX_SESSIONS) != SR2_CONNECTING)
+            fail("a search while the names are looked up");
+        for (t = 0, c = SR2_CONNECTING; t < 3000 && c == SR2_CONNECTING; t++) {
+            run(10);
+            c = sr2_enum(nets[5], now, found, SR2_MAX_SESSIONS);
+        }
+        if (c != 0)
+            fail(c == SR2_CONNECTING ? "the search never ended after the lookup" : "the search after the lookup");
+        sr2_leave(nets[5], now);
+        ok("the directory's names are looked up on a thread of their own; the search waits for them");
+    }
 
     /* the directory: found through it, joined direct, then through the relay */
     if (getenv("SR2_DIR_PORT")) {

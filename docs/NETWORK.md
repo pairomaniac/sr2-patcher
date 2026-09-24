@@ -212,9 +212,11 @@ reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
   has got through after four seconds the guest sends through the server
   and the host follows onto the relay when the first relayed packet
   arrives; the relay is per guest. A host registers with the servers
-  every second and unregisters when it leaves; five seconds of silence
-  drops it too. The listing is public; the game's own OPEN/CLOSE and
-  START are the controls.
+  every second, with a cookie each server issued it so a forged
+  registration is never listed, and unregisters when it leaves; five
+  seconds of silence drops it too. The servers' names are looked up on
+  a thread of the DLL's own. The listing is public; the game's own
+  OPEN/CLOSE and START are the controls.
 - **DIRECT IP**: the host forwards UDP 47626; the guest types the address,
   or `host:port`, in the entry popup. Blank searches the LAN. What TCP/IP
   did, without DirectPlay.

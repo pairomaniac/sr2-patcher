@@ -64,11 +64,25 @@ def main():
         check(lists(sock, a, 1, t + 2 + k * 0.4) == 1, 'a searching game refused')
     d.expire(t + 100)
     check(not d.lists, 'idle buckets kept')
+    # a registration is challenged: C with the cookie, nothing listed until it comes back
+    sock.sent.clear()
+    guid = bytes([1]) * 16
+    record = bytes([4, 1, 0]) + b'T0'.ljust(64, b'\0') + bytes([1])
+    d.handle(sock, head(b'H') + guid + record + b'\0\0\0\0', ('192.0.2.1', 6000), t + 100)
+    check(not d.sessions and len(sock.sent) == 1 and sock.sent[0][0][:9] == head(b'C') and sock.sent[0][1] == ('192.0.2.1', 6000),
+          'a registration without the cookie is challenged')
+    cookie = sock.sent[0][0][9:]
+    check(len(cookie) == d.COOKIE and cookie != d.cookie_for(('192.0.2.2', 6000), guid), 'the cookie is the address\'s')
+    sock.sent.clear()
+    d.handle(sock, head(b'H') + guid + record + cookie, ('192.0.2.2', 6000), t + 100)
+    check(not d.sessions and sock.sent[0][0][:9] == head(b'C'), 'another address\'s cookie is not taken')
     with contextlib.redirect_stdout(io.StringIO()):     # the server's own log lines
         for k in range(18):
             guid = bytes([k + 1]) * 16
             record = bytes([4, 1, 1 if k == 3 else 0]) + (b'T%d' % k).ljust(64, b'\0') + bytes([1])
-            d.handle(sock, head(b'H') + guid + record, ('192.0.2.%d' % (k + 1), 6000), t + 100 + k)
+            host = ('192.0.2.%d' % (k + 1), 6000)
+            d.handle(sock, head(b'H') + guid + record + d.cookie_for(host, guid), host, t + 100 + k)
+    check(len(d.sessions) == 18, 'registered with the cookie')
     sock.sent.clear()
     check(lists(sock, a, 1, t + 120) == 1, 'lists(sock, a, 1, t + 120) == 1')
     data = sock.sent[-1][0]
@@ -101,7 +115,7 @@ def main():
         check(bytes([18]) * 16 in d.sessions, 'X from another address ignored')
         d.handle(sock, head(b'X') + bytes([18]) * 16, ('192.0.2.18', 6000), t + 140)
     check(bytes([18]) * 16 not in d.sessions, 'X from the host closes it')
-    print('directory: lists held to %d/s per address after %d, %d bytes at the most; the token, N, X'
+    print('directory: lists held to %d/s per address after %d, %d bytes at the most; the token, the cookie, N, X'
           % (d.LIST_RATE, d.LIST_BURST, most))
     return 0
 

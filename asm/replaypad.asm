@@ -82,5 +82,4 @@ entry:  pushad
 ; the inputs asked for, as the annex numbers them - RB, LB, the left
 ; stick's left and right, RT, LT, Y, X - and the bits each sets
 inputs: db 9, 8, 18, 19, 17, 16, 15, 14
-        align 2
 masks:  dw 1, 2, 4, 8, 0x80, 0x100, 0x30, 0x40

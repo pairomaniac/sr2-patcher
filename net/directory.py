@@ -15,13 +15,14 @@ token the client made up at start (echoed in every answer, so an answer
 the client did not ask for is dropped), then the body:
 
     client -> server
-        H <guid> <record>         host: my session (every second; refreshes it)
+        H <guid> <record> <cookie>  host: my session (every second; refreshes it)
         X <guid>                  host: my session is over
         L                         guest: the list
         J <guid>                  guest: I want this host
         R <guid> <data>           guest: forward <data> to the host
         R <guid> <ep> <data>      host: forward <data> to the guest at <ep>
     server -> client
+        C <cookie>                to a host: the cookie its registration needs
         S <n> {<guid> <ep> <record>}...   the open sessions
         P <ep>                    the other side's endpoint
         N                         no such session
@@ -30,11 +31,14 @@ the client did not ask for is dropped), then the body:
 
 <guid> is 16 bytes, <ep> an IPv4 address and port, 4 + 2 bytes big-endian,
 <record> the 68 bytes the game shows and one more: max players, players,
-closed (a byte each), the team name, 64 bytes, and the wire version. The
-older "SR2D" form - no token, a 67-byte record - is still answered in
-kind, for a patcher from before the token. A session expires after
-EXPIRE_S without a refresh from its host; a relayed guest is forgotten
-after as long without traffic.
+closed (a byte each), the team name, 64 bytes, and the wire version.
+<cookie> is four bytes made here from the host's address and the guid:
+a registration without the right one is answered with C and not listed,
+so a host with a forged source address, which never sees its C, is never
+listed. The older "SR2D" form - no token, no cookie, a 67-byte record -
+is still answered in kind, for a patcher from before the token. A
+session expires after EXPIRE_S without a refresh from its host; a
+relayed guest is forgotten after as long without traffic.
 
 What it refuses: an address that keeps asking for sessions that do not
 exist - MISS_LIMIT different ones in MISS_WINDOW_S; asking again for one
@@ -49,6 +53,8 @@ the guests that joined it through here. The list puts open sessions
 first, the newest of them first, and stops at LIST_MAX.
 """
 
+import hashlib
+import secrets
 import socket
 import subprocess
 import sys
@@ -59,6 +65,7 @@ MAGIC_OLD = b'SR2D'     # before the token: no token, a 67-byte record
 GUID = 16
 RECORD = 68             # max, players, closed, name[64], version
 RECORD_OLD = 67
+COOKIE = 4
 EP = 6
 EXPIRE_S = 5
 MAX_SESSIONS = 5000
@@ -76,8 +83,13 @@ BAN_S = 600
 MAX_MISSES = 10000   # addresses remembered for their misses; the oldest forgotten past it
 
 sessions = {}   # guid -> {'host': (ip, port), 'record': bytes, 'seen': t, 'guests': {ep: {'seen': t, 'bucket': {}}}, 'relayed': bool}
+SECRET = secrets.token_bytes(16)    # the cookies are made from it; a restart makes new ones
 misses = {}     # ip -> [first_miss_t, {guids asked for that were not there}] or [until_t, None] while banned
 lists = {}      # ip -> (tokens, t): the list bucket
+
+
+def cookie_for(addr, guid):
+    return hashlib.blake2b(SECRET + ep_bytes(addr) + guid, digest_size=COOKIE).digest()
 
 
 def ep_bytes(addr):
@@ -175,10 +187,18 @@ def handle(sock, data, addr, now):
         return e['record'][:RECORD_OLD] if old else e['record']
 
     if op == b'H':
-        if len(body) == GUID + RECORD_OLD:
+        if old:
+            if len(body) != GUID + RECORD_OLD:
+                return
             body += b'\0'                  # the version an older host does not send
-        if len(body) != GUID + RECORD:
-            return
+        else:
+            if len(body) != GUID + RECORD + COOKIE:
+                return
+            guid = body[:GUID]
+            if body[GUID + RECORD:] != cookie_for(addr, guid):
+                send(sock, reply(b'C', cookie_for(addr, guid)), addr)
+                return
+            body = body[:GUID + RECORD]
         guid, record = body[:GUID], body[GUID:]
         e = sessions.get(guid)
         if e is None:
@@ -315,13 +335,11 @@ def main():
     print('listening on udp/%d' % port, flush=True)
     swept = 0
     while True:
-        now = time.monotonic()
         try:
-            data, addr = sock.recvfrom(5 + GUID + EP + MAX_RELAY + 1)
-        except socket.timeout:
+            data, addr = sock.recvfrom(9 + GUID + EP + MAX_RELAY + 1)
+        except (socket.timeout, ConnectionResetError):
             data = None
-        except ConnectionResetError:
-            continue
+        now = time.monotonic()
         if data:
             handle(sock, data, addr, now)
         if now - swept >= 1:

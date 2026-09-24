@@ -45,12 +45,24 @@ PIXELS = VERTS + 0x20000                     # a 640x480 16-bit surface's pixels
 ZF = 1 << 6
 
 
-def exe_stub():
-    """WIDE_BLOB placed with its table, the exe's globals and two kernel32
-    stubs around it; the profile answer is settable."""
-    blob = patcher.exe_blob(patcher.WIDE_BLOB, 'European') + patcher.resolution_table()
+def map_page(mu, addr):
+    """The page holding addr, unless it is mapped already."""
+    page = addr & ~0xfff
+    if not any(lo <= page <= hi for lo, hi, _p in mu.mem_regions()):
+        mu.mem_map(page, 0x1000)
+
+
+def exe_stub(build='European'):
+    """The build's wide blob placed with its table, the exe's globals and
+    two kernel32 stubs around it; the profile answer is settable."""
+    global ROW
+    ROW = patcher.BUILDS[build]
+    blob = patcher.exe_blob(patcher.WIDE_US_BLOB if build == 'American' else patcher.WIDE_BLOB, build) + patcher.resolution_table()
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    for addr in (CODE, STUBS, VTABLE, RECTS, 0x4d5000, 0x495000, 0x50a000):
+    pages = {CODE, STUBS, VTABLE, RECTS}
+    pages |= set(v & ~0xfff for k, v in ROW['addresses'].items() if k in ('WIDTH', 'HEIGHT', 'MODE', 'HIRES'))
+    pages |= set(v & ~0xfff for v in ROW['slots'].values())
+    for addr in sorted(pages):
         mu.mem_map(addr, 0x1000)
     mu.mem_map(STACK, 0x10000)
     mu.mem_write(CODE, blob)
@@ -333,8 +345,8 @@ def test_gl():
         raise SystemExit('widetest: the trace said %r' % (lines,))
 
 
-def test_exe():
-    mu, call, state = exe_stub()
+def test_exe(build='European'):
+    mu, call, state = exe_stub(build)
     mode = ROW['addresses']['MODE']
     # the mode check: no file, no wide size, mode 0 equal to MODE 0
     call(0, 0, 0xCAFE0000, 0)                           # the pushed esi, the setter's return, the mode
@@ -358,6 +370,12 @@ def test_exe():
     call(5, eax=1)
     if size(mu) != (800, 600):
         raise SystemExit('widetest: mode 1 not 800x600: %r' % (size(mu),))
+    if build == 'American':                             # its third size, behind a flag of its own
+        mu.mem_write(ROW['addresses']['HIRES'], struct.pack('<I', 1))
+        call(5, eax=1)
+        if size(mu) != (1024, 768):
+            raise SystemExit('widetest: the American mode 1 with the flag not 1024x768: %r' % (size(mu),))
+        mu.mem_write(ROW['addresses']['HIRES'], struct.pack('<I', 0))
     for answer in (b'800x600', b'1234x999', b'', b'1920'):
         state['answer'] = answer
         mu.mem_write(mode, struct.pack('<I', 0))
@@ -367,7 +385,8 @@ def test_exe():
             raise SystemExit('widetest: %r taken as a wide size' % answer)
     # the screen change: the setter with the front end's mode once the file's size differs from the one in force
     settings, setter = ROW['addresses']['SETTINGS'], ROW['addresses']['SETTER']
-    mu.mem_map(setter & ~0xfff, 0x1000)
+    map_page(mu, setter)
+    map_page(mu, settings)
     mu.mem_write(setter, b'\xc3')
     mu.mem_write(settings, struct.pack('<I', RECTS + 0x100))
     mu.mem_write(RECTS + 0x150, struct.pack('<I', 1))
@@ -400,8 +419,8 @@ def test_exe():
     # was; the callback gets its element and every register comes back
     dll, gamed3d, resume = 0x700000, ROW['addresses']['GAMED3D'], ROW['addresses']['WALKRESUME']
     mu.mem_map(dll, 0x18000)
-    mu.mem_map(gamed3d & ~0xfff, 0x1000)
-    mu.mem_map(resume & ~0xfff, 0x1000)
+    map_page(mu, gamed3d)
+    map_page(mu, resume)
     mu.mem_write(dll, b'MZ')
     mu.mem_write(dll + 0x3c, struct.pack('<I', 0x80))
     mu.mem_write(dll + 0x80 + 0x50, struct.pack('<I', 0x18000))
@@ -416,8 +435,8 @@ def test_exe():
         esp = mu.reg_read(UC_X86_REG_ESP)
         seen.append((address, struct.unpack('<I', mu.mem_read(esp + 4, 4))[0], struct.unpack('<I', mu.mem_read(dll + 0x17108, 4))[0]))
     callbacks = (ROW['addresses']['HUDLO'], ROW['addresses']['HUDHI'], ROW['addresses']['HUDHI'] + 0x10)
-    for page in sorted(set(cb & ~0xfff for cb in callbacks)):
-        mu.mem_map(page, 0x1000)
+    for cb in callbacks:
+        map_page(mu, cb)
     for cb in callbacks:
         mu.mem_write(cb, b'\xc3')
         mu.hook_add(UC_HOOK_CODE, callback, begin=cb, end=cb + 1)
@@ -1185,10 +1204,11 @@ def test_2d():
 
 
 def main():
-    test_exe()
+    test_exe('European')
+    test_exe('American')
     test_gl()
     test_2d()
-    print('widetest: the size stubs, the viewport and perspective hooks and the 2D scaling OK')
+    print('widetest: the size stubs on both exe blobs, the viewport and perspective hooks and the 2D scaling OK')
     return 0
 
 

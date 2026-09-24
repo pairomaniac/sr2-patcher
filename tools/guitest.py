@@ -122,7 +122,7 @@ def walk(widget, out=None):
 def text_of(widget):
     try:
         return str(widget.cget('text'))
-    except Exception:                                       # noqa: BLE001
+    except Exception:                                       # anything: the check is that the window survives it
         return ''
 
 

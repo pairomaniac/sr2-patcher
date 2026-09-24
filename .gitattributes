@@ -12,3 +12,4 @@
 *.h text eol=lf
 *.def text eol=lf
 *.service text eol=lf
+*.example text eol=lf

@@ -103,14 +103,14 @@ Australian only and says so on the other builds.
 | `asm` | `asm/` edited without `asm/build.py` being run |
 | `labels` | `tools/labels.py` edited without being run: the labels rendered here against the baked ones, a rasteriser's few pixels of difference allowed (skips without Pillow and the font) |
 | `net` | `net/` edited without `net/build.py` being run |
-| `nettest` | the network core: a host and five guests over loopback, a third of the datagrams dropped - joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going, an oversized reliable datagram and a welcome with a seat past the table; then a directory server started for the run, a session found through it, a direct join and a relayed one (skips without a C compiler) |
-| `directorytest` | the directory server's list limit per address, with a hand-set clock |
+| `nettest` | the network core: a host and five guests over loopback, a third of the datagrams dropped - joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going, an oversized reliable datagram and a welcome with a seat past the table; the name lookup on its thread; then a directory server started for the run (a failure to start fails the check), a session found through it, a direct join and a relayed one (skips without a C compiler) |
+| `directorytest` | the directory server's list limit per address, the token, the registration cookie, N and X, with a hand-set clock |
 | `lint` | pyflakes |
-| `bgrow`, `wide`, `fullwin`, `altenter`, `loadhold`, `padmenu`, `pagepad`, `hudlast`, `frametrace`, `d3dinit`, `texrange`, `replayfree` | those stubs under Unicorn, with the exe's routines stubbed; `tools/uctest.py` is what the tests share |
+| `bgrow`, `wide`, `fullwin`, `altenter`, `loadhold`, `padmenu`, `pagepad`, `hudlast`, `frametrace`, `d3dinit`, `texrange`, `replayfree` | those stubs under Unicorn, with the exe's routines stubbed (`wide` runs the European and the American exe blobs); `tools/uctest.py` is what the tests share |
 | `cab` | the disc and cabinet readers on a real dump |
 | `dgvoodoo` | the dgVoodoo 2 add-on's download and unpack against a made-up release |
 | `gui` | the window driven headlessly: the widgets reachable, the palette measured, the feature rows against the patch keys (skips without a display) |
-| `offsets` | every original byte string in the file, every patch alone, every pair and a hundred random sets applying, the all-on result at its pinned MD5 with the full resolution table and with the capped one; an install older than the tables is noted, not failed |
+| `offsets` | every original byte string in the file, every patch alone, every pair, a hundred random sets and the diagnostics in sets of their own applying, the all-on result at its pinned MD5 with the full resolution table and with the capped one; an install older than the tables is noted, not failed |
 | `music` | the music hook under Unicorn, on the build's real `MGAudio.dll` |
 | `altab` | the alt-tab stub and the rewritten restore routine under Unicorn |
 | `padinput`, `dinput8`, `nogeneric` | the pad annex, the DirectInput 8 create and type translation, and the device-list filter under Unicorn, on the build's real `MGInput.dll` |
