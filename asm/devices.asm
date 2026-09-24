@@ -545,9 +545,11 @@ release:
         jz      .none
         push    eax
         push    ecx
+        push    edx
         mov     ecx, [eax]
         push    eax
         call    [ecx + 8]
+        pop     edx
         pop     ecx
         pop     eax
 .none:  ret
@@ -635,24 +637,26 @@ rowrec:
         pop     ecx
         ret
 
-; eax = player, edx = a name or 0: the config saved to the file.
+; eax = player, edx = a name or 0: the config saved to the file. Persist
+; and Release are stdcall and keep nothing but the stack, so the name is
+; taken from it, not from edx.
 savecfg:
         push    eax
         push    ecx
         push    edx
         call    getcfg
-        pop     edx
         test    eax, eax
         jz      .out
         push    eax
         push    1
-        push    edx
+        push    dword [esp + 8]         ; the name
         push    eax
         mov     ecx, [eax]
         call    [ecx + 0x30]            ; Persist(name, save)
         pop     eax
         call    release
-.out:   pop     ecx
+.out:   pop     edx
+        pop     ecx
         pop     eax
         ret
 

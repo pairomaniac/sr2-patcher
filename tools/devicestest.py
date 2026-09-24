@@ -169,6 +169,9 @@ def main(argv):
         elif name == 'Bits':
             ret = log['bits']
         mu.reg_write(UC_X86_REG_EAX, ret)
+        if name != 'Bits':                                  # stdcall keeps neither
+            mu.reg_write(UC_X86_REG_ECX, 0xdeadbee0)
+            mu.reg_write(UC_X86_REG_EDX, 0xdeadbee4)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
 

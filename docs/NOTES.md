@@ -1433,8 +1433,10 @@ and clears, reached the connection screens only now and then, and the
 wrapper's level bits there ran the poll's repeat without its delay
 whenever anything else was held. A press of Back sets bit 13 in the
 same word - TAB to the list, back to the row - and any press sets bit
-31, which closes the card as a key would. Then the edge against the
-previous level and the three stores. The poll runs only from the
+31, which closes the card as a key would. Then the edge again, against
+the stored previous level - the exe made one at `0x43f94b`, before the
+site, from a level without the annex's bits - and the three stores;
+with the poll slot empty the exe's edge is stored as it is. The poll runs only from the
 multiplayer controller (`0x43fcd9`), so no other screen sees any of
 this.
 `tools/padmenutest.py` runs the entry under Unicorn.

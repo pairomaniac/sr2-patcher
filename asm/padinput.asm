@@ -196,9 +196,9 @@ save:
         jne     .named
         add     esi, 2
         call    number
-        cmp     eax, FULL
+        cmp     eax, DEADZONE_MAX       ; as the parser clamps: a full deadzone leaves no range to scale by
         jbe     .setdz
-        mov     eax, FULL
+        mov     eax, DEADZONE_MAX
 .setdz: mov     [ebx + tables - $$ + W_DZ + edi * 4], eax
 .named:
         ; the table's row for this player: every key and pad forgotten,

@@ -4,18 +4,18 @@
     python3 tools/padmenutest.py
 
 padmenu.asm's entry with the European build's addresses in place, called
-as the poll's site is: ecx the level packed so far, edx the previous
-level, the return address the site's. It asks the poll slot's routine
-for side 0's twelve inputs with the stdcall frame the annex's page poll
-expects, puts A, B and Start into the level as their bits and takes the
-wrapper's directions out of it, makes the edge against the previous
-level, stores level, edge and previous, returns thirteen bytes past the
-site, and in the keyboard word sets the directions as pulses - on a
+as the poll's site is: ecx the level packed so far, edx the edge the exe
+made from it and the previous level, the return address the site's. It
+asks the poll slot's routine for side 0's twelve inputs with the stdcall
+frame the annex's page poll expects, puts A, B and Start into the level
+as their bits and takes the wrapper's directions out of it, makes the
+edge again against the stored previous level, stores level, edge and
+previous, returns thirteen bytes past the site, and in the keyboard word sets the directions as pulses - on a
 change, then every PERIOD frames once DELAY frames held - bit 31 on any
 press and bit 13 on a press of Back. Nothing is asked with the slot
 empty. The registers come back as they were.
 
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 
@@ -63,6 +63,8 @@ def main():
         mu.mem_write(SLOT, struct.pack('<I', slot))
         if prev is None:
             prev = struct.unpack('<I', mu.mem_read(PREV, 4))[0]
+        else:
+            mu.mem_write(PREV, struct.pack('<I', prev))
         for addr in (LEVEL, EDGE):
             mu.mem_write(addr, b'\0' * 4)
         esp = STACK + 0x8000
@@ -72,13 +74,14 @@ def main():
         for r, v in regs.items():
             mu.reg_write(r, v)
         mu.reg_write(UC_X86_REG_ECX, level)
-        mu.reg_write(UC_X86_REG_EDX, prev)
-        mu.emu_start(CODE, CODE + len(blob))
+        mu.reg_write(UC_X86_REG_EDX, ~prev & level & 0xffffffff)   # the edge, as the site's `not edx; and edx, ecx` left it
+        mu.emu_start(CODE, CODE + len(blob), timeout=2000000)
         assert mu.reg_read(UC_X86_REG_ESP) == esp + 4, 'the stack came back wrong'
         for r, v in regs.items():
             assert mu.reg_read(r) == v, 'a register came back changed'
         got = [struct.unpack('<I', mu.mem_read(a, 4))[0] for a in (LEVEL, EDGE, PREV, KEYS)]
         assert got[0] == got[2], 'the previous level is not the level'
+        assert got[1] == ~prev & got[0] & 0xffffffff, 'the edge is not down-now-not-before'
         return got[0], got[1], got[3]
 
     DELAY, PERIOD, ANY, TAB = 30, 2, 0x80000000, 0x2000
@@ -115,6 +118,10 @@ def main():
     assert frame({BTN_A: 0x80, BTN_B: 0x80, START: 0x80}) == (0x8030, 0x8030, ANY), 'A, B, Start'
     clear()
     assert frame({BTN_A: 0x80, BTN_B: 0x80, START: 0x80}) == (0x8030, 0, 0), 'buttons held: an edge again, or any key again'
+    clear()
+    assert frame({BTN_A: 0x80}, level=0x10, prev=0x8030) == (0x10, 0, 0), 'A held through the wrapper too: an edge'
+    assert frame({}, level=0, prev=0x10) == (0, 0, 0), 'a release: an edge'
+    assert frame({BTN_A: 0x80}, level=0x10, prev=0) == (0x10, 0x10, ANY), 'a press through both: one edge'
     rest()
     assert frame({}, level=0x8010, prev=0x8010) == (0x8010, 0, 0), 'the wrapper\'s button bits lost'
     assert frame({}, level=0xf, prev=0) == (0, 0, 0), 'the wrapper\'s direction bits kept'

@@ -3,8 +3,9 @@
 ;
 ; The multiplayer controller polls the pad every frame at 0x43f8e0: the
 ; input wrapper's button mask packed into a level word, an edge word
-; from it and the previous level, and the three stored (0x43f94f,
-; 0x4ef7c4 / 0x4ef7e4 / 0x4ef7d4). Its screens test the edge word for
+; made from it and the previous level (0x43f94b: `not edx; and edx,
+; ecx`), and the three stored (0x43f94f, 0x4ef7c4 / 0x4ef7e4 /
+; 0x4ef7d4). Its screens test the edge word for
 ; up, down, left, right (bits 0-3), confirm (4), cancel (5) and Enter
 ; (15), and the keyboard's own word (0x4d5e08, from WM_KEYDOWN) for the
 ; same, for TAB (bit 13), which alone opens the team room's MENU row,
@@ -23,8 +24,10 @@
 ; repeat gives a key. A bit there waits for the task that reads and
 ; clears the word, so no screen misses one, where the edge word is
 ; made and cleared by the frame. A press of Back sets TAB there, and
-; any press its bit 31. Then the edge and the three stores, returning
-; past the two stores that followed the site.
+; any press its bit 31. The edge is made again against the stored
+; previous level, since the level now carries the annex's bits, then
+; the three stores, returning past the two that followed the site.
+; With the slot empty the site's own edge in edx is stored as it is.
 ;
 ; Placeholders the patcher fills: the level, edge and previous words
 ; (PADLEVEL, PADEDGE, PADPREV), the keyboard word (MENUKEYS), the poll's
@@ -46,7 +49,7 @@ bits 32
 %define INPUTS      12                  ; the inputs asked for
 %define SKIP        13                  ; the two stores after the site, returned past
 
-; ecx = the level packed so far, edx = the previous level
+; ecx = the level packed so far, edx = the edge the site made from it
 entry:  add     dword [esp], SKIP
         push    eax
         push    esi
@@ -96,9 +99,10 @@ entry:  add     dword [esp], SKIP
 .buttons:
         and     esi, ~(DIRS | TAB)
         or      ecx, esi
-.store: not     edx
-        and     edx, ecx                ; the edge: down now, not before
-        mov     [PADLEVEL], ecx
+        mov     edx, [PADPREV]
+        not     edx
+        and     edx, ecx                ; the edge again: down now, not before
+.store: mov     [PADLEVEL], ecx
         mov     [PADEDGE], edx
         mov     [PADPREV], ecx
         pop     ebp

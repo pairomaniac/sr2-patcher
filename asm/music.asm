@@ -1202,6 +1202,10 @@ startup:
         push    0
         call    dword [ebx + D_CREATEEV]
         mov     [ebx + D_HDONE], eax
+        cmp     dword [ebx + D_HREQ], 0  ; both events before the thread, which waits on them at once
+        je      .nothread
+        test    eax, eax
+        jz      .nothread
         push    0
         push    0
         push    0
@@ -1211,11 +1215,7 @@ startup:
         push    0
         call    dword [ebx + D_CREATETHR]
         test    eax, eax
-        jz      .nothread
-        cmp     dword [ebx + D_HREQ], 0
-        je      .nothread
-        cmp     dword [ebx + D_HDONE], 0
-        jne     .done
+        jnz     .done
 .nothread:
         mov     dword [ebx + D_NTRACKS], 0
 .done:

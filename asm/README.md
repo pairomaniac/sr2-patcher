@@ -391,8 +391,9 @@ have passed. [docs/NOTES.md](../docs/NOTES.md), *Loading screens*;
 One entry in the exe's annex, in place of the store of the pad poll's
 level word: MGInput's annex asked for the pad's D-pad, stick, A, B,
 Start and Back through the poll it publishes, the buttons put into the
-level as the screens' bits, the edge and the three stores made, and the
-directions, at the keyboard's repeat, a press of Back as TAB and any
+level as the screens' bits, the edge made again against the stored
+previous level (the exe made one before the site, from a level without
+the annex's bits) and the three stores, and the directions, at the keyboard's repeat, a press of Back as TAB and any
 press as a key put into the keyboard's menu word, which waits for the
 task that reads it.
 [docs/NOTES.md](../docs/NOTES.md), *The menus' directions*;

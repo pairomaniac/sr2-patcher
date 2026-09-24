@@ -166,12 +166,13 @@ compose:
         add     ecx, eax
         sub     ecx, 8
         lea     edx, [eax + ANNEX_RVA]
+        jmp     .test
 .scan:  cmp     dword [edx], 'BGBL'
         jne     .next
         cmp     dword [edx + 4], 'OCK'
         je      .found
 .next:  add     edx, 4
-        cmp     edx, ecx
+.test:  cmp     edx, ecx                ; the bound before the read: no annex, no scan
         jbe     .scan
         jmp     .no
 .found: add     edx, 8

@@ -199,13 +199,17 @@ def main(argv):
     # 2. a save: three records for 2P and a deadzone in the name; the text rewritten
     handbrake_b = patcher.annex_records(1, [(0, None)] * 8 + [(0, 13)])[9]
     three = b''.join(patcher.annex_records(1, [(0x11, None), (0x1f, None)])[:2]) + handbrake_b
-    mu.mem_write(buf, three)
     name = SCRATCH + 0x40
+    t2 = [(0x11, None), (0x1f, None)] + [(0, None)] * 6 + [(0, 13)] + [(0, None)] * 4
+    mu.mem_write(buf, three)
+    mu.mem_write(name, b'DZ12000\0')                                   # past the most: clamped as the parser clamps
+    ret, _p = call(site(save_off), this, slot1, name, buf, 3)
+    assert ret == 0 and disk['text'] == patcher.annex_text([None, t2], (1000, 9000)), disk['text'].decode()
+    mu.mem_write(buf, three)
     mu.mem_write(name, b'DZ4000\0')
     ret, popped = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and popped == 4 + 0x14, (hex(ret), popped)
-    assert disk['text'] is not None and disk['opened'][-1] == (CFG, 0xC0000000, 4) and disk['ended'] == 1
-    t2 = [(0x11, None), (0x1f, None)] + [(0, None)] * 6 + [(0, 13)] + [(0, None)] * 4
+    assert disk['text'] is not None and disk['opened'][-1] == (CFG, 0xC0000000, 4) and disk['ended'] == 2
     assert disk['text'] == patcher.annex_text([None, t2], (1000, 4000)), disk['text'].decode()
     recs, count = load(slot1)
     assert recs == patcher.annex_records(1, t2), count
