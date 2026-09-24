@@ -276,10 +276,23 @@ and serial:
 
 The team room, the chat, the car and course selection and the race are
 the game's own. Up to four players, on 0.7.1 or later; a patcher from
-before that is refused, and `sr2-net.log` says so. If something goes
-wrong online, `sr2-net.log` from each machine
-is the report to send - create the empty file beside the exe first. How
-it works is in [docs/NETWORK.md](docs/NETWORK.md).
+before that is refused. How it works is in
+[docs/NETWORK.md](docs/NETWORK.md).
+
+### The network log
+
+Create an empty file named `sr2-net.log` beside `SEGA RALLY 2.exe` and
+the game writes a line there for everything the network does: the
+connection opened and how, the team hosted, a join and who it reached,
+a guest seated or refused and why (closed, full, not that team, an
+older patcher), the switch to the relay when no direct path opened,
+a player dropped and why, the team lost. Each line starts with the
+game's own clock in milliseconds. Nothing is logged without the file.
+
+It is the report to send when something goes wrong online - one from
+each machine, since the host and a guest see different halves - and
+the first place to look yourself: a join that fails says on which side
+and for what reason.
 
 ## Music
 
@@ -361,7 +374,8 @@ which release you have (European, American, Australian, Japanese) - the
 window names it - whether you are on Windows or Wine/Proton, and what
 you were doing just before. For a crash on Windows, the entry under
 Event Viewer → Windows Logs → Application names the faulting module and
-offset, which is usually enough to find it. For a disc image of a
+offset, which is usually enough to find it. For anything online,
+`sr2-net.log` from each machine ([The network log](#the-network-log)). For a disc image of a
 release the patcher does not know, or anything that does not fit an
 issue: pairo@segaonline.net.
 

@@ -808,7 +808,8 @@ static void take_packet(sr2_net *n, const route *from, uint8_t *pkt, int len, ui
     take_ack(p, rd32(pkt + 12));
     if (type == T_REFUSE) {
         if (n->joining && len > HDR) {
-            nlog(n, "refused: reason %d", pkt[HDR]);
+            static const char *const why[] = {"?", "not that session", "closed", "full", "a patcher from before this one's wire"};
+            nlog(n, "refused by the host: %s", pkt[HDR] < 5 ? why[pkt[HDR]] : "?");
             n->join_refused = 1;
         }
         return;
