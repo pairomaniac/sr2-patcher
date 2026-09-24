@@ -34,7 +34,7 @@ BUILDS = ('EU', 'US', 'AU', 'JP', 'JP_MK')
 # name, what, command, needs: '' for none, 'disc' for the install disc
 # (and the game if there is one), 'game' for the installed game.
 CHECKS = [
-    ('tables', 'patch tables: sites inside the file, no overlap, placeholders filled',
+    ('tables', 'the patch tables: sites in range, no overlap, no placeholder',
      [PY, 'sr2-patcher.py', '--selfcheck'], ''),
     ('asm', 'asm/ sources match the committed blobs',
      [PY, 'asm/build.py', '--check'], ''),
@@ -45,17 +45,17 @@ CHECKS = [
       'tools/frametracetest.py', 'tools/frames.py', 'tools/d3dinittest.py', 'tools/dgvoodootest.py',
       'tools/selftest.py', 'tools/guitest.py', 'tools/assets.py', 'tools/padinputtest.py', 'tools/devicestest.py', 'tools/widetest.py',
       'tools/resolutiontest.py', 'tools/dinput8test.py', 'tools/nogenerictest.py', 'tools/hudlasttest.py', 'tools/loudness.py', 'tools/txrdump.py', 'tools/uctest.py', 'tools/labels.py', 'tools/nettest.py', 'tools/directorytest.py', 'net/build.py', 'net/directory.py', 'tools/padbits.py'], ''),
-    ('labels', 'tools/labels.py renders what the script carries (skips without Pillow and the font)',
+    ('labels', 'the baked labels against a render (skips without Pillow)',
      [PY, 'tools/labels.py', '--check'], ''),
     ('net', 'net/ matches the MGNetWk.dll build the script carries',
      [PY, 'net/build.py', '--check'], ''),
-    ('nettest', 'the network core: a host and guests over loopback, with loss (skips without cc)',
+    ('nettest', 'the network core over loopback, with loss (skips without cc)',
      [PY, 'tools/nettest.py'], ''),
     ('directorytest', 'the directory server\'s list limit',
      [PY, 'tools/directorytest.py'], ''),
     ('bgrow', 'the .bg copies under Unicorn, 16 and 32 bits, scaled',
      [PY, 'tools/bgrowtest.py'], ''),
-    ('wide', 'the widescreen stubs under Unicorn: the size, FOV, viewport and 2D scaling',
+    ('wide', 'the widescreen stubs: the size, FOV, viewport and 2D scaling',
      [PY, 'tools/widetest.py'], ''),
     ('fullwin', 'the borderless present and window sizing under Unicorn',
      [PY, 'tools/fullwintest.py'], ''),
@@ -83,27 +83,27 @@ CHECKS = [
      [PY, 'tools/guitest.py'], ''),
     ('cab', 'the cabinet reader on a real disc',
      [PY, 'tools/cabtest.py', '{disc}'], 'disc'),
-    ('offsets', 'every patch against the real files, in every combination, pinned',
+    ('offsets', 'every patch on the real files, every combination, pinned',
      [PY, 'tools/selftest.py', '{game}'], 'game'),
-    ('music', 'the music hook under Unicorn, the real MGAudio.dll',
+    ('music', 'the music hook, the real MGAudio.dll',
      [PY, 'tools/musictest.py', '{game}'], 'game'),
-    ('altab', 'the alt-tab stub and restore routine under Unicorn, real files',
+    ('altab', 'the alt-tab stub and restore routine, the real files',
      [PY, 'tools/activatetest.py', '{game}'], 'game'),
-    ('padinput', 'the pad annex under Unicorn, the real MGInput.dll',
+    ('padinput', 'the pad annex, the real MGInput.dll',
      [PY, 'tools/padinputtest.py', '{game}'], 'game'),
-    ('dinput8', 'the DirectInput 8 create and type translation under Unicorn, the real MGInput.dll',
+    ('dinput8', 'the DirectInput 8 create and type map, the real MGInput.dll',
      [PY, 'tools/dinput8test.py', '{game}'], 'game'),
-    ('nogeneric', 'the device list filter under Unicorn, the real MGInput.dll',
+    ('nogeneric', 'the device list filter, the real MGInput.dll',
      [PY, 'tools/nogenerictest.py', '{game}'], 'game'),
-    ('devices', 'the Device Settings page binding under Unicorn, the real Options.dll',
+    ('devices', 'the Device Settings page binding, the real Options.dll',
      [PY, 'tools/devicestest.py', '{game}'], 'game'),
-    ('resolution', 'the resolution row under Unicorn, the real Options.dll',
+    ('resolution', 'the resolution row, the real Options.dll',
      [PY, 'tools/resolutiontest.py', '{game}'], 'game'),
-    ('clearsize', "the clear's two arguments under Unicorn, the real exe",
+    ('clearsize', "the clear's two arguments, the real exe",
      [PY, 'tools/clearsizetest.py', '{game}'], 'game'),
-    ('replaypad', "the pad on the replay's camera controls under Unicorn, the real exe",
+    ('replaypad', "the pad on the replay's camera controls, the real exe",
      [PY, 'tools/replaypadtest.py', '{game}'], 'game'),
-    ('sortpad', "the pad's LB and RB on the gallery's sort under Unicorn, the real ReplayGallery.dll",
+    ('sortpad', "the pad's LB and RB on the gallery's sort, ReplayGallery.dll",
      [PY, 'tools/sortpadtest.py', '{game}'], 'game'),
 ]
 
@@ -155,7 +155,7 @@ def main():
     c = colours({'auto': None, 'always': True, 'never': False}[args.colour])
     if args.list:
         for name, what, _cmd, needs in CHECKS:
-            print('  %-13s %-64s %s' % (name, what, 'needs the %s' % needs if needs else ''))
+            print('  %-13s %-60s %s' % (name, what, 'needs the %s' % needs if needs else ''))
         return 0
 
     wanted = set(args.only.split(',')) if args.only else None
@@ -200,14 +200,14 @@ def main():
             proc = subprocess.run(run, capture_output=True, text=True, errors='replace', timeout=TIMEOUT)
             took = time.time() - start
             if proc.returncode == SKIPPED:      # the tool said it could not run, which is not a pass
-                print('  %s%s SKIP%s  %s %s(%s)%s'
+                print('  %s%s SKIP%s  %-60s %s(%s)%s'
                       % (c['warn'], pad(tag), c['off'], what, c['dim'],
                          (proc.stdout + proc.stderr).strip().split('\n')[-1], c['off']))
                 results.append((tag, None))
                 continue
             good = proc.returncode == 0
             results.append((tag, good))
-            print('  %s%s%s %s  %-64s %s%.1fs%s'
+            print('  %s%s%s %s  %-60s %s%5.1fs%s'
                   % (c['bold'], pad(tag), c['off'],
                      '%sOK  %s' % (c['ok'], c['off']) if good else '%sFAIL%s' % (c['bad'], c['off']),
                      what, c['dim'], took, c['off']))
