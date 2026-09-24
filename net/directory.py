@@ -35,8 +35,10 @@ closed (a byte each), the team name, 64 bytes, and the wire version.
 <cookie> is four bytes made here from the host's address and the guid:
 a registration without the right one is answered with C and not listed,
 so a host with a forged source address, which never sees its C, is never
-listed. A session expires after EXPIRE_S without a refresh from its
-host; a relayed guest is forgotten after as long without traffic.
+listed. The older "SR2D" form - no token, no cookie, a 67-byte record -
+is still answered in kind, for a patcher from before the token. A
+session expires after EXPIRE_S without a refresh from its host; a
+relayed guest is forgotten after as long without traffic.
 
 What it refuses: an address that keeps asking for sessions that do not
 exist - MISS_LIMIT different ones in MISS_WINDOW_S; asking again for one
@@ -59,9 +61,10 @@ import sys
 import time
 
 MAGIC = b'SR2E'
-HEAD = 9                # the magic, the op, the token
+MAGIC_OLD = b'SR2D'     # before the token: no token, a 67-byte record
 GUID = 16
 RECORD = 68             # max, players, closed, name[64], version
+RECORD_OLD = 67
 COOKIE = 4
 EP = 6
 EXPIRE_S = 5
@@ -79,8 +82,7 @@ MISS_WINDOW_S = 60
 BAN_S = 600
 MAX_MISSES = 10000   # addresses remembered for their misses; the oldest forgotten past it
 
-sessions = {}   # guid -> {'host': (ip, port), 'token': bytes, 'record': bytes, 'seen': t,
-                #          'guests': {ep: {'seen': t, 'token': bytes, 'bucket': {}}}, 'relayed': bool}
+sessions = {}   # guid -> {'host': (ip, port), 'record': bytes, 'seen': t, 'guests': {ep: {'seen': t, 'bucket': {}}}, 'relayed': bool}
 SECRET = secrets.token_bytes(16)    # the cookies are made from it; a restart makes new ones
 misses = {}     # ip -> [first_miss_t, {guids asked for that were not there}] or [until_t, None] while banned
 lists = {}      # ip -> (tokens, t): the list bucket
@@ -167,35 +169,50 @@ def over_rate(bucket, side, now, rate=RELAY_RATE, burst=RELAY_RATE):
 
 
 def handle(sock, data, addr, now):
-    """One datagram: the magic, the op, the sender's token, the body."""
-    if len(data) < HEAD or data[:4] != MAGIC:
+    """One datagram. The head decides the form: the token's form answers
+    with the token, the older one without."""
+    if len(data) >= 9 and data[:4] == MAGIC:
+        head, body = data[:9], data[9:]
+    elif len(data) >= 5 and data[:4] == MAGIC_OLD:
+        head, body = data[:5], data[5:]
+    else:
         return
-    op, token, body = data[4:5], data[5:HEAD], data[HEAD:]
+    op = head[4:5]
+    old = head[:4] == MAGIC_OLD
 
-    def reply(op, payload=b'', token=token):
-        return MAGIC + op + token + payload
+    def reply(op, payload=b''):
+        return head[:4] + op + head[5:] + payload
+
+    def record_for(e):
+        return e['record'][:RECORD_OLD] if old else e['record']
 
     if op == b'H':
-        if len(body) != GUID + RECORD + COOKIE:
-            return
-        guid, record = body[:GUID], body[GUID:GUID + RECORD]
-        if body[GUID + RECORD:] != cookie_for(addr, guid):
-            send(sock, reply(b'C', cookie_for(addr, guid)), addr)
-            return
+        if old:
+            if len(body) != GUID + RECORD_OLD:
+                return
+            body += b'\0'                  # the version an older host does not send
+        else:
+            if len(body) != GUID + RECORD + COOKIE:
+                return
+            guid = body[:GUID]
+            if body[GUID + RECORD:] != cookie_for(addr, guid):
+                send(sock, reply(b'C', cookie_for(addr, guid)), addr)
+                return
+            body = body[:GUID + RECORD]
+        guid, record = body[:GUID], body[GUID:]
         e = sessions.get(guid)
         if e is None:
             if len(sessions) >= MAX_SESSIONS:
                 return
             if sum(1 for s in sessions.values() if s['host'][0] == addr[0]) >= PER_IP:
                 return
-            e = sessions[guid] = {'host': addr, 'token': token, 'record': record, 'seen': now, 'guests': {},
+            e = sessions[guid] = {'host': addr, 'record': record, 'seen': now, 'guests': {},
                                   'joined': 0, 'relayed': False}
             print("'%s' opened by %s:%d (%d open)" % (session_name(e), *addr, len(sessions)), flush=True)
         elif e['host'] != addr:
             return                        # someone else's id
         e['record'] = record
         e['seen'] = now
-        e['token'] = token
 
     elif op == b'X':
         e = sessions.get(body) if len(body) == GUID else None
@@ -207,7 +224,7 @@ def handle(sock, data, addr, now):
             return
         # open and not full first, the freshest first among equals
         order = sorted(sessions.items(), key=lambda ge: (ge[1]['record'][2] != 0, -ge[1]['seen']))
-        out = [guid + ep_bytes(e['host']) + e['record'] for guid, e in order[:LIST_MAX]]
+        out = [guid + ep_bytes(e['host']) + record_for(e) for guid, e in order[:LIST_MAX]]
         send(sock, reply(b'S', bytes([len(out)]) + b''.join(out)), addr)
 
     elif op == b'J':
@@ -224,12 +241,11 @@ def handle(sock, data, addr, now):
             e['guests'][addr] = {'seen': now, 'bucket': {}}
             e['joined'] += 1
         e['guests'][addr]['seen'] = now
-        e['guests'][addr]['token'] = token
         send(sock, reply(b'P', ep_bytes(e['host'])), addr)
-        send(sock, reply(b'P', ep_bytes(addr), e['token']), e['host'])
+        send(sock, host_reply(e, b'P', ep_bytes(addr)), e['host'])
 
     elif op == b'R':
-        if len(body) < GUID or len(data) > HEAD + GUID + EP + MAX_RELAY:
+        if len(body) < GUID or len(data) > len(head) + GUID + EP + MAX_RELAY:
             return
         e = sessions.get(body[:GUID])
         if e is None:
@@ -243,18 +259,29 @@ def handle(sock, data, addr, now):
             if ge is None or over_rate(ge['bucket'], 'h', now):
                 return
             e['seen'] = now
-            e['token'] = token
-            send(sock, reply(b'D', rest[EP:], ge['token']), guest)
+            e['host_head'] = head
+            send(sock, ge['head'][:4] + b'D' + ge['head'][5:] + rest[EP:], guest)
         else:
             ge = e['guests'].get(addr)
             if ge is None or over_rate(ge['bucket'], 'g', now):
                 return
             ge['seen'] = now
-            ge['token'] = token
+            ge['head'] = head
             if not e['relayed']:
                 e['relayed'] = True
                 print("'%s' relaying for %s:%d" % (session_name(e), *addr), flush=True)
-            send(sock, reply(b'D', ep_bytes(addr) + rest, e['token']), e['host'])
+            send(sock, host_reply(e, b'D', ep_bytes(addr) + rest), e['host'])
+
+    if op in (b'J', b'R') and e is not None and addr in e['guests']:
+        e['guests'][addr]['head'] = head
+    if op == b'H':
+        e['host_head'] = head
+
+
+def host_reply(e, op, payload):
+    """A datagram to a session's host in the form its last datagram took."""
+    head = e.get('host_head', MAGIC_OLD + b'?')
+    return head[:4] + op + head[5:] + payload
 
 
 UNIT = 'sr2-directory'
@@ -309,7 +336,7 @@ def main():
     swept = 0
     while True:
         try:
-            data, addr = sock.recvfrom(HEAD + GUID + EP + MAX_RELAY + 1)
+            data, addr = sock.recvfrom(9 + GUID + EP + MAX_RELAY + 1)
         except (socket.timeout, ConnectionResetError):
             data = None
         now = time.monotonic()

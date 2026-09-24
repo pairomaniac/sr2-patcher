@@ -8,7 +8,7 @@ sends and a clock set by hand. Checked: a list for every request up to
 the burst, then LIST_RATE a second; each address its own bucket; an
 idle address's bucket forgotten; a full list of 16 sessions still one
 datagram under 1472 bytes, open sessions first and the newest of those
-first; the token echoed and the form from before it ignored; a join to
+first; the token echoed and the old form answered in its own; a join to
 no session answered N and counted once however often it is asked; the
 host's X taking the session down.
 """
@@ -93,9 +93,11 @@ def main():
     check(entries[0][:16] == bytes([18]) * 16 and entries[1][:16] == bytes([17]) * 16, 'the newest first')
     check(all(e[:16] != bytes([4]) * 16 for e in entries), 'the closed one is not among sixteen open')
     check(all(e[-1] == 1 for e in entries), 'the version in each record')
-    sock.sent.clear()
-    d.handle(sock, b'SR2D' + b'L', ('203.0.113.10', 5000), t + 120)
-    check(not sock.sent, 'the form from before the token is not answered')
+    with contextlib.redirect_stdout(io.StringIO()):
+        d.handle(sock, d.MAGIC_OLD + b'L', b_old := ('203.0.113.10', 5000), t + 120)
+    data = sock.sent[-1][0]
+    check(data[:5] == d.MAGIC_OLD + b'S' and data[5] == d.LIST_MAX and len(data) == 6 + 89 * d.LIST_MAX, 'the old form answered in kind')
+    check(sock.sent[-1][1] == b_old, 'sock.sent[-1][1] == b_old')
     # a join to a session that is not there: N, and one miss however often it is asked
     sock.sent.clear()
     for k in range(20):
