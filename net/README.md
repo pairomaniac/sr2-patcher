@@ -123,8 +123,9 @@ What the server refuses: ten different unknown sessions asked for in a
 minute (joins from that address ignored for ten minutes; asking again
 for the same one counts once), more than eight sessions from one
 address, relayed datagrams over the game's size, more than 300 a second
-per guest each way, and more than ten lists a second to one address
-after a burst of twenty, since a list reply is up to 1450 bytes for a
+per guest each way, more than four relayed guests of a session from one
+address, and more than ten lists a second to one address after a burst
+of twenty, since a list reply is up to 1450 bytes for a
 9-byte request and a UDP source can be forged. A searching game asks 2.5
 times a second. It forwards only between a session's host and the guests
 that joined it there.

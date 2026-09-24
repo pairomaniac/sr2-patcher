@@ -187,12 +187,16 @@ static inline int sock_parse(const char *text, uint16_t default_port, sock_addr 
         return -1;
     memcpy(host, text, n);
     host[n] = 0;
-    out->port = colon ? (uint16_t)atoi(colon + 1) : default_port;
-    if (out->port == 0)
+    if (colon) {
+        long port = atol(colon + 1);
+        if (port < 0 || port > 65535)
+            return -1;
+        out->port = port ? (uint16_t)port : default_port;
+    } else
         out->port = default_port;
     out->addr = inet_addr(host);
-    if (out->addr != INADDR_NONE)
-        return 0;
+    if (out->addr != INADDR_NONE || strcmp(host, "255.255.255.255") == 0)
+        return 0;                       /* the broadcast address is what inet_addr's failure value looks like */
     he = gethostbyname(host);
     if (!he || he->h_addrtype != AF_INET || !he->h_addr_list[0])
         return -1;

@@ -63,6 +63,7 @@ EP = 6
 EXPIRE_S = 5
 MAX_SESSIONS = 5000
 MAX_GUESTS = 8       # relayed guests a session may hold; the game seats 3
+GUESTS_PER_IP = 4    # of them from one address
 PER_IP = 8           # as Virtual-On's rendezvous.py
 LIST_MAX = 16        # the game shows 15
 MAX_RELAY = 1056     # the DLL's largest datagram (16 + 1024 + a margin)
@@ -127,7 +128,9 @@ def closed(guid, why):
 
 
 def session_name(e):
-    return e['record'][3:3 + 64].split(b'\0')[0].decode('latin1', 'replace')
+    """The team name as the log shows it: printable, one line."""
+    raw = e['record'][3:3 + 64].split(b'\0')[0].decode('latin1', 'replace')
+    return ''.join(c if 32 <= ord(c) < 127 else '?' for c in raw)
 
 
 def expire(now):
@@ -213,7 +216,7 @@ def handle(sock, data, addr, now):
             send(sock, reply(b'N'), addr)
             return
         if addr not in e['guests']:
-            if len(e['guests']) >= MAX_GUESTS:
+            if len(e['guests']) >= MAX_GUESTS or sum(1 for g in e['guests'] if g[0] == addr[0]) >= GUESTS_PER_IP:
                 return
             e['guests'][addr] = {'seen': now, 'bucket': {}}
             e['joined'] += 1

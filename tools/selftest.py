@@ -8,7 +8,9 @@ CI cannot do this - the game is not in the repository - so it runs from
 
   * every original byte string in the tables is really in the file
   * every patch applies alone, in every pair and in a hundred random sets, not just all on
-  * the fully patched result has the MD5 it had last time
+  * the fully patched result has the MD5 it had last time, with the full
+    resolution table and with the one capped at 2048 a side that patch()
+    writes on Windows without the dgVoodoo add-on
 
 A patched install that does not hold that result is noted, not failed:
 it is older than the tables, and a re-patch brings it up.
@@ -26,6 +28,25 @@ from uctest import patcher
 
 # MD5 of each patched file with every patch on, per build. Update
 # deliberately, and only when a patch actually changed.
+# EXPECTED_CAPPED: the files the capped resolution table changes.
+EXPECTED_CAPPED = {
+    'European': {
+        'SEGA RALLY 2.exe': 'a53fb7776aa56f693edd2ad3777e5f28',
+        'Options.dll': '8a39cbed6a26efab214d0bfec57b0cef',
+    },
+    'American': {
+        'SEGA RALLY 2.exe': 'd47cf990a1e2e697cb71d6f1f0f7ee1e',
+        'Options.dll': '8a39cbed6a26efab214d0bfec57b0cef',
+    },
+    'Australian': {
+        'SEGA RALLY 2.exe': '9de6d60c09ebbf68263f899a5ec1fb3a',
+        'Options.dll': '6b63152b6bbbedda9505c7ffff9d2507',
+    },
+    'Japanese (DigiCube, MediaKite)': {
+        'SEGA RALLY 2.exe': 'd31f810e8e4383fbd7a57d0d91fe828c',
+        'Options.dll': '8a39cbed6a26efab214d0bfec57b0cef',
+    },
+}
 EXPECTED = {
     'European': {
         'SEGA RALLY 2.exe': '3435e14a5699853b60386ecb8b1f67a6',
@@ -33,7 +54,7 @@ EXPECTED = {
         'MUSASHI\\MGameD3D.dll': '43a4d813412a16bdf0e7594edc62bf13',
         'MUSASHI\\MGAudio.dll': '63ce2a85470987c60de08dfb39270e99',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
-        'MUSASHI\\MGNetWk.dll': 'e9cbf9c92473288a787545898c12ee4b',
+        'MUSASHI\\MGNetWk.dll': 'b8efa97d052886f5df778342b55b0f1d',
         'MUSASHI\\MGInput.dll': 'd2b51cb4d42fd7a126b22893461f8282',
         'Title.dll': '44820b86f991575fc7d696fd2d88df57',
         'Options.dll': '0491aa518fc3cb4f9e9e9025a754d344',
@@ -45,7 +66,7 @@ EXPECTED = {
         'MUSASHI\\MGameD3D.dll': '43a4d813412a16bdf0e7594edc62bf13',
         'MUSASHI\\MGAudio.dll': '63ce2a85470987c60de08dfb39270e99',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
-        'MUSASHI\\MGNetWk.dll': 'e9cbf9c92473288a787545898c12ee4b',
+        'MUSASHI\\MGNetWk.dll': 'b8efa97d052886f5df778342b55b0f1d',
         'MUSASHI\\MGInput.dll': 'a7b29785fb197f8f24ce2493e3cb11af',
         'Title.dll': 'f6bc04020ed3b2520a325ea00bd97181',
         'Options.dll': '0491aa518fc3cb4f9e9e9025a754d344',
@@ -57,7 +78,7 @@ EXPECTED = {
         'MUSASHI\\MGameD3D.dll': '43a4d813412a16bdf0e7594edc62bf13',
         'MUSASHI\\MGAudio.dll': '4394c4357861970e78e638de6fa0b287',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
-        'MUSASHI\\MGNetWk.dll': 'e9cbf9c92473288a787545898c12ee4b',
+        'MUSASHI\\MGNetWk.dll': 'b8efa97d052886f5df778342b55b0f1d',
         'MUSASHI\\MGInput.dll': '5cd3b75d6afa1092319d2ccec0b2da37',
         'Title.dll': '9389461a46a6447a9cd1d799c31d4203',
         'Options.dll': 'f51cec79a4997da6bb240d730ed17303',
@@ -69,7 +90,7 @@ EXPECTED = {
         'MUSASHI\\MGameD3D.dll': '43a4d813412a16bdf0e7594edc62bf13',
         'MUSASHI\\MGAudio.dll': '63ce2a85470987c60de08dfb39270e99',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
-        'MUSASHI\\MGNetWk.dll': 'e9cbf9c92473288a787545898c12ee4b',
+        'MUSASHI\\MGNetWk.dll': 'b8efa97d052886f5df778342b55b0f1d',
         'MUSASHI\\MGInput.dll': 'd2b51cb4d42fd7a126b22893461f8282',
         'Title.dll': '44820b86f991575fc7d696fd2d88df57',
         'Options.dll': '0491aa518fc3cb4f9e9e9025a754d344',
@@ -141,6 +162,16 @@ def main(argv):
         print('  %-24s %d -> %d bytes, %d of %d combinations failed, all on %s %s'
               % (name, len(original), len(result), failed, len(trials) + 1, digest, note))
         bad += failed
+        patcher.select_resolutions('capped')
+        try:
+            capped = hashlib.md5(apply_all(build, original, name, keys)).hexdigest()
+        finally:
+            patcher.select_resolutions('full')
+        if capped != digest:
+            expected = EXPECTED_CAPPED.get(build, {}).get(name)
+            note = 'not pinned' if expected is None else ('CHANGED, expected %s' % expected if capped != expected else '')
+            bad += note.startswith('CHANGED')
+            print('  %-24s capped resolution table: %s %s' % ('', capped, note))
     print('FAILED' if bad else 'OK')
     return 1 if bad else 0
 

@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+# One build per ref at a time: a second push to the same branch or tag
+# waits for the first, so two release uploads cannot cross.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # The same runner used locally. The checks that need the discs or an
   # installed game, which are not in the repository, skip themselves.

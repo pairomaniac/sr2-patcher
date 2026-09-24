@@ -114,7 +114,7 @@ the other builds.
 | `cab` | the disc and cabinet readers on a real dump |
 | `dgvoodoo` | the dgVoodoo 2 add-on's download and unpack against a made-up release |
 | `gui` | the window driven headlessly: the widgets reachable, the palette measured, the feature rows against the patch keys (skips without a display) |
-| `offsets` | every original byte string in the file, every patch alone, every pair and a hundred random sets applying, the all-on result at its pinned MD5; an install older than the tables is noted, not failed |
+| `offsets` | every original byte string in the file, every patch alone, every pair and a hundred random sets applying, the all-on result at its pinned MD5 with the full resolution table and with the capped one; an install older than the tables is noted, not failed |
 | `music` | the music hook under Unicorn, on the build's real `MGAudio.dll` |
 | `altab` | the alt-tab stub and the rewritten restore routine under Unicorn |
 | `padinput`, `dinput8`, `nogeneric` | the pad annex, the DirectInput 8 create and type translation, and the device-list filter under Unicorn, on the build's real `MGInput.dll` |
