@@ -28,6 +28,7 @@ ROOT = os.path.dirname(HERE)
 PY = sys.executable or 'python3'
 CONF = os.path.expanduser('~/.sr2-test')
 SKIPPED = 77            # tools/uctest.py's exit code for "could not run"
+TIMEOUT = 900           # seconds a check may take; a looping stub would otherwise hang the run
 BUILDS = ('EU', 'US', 'AU', 'JP', 'JP_MK')
 
 # name, what, command, needs: '' for none, 'disc' for the install disc
@@ -154,10 +155,14 @@ def main():
     c = colours({'auto': None, 'always': True, 'never': False}[args.colour])
     if args.list:
         for name, what, _cmd, needs in CHECKS:
-            print('  %-9s %-64s %s' % (name, what, 'needs the %s' % needs if needs else ''))
+            print('  %-13s %-64s %s' % (name, what, 'needs the %s' % needs if needs else ''))
         return 0
 
     wanted = set(args.only.split(',')) if args.only else None
+    if wanted:
+        unknown = wanted - {n for n, _w, _c, _nd in CHECKS}
+        if unknown:
+            ap.error('no check named %s; --list names them' % ', '.join(sorted(unknown)))
     builds = targets(args)
     labels = [b[0] for b in builds if b[0]]
     width = max([13] + [len(n) + (1 + max(map(len, labels)) if nd and labels else 0)
@@ -177,8 +182,9 @@ def main():
         col = 1 if needs == 'disc' else 2
         runs = [(None, None, None)] if not needs else [t for t in builds if t[col] is not None]
         if not runs:
-            print('  %s%s SKIP%s  %s %s(no %s in %s)%s'
-                  % (c['warn'], pad(name), c['off'], what, c['dim'], needs, CONF, c['off']))
+            print('  %s%s SKIP%s  %s %s(no %s %s)%s'
+                  % (c['warn'], pad(name), c['off'], what, c['dim'], needs,
+                     'given' if args.source else 'in ' + CONF, c['off']))
             results.append((name, None))
             continue
         for label, disc, game in runs:
@@ -191,7 +197,7 @@ def main():
             run = [a.replace('{disc}', disc or '').replace('{game}', game or '') for a in cmd]
             run = [a for a in run if a]
             start = time.time()
-            proc = subprocess.run(run, capture_output=True, text=True)
+            proc = subprocess.run(run, capture_output=True, text=True, errors='replace', timeout=TIMEOUT)
             took = time.time() - start
             if proc.returncode == SKIPPED:      # the tool said it could not run, which is not a pass
                 print('  %s%s SKIP%s  %s %s(%s)%s'

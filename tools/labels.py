@@ -116,7 +116,7 @@ def main(argv):
     except (ImportError, SystemExit) as exc:
         if check:
             print('labels: skipped (%s)' % exc)
-            return 0
+            return 77                   # what tools/check.py reads as a skip, not a pass
         raise
     if '--show' in argv:
         write_bmps(labels, argv[argv.index('--show') + 1])

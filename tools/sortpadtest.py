@@ -15,7 +15,6 @@ empty poll slot or no sort block passed over.
 
 Needs python3-unicorn and pefile; exits 77 with a note when missing.
 """
-import os
 import struct
 import sys
 
@@ -39,8 +38,7 @@ def main(argv):
         print(__doc__.strip())
         return 2
     build = patcher.check_build(argv[1])
-    with open(os.path.join(argv[1], 'ReplayGallery.dll'), 'rb') as fh:
-        buf = bytearray(fh.read())
+    buf = uctest.stock(argv[1], 'ReplayGallery.dll')
     out = patcher.apply_sortpad(patcher.apply_replayfree(buf, build), build)
     slot = patcher.BUILDS[build]['addresses']['PADPOLL']
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
@@ -79,7 +77,7 @@ def main(argv):
         mu.reg_write(UC_X86_REG_ECX, 0x55555555)
         esp = STACK + 0x8000
         mu.reg_write(UC_X86_REG_ESP, esp)
-        mu.emu_start(site, site + 9)
+        mu.emu_start(site, site + 9, timeout=2000000)
         assert mu.reg_read(UC_X86_REG_ESP) == esp, 'the stack came back wrong'
         for reg, v in regs.items():
             assert mu.reg_read(reg) == v, 'a register came back changed'

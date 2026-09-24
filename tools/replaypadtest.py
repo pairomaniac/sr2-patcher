@@ -17,11 +17,11 @@ player 2 on side 1's sources and its own keys.
 
 Needs python3-unicorn and pefile; exits 77 with a note when missing.
 """
-import os
 import struct
 import sys
 
 from uctest import patcher
+import uctest
 
 try:
     import pefile
@@ -44,8 +44,7 @@ def main(argv):
         print(__doc__.strip())
         return 2
     build = patcher.check_build(argv[1])
-    with open(os.path.join(argv[1], patcher.EXE), 'rb') as fh:
-        buf = bytearray(fh.read())
+    buf = uctest.stock(argv[1], patcher.EXE)
     out = patcher.apply_replaypad(buf, build)
     row = patcher.BUILDS[build]
     pe = pefile.PE(data=bytes(out))
@@ -115,7 +114,7 @@ def main(argv):
         w(esp, 0xDEAD0000)
         mu.reg_write(UC_X86_REG_ESP, esp)
         mu.reg_write(UC_X86_REG_ECX, OBJ)
-        mu.emu_start(update, 0xDEAD0000)
+        mu.emu_start(update, 0xDEAD0000, timeout=2000000)
         assert mu.reg_read(UC_X86_REG_ESP) == esp + 4, 'the stack came back wrong'
         n = r(OBJ + 4)
         return [(r(OBJ + 0x20 + 4 * i), r(OBJ + 0x18 + 4 * i), rs(OBJ + 0x30 + 4 * i)) for i in range(n)]

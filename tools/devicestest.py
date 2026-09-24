@@ -10,7 +10,7 @@ poll answers a scripted pad and whose GetState hands out a key array.
 Drives refresh, a wait that binds a key (swapping with the row that had
 it), one that binds a pad input, the deadzone step and DEFAULT, and
 checks the records, the value strings and the Persist calls. Needs
-python3-unicorn; exits 0 with a note when it is missing.
+python3-unicorn; exits 77 with a note when it is missing.
 """
 import os
 import struct
@@ -53,16 +53,20 @@ def main(argv):
     mu.mem_map(STACK, 0x100000)
 
     # The page's code: the blob after the menu's data. Its routines by
-    # their offsets in the assembled blob, found from the source's labels
-    # through nasm's listing would be nicer; here from the bytes.
+    # their offsets in the assembled blob, from the source's labels
+    # through nasm's listing.
     blob = patcher.DEVICES_BLOB
     page = struct.unpack('<I', mu.mem_read(BASE + patcher._off_to_rva(image, patcher.BUILDS[build]['sites']['devices'][6] + 12), 4))[0] - len(blob)
     assert bytes(mu.mem_read(page, 16)) == blob[:16], 'the page blob not at %#x' % page
     size = struct.unpack_from('<I', image, struct.unpack_from('<I', image, 0x3c)[0] + 24 + 56)[0]
     section = bytes(mu.mem_read(BASE + sec, size - sec))
     data = BASE + sec + section.index(bytes(a for _n, a in patcher.PAGE_ACTIONS))
+    import shutil
     import subprocess
     import tempfile
+    if not shutil.which('nasm'):
+        print('devicestest: skipped, nasm not installed (the routines are found through its listing)')
+        sys.exit(uctest.SKIPPED)
     with tempfile.NamedTemporaryFile(suffix='.lst') as lst:
         subprocess.check_call(['nasm', '-f', 'bin', '-l', lst.name, '-o', os.devnull, os.path.join(HERE, '..', 'asm', 'devices.asm')])
         listing = open(lst.name).read()

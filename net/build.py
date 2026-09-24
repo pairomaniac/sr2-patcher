@@ -106,6 +106,8 @@ def main(argv):
     with open(DLL, 'wb') as fh:
         fh.write(blob)
     if '--out' in argv:
+        if argv.index('--out') + 1 >= len(argv):
+            raise SystemExit('--out needs a directory')
         with open(os.path.join(argv[argv.index('--out') + 1], 'MGNetWk.dll'), 'wb') as fh:
             fh.write(blob)
     text = pattern.sub(lambda _m: generated(blob, sha), text)

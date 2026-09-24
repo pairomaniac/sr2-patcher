@@ -8,7 +8,7 @@ the count must fall through to the function's eleventh byte with what
 the replaced ten left: eax the table, esi the index, esi pushed. One at
 or above it, including VendorLogo's -128, must return with the stack as
 a stdcall leaves it and nothing else touched. Needs python3-unicorn;
-exits 0 with a note when it is missing.
+exits 77 with a note when it is missing.
 """
 import struct
 import sys

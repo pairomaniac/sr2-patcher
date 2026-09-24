@@ -11,13 +11,13 @@ it was called from, and leave the arguments where the caller's own
 the site's return address is not where the game left it.
 
 Nothing to do on the other two builds, which pass the height already.
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
-import os
 import struct
 import sys
 
 from uctest import patcher
+import uctest
 
 try:
     import pefile
@@ -37,10 +37,9 @@ def main(argv):
         return 2
     build = patcher.check_build(argv[1])
     if 'clearsize' not in patcher.patches(build):
-        print('clearsize: nothing to do on the %s build' % build.lower())
+        print('note: clearsize is Australian only; nothing was run on the %s build' % build.lower())
         return 0
-    with open(os.path.join(argv[1], patcher.EXE), 'rb') as fh:
-        buf = bytearray(fh.read())
+    buf = uctest.stock(argv[1], patcher.EXE)
     out = patcher.apply_clearsize(buf, build)
 
     row = patcher.BUILDS[build]['addresses']
@@ -60,7 +59,7 @@ def main(argv):
     esp = STACK + 0x8000
     mu.mem_write(esp, struct.pack('<I', 0xDEAD0000))
     mu.reg_write(UC_X86_REG_ESP, esp)
-    mu.emu_start(base + 0x1000 + site - patcher._rva_to_off(out, 0x1000), row['CLEAR'])
+    mu.emu_start(base + 0x1000 + site - patcher._rva_to_off(out, 0x1000), row['CLEAR'], timeout=2000000)
 
     sp = mu.reg_read(UC_X86_REG_ESP)
     ret, width, height = struct.unpack('<III', mu.mem_read(sp, 12))

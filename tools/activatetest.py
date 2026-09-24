@@ -10,7 +10,7 @@ with the stack as the original call would have left it.
 
 The DLL half: MGameD3D.dll patched in memory, mapped and relocated to
 another base, its restore routine called - it must call RestoreAllSurfaces
-on the IDirectDraw4 and store the result. Needs python3-unicorn; exits 0
+on the IDirectDraw4 and store the result. Needs python3-unicorn; exits 77
 with a note when it is missing.
 """
 import os

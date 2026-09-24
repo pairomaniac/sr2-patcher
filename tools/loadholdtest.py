@@ -10,7 +10,7 @@ it, then makes the load the site made, with eax and edx as they were.
 The clock and Sleep are stubs, the clock advancing by what Sleep is
 asked for. A step with no create before it does not wait.
 
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 
@@ -72,7 +72,7 @@ def main():
         mu.reg_write(UC_X86_REG_EAX, eax)
         mu.reg_write(UC_X86_REG_ECX, ecx)
         mu.reg_write(UC_X86_REG_EDX, edx)
-        mu.emu_start(CODE + entry, CODE + len(blob))
+        mu.emu_start(CODE + entry, CODE + len(blob), timeout=2000000)
         if mu.reg_read(UC_X86_REG_ESP) != esp + 4:
             raise SystemExit('loadholdtest: the stack came back at %x, not %x' % (mu.reg_read(UC_X86_REG_ESP), esp + 4))
         return tuple(mu.reg_read(r) for r in (UC_X86_REG_EAX, UC_X86_REG_ECX, UC_X86_REG_EDX))

@@ -144,9 +144,10 @@ def main():
         check('%s reads (%s on %s)' % (what, a, b), got >= want,
               '%.2f:1, wants %.1f' % (got, want))
 
-    # A skip is a note locally and a failure in CI, where the runner is
-    # meant to have both and a green run that tested no window is wrong.
-    skip = 1 if os.environ.get('CI') == 'true' else 0
+    # A skip is reported as one locally (77, what tools/check.py reads as
+    # a skip) and is a failure in CI, where the runner is meant to have
+    # both and a green run that tested no window is wrong.
+    skip = 1 if os.environ.get('CI') == 'true' else 77
     try:
         import tkinter as tk
         from tkinter import ttk
@@ -161,6 +162,11 @@ def main():
         return 1 if FAILED else skip
 
     root = build_window(patcher, tk)
+    raised = []
+
+    def callback_failed(exc, val, tb):  # Tk swallows these and prints them; count them instead
+        raised.append('%s: %s' % (exc.__name__, val))
+    root.report_callback_exception = callback_failed
     root.overrideredirect(True)        # no window manager under xvfb
     root.geometry('+0+0')
     root.update()
@@ -337,6 +343,7 @@ def main():
     check('every description opens and closes', shown == len(bubbles))
     root.event_generate('<Escape>')
     pump()
+    check('no callback raised on the way', not raised, '; '.join(raised))
 
     # ---- the tables the window reads from ----------------------------
     check('every patch is in exactly one feature row',

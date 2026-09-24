@@ -9,7 +9,7 @@ called with (hinst, 0x800, IID_IDirectInput8A, &out, NULL), the object
 queried for IID_IDirectInput8A and kept, the original released; E_FAIL
 and nothing kept when dinput8.dll is not there. Then the kind entry:
 DirectInput 8's device types written as DirectInput 5's, the displaced
-instruction's edx and flags. Needs python3-unicorn; exits 0 with a note
+instruction's edx and flags. Needs python3-unicorn; exits 77 with a note
 when it is missing so tools/check.py can skip it.
 """
 import os

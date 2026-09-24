@@ -9,7 +9,7 @@ for kernel32's profile routines, GetModuleFileNameA and the page's text
 routine. Drives the row's init (the stock choice, then a wide size in
 SR2.CFG), a draw of the row and the write-back on leaving, and checks the
 row, the count, the text drawn and the profile write. Needs
-python3-unicorn; exits 0 with a note when it is missing.
+python3-unicorn; exits 77 with a note when it is missing.
 """
 import os
 import struct

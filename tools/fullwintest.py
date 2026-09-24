@@ -11,7 +11,7 @@ leave the stack as the routine it replaces did, return the blit's result
 and keep the counter after the blit, with QueryPerformanceCounter
 resolved once.
 `sizewindow` must move a WS_POPUP window to the monitor under the cursor
-and leave a framed one where it is. Needs python3-unicorn; exits 0
+and leave a framed one where it is. Needs python3-unicorn; exits 77
 with a note when it is missing.
 """
 import struct
@@ -119,7 +119,7 @@ class Machine:
         esp = STACK + 0x8000
         self.mu.mem_write(esp + 0x10, struct.pack('<II', RETURN, 0))
         self.mu.reg_write(UC_X86_REG_ESP, esp)
-        self.mu.emu_start(BASE + SELF, RETURN)
+        self.mu.emu_start(BASE + SELF, RETURN, timeout=2000000)
         if self.mu.reg_read(UC_X86_REG_ESP) != esp + 0x18:
             raise SystemExit('fullwintest: present left the stack wrong')
         if self.mu.reg_read(UC_X86_REG_EAX) != 0x887601c2 \
@@ -135,7 +135,7 @@ class Machine:
         esp = STACK + 0x8000
         self.mu.mem_write(esp, struct.pack('<7I', RETURN, 0x1234, 0, 0, 650, 500, 1))
         self.mu.reg_write(UC_X86_REG_ESP, esp)
-        self.mu.emu_start(BASE + SELF + 5, RETURN)
+        self.mu.emu_start(BASE + SELF + 5, RETURN, timeout=2000000)
         if self.mu.reg_read(UC_X86_REG_ESP) != esp + 4 + 0x18:
             raise SystemExit('fullwintest: sizewindow left the stack wrong')
         return self.calls

@@ -9,7 +9,7 @@ here that play GetModuleHandleA, GetProcAddress, GetModuleFileNameA,
 CreateDirectoryA, CreateFileA and WriteFile. Three calls from three
 sites must store each HRESULT in the last-HRESULT slot, make logs\
 beside the exe, write the header and one line per call to a file in it,
-and return with every register and the flags as they were. Needs python3-unicorn; exits 0 with a note when
+and return with every register and the flags as they were. Needs python3-unicorn; exits 77 with a note when
 it is missing.
 """
 import struct

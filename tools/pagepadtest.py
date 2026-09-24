@@ -61,7 +61,7 @@ def run(build):
         for r, v in regs.items():
             mu.reg_write(r, v)
         mu.reg_write(UC_X86_REG_ESP, esp)
-        mu.emu_start(CODE, CODE + len(blob))
+        mu.emu_start(CODE, CODE + len(blob), timeout=2000000)
         assert mu.reg_read(UC_X86_REG_ESP) == esp + 4, 'the stack came back wrong'
         for r, v in regs.items():
             assert mu.reg_read(r) == v, 'a register came back changed'

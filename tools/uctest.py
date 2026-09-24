@@ -1,5 +1,5 @@
 """What the Unicorn tests share: the patcher module, the Unicorn import
-that exits 0 when the package is missing (so tools/check.py can skip the
+that exits 77 when the package is missing (so tools/check.py can skip the
 check), the build a game file belongs to, and a PE image mapped into an
 emulator the way the loader maps it."""
 import hashlib
@@ -15,6 +15,16 @@ spec.loader.exec_module(patcher)
 
 
 SKIPPED = 77            # the exit code tools/check.py reads as a skip, not a pass
+
+
+def stock(game, name):
+    """The bytes of the game file `name` (as BUILDS spells it) from its
+    .bak when it has been patched, so a test runs on the original."""
+    path = os.path.join(game, *name.split('\\'))
+    if os.path.isfile(path + '.bak'):
+        path += '.bak'
+    with open(path, 'rb') as fh:
+        return bytearray(fh.read())
 
 
 def unicorn(name):

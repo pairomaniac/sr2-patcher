@@ -10,7 +10,7 @@ and from a hand-written text; the save's text and deadzone; the update
 taking the first free pad and reading the race gate; the poll's
 buttons, triggers, stick halves through the deadzone, menu-only sources
 in and out of a race, and keyboard sources left to the DLL. Needs
-python3-unicorn; exits 0 with a note when it is missing so tools/check.py
+python3-unicorn; exits 77 with a note when it is missing so tools/check.py
 can skip it.
 """
 import os

@@ -21,7 +21,7 @@ HUD flag set a draw in the left or right part of the 640 moves out to
 a 16:9 frame's edge, and the exe's walk entry sets that flag, and the
 bounds of the HUD's own draws beside it, around a
 HUD callback through a fake MGameD3D.
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import math
 import struct

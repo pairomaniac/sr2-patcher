@@ -12,7 +12,7 @@ HUD, the reset - before the fade; the late entry draws the tree and
 then a HUD still pending, once. The exe's routines are stubs that note
 the call and the registers.
 
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 
@@ -63,7 +63,7 @@ def check(build):
         mu.reg_write(UC_X86_REG_ESP, esp)
         mu.reg_write(UC_X86_REG_ESI, FRAME)
         mu.reg_write(UC_X86_REG_ECX, 0x77)
-        mu.emu_start(CODE + entry, CODE + len(blob))
+        mu.emu_start(CODE + entry, CODE + len(blob), timeout=2000000)
         if mu.reg_read(UC_X86_REG_ESP) != esp + 4:
             raise SystemExit('hudlasttest: the stack came back at %x, not %x' % (mu.reg_read(UC_X86_REG_ESP), esp + 4))
         return [c[0] for c in calls]

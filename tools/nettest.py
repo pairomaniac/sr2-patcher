@@ -41,8 +41,10 @@ def main():
             if server.poll() is None:
                 env['SR2_DIR_PORT'] = str(port)
             else:
+                print('note: the directory did not start on port %d, so the relay leg was not run' % port)
                 server = None
-        except OSError:
+        except OSError as exc:
+            print('note: the directory could not be started (%s), so the relay leg was not run' % exc)
             server = None
         try:
             proc = subprocess.run([exe], capture_output=True, text=True, timeout=120, env=env)

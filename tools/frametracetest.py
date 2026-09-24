@@ -8,13 +8,13 @@ stubs, the four flags in a page of their own and the two slots after it
 filled as the patcher fills them, and entered as the frame gate would:
 its entry first, then its exit. The entry must take the counter through
 the routine given, leave ecx and edx alone and continue with eax as the
-displaced load. The first exit must make logs\ beside the exe, open frames.log in it, write
+displaced load. The first exit must make logs\\ beside the exe, open frames.log in it, write
 the header and its line; the next only its line, with the entry counter,
 the stamp found through the jump at the fake MGameD3D's present and the
 flags as bits; and leave as the gate did: three registers popped, the
 counter stored in the timer object, the stack back where it was. With
 user32 missing nothing is written and nothing is retried; without the
-jump (the borderless patch not in) the stamp is 0. Needs python3-unicorn; exits 0 with a note when it is missing.
+jump (the borderless patch not in) the stamp is 0. Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 import sys
@@ -124,7 +124,7 @@ class Machine:
         mu.reg_write(UC_X86_REG_ESP, STACK + 0x8000)
         mu.reg_write(UC_X86_REG_ECX, TIMER)
         mu.reg_write(UC_X86_REG_EDX, 0xd2d2)
-        mu.emu_start(BLOB + 5, BACK)
+        mu.emu_start(BLOB + 5, BACK, timeout=2000000)
         if (mu.reg_read(UC_X86_REG_ECX), mu.reg_read(UC_X86_REG_EDX), mu.reg_read(UC_X86_REG_ESP)) != (TIMER, 0xd2d2, STACK + 0x8000):
             raise SystemExit('frametracetest: the entry clobbered registers or the stack')
         if mu.reg_read(UC_X86_REG_EAX) != flags[0]:
@@ -135,7 +135,7 @@ class Machine:
         mu.reg_write(UC_X86_REG_EAX, now)
         mu.reg_write(UC_X86_REG_EBX, steps)
         mu.reg_write(UC_X86_REG_ESI, TIMER)
-        mu.emu_start(BLOB, RETURN)
+        mu.emu_start(BLOB, RETURN, timeout=2000000)
         if mu.reg_read(UC_X86_REG_ESP) != esp + 16:
             raise SystemExit('frametracetest: the stack was left wrong')
         if (mu.reg_read(UC_X86_REG_EDI), mu.reg_read(UC_X86_REG_ESI), mu.reg_read(UC_X86_REG_EBX)) != (0xd1, 0x51, 0xb1):
