@@ -1445,7 +1445,7 @@ wrapper's update and the poll under Unicorn with `GetActionState`
 stubbed (European offsets).
 
 The name tables and defaults are data the patcher appends after the code
-(`annex_tables`); `annex_records` and `annex_text` model the output.
+(`annex_tables`); `tools/uctest.py`'s `annex_records` and `annex_text` model the output for the tests.
 `tools/padinputtest.py` runs the four entries under Unicorn against the
 real DLL.
 

@@ -74,10 +74,10 @@ BUILDS = {
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd07c0, 0x7e359), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
-                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0),   # MGInput.dll: the create, the type byte's first read, the two interface ids
+                  'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': 0x7e906, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
@@ -121,9 +121,9 @@ BUILDS = {
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd0bc0, 0x7e779), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),
-                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0), 'nogeneric': 0x26d2,
+                  'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0), 'nogeneric': 0x26d2,
                   'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
-                  'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': 0x7ed26, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
+                  'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
                   'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd),
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8},
@@ -162,11 +162,11 @@ BUILDS = {
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
                   'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c, 0x5da8),   # Options.dll
-                  'noregistry': (0x115fd4, 0xbd959), 'xinput': (0x7940, 0x7a20, 0x6940, 0x81a8, 0x7e40),   # the latter MGInput.dll
-                  'dinput8': (0x2870, 0x39f9, 0x10678, 0x106b8), 'nogeneric': 0x2694,
+                  'noregistry': (0x115fd4, 0xbd959), 'xinput': (0x7940, 0x7a20, 0x6940, 0x81a8), 'kbdpoll': 0x7e40,   # the older MGInput.dll: the keyboard poll's address in the update's dispatch, hooked instead of the device's poll
+                  'dinput8': (0x2870, 0x8550, 0x39f9, '8b9660020000', 0x10678, 0x106b8), 'nogeneric': 0x2694,   # the older MGInput.dll: the type read is a six-byte load
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'cardwarn': 0x4b263, 'cdlevel': 0xb2668,
                   'clearsize': 0x40b83,
-                  'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': 0xbdef8, 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
+                  'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
                   'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d),
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
@@ -217,10 +217,10 @@ BUILDS = {
         'sites': {'check': 0x267c0, 'loader': 0x7571e, 'activate': 0x25ff7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd07c0, 0x7e349), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
-                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0),   # MGInput.dll: the create, the type byte's first read, the two interface ids
+                  'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': 0x7e8f6, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
@@ -336,13 +336,12 @@ VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec800000
 
 
 # The DirectInput interface ids MGInput.dll's two QueryInterface calls
-# name, and DirectInput 8's in their place; the DirectInputCreateA thunk
-# the create site calls, per build (its RVA, for the site's call operand).
+# name, and DirectInput 8's in their place. The DirectInputCreateA thunk
+# the create site calls is in each build's row.
 IID_IDIRECTINPUT2A = bytes.fromhex('62e64459 8aaa cf11 bfc7 444553540000'.replace(' ', ''))
 IID_IDIRECTINPUT8A = bytes.fromhex('308079bf 3a48 a24d aa99 5d64ed369700'.replace(' ', ''))
 IID_IDIRECTINPUTDEVICE2A = bytes.fromhex('82e64459 2ec9 cf11 bfc7 444553540000'.replace(' ', ''))
 IID_IDIRECTINPUTDEVICE8A = bytes.fromhex('8010d454 15dc 3348 a41b 748f73a38179'.replace(' ', ''))
-DI_THUNK = {'European': 0x8a30, 'American': 0x8a30, 'Australian': 0x8550, 'Japanese (DigiCube, MediaKite)': 0x8a30}
 
 
 def devices_sites(offsets, tables):
@@ -578,7 +577,7 @@ def patches(build):
             (site['loadhold'][1], b'\x8b\x0d' + struct.pack('<I', row['addresses']['LOADPIC']), None)), 'apply_loadhold'),
         'padmenu': (EXE, ((site['padmenu'], b'\x89\x0d' + struct.pack('<I', row['addresses']['PADLEVEL']), None),), 'apply_padmenu'),
         'replaypad': (EXE, ((site['replaypad'], bytes.fromhex('8b56088b06'), None),), 'apply_replaypad'),
-        'pagepad': (EXE, ((site['pagepad'], bytes.fromhex('8b4424103bc5' if build == 'Australian' else '8b44241085c0'), None),),
+        'pagepad': (EXE, ((site['pagepad'][0], bytes.fromhex(site['pagepad'][1]), None),),
                     'apply_pagepad'),
         'titlebg': ('Title.dll', ((TITLEROW_SITE, bytes.fromhex('8bc88bf38be98bfac1e902f3a58bcd03d883e103f3a4'), None),),
                     'apply_titlebg'),
@@ -660,28 +659,26 @@ def patches(build):
     # by several routes, so the annex answers the inputs that keep the
     # menus navigable only while the exe's car table (CARS) is empty: the
     # cars exist from a race's setup to its teardown, whatever the mode.
-    # Every MGInput.dll but the Australian hooks the device's poll; the
-    # Australian, an older build with static polls, the keyboard poll's
-    # address in the record update's dispatch (a relocated immediate).
-    if len(site['xinput']) == 4:
-        load, save, update, poll = site['xinput']
+    # The device's poll is hooked, or on the older MGInput.dll with its
+    # static polls (a `kbdpoll` site in the row) the keyboard poll's
+    # address in the record update's dispatch, a relocated immediate.
+    load, save, update, poll = site['xinput']
+    if 'kbdpoll' in site:
+        hook = (poll, struct.pack('<I', 0x10000000 + site['kbdpoll']), None)
+        prologue = bytes.fromhex('81ec94020000')
+    else:
         hook = (poll, bytes.fromhex('8b4424048b480c85c9'), None)
         prologue = bytes.fromhex('538b5c240855')
-    else:
-        load, save, update, poll, kbdpoll = site['xinput']
-        hook = (poll, struct.pack('<I', 0x10000000 + kbdpoll), None)
-        prologue = bytes.fromhex('81ec94020000')
     table['xinput'] = ('MUSASHI\\MGInput.dll', (
         (load, bytes.fromhex('81ec0c020000'), None),
         (save, bytes.fromhex('81ec04010000'), None),
         (update, prologue, None),
         hook), 'apply_xinput')
-    # The kind site is the type byte's first read: a seven-byte cmp in every
-    # MGInput.dll but the Australian, where it is a six-byte load.
-    create, kind, iid_di, iid_dev = site['dinput8']
+    # The kind site is the type byte's first read; the row has its bytes.
+    create, thunk, kind, kindbytes, iid_di, iid_dev = site['dinput8']
     table['dinput8'] = ('MUSASHI\\MGInput.dll', (
-        (create, bytes.fromhex('8d4424106a00506800050000') + b'\x53\xe8' + struct.pack('<i', DI_THUNK[build] - (create + 18)), None),
-        (kind, bytes.fromhex('80be6002000003') if kind == 0x39ac else bytes.fromhex('8b9660020000'), None),
+        (create, bytes.fromhex('8d4424106a00506800050000') + b'\x53\xe8' + struct.pack('<i', thunk - (create + 18)), None),
+        (kind, bytes.fromhex(kindbytes), None),
         (iid_di, IID_IDIRECTINPUT2A, IID_IDIRECTINPUT8A),
         (iid_dev, IID_IDIRECTINPUTDEVICE2A, IID_IDIRECTINPUTDEVICE8A)), 'apply_dinput8')
     table['nogeneric'] = ('MUSASHI\\MGInput.dll', ((site['nogeneric'], bytes.fromhex('741c8b0e52'), None),), 'apply_nogeneric')
@@ -4286,6 +4283,15 @@ NOGENERIC_MAGICS = {
     'CONT': 0xE6E6E6E6,
     'SKIP': 0xE7E7E7E7,
 }
+SORTPAD_MAGICS = {
+    'PADPOLL': 0xDFDFDFDF,
+}
+SITE_MAGICS = (0xE7E7E7E1, 0xE7E7E7E2, 0xE7E7E7E3, 0xE7E7E7E4, 0xE7E7E7E5)
+BLOB_LABELS = {
+    'FULLWIN_BLOB': {'t_blt': 0x37c},
+    'MIX_BLOB': {'stream': 0x33},
+    'RESOLUTION_BLOB': {'groups': 0x704, 'table': 0x72c},
+}
 # --- GENERATED by asm/build.py: END ---
 
 # --- GENERATED by tools/labels.py: BEGIN (do not edit) ---
@@ -5251,7 +5257,7 @@ def apply_pagepad(buf, build):
     RB into the player's level word as Page Up and Page Down, then makes
     them."""
     out, rva = append_section(buf, exe_blob(PAGEPAD_BLOB, build))
-    _branch(out, BUILDS[build]['sites']['pagepad'], rva, 6)
+    _branch(out, BUILDS[build]['sites']['pagepad'][0], rva, 6)
     return out
 
 
@@ -5349,64 +5355,24 @@ def annex_tables():
     return bytes(out)
 
 
-def annex_records(player, table=None):
-    """The records the annex generates for a player from a table of
-    (key, pad input or None) per action - the defaults when none - in the
-    order it lays them out."""
-    if table is None:
-        keys = (KEYS_1P, KEYS_2P)[player]
-        table = [(keys[a], PAD_DEFAULT[a]) for a in range(13)]
-
-    def record(action, source):
-        delay, rate = (10, 3) if 2 <= action <= 5 else (0, 0)
-        return struct.pack('<13I', action, delay, rate, 0, 10000, source, 0, 0, 0, 0, 0, 0, 0)
-    out = []
-    for action, (key, pad) in enumerate(table):
-        out.append(record(action, key))
-        if pad is not None:
-            out.append(record(action, PAD_BASE + player * PAD_PLAYER + pad))
-    for action, key in zip(FIXED_ACTIONS, FIXED_KEYS[player]):
-        out.append(record(action, MENUKEY_BASE + key))
-    for action, pad in FIXED_PADS:
-        out.append(record(action, PAD_BASE + player * PAD_PLAYER + pad))
-    return out
-
-
-def annex_text(tables=None, deadzones=(PAD_DEADZONE, PAD_DEADZONE)):
-    """The text the annex writes, as it lays it out: for the defaults, or
-    for a (key, pad input or None) per action per player."""
-    defaults = [[(keys[a], PAD_DEFAULT[a]) for a in range(13)] for keys in (KEYS_1P, KEYS_2P)]
-    tables = [t or defaults[i] for i, t in enumerate(tables or (None, None))]
-    lines = ['; SEGA RALLY 2 controls']
-    for player, table in enumerate(tables):
-        for device in ('Controller', 'Keyboard'):
-            lines += ['', '[%dP %s]' % (player + 1, device)]
-            if device == 'Controller':
-                lines.append('Deadzone = %d' % (deadzones[player] // 100))
-            for action in TEXT_ORDER:
-                key, pad = table[action]
-                name = KEY_NAMES[key] if device == 'Keyboard' else ('-' if pad is None else PAD_NAMES[pad])
-                lines.append('%s = %s' % (ACTION_NAMES[action], name.replace(' ', '_')))
-    return ''.join(line + '\n' for line in lines).encode('ascii')
-
-
 def apply_xinput(buf, build):
     """padinput.asm in MGInput.dll, its tables and working area after the
     code: the registry helper's load and save and the config's update each
     jump to it, their displaced bytes copied into its replay slots; the
-    device's poll too on every build but the Australian, where the keyboard
-    poll's address in the record update's dispatch is pointed at the
-    annex's five-argument entry."""
-    sites = BUILDS[build]['sites']['xinput']
-    load, save, update, poll = sites[:4]
+    device's poll too, or on the older MGInput.dll (a `kbdpoll` site) the
+    keyboard poll's address in the record update's dispatch is pointed at
+    the annex's five-argument entry."""
+    site = BUILDS[build]['sites']
+    load, save, update, poll = site['xinput']
+    static = 'kbdpoll' in site
     blob = PADINPUT_BLOB + annex_tables() + b'\0' * (ANNEX_END - ANNEX_TABLES)
     out, rva = append_section(buf, blob, chars=CODE_SECTION | 0x80000000)
     values = {
         'LOADLIB': _iat_slot(buf, 'kernel32.dll', 'LoadLibraryA'),
         'GETPROC': _iat_slot(buf, 'kernel32.dll', 'GetProcAddress'),
         'UPDATE': _off_to_rva(buf, update + 6),
-        'POLL': _off_to_rva(buf, poll + 9) if len(sites) == 4 else 0,
-        'KBDPOLL': sites[4] if len(sites) == 5 else 0,
+        'POLL': 0 if static else _off_to_rva(buf, poll + 9),
+        'KBDPOLL': site['kbdpoll'] if static else 0,
     }
     code = bytearray(PADINPUT_BLOB)
     for name, magic in PADINPUT_MAGICS.items():
@@ -5414,18 +5380,18 @@ def apply_xinput(buf, build):
             code = code.replace(struct.pack('<I', magic), struct.pack('<I', BUILDS[build]['addresses'][{'CARS': 'CARS', 'PUBLISH': 'PADPOLL'}[name]]))
         else:
             code = code.replace(struct.pack('<I', magic), struct.pack('<i', values[name] - rva))
-    for marker, site, length in ((b'\xc1' * 6, update, 6), (b'\xc2' * 9, poll if len(sites) == 4 else None, 9)):
+    for marker, at, length in ((b'\xc1' * 6, update, 6), (b'\xc2' * 9, None if static else poll, 9)):
         if code.count(marker) != 1:
             raise ValueError('padinput.asm: the replay slot %s is not there once' % marker.hex())
-        code = code.replace(marker, bytes(buf[site:site + length]) if site is not None else b'\x90' * length)
+        code = code.replace(marker, bytes(buf[at:at + length]) if at is not None else b'\x90' * length)
     start = _rva_to_off(out, rva)
     out[start:start + len(code)] = code
     for off, entry, length in ((load, 0, 6), (save, 5, 6), (update, 10, 6)):
         _branch(out, off, rva + entry, length, op=b'\xe9')
-    if len(sites) == 4:
-        _branch(out, poll, rva + 15, 9, op=b'\xe9')
-    else:
+    if static:
         struct.pack_into('<I', out, poll, 0x10000000 + rva + 20)
+    else:
+        _branch(out, poll, rva + 15, 9, op=b'\xe9')
     return out
 
 
@@ -5444,14 +5410,14 @@ def apply_dinput8(buf, build):
     """dinput8.asm in MGInput.dll: the DirectInputCreateA call becomes a
     jump to its create, the first read of the device's type byte a call
     to its translation; the interface ids were rewritten as sites."""
-    create, kind, _iid_di, _iid_dev = BUILDS[build]['sites']['dinput8']
+    create, _thunk, kind, kindbytes, _iid_di, _iid_dev = BUILDS[build]['sites']['dinput8']
     out, rva = append_section(buf, DINPUT8_BLOB, chars=CODE_SECTION | 0x80000000)
     _fill_relative(out, rva, DINPUT8_BLOB, DINPUT8_MAGICS, {
         'LOADLIB': _iat_slot(buf, 'kernel32.dll', 'LoadLibraryA'),
         'GETPROC': _iat_slot(buf, 'kernel32.dll', 'GetProcAddress'),
         'CONT': _off_to_rva(buf, create + 18)})
     _branch(out, create, rva, 18, op=b'\xe9')
-    _branch(out, kind, rva + 5, 7 if kind == 0x39ac else 6)
+    _branch(out, kind, rva + 5, len(kindbytes) // 2)
     return out
 
 
@@ -5483,7 +5449,6 @@ def apply_mixerless(buf, build):
     return out
 
 
-MIX_STREAM = 51                                  # the second routine in mix.asm
 
 
 def apply_mix(buf, build):
@@ -5494,7 +5459,7 @@ def apply_mix(buf, build):
     sites = BUILDS[build]['sites']['mix']
     out, rva = append_section(buf, MIX_BLOB, chars=CODE_SECTION)
     _branch(out, sites[0], rva, 8)
-    _branch(out, sites[1], rva + MIX_STREAM, 6)
+    _branch(out, sites[1], rva + BLOB_LABELS['MIX_BLOB']['stream'], 6)
     return out
 
 
@@ -6205,15 +6170,15 @@ def apply_voltrace(buf, build):
         slot_va = IMAGE_BASE + rva + len(blob) + 4 * i
         struct.pack_into('<I', out, start + len(blob) + 4 * i, IMAGE_BASE + _off_to_rva(out, off) + length)
         out[start:start + len(blob)] = bytes(out[start:start + len(blob)]).replace(
-            struct.pack('<I', 0xE7E7E7E1 + i), struct.pack('<I', slot_va))
+            struct.pack('<I', SITE_MAGICS[i]), struct.pack('<I', slot_va))
         _branch(out, off, rva + 5 * i, length, op=b'\xe9')
     return out
 
 
 def fullwin_stamp():
     """The offset in fullwin.asm's blob of the counter stamp its present
-    keeps, the dword after its QueryPerformanceCounter pointer."""
-    return FULLWIN_BLOB.index(b'QueryPerformanceCounter\0') + len(b'QueryPerformanceCounter\0') + 4
+    keeps."""
+    return BLOB_LABELS['FULLWIN_BLOB']['t_blt']
 
 
 FRAMETRACE_STAMP = PRESENT_SITE + 5     # plus the stamp's offset: from the present to the stamp, via the jump's rel32
@@ -6240,9 +6205,9 @@ def apply_frametrace(buf, build):
     start = _rva_to_off(out, rva)
     slots = IMAGE_BASE + rva + len(blob)
     struct.pack_into('<II', out, start + len(blob), counter, IMAGE_BASE + _off_to_rva(out, entry_site) + 5)
-    out[start:start + len(blob)] = blob.replace(struct.pack('<I', 0xE7E7E7E1), struct.pack('<I', slots)) \
-        .replace(struct.pack('<I', 0xE7E7E7E2), struct.pack('<I', slots + 4)) \
-        .replace(struct.pack('<I', 0xE7E7E7E3), struct.pack('<I', FRAMETRACE_STAMP + fullwin_stamp()))
+    out[start:start + len(blob)] = blob.replace(struct.pack('<I', SITE_MAGICS[0]), struct.pack('<I', slots)) \
+        .replace(struct.pack('<I', SITE_MAGICS[1]), struct.pack('<I', slots + 4)) \
+        .replace(struct.pack('<I', SITE_MAGICS[2]), struct.pack('<I', FRAMETRACE_STAMP + fullwin_stamp()))
     _branch(out, exit_site, rva, 5, op=b'\xe9')
     _branch(out, entry_site, rva + 5, 5, op=b'\xe9')
     return out
@@ -6360,8 +6325,11 @@ def apply_resolution(buf, build):
     for name, magic in RESOLUTION_MAGICS.items():
         blob = blob.replace(struct.pack('<I', magic), struct.pack('<I', values[name] - base))
     groups = resolution_groups()
-    # the groups, then the table
-    blob = blob[:-len(groups)] + groups + resolution_table(strings=True)
+    # the groups, then the table, where resolution.asm's labels say
+    at = BLOB_LABELS['RESOLUTION_BLOB']
+    if at['groups'] + len(groups) != at['table'] or at['table'] != len(blob):
+        raise ValueError('resolution.asm: the groups and the table are not where the patcher writes them')
+    blob = blob[:at['groups']] + groups + resolution_table(strings=True)
     out, rva = _self_section(buf, blob)
     _branch(out, RESOLUTION_INIT, rva, 14)
     _branch(out, RESOLUTION_DRAW, rva + 5, 8)
@@ -6426,7 +6394,7 @@ def apply_sortpad(buf, build):
     steps the sort mode on a press of the pad's LB or RB, then makes them.
     The exe's poll slot is the build's; the section is writable, the blob
     keeping what was down."""
-    blob = SORTPAD_BLOB.replace(struct.pack('<I', 0xDFDFDFDF), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
+    blob = SORTPAD_BLOB.replace(struct.pack('<I', SORTPAD_MAGICS['PADPOLL']), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
     out, rva = _self_section(buf, blob)
     _branch(out, SORTPAD_SITE, rva, 9)
     return out
@@ -9280,8 +9248,6 @@ def selfcheck():
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
                     raise ValueError('%s: a placeholder left in a stub' % build)
-    if MIX_BLOB[MIX_STREAM:MIX_STREAM + 3] != b'\x51\x8d\x83':    # `push ecx; lea eax, [ebx+...]` opens the stream routine
-        raise ValueError('mix.asm: the stream routine is not at +%d' % MIX_STREAM)
     # The window and the README list features, not keys; a key in neither
     # or in both is a patch nobody is offered or is offered twice.
     listed = [k for group in ESSENTIAL + EXTRA for k in BY_GROUP[group][2]]

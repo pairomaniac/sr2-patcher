@@ -99,6 +99,8 @@ that long.
 
 INTERNET goes through `net/directory.py` on UDP 47627, on Sega Online's
 three servers: `segaonline.net`, `us.segaonline.net`, `jp.segaonline.net`.
+The list is `SR2_DIRECTORIES` in `sr2net.h`, the one place to change
+when a server moves; a rebuilt DLL carries the new list.
 Their names are looked up on a thread of the DLL's own, so a slow or
 absent resolver holds the list, not the game; the search reports
 "connecting" until the lookup is done.

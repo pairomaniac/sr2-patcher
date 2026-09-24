@@ -47,9 +47,8 @@ def main(argv):
         print('padinputtest: %s is not an MGInput.dll the patcher knows' % path)
         return 1
     image = patcher.apply_xinput(raw, build)
-    sites = patcher.BUILDS[build]['sites']['xinput']
-    load_off, save_off, update_off, poll_off = sites[:4]
-    australian = len(sites) == 5          # the keyboard poll's address in the dispatch, not a device method
+    load_off, save_off, update_off, poll_off = patcher.BUILDS[build]['sites']['xinput']
+    australian = 'kbdpoll' in patcher.BUILDS[build]['sites']   # the keyboard poll's address in the dispatch, not a device method
 
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     annex = uctest.map_image(mu, image, BASE)
@@ -182,13 +181,13 @@ def main(argv):
     ret, popped = call(site(load_off), this, slot0, 0, 0, 0, got)
     assert ret == 0 and popped == 4 + 0x18, (hex(ret), popped)
     assert struct.unpack('<I', mu.mem_read(publish, 4))[0] == BASE + annex + 25
-    want0 = patcher.annex_records(0)
+    want0 = uctest.annex_records(0)
     assert struct.unpack('<I', mu.mem_read(got, 4))[0] == len(want0) == 13 * 2 + len(patcher.FIXED_ACTIONS) + len(patcher.FIXED_PADS)
     recs, count = load(slot0)
     assert recs == want0, [r.hex() for r in recs[:3]]
     assert disk['opened'] == [(CFG, 0x80000000, 3)], disk['opened']
     recs, count = load(slot1, 2)                # fewer wanted than held: that many
-    assert count == 2 and recs == patcher.annex_records(1)[:2]
+    assert count == 2 and recs == uctest.annex_records(1)[:2]
     mu.mem_write(SCRATCH + 0x18, b'2\0')
     ret, _p = call(site(load_off), this, SCRATCH + 0x18, 0, buf, 32, got)
     assert ret == 0x80070057, hex(ret)
@@ -197,22 +196,22 @@ def main(argv):
     assert ret == 0 and struct.unpack('<I', mu.mem_read(got, 4))[0] == 0
 
     # 2. a save: three records for 2P and a deadzone in the name; the text rewritten
-    handbrake_b = patcher.annex_records(1, [(0, None)] * 8 + [(0, 13)])[9]
-    three = b''.join(patcher.annex_records(1, [(0x11, None), (0x1f, None)])[:2]) + handbrake_b
+    handbrake_b = uctest.annex_records(1, [(0, None)] * 8 + [(0, 13)])[9]
+    three = b''.join(uctest.annex_records(1, [(0x11, None), (0x1f, None)])[:2]) + handbrake_b
     name = SCRATCH + 0x40
     t2 = [(0x11, None), (0x1f, None)] + [(0, None)] * 6 + [(0, 13)] + [(0, None)] * 4
     mu.mem_write(buf, three)
     mu.mem_write(name, b'DZ12000\0')                                   # past the most: clamped as the parser clamps
     ret, _p = call(site(save_off), this, slot1, name, buf, 3)
-    assert ret == 0 and disk['text'] == patcher.annex_text([None, t2], (1000, 9000)), disk['text'].decode()
+    assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 9000)), disk['text'].decode()
     mu.mem_write(buf, three)
     mu.mem_write(name, b'DZ4000\0')
     ret, popped = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and popped == 4 + 0x14, (hex(ret), popped)
     assert disk['text'] is not None and disk['opened'][-1] == (CFG, 0xC0000000, 4) and disk['ended'] == 2
-    assert disk['text'] == patcher.annex_text([None, t2], (1000, 4000)), disk['text'].decode()
+    assert disk['text'] == uctest.annex_text([None, t2], (1000, 4000)), disk['text'].decode()
     recs, count = load(slot1)
-    assert recs == patcher.annex_records(1, t2), count
+    assert recs == uctest.annex_records(1, t2), count
     assert count == 13 + 1 + len(patcher.FIXED_ACTIONS) + len(patcher.FIXED_PADS)
 
     # 3. a fresh session parses that text back; 1P still the defaults
@@ -223,7 +222,7 @@ def main(argv):
     t3 = list(t2)                               # the menus' actions are not in the text: their defaults again
     for a in (2, 3, 10, 11, 12):
         t3[a] = (patcher.KEYS_2P[a], patcher.PAD_DEFAULT[a])
-    assert recs == patcher.annex_records(1, t3), count
+    assert recs == uctest.annex_records(1, t3), count
     ret, _p = call(site(save_off), this, slot0, 0, buf, 0)      # a save with no records: 1P's row emptied, no deadzone change
     assert b'[1P Controller]\nDeadzone = 10\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
     assert b'MenuUp' not in disk['text'] and b'Enter' not in disk['text']
@@ -234,7 +233,7 @@ def main(argv):
     recs, count = load(slot0)
     t = [(patcher.KEYS_1P[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
     t[0] = (0x10, patcher.PAD_DEFAULT[0])
-    assert recs == patcher.annex_records(0, t), count
+    assert recs == uctest.annex_records(0, t), count
 
     # 4. a hand-written text: CRLF, blank lines, comments, no "=", unknown names dropped, sections in any order
     disk['text'] = (b'\r\n; mine\r\n[2P Keyboard]\r\nView NUM_ENTER\r\nSteeringLeft = -\r\n\r\n[1P Controller]\r\nDeadzone = 30\r\n'
@@ -245,12 +244,12 @@ def main(argv):
     t = [(patcher.KEYS_1P[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
     t[0] = (0x10, patcher.PAD_LB)
     t[4] = (patcher.KEYS_1P[4], patcher.PAD_LEFT)
-    assert recs == patcher.annex_records(0, t), count
+    assert recs == uctest.annex_records(0, t), count
     recs, count = load(slot1)
     t = [(patcher.KEYS_2P[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
     t[9] = (0x9c, 24)
     t[4] = (0, None)
-    assert recs == patcher.annex_records(1, t), count
+    assert recs == uctest.annex_records(1, t), count
 
     # 4. the pads: 1P's config update with a pad in slot 1 only
     cfg0, cfg1 = SCRATCH + 0x1000, SCRATCH + 0x2000

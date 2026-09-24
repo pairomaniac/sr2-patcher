@@ -55,7 +55,7 @@ The regions, in file order:
 | Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_windowed`; `apply_clearsize`, `apply_loadhold`, `apply_padmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter` |
 | Gamepad | `apply_xinput` and the pad annex (`annex_tables` and the tables before it); `apply_dinput8`, `apply_nogeneric`, `_fill_relative` |
 | No-mixer patch | `apply_mixerless` |
-| Mix patch | `MIX_STREAM`, `apply_mix`, `apply_sfxoptions` |
+| Mix patch | `apply_mix` (its second entry from `BLOB_LABELS`), `apply_sfxoptions` |
 | Device Settings | `apply_devices`, `patch_txr` and the page's tables |
 | Connection rows | `LOBBY_DIR`, `LOBBY_BACKDROP_MD5`, `lobby_mask`, `bmp24`, `lobby_backdrop`, `lobby_art`, `clamp_mpdata` |
 | Diagnostics and the rest of the exe | `apply_voltrace`, `apply_frametrace`, `apply_titlebg`, `apply_widescreen`, `apply_gltrace`, `apply_d3dtrace`, `apply_d3dtrace2d` |

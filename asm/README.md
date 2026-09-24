@@ -19,10 +19,14 @@ a word-sized string instruction - the source spells it out.
 
 Two rules every blob follows:
 
-- An exe stub never names an exe address in its source (`build.py`
-  refuses one); everything it reads comes through an `EXE_MAGICS`
-  placeholder the patcher fills from the build's row. The exe is never
-  relocated, so those are absolute.
+- No source or include names an exe address (`build.py` refuses one);
+  everything a stub reads comes through a placeholder from the tables in
+  `build.py`, filled by the patcher from the build's row. The exe is
+  never relocated, so those are absolute. An offset the patcher needs
+  inside a blob - `mix.asm`'s second entry, the borderless present's
+  stamp, the resolution table's groups - is a label named in `build.py`'s
+  `LABELS`, read off nasm's listing and written out as `BLOB_LABELS`;
+  nothing of the kind is kept by hand.
 - A DLL stub is position-independent: the DLLs are relocated on every
   load, so the blob takes its own address with a `call`/`pop` and
   reaches the DLL's globals and import slots relative to that, and the

@@ -67,19 +67,12 @@ def main(argv):
     if not shutil.which('nasm'):
         print('devicestest: skipped, nasm not installed (the routines are found through its listing)')
         sys.exit(uctest.SKIPPED)
+    sys.path.insert(0, os.path.join(HERE, '..', 'asm'))
+    from build import listing_labels
     with tempfile.NamedTemporaryFile(suffix='.lst') as lst:
         subprocess.check_call(['nasm', '-f', 'bin', '-l', lst.name, '-o', os.devnull, os.path.join(HERE, '..', 'asm', 'devices.asm')])
-        listing = open(lst.name).read()
-    labels, pending = {}, []
-    for line in listing.splitlines():
-        src = line[40:].strip()
-        word = src.split()[0] if src else ''
-        if word.endswith(':') and not word.startswith('.'):
-            pending.append(word[:-1])
-        if len(line) > 15 and line[7:15].strip() and all(c in '0123456789ABCDEF' for c in line[7:15]):
-            for name in pending:
-                labels[name] = int(line[7:15], 16)
-            pending = []
+        with open(lst.name) as fh:
+            labels = listing_labels(fh.read())
     for need in ('refresh', 'snapshot', 'waittick', 'defaults', 'bindkey', 'held', 'binding', 'row', 'snapkeys', 'shown'):
         assert need in labels, need
 
@@ -143,7 +136,7 @@ def main(argv):
         return out
 
     for player, cfg in enumerate((CFG0, CFG1)):
-        build_records(cfg, [(struct.unpack_from('<I', r, 0)[0], struct.unpack_from('<I', r, 0x14)[0]) for r in patcher.annex_records(player)])
+        build_records(cfg, [(struct.unpack_from('<I', r, 0)[0], struct.unpack_from('<I', r, 0x14)[0]) for r in uctest.annex_records(player)])
     mu.mem_write(KEYS, b'\0' * 256)
 
     pad = {0x33f: 1000, 0x37f: 1000}   # source: value

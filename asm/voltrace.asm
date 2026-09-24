@@ -19,6 +19,11 @@ bits 32
 
 %define IAT_LOADLIB     0xE3E3E3E3
 %define IAT_GETPROC     0xE4E4E4E4
+%define SITE1           0xE7E7E7E1      ; the patcher's per-site placeholders (build.py's SITE_MAGICS)
+%define SITE2           0xE7E7E7E2
+%define SITE3           0xE7E7E7E3
+%define SITE4           0xE7E7E7E4
+%define SITE5           0xE7E7E7E5
 %define BUF             80
 
 ; Each thunk ends in `jmp [abs]` through a placeholder 0xE7E7E7En: the
@@ -100,31 +105,31 @@ t1:     push    1
         push    ebp
         mov     ebp, esp
         sub     esp, 0xc
-        jmp     dword [0xE7E7E7E1]
+        jmp     dword [SITE1]
 t2:     push    2
         call    report
         push    ebp
         mov     ebp, esp
         sub     esp, 0x80
-        jmp     dword [0xE7E7E7E2]
+        jmp     dword [SITE2]
 t3:     push    3
         call    report
         push    esi
         mov     esi, [ecx]
         test    esi, esi
-        jmp     dword [0xE7E7E7E3]
+        jmp     dword [SITE3]
 t4:     push    4
         call    report
         push    ebp
         mov     ebp, esp
         sub     esp, 0x88
-        jmp     dword [0xE7E7E7E4]
+        jmp     dword [SITE4]
 t5:     push    5
         call    report
         push    ebp
         mov     ebp, esp
         sub     esp, 0xc
-        jmp     dword [0xE7E7E7E5]
+        jmp     dword [SITE5]
 
 s_pre:  db 'sr2 v', 0
 s_k32:  db 'kernel32.dll', 0

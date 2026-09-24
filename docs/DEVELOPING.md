@@ -169,9 +169,13 @@ When a patch changes what it writes, update `EXPECTED` in
 ## Adding a build
 
 A row in `BUILDS`: the fingerprints, the exe sites, the SetTextColor
-sites, the import slots and the addresses. An exe stub may not name an
-exe address in its source (`asm/build.py` refuses one); everything a
-stub reads goes through a placeholder and the row.
+sites, the import slots and the addresses. Where a build's file differs
+in shape - the older `MGInput.dll`'s static polls (`kbdpoll`), its
+six-byte type read, the exe's `pagepad` site - the row carries the
+original bytes or the extra site; nothing in the code tests the build's
+name. No stub may name an exe address in its source (`asm/build.py`
+refuses one); everything a stub reads goes through a placeholder and
+the row.
 
 `tools/discsurvey.py` gives the fingerprints. Find each site by searching
 the new exe for the European site's bytes with addresses and `rel32`s
