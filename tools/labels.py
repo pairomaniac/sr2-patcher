@@ -167,11 +167,13 @@ def main(argv):
         write_bmps(labels, argv[argv.index('--show') + 1])
     new = generated(labels)
     if check:
-        baked = pattern.search(text).group(0)
-        if baked == new:
+        # The masks, not the region's text: zlib builds differ in the
+        # stream they make of the same bytes.
+        baked = carried(pattern.search(text).group(0))
+        if baked == labels:
             print('labels match')
             return 0
-        worst = compare(carried(baked), labels)
+        worst = compare(baked, labels)
         if worst[0] <= MEAN_TOLERANCE and worst[1] <= FAR_TOLERANCE:
             print('note: labels match within the rasteriser\'s tolerance: mean %.2f/255 off, %.1f%% of pixels far off at worst (%s)'
                   % (worst[0], worst[1] * 100, worst[2]))
