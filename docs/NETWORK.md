@@ -210,13 +210,17 @@ reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
   anywhere is seen from anywhere. JOIN names one at the server it was heard
   from; the server tells each side the other's public address and port,
   the host sends a few packets to open its NAT, the guest's joins arrive,
-  and from there the two talk directly with the server out of the loop.
+  and from there the two talk directly with the server out of the loop;
+  a session the server no longer has is answered at once, not waited out.
+  Every datagram to the server carries a token the DLL made up, echoed in
+  the answers, so nothing forged as the server is taken.
   When nothing has got through after four seconds, the guest sends its
   traffic through that server and the host follows onto the relay the
   moment a relayed packet arrives; the relay is per guest, so one guest can
   be direct and another relayed. A host registers with all three servers
-  every second; five seconds of silence drops the entry. The listing is
-  public; the game's own OPEN/CLOSE and START are the controls.
+  every second and takes its entry down when it leaves; five seconds of
+  silence drops it too. The listing is public; the game's own OPEN/CLOSE
+  and START are the controls.
 - **DIRECT IP**: the host forwards UDP 47626; the guest types the address,
   or `host:port`, in the entry popup. Blank searches the LAN. What TCP/IP
   did, without DirectPlay.
@@ -244,7 +248,7 @@ Against the stock DLL and DirectPlay:
 | Stock | Here |
 | --- | --- |
 | `EnumSessions`: DirectPlay's broadcast or a typed address | the LAN broadcast, the typed address, or the directory; `DPERR_CONNECTING` for up to three seconds while nothing has answered, then the list; `GetCaps` reports 1500 ms so the exe keeps polling that long after the first answer |
-| `CreateSession` / `JoinSession` / `CreatePlayer`: DirectPlay `Open`, `CreatePlayer`, the DLL's roster | a session id made by the host; `JOIN` with it, `WELCOME` with the index, the reserved slots and the roster, `REFUSE` when closed, full or not that session; the name sent after, reliably; the roster on every change |
+| `CreateSession` / `JoinSession` / `CreatePlayer`: DirectPlay `Open`, `CreatePlayer`, the DLL's roster | a session id made by the host; `JOIN` with it, a nonce, the wire version and the host's cookie (a `CHALLENGE` hands it to a first join), `WELCOME` with the index, the reserved slots, the roster and the version, `REFUSE` when closed, full, not that session or another version; the name sent after, reliably; the roster on every change |
 | `SendTo` guaranteed / not, to one or to all | a reliable class per link (numbered, acknowledged, resent every 250 ms, in order, a 64-deep window) and an unreliable one; the host forwards between guests; the receiver gets the sender's index |
 | `PopUnsequenced`, `DPERR_NOMESSAGES`, `DPERR_BUFFERTOOSMALL` | the same, the same codes |
 | events 0-3: host identified, player created, destroyed, session lost | the same, in the order the exe wants; a guest's `0x4402a0` loop finds its index known the moment `CreatePlayer` returns |

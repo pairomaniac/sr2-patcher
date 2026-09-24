@@ -205,8 +205,9 @@ static void oversized(void)
     ok("an oversized reliable datagram is dropped; the link after it intact");
 }
 
-/* A host that answers a join by itself: the welcome carries `index`. */
-static int fake_host(int who, int index)
+/* A host that answers a join by itself: the welcome carries `index`, and
+ * the wire version unless `old`, the shape a host from before it sends. */
+static int fake_host(int who, int index, int old)
 {
     sr2_session s;
     sock_t fs = socket(AF_INET, SOCK_DGRAM, 0);
@@ -224,6 +225,7 @@ static int fake_host(int who, int index)
     s.addr = htonl(INADDR_LOOPBACK);
     s.port = local_port(fs);
     s.max_players = 4;
+    s.version = SR2_PROTO;
     strcpy(s.name, "FAKE");
     r = sr2_join(nets[who], &s, now);
     for (t = 0; t < 700 && r == SR2_CONNECTING; t++) {
@@ -231,12 +233,15 @@ static int fake_host(int who, int index)
         socklen_t flen = sizeof from;
         int n = (int)recvfrom(fs, buf, sizeof buf, 0, (struct sockaddr *)&from, &flen);
         if (n >= 16 && buf[4] == 3 && !welcomed) {     /* T_JOIN: T_WELCOME, reliable seq 1 */
-            uint8_t w[16 + 7];
+            uint8_t w[16 + 8];
+            if (n != 16 + 29 || buf[16 + 24] != SR2_PROTO)
+                fail("the join's shape: guid, nonce, version, cookie");
             header(w, 4, 1, 0, index, 1);
             w[16] = index;
             w[17] = 0;
             memset(w + 18, 0, 5);                       /* nothing reserved, an empty roster */
-            sendto(fs, w, sizeof w, 0, (struct sockaddr *)&from, flen);
+            w[23] = SR2_PROTO;
+            sendto(fs, w, old ? 16 + 7 : 16 + 8, 0, (struct sockaddr *)&from, flen);
             welcomed = 1;
         }
         run(10);
@@ -246,6 +251,83 @@ static int fake_host(int who, int index)
     if (!welcomed)
         fail("the fake host never saw the join");
     return r;
+}
+
+/* Guest 1's socket sends the host an ack far past anything the host
+ * sent: it must not clear the window, or the next reliable messages
+ * from the host would be given up on under loss. */
+static void forged_ack(void)
+{
+    uint8_t pkt[16];
+    int k, seq_ok = 1;
+    char order[16];
+    spy_from = sr2_port(nets[1]);
+    spy_to = sr2_port(nets[0]);
+    sr2_send(nets[1], 0, "y", 2, 1, now);
+    run(300);
+    if (spy_sock == SOCK_INVALID || !got(0, 1, "y"))
+        fail("the watched link");
+    header(pkt, 12, 0, 1, 0xff, 0);                     /* T_ACK */
+    pkt[12] = 0xe8; pkt[13] = 0x03; pkt[14] = 0; pkt[15] = 0;   /* ack 1000 */
+    send_from(spy_sock, spy_to, pkt, sizeof pkt);
+    run(50);
+    drop_pct = 60;
+    for (k = 0; k < 10; k++) {
+        snprintf(order, sizeof order, "f%d", k);
+        sr2_send(nets[0], 1, order, (int)strlen(order) + 1, 1, now);
+    }
+    run(4000);
+    drop_pct = 0;
+    for (k = 0; k < 10 && seq_ok; k++) {
+        snprintf(order, sizeof order, "f%d", k);
+        seq_ok = got(1, 0, order);
+    }
+    if (!seq_ok)
+        fail("a forged ack cleared the host's window");
+    spy_from = 0;
+    ok("an ack past anything sent is ignored; the window resends under loss");
+}
+
+/* A join from a socket that has never been challenged, with the right
+ * session but no cookie, and one with a made-up cookie: a challenge each
+ * time, no seat, no welcome, nothing but 20 bytes back. */
+static void uncookied(void)
+{
+    sock_t fs = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in sa, from;
+    socklen_t flen = sizeof from;
+    uint8_t pkt[16 + 29], in[256];
+    sr2_session s;
+    int n, max, cur, before, k, challenges = 0, others = 0;
+    memset(&sa, 0, sizeof sa);
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (fs < 0 || bind(fs, (struct sockaddr *)&sa, sizeof sa) != 0)
+        fail("uncookied socket");
+    fcntl(fs, F_SETFL, O_NONBLOCK);
+    sr2_session_info(nets[0], &s);
+    sr2_player_count(nets[0], &max, &before);
+    for (k = 0; k < 2; k++) {
+        memset(pkt, 0, sizeof pkt);
+        header(pkt, 3, 0, 0xff, 0xff, 0);               /* T_JOIN */
+        memcpy(pkt + 16, s.guid, 16);
+        memset(pkt + 32, 0x77, 8);
+        pkt[40] = SR2_PROTO;
+        pkt[41] = k * 0x5a; pkt[42] = k * 0x5a;         /* no cookie, then a wrong one */
+        send_from(fs, sr2_port(nets[0]), pkt, sizeof pkt);
+        run(200);
+        while ((n = (int)recvfrom(fs, in, sizeof in, 0, (struct sockaddr *)&from, &flen)) > 0) {
+            if (n == 16 + 4 && in[4] == 15)
+                challenges++;
+            else
+                others++;
+        }
+    }
+    close(fs);
+    sr2_player_count(nets[0], &max, &cur);
+    if (challenges != 2 || others || cur != before)
+        fail("a join without the cookie got more than a challenge");
+    ok("a join without the host's cookie gets a 20-byte challenge and no seat");
 }
 
 int main(void)
@@ -297,12 +379,28 @@ int main(void)
     ok("names and counts everywhere");
 
     oversized();
-    if (fake_host(5, 1) != SR2_OK || sr2_my_index(nets[5]) != 1)
+    forged_ack();
+    uncookied();
+    if (fake_host(5, 1, 0) != SR2_OK || sr2_my_index(nets[5]) != 1)
         fail("a welcome with seat 1");
     sr2_leave(nets[5], now);
-    if (fake_host(5, 200) == SR2_OK || sr2_my_index(nets[5]) >= 0)
+    if (fake_host(5, 200, 0) == SR2_OK || sr2_my_index(nets[5]) >= 0)
         fail("a welcome with seat 200 taken");
     ok("a welcome with a seat past the table is not taken; one in it is");
+    if (fake_host(5, 1, 1) != SR2_REFUSED || sr2_my_index(nets[5]) >= 0)
+        fail("an older host's welcome taken");
+    ok("a host of another wire version is refused, not joined");
+    {
+        sr2_session s;
+        memset(&s, 0, sizeof s);
+        s.addr = htonl(INADDR_LOOPBACK);
+        s.port = sr2_port(nets[0]);
+        s.max_players = 4;
+        s.version = 0;
+        if (sr2_join(nets[5], &s, now) != SR2_REFUSED)
+            fail("a listed session of another version joined");
+        ok("a listed session of another wire version is refused before a join goes out");
+    }
 
     /* a fifth: full */
     if (join(4, "") != SR2_REFUSED)
@@ -423,6 +521,25 @@ int main(void)
         if (sr2_host(nets[0], "TEAM", 4, now) != SR2_OK || sr2_player_create(nets[0], "Host", now) != 0)
             fail("host internet");
         run(1200);                      /* registered */
+        {
+            sr2_session s;
+            int t2;
+            memset(&s, 0, sizeof s);
+            memset(s.guid, 0x33, 16);
+            s.addr = htonl(INADDR_LOOPBACK);
+            s.port = 1;                 /* nobody */
+            s.max_players = 4;
+            s.version = SR2_PROTO;
+            strcpy(s.name, "GONE");
+            r = sr2_join(nets[3], &s, now);
+            for (t2 = 0; t2 < 100 && r == SR2_CONNECTING; t2++) {
+                run(10);
+                r = sr2_join_status(nets[3], now);
+            }
+            if (r != SR2_REFUSED)
+                fail("a session the directory does not have: not refused within a second");
+            ok("internet: a join to a session the directory does not have is refused by its N, not waited out");
+        }
         if (join(1, "internet: guest 1 finds the session at the directory and joins direct") != SR2_OK)
             fail("internet join");
         drop_to = sr2_port(nets[2]);
@@ -441,13 +558,33 @@ int main(void)
         drop_to = 0;
         for (k = 3; k < N; k++)
             alive[k] = 0;
+        {
+            sr2_session found[SR2_MAX_SESSIONS];
+            int c = sr2_enum(nets[4], now, found, SR2_MAX_SESSIONS), t2;
+            for (t2 = 0; t2 < 100 && c == SR2_CONNECTING; t2++) {
+                run(10);
+                c = sr2_enum(nets[4], now, found, SR2_MAX_SESSIONS);
+            }
+            if (c != 1 || found[0].version != SR2_PROTO)
+                fail("the list before the host leaves");
+            sr2_leave(nets[0], now);
+            alive[0] = 0;
+            run(3500);                  /* past the game's own TTL; the directory's would be 5 s */
+            c = sr2_enum(nets[4], now, found, SR2_MAX_SESSIONS);
+            if (c != 0)
+                fail("the session still listed after the host's X");
+            ok("internet: the host's leave takes its session off the list at once");
+            sr2_leave(nets[4], now);
+        }
     }
 
-    /* the host leaves */
-    drain_events(4); drain_events(1);
-    sr2_leave(nets[0], now);
-    alive[0] = 0;
-    run(100);
+    /* the host leaves (already gone, with the directory) */
+    if (alive[0]) {
+        drain_events(4); drain_events(1);
+        sr2_leave(nets[0], now);
+        alive[0] = 0;
+        run(100);
+    }
     i = dir_port ? 1 : 4;
     if (!expect_event(i, SR2_EV_LOST, -1) || sr2_poll(nets[i], now) != SR2_ERR)
         fail("host leaves");

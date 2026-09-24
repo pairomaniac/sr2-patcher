@@ -18,6 +18,7 @@
 #define SR2_NAME_LEN        64      /* the game's name fields, NUL included */
 #define SR2_MAX_PAYLOAD     1024    /* the game's largest message is 0x134, 0x136 with the stock DLL's header */
 #define SR2_MAX_SESSIONS    16
+#define SR2_PROTO           1       /* the wire's version: in the join, the welcome and the session record; a mismatch is refused */
 
 /* OpenConnection kinds as the exe passes them: rows 0, 1, 2 of the screen. */
 #define SR2_KIND_DIRECT     1       /* an address typed; empty = LAN search */
@@ -34,7 +35,7 @@
 #define SR2_OK              0
 #define SR2_ERR             (-1)    /* failed */
 #define SR2_CONNECTING      (-2)    /* not yet: keep calling */
-#define SR2_REFUSED         (-3)    /* the host said no: full or closed */
+#define SR2_REFUSED         (-3)    /* the host said no: full, closed, not that session, or another version */
 #define SR2_NONE            1       /* nothing there */
 #define SR2_TOOSMALL        2       /* the buffer: *len says how much */
 
@@ -43,6 +44,7 @@ typedef struct {
     int      max_players;
     int      players;
     int      closed;                /* joins refused */
+    int      version;               /* the host's SR2_PROTO; 0 from a host older than it */
     char     name[SR2_NAME_LEN];
     uint32_t addr;                  /* the host, network order */
     uint16_t port;                  /* host order */
@@ -112,7 +114,10 @@ int  sr2_poll(sr2_net *n, uint32_t now);
 int  sr2_pop_event(sr2_net *n, sr2_event *ev);
 
 /* Game messages: to an index, or -1 for everyone else; reliable ones
- * arrive in order and always, the others when they do. */
+ * arrive in order, resent until acknowledged and held back while the
+ * receiver's queue is full; the others when they do. SR2_ERR when a
+ * reliable one cannot be sent: 64 unacknowledged already on that link
+ * after the socket has been drained, which a live peer never reaches. */
 int  sr2_send(sr2_net *n, int to, const void *data, int len, int reliable, uint32_t now);
 int  sr2_recv(sr2_net *n, int *from, void *buf, int *len);
 

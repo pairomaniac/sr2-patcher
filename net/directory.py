@@ -10,10 +10,13 @@ No state beyond the open sessions.
     python3 directory.py [port]        default 47627
     python3 directory.py status        what the journal says it did
 
-Wire format, one UDP datagram each, all starting with the magic "SR2D":
+Wire format, one UDP datagram each: the magic "SR2E", an op, a four-byte
+token the client made up at start (echoed in every answer, so an answer
+the client did not ask for is dropped), then the body:
 
     client -> server
         H <guid> <record>         host: my session (every second; refreshes it)
+        X <guid>                  host: my session is over
         L                         guest: the list
         J <guid>                  guest: I want this host
         R <guid> <data>           guest: forward <data> to the host
@@ -21,25 +24,29 @@ Wire format, one UDP datagram each, all starting with the magic "SR2D":
     server -> client
         S <n> {<guid> <ep> <record>}...   the open sessions
         P <ep>                    the other side's endpoint
-        N                         no such session (the DLL does not read it yet)
+        N                         no such session
         D <ep> <data>             to a host: relayed from the guest at <ep>
         D <data>                  to a guest: relayed from the host
 
 <guid> is 16 bytes, <ep> an IPv4 address and port, 4 + 2 bytes big-endian,
-<record> the 67 bytes the game shows: max players, players, closed (a byte
-each) and the team name, 64 bytes. A session expires after EXPIRE_S without
-a refresh from its host; a relayed guest is forgotten after as long without
-traffic.
+<record> the 68 bytes the game shows and one more: max players, players,
+closed (a byte each), the team name, 64 bytes, and the wire version. The
+older "SR2D" form - no token, a 67-byte record - is still answered in
+kind, for a patcher from before the token. A session expires after
+EXPIRE_S without a refresh from its host; a relayed guest is forgotten
+after as long without traffic.
 
 What it refuses: an address that keeps asking for sessions that do not
-exist has its joins ignored for a while (joins only: one address may be a
-whole carrier NAT); more than PER_IP sessions from one address; a relayed
-datagram larger than the game's; more than RELAY_RATE relayed packets a
-second per guest each way, which a race never reaches and a tunnel cannot
-exceed; more than LIST_RATE lists a second to one address, since a list is
-far larger than the request and the source of a UDP request can be forged.
-It forwards only between a session's host and the guests that
-joined it through here.
+exist - MISS_LIMIT different ones in MISS_WINDOW_S; asking again for one
+is not counted again - has its joins ignored for a while (joins only: one
+address may be a whole carrier NAT); more than PER_IP sessions from one
+address; a relayed datagram larger than the game's; more than RELAY_RATE
+relayed packets a second per guest each way, which a race never reaches
+and a tunnel cannot exceed; more than LIST_RATE lists a second to one
+address, since a list is far larger than the request and the source of a
+UDP request can be forged. It forwards only between a session's host and
+the guests that joined it through here. The list puts open sessions
+first, the newest of them first, and stops at LIST_MAX.
 """
 
 import socket
@@ -47,9 +54,11 @@ import subprocess
 import sys
 import time
 
-MAGIC = b'SR2D'
+MAGIC = b'SR2E'
+MAGIC_OLD = b'SR2D'     # before the token: no token, a 67-byte record
 GUID = 16
-RECORD = 67
+RECORD = 68             # max, players, closed, name[64], version
+RECORD_OLD = 67
 EP = 6
 EXPIRE_S = 5
 MAX_SESSIONS = 5000
@@ -63,9 +72,10 @@ LIST_BURST = 20
 MISS_LIMIT = 10      # this, the window and the ban as Virtual-On's rendezvous.py
 MISS_WINDOW_S = 60
 BAN_S = 600
+MAX_MISSES = 10000   # addresses remembered for their misses; the oldest forgotten past it
 
 sessions = {}   # guid -> {'host': (ip, port), 'record': bytes, 'seen': t, 'guests': {ep: {'seen': t, 'bucket': {}}}, 'relayed': bool}
-misses = {}     # ip -> [first_miss_t, count] or [until_t, None] while banned
+misses = {}     # ip -> [first_miss_t, {guids asked for that were not there}] or [until_t, None] while banned
 lists = {}      # ip -> (tokens, t): the list bucket
 
 
@@ -98,14 +108,26 @@ def banned(ip, now):
     return False
 
 
-def miss(ip, now):
-    m = misses.setdefault(ip, [now, 0])
+def miss(ip, guid, now):
+    if ip not in misses and len(misses) >= MAX_MISSES:
+        del misses[next(iter(misses))]
+    m = misses.setdefault(ip, [now, set()])
     if m[1] is None:
         return
-    m[1] += 1
-    if m[1] >= MISS_LIMIT:
+    m[1].add(guid)
+    if len(m[1]) >= MISS_LIMIT:
         misses[ip] = [now + BAN_S, None]
-        print('%s banned for %ds: %d unknown sessions in %ds' % (ip, BAN_S, m[1], MISS_WINDOW_S), flush=True)
+        print('%s banned for %ds: %d unknown sessions in %ds' % (ip, BAN_S, MISS_LIMIT, MISS_WINDOW_S), flush=True)
+
+
+def closed(guid, why):
+    e = sessions.pop(guid)
+    print("'%s' by %s:%d closed: %d joined here, %s, %s" % (session_name(e), *e['host'], e['joined'],
+          'relayed' if e['relayed'] else 'direct', why), flush=True)
+
+
+def session_name(e):
+    return e['record'][3:3 + 64].split(b'\0')[0].decode('latin1', 'replace')
 
 
 def expire(now):
@@ -115,10 +137,7 @@ def expire(now):
     for ip in [ip for ip, (_, t) in lists.items() if now - t > LIST_BURST / LIST_RATE]:
         del lists[ip]                     # full again: the same as no entry
     for g in [g for g, e in sessions.items() if now - e['seen'] > EXPIRE_S]:
-        e = sessions.pop(g)
-        name = e['record'][3:].split(b'\0')[0].decode('latin1', 'replace')
-        print("'%s' by %s:%d closed: %d joined here, %s" % (name, *e['host'], e['joined'],
-              'relayed' if e['relayed'] else 'direct'), flush=True)
+        closed(g, 'not refreshed')
     for e in sessions.values():
         for ep in [ep for ep, ge in e['guests'].items() if now - ge['seen'] > EXPIRE_S]:
             del e['guests'][ep]
@@ -135,12 +154,26 @@ def over_rate(bucket, side, now, rate=RELAY_RATE, burst=RELAY_RATE):
 
 
 def handle(sock, data, addr, now):
-    if len(data) < 5 or data[:4] != MAGIC:
+    """One datagram. The head decides the form: the token's form answers
+    with the token, the older one without."""
+    if len(data) >= 9 and data[:4] == MAGIC:
+        head, body = data[:9], data[9:]
+    elif len(data) >= 5 and data[:4] == MAGIC_OLD:
+        head, body = data[:5], data[5:]
+    else:
         return
-    op = data[4:5]
-    body = data[5:]
+    op = head[4:5]
+    old = head[:4] == MAGIC_OLD
+
+    def reply(op, payload=b''):
+        return head[:4] + op + head[5:] + payload
+
+    def record_for(e):
+        return e['record'][:RECORD_OLD] if old else e['record']
 
     if op == b'H':
+        if len(body) == GUID + RECORD_OLD:
+            body += b'\0'                  # the version an older host does not send
         if len(body) != GUID + RECORD:
             return
         guid, record = body[:GUID], body[GUID:]
@@ -152,30 +185,32 @@ def handle(sock, data, addr, now):
                 return
             e = sessions[guid] = {'host': addr, 'record': record, 'seen': now, 'guests': {},
                                   'joined': 0, 'relayed': False}
-            name = record[3:].split(b'\0')[0].decode('latin1', 'replace')
-            print("'%s' opened by %s:%d (%d open)" % (name, *addr, len(sessions)), flush=True)
+            print("'%s' opened by %s:%d (%d open)" % (session_name(e), *addr, len(sessions)), flush=True)
         elif e['host'] != addr:
             return                        # someone else's id
         e['record'] = record
         e['seen'] = now
 
+    elif op == b'X':
+        e = sessions.get(body) if len(body) == GUID else None
+        if e is not None and e['host'] == addr:
+            closed(body, 'the host left')
+
     elif op == b'L':
         if over_rate(lists, addr[0], now, LIST_RATE, LIST_BURST):
             return
-        out = []
-        for guid, e in sessions.items():
-            if len(out) == LIST_MAX:
-                break
-            out.append(guid + ep_bytes(e['host']) + e['record'])
-        send(sock, MAGIC + b'S' + bytes([len(out)]) + b''.join(out), addr)
+        # open and not full first, the freshest first among equals
+        order = sorted(sessions.items(), key=lambda ge: (ge[1]['record'][2] != 0, -ge[1]['seen']))
+        out = [guid + ep_bytes(e['host']) + record_for(e) for guid, e in order[:LIST_MAX]]
+        send(sock, reply(b'S', bytes([len(out)]) + b''.join(out)), addr)
 
     elif op == b'J':
         if len(body) != GUID or banned(addr[0], now):
             return
         e = sessions.get(body)
         if e is None:
-            miss(addr[0], now)
-            send(sock, MAGIC + b'N', addr)
+            miss(addr[0], body, now)
+            send(sock, reply(b'N'), addr)
             return
         if addr not in e['guests']:
             if len(e['guests']) >= MAX_GUESTS:
@@ -183,11 +218,11 @@ def handle(sock, data, addr, now):
             e['guests'][addr] = {'seen': now, 'bucket': {}}
             e['joined'] += 1
         e['guests'][addr]['seen'] = now
-        send(sock, MAGIC + b'P' + ep_bytes(e['host']), addr)
-        send(sock, MAGIC + b'P' + ep_bytes(addr), e['host'])
+        send(sock, reply(b'P', ep_bytes(e['host'])), addr)
+        send(sock, host_reply(e, b'P', ep_bytes(addr)), e['host'])
 
     elif op == b'R':
-        if len(body) < GUID or len(data) > 5 + GUID + EP + MAX_RELAY:
+        if len(body) < GUID or len(data) > len(head) + GUID + EP + MAX_RELAY:
             return
         e = sessions.get(body[:GUID])
         if e is None:
@@ -201,17 +236,29 @@ def handle(sock, data, addr, now):
             if ge is None or over_rate(ge['bucket'], 'h', now):
                 return
             e['seen'] = now
-            send(sock, MAGIC + b'D' + rest[EP:], guest)
+            e['host_head'] = head
+            send(sock, ge['head'][:4] + b'D' + ge['head'][5:] + rest[EP:], guest)
         else:
             ge = e['guests'].get(addr)
             if ge is None or over_rate(ge['bucket'], 'g', now):
                 return
             ge['seen'] = now
+            ge['head'] = head
             if not e['relayed']:
                 e['relayed'] = True
-                print("'%s' relaying for %s:%d" % (e['record'][3:].split(b'\0')[0].decode('latin1', 'replace'), *addr),
-                      flush=True)
-            send(sock, MAGIC + b'D' + ep_bytes(addr) + rest, e['host'])
+                print("'%s' relaying for %s:%d" % (session_name(e), *addr), flush=True)
+            send(sock, host_reply(e, b'D', ep_bytes(addr) + rest), e['host'])
+
+    if op in (b'J', b'R') and e is not None and addr in e['guests']:
+        e['guests'][addr]['head'] = head
+    if op == b'H':
+        e['host_head'] = head
+
+
+def host_reply(e, op, payload):
+    """A datagram to a session's host in the form its last datagram took."""
+    head = e.get('host_head', MAGIC_OLD + b'?')
+    return head[:4] + op + head[5:] + payload
 
 
 UNIT = 'sr2-directory'

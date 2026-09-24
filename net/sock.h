@@ -8,6 +8,7 @@
 #define SR2_SOCK_H
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -54,6 +55,44 @@ static inline int sock_startup(void)
     return WSAStartup(MAKEWORD(2, 2), &wsa) == 0 ? 0 : -1;
 #else
     return 0;
+#endif
+}
+
+/* Bytes nobody off the wire can guess, for the nonces and cookies: the
+ * system's random source where there is one, else the clocks, the process
+ * and the stack mixed. */
+static inline void sock_random(uint8_t *out, int len)
+{
+    int i;
+#ifdef _WIN32
+    LARGE_INTEGER qpc;
+    uint32_t seed[6], h = 2166136261u;
+    QueryPerformanceCounter(&qpc);
+    seed[0] = qpc.LowPart;
+    seed[1] = qpc.HighPart;
+    seed[2] = GetTickCount();
+    seed[3] = GetCurrentProcessId();
+    seed[4] = GetCurrentThreadId();
+    seed[5] = (uint32_t)(uintptr_t)&qpc;
+    for (i = 0; i < len; i++) {
+        h ^= seed[i % 6] + i;
+        h *= 16777619u;
+        h ^= h >> 15;
+        h *= 2246822519u;
+        h ^= h >> 13;
+        out[i] = (uint8_t)(h >> 24);
+        seed[i % 6] = h;
+    }
+#else
+    FILE *fh = fopen("/dev/urandom", "rb");
+    if (fh) {
+        size_t got = fread(out, 1, len, fh);
+        fclose(fh);
+        if ((int)got == len)
+            return;
+    }
+    for (i = 0; i < len; i++)
+        out[i] = (uint8_t)(rand() >> 4);
 #endif
 }
 

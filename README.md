@@ -276,7 +276,8 @@ and serial:
 
 The team room, the chat, the car and course selection and the race are
 the game's own. Up to four players, and everyone needs the same patcher
-version. If something goes wrong online, `sr2-net.log` from each machine
+version: a host or guest on another one is refused, and `sr2-net.log`
+says so. If something goes wrong online, `sr2-net.log` from each machine
 is the report to send - create the empty file beside the exe first. How
 it works is in [docs/NETWORK.md](docs/NETWORK.md).
 
