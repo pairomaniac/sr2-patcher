@@ -35,10 +35,10 @@ relay leg with one guest's port blackholed.
 Under the `netplay` key, with the stock DLL kept as `.bak`. `lobby` and
 `netplay` need each other.
 
-The DLL is committed rather than carried inside the script: a whole DLL
-written out as a blob in the middle of a Python file is what a scanner
-calls a dropper. The patcher reads it from `net/` or from beside itself - the Windows
-build from its `_internal` folder - and checks it against `MGNETWK_SHA`
+The DLL is committed rather than carried inside the script, since a DLL
+written out as a blob in a Python file is what a scanner calls a
+dropper. The patcher reads it from `net/` or from beside itself (the
+Windows build from `_internal`) and checks it against `MGNETWK_SHA`
 before installing it.
 
 ## The wire
@@ -77,13 +77,12 @@ host's, the reserved slots, the roster and the version) or `REFUSE`
 (closed, full, not that session, or another version).
 
 The version is in the join, the welcome and the session record, and
-each link keeps the one the other side gave. The intent is that a later
-version adds fields rather than changing them and reads a peer's by its
-version, so versions from `SR2_PROTO_MIN` up keep playing together; a
-change that cannot be made that way raises `SR2_PROTO_MIN`. A patcher
-from before the version, which sends none (0.7.0 and earlier), is
-refused, with a reason in `sr2-net.log` on both sides, or before a join
-goes out when its record says so.
+each link keeps the one the other side gave. A later version should add
+fields rather than change them and read a peer's by its version, so
+versions from `SR2_PROTO_MIN` up keep playing together; a change that
+cannot be made that way raises `SR2_PROTO_MIN`. A patcher from before
+the version, which sends none (0.7.0 and earlier), is refused with a
+reason in `sr2-net.log` on both sides.
 
 `sr2-net.log` beside the exe, created empty, turns on a log of what the
 core did.
@@ -125,10 +124,10 @@ for the same one counts once), more than eight sessions from one
 address, relayed datagrams over the game's size, more than 300 a second
 per guest each way, more than four relayed guests of a session from one
 address, and more than ten lists a second to one address after a burst
-of twenty, since a list reply is up to 1450 bytes for a
-9-byte request and a UDP source can be forged. A searching game asks 2.5
-times a second. It forwards only between a session's host and the guests
-that joined it there.
+of twenty (a list reply is up to 1450 bytes for a 9-byte request and a
+UDP source can be forged; a searching game asks 2.5 times a second). It
+forwards only between a session's host and the guests that joined it
+there.
 
 The DLL drops a datagram longer than a header and the largest payload,
 which no sender makes, and a welcome whose index is past the player table.

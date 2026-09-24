@@ -13,9 +13,8 @@ asm/*.asm  ──nasm──►  hex strings in sr2-patcher.py  ──►  the on
 ```
 
 `sr2-patcher.py` cannot read `asm/` at runtime, so the machine code is
-baked in as text between GENERATED markers; `asm/build.py` is the only
-thing that puts it there. **Never edit a blob by hand.** The next build
-run silently discards it.
+baked in as text between GENERATED markers by `asm/build.py`. **Never
+edit a blob by hand**; the next build run discards it.
 
 ## Setup, once
 
@@ -24,8 +23,8 @@ sh tools/setup-dev.sh          # says what is missing and the install line
 cp tools/sr2-test.example ~/.sr2-test
 ```
 
-Everything comes from the distribution - there is no venv, and nothing
-here needs pip. None of it is needed to run the patcher.
+Everything comes from the distribution; no venv, no pip. None of it is
+needed to run the patcher.
 
 | Package | For |
 | --- | --- |
@@ -41,9 +40,9 @@ here needs pip. None of it is needed to run the patcher.
 `~/.sr2-test` names, per build, the install disc, the play disc, the
 installed game and the Wine prefix: `SR2_DISC_EU`, `SR2_PLAY_EU`,
 `SR2_GAME_EU`, `SR2_PFX_EU`, and `US`, `AU`, `JP` (Sega's own disc) and
-`JP_MK` (the DigiCube and MediaKite reissue) likewise. The example file describes each variable.
-One left empty is shown as N/A, grey, by `check.py` and `sr2.sh BUILD
-show`, and is not counted as a skip.
+`JP_MK` (the DigiCube and MediaKite reissue) likewise; the example file
+describes each. One left empty shows as N/A in `check.py` and `sr2.sh
+BUILD show`, not as a skip.
 
 ## Daily loop
 
@@ -71,11 +70,10 @@ Some patches need others, and the patcher refuses a set without them:
 `xinput` needs `noregistry` (which gives the game's own block a file of
 its own and leaves `SR2.CFG` to the text), `devices` needs `xinput`,
 `nogeneric` needs `dinput8`, `music` needs `cdlevel`, `lobby` and
-`netplay` need each other - the connection screen's rows and the DLL
-behind them are one thing - and the three other widescreen patches need
-`widescreen`. The diagnostics have needs too: `gltrace` wants
-`widescreen3d`, `d3dtrace` and `d3dtrace2d` `widescreen2d`. `windowed`
-and `borderless` are the game's mode and are always in.
+`netplay` need each other, and the three other widescreen patches need
+`widescreen`. Among the diagnostics `gltrace` needs `widescreen3d`,
+`d3dtrace` and `d3dtrace2d` `widescreen2d`. `windowed` and `borderless`
+are always in.
 
 Two more tools for the daily work:
 
@@ -91,15 +89,13 @@ Two more tools for the daily work:
 ## The checks
 
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-There are 33. The first 21, down to `gui`, need nothing but nasm,
-pyflakes, Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C
-compiler, and CI installs those and runs them; every test that maps a
-PE image does it through `tools/uctest.py`. The last twelve need the
-discs and the games and skip themselves without; `devices` also needs
-nasm, whose listing it reads. A tool that cannot run exits 77 and is
-reported SKIP rather than OK, so a missing package never reads as a
-passing test. `clearsize` is Australian only and says so as a note on
-the other builds.
+There are 33. The first 21, down to `gui`, need only nasm, pyflakes,
+Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C compiler, and
+CI runs them; every test that maps a PE image does it through
+`tools/uctest.py`. The last twelve need the discs and the games and skip
+without them; `devices` also needs nasm, whose listing it reads. A tool
+that cannot run exits 77 and is reported SKIP, never OK. `clearsize` is
+Australian only and says so on the other builds.
 
 | Check | Catches |
 | --- | --- |
@@ -125,8 +121,7 @@ the other builds.
 | `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, the input objects and the annex's poll stubbed |
 
 A truncated `data1.cab` works for `cab` (`head -c 16M`), as long as it
-keeps the `.cab` name. To exercise the
-disc reader without a dump:
+keeps the `.cab` name. To exercise the disc reader without a dump:
 
 ```bash
 genisoimage -o sr2.iso -graft-points DATA1.CAB=data1.head
@@ -185,11 +180,11 @@ the row with the exe's import table and the `call` sites, so a wrong row
 fails before anything is written.
 
 A rebuild of a known exe is the easy case; `Japanese (DigiCube,
-MediaKite)` is the example. Search it for each European site's bytes unmasked first: the
-hits come back at the old offset or at a constant delta, which shows
-where code moved. Data addresses stay put if the sections do.
-`tools/selftest.py` on an install from the disc then checks every site
-and pins the result.
+MediaKite)` is the example. Search it for each European site's bytes
+unmasked first: the hits come back at the old offset or at a constant
+delta, which shows where code moved. Data addresses stay put if the
+sections do. `tools/selftest.py` on an install from the disc then checks
+every site and pins the result.
 
 ## Reading a Wine log
 
@@ -241,13 +236,9 @@ prints the frame rate, the spread of the intervals, the catch-up frames
 and the worst intervals with when they happened. NOTES.md, *Frame
 timing*, says what the numbers mean.
 
-Take the baseline first: a run of the stock configuration, before any
-change, kept. Every later log is read against it. A change made before
-the baseline exists cannot be told from the problem it was meant to fix,
-and a change that fixes a problem the change before it introduced looks
-like an improvement. One change per run; the `-key` form gives the A/B
-without touching anything else. Numbers over feel: a run that felt
-smoother with the same log is the same run.
+Take a baseline of the stock configuration first and read every later
+log against it. One change per run; the `-key` form gives the A/B
+without touching anything else.
 
 ### gltrace
 
@@ -326,14 +317,9 @@ co-author or session trailers, whatever tool wrote the change.
 
 ### Working with a patch file
 
-Changes arrive as a `git diff`. Before making one, `git fetch` and diff
-against `origin/main` as it is at that moment - a patch against an older
-commit fails on every file it touches, and "already exists in working
-directory" for a new file means the earlier version of the patch was
-already committed. Before applying one, the tree must be clean: `git
-status` empty, or `git checkout -- .` and `git clean -f` on the files
-the patch adds. New files need `git add` before the commit; `-a` does
-not take them.
+Changes arrive as `git format-patch` files against `origin/main` as it
+is at that moment; a patch against an older commit fails on every file
+it touches. Apply them with `git am` on a clean tree.
 
 ## Releasing
 
@@ -347,12 +333,10 @@ git tag -a v0.4.0 -m "v0.4.0"
 git push origin v0.4.0
 ```
 
-`VERSION` stays `dev` in the repository - the workflow stamps it from the
+`VERSION` stays `dev` in the repository; the workflow stamps it from the
 tag name less its `v`, so the tag, the exe's filename, its Windows file
-properties and `--version` cannot disagree; the zips carry the tag as it
-is. A push that is not a tag builds the same two
-zips as an artifact, named with the short SHA, and leaves the release
-page alone.
+properties and `--version` cannot disagree. A push that is not a tag
+builds the same two zips as an artifact named with the short SHA.
 
 Then write the notes over the generated ones: *Changes*, *Requirements*,
 *Known issues*, plain, only what has been seen.
@@ -361,10 +345,9 @@ Then write the notes over the generated ones: *Changes*, *Requirements*,
 gh release edit v0.4.0 --notes-file notes.md
 ```
 
-The tag, the release notes and the assets are three separate things.
 Moving the tag (`git tag -f`, `git push --force origin
-refs/tags/v0.4.0`) re-runs the build and re-uploads the zips, but leaves
-the notes as they are. `gh release view` shows all three as they stand.
+refs/tags/v0.4.0`) re-runs the build and re-uploads the zips but leaves
+the notes as they are; `gh release view` shows all three.
 
 Before a release, put the exe through VirusTotal by hand and read the
 verdicts; the build log prints its checksum and a lookup link.
@@ -383,40 +366,23 @@ together: every patch in exactly one row, every diagnostic with a label.
 icon, and writes `assets/icon.ico` for the exe. Run it after changing
 the artwork; never edit the blob by hand.
 
-`tools/guitest.py` drives the window under xvfb - what each button is
-offered for, which cards start open, that every description opens. It
-skips with no display, and the CI job installs xvfb so it does not. Its
-first pass needs no display: every pair of `PALETTE` colours that
-carries meaning, against the contrast WCAG asks of it - 4.5:1 for text,
-3:1 for a border or a tick, and 1.25:1 between each surface and the one
-behind it - the card, the band under a heading, the window, and the
-boxes text is typed into - so they can be told apart. The colours
-themselves are quantised out of the box art, the Stratos watercolour and
-the cabinet: a neutral paper white, a neutral near-black, cool greys,
-the badge's red, the livery's green for the window behind everything -
-the car's own arrangement, white panels on green, with the paper
-ruling the logo off from the rest.
-The band behind the logo is an image rather than canvas items: the
-canvas does not antialias, and the cut across it is a shallow diagonal.
-It is redrawn on a resize, which takes a fifth of a second at width, so
-it waits for the dragging to stop. The wheels' gold is far too light to
-read as text, so the step numbers take a darkened one. Pick a new colour
-from the artwork and then measure it; nothing in the palette is judged
-by eye.
+`tools/guitest.py` drives the window under xvfb: what each button is
+offered for, which cards start open, that every description opens, and
+that the disc and folder probes run off the window's thread. It skips
+with no display; CI installs xvfb. Its first pass needs no display: every
+pair of `PALETTE` colours that carries meaning against the contrast WCAG
+asks - 4.5:1 for text, 3:1 for a border or a tick, 1.25:1 between each
+surface and the one behind it. The colours are quantised out of the box
+art, the Stratos watercolour and the cabinet; pick a new one from the
+artwork and then measure it. The band behind the logo is an image, since
+the canvas does not antialias, redrawn once a resize has stopped.
 
-How tall the window opens is `LINE_CAP`, in lines of its own text, and
-that is the bound that does the work. The screen is the other one and is
-not much use: `winfo_screenheight` is every monitor together, so on a
-desktop with more than one it is not the height of anything anybody is
-looking at. Lines are, because they scale with the display. 48 lines
-puts the heading of the last numbered card on screen.
-
-`_settle_height` sets that height once the window is up. Nothing
-measured before it is mapped can be trusted - a line was 15 pixels and
-the screen 931 on a desktop that a moment later said 22 and 2160 - so it
-re-measures for the first half second and then stops. It has to stop, or
-the window cannot be dragged. Neither bound limits dragging: `maxsize`
-is the screen and the content.
+The window opens `LINE_CAP` lines of its own text tall - 48 puts the
+heading of the last numbered card on screen. `winfo_screenheight` is
+every monitor together, so it is only the upper bound. `_settle_height`
+re-measures for the first half second after the window is mapped, since
+nothing measured before that can be trusted, and then stops so the
+window can be dragged.
 
 ## The Windows build
 
@@ -432,10 +398,9 @@ The `windows` job in
 [.github/workflows/build.yml](../.github/workflows/build.yml) runs it on
 every push to main and on a tag, after `verify` passes. It builds
 PyInstaller's bootloader from source rather than taking the wheel's,
-which every PyInstaller exe ever shipped has in common; stamps the
-version from the tag, or the short SHA otherwise; checks that tkinter,
-the certifi CA list and the netplay DLL are in the bundle; and runs the
-exe's `--selfcheck`, which catches an over-eager entry in the spec's
-`EXCLUDES` among the modules the tables import - not tkinter, certifi
-or ctypes, which are imported later and only the window exercises. A tag
-also uploads both zips to the release page.
+which every PyInstaller exe shares and scanners know; stamps the version
+from the tag, or the short SHA; checks that tkinter, the certifi CA list
+and the netplay DLL are in the bundle; and runs the exe's `--selfcheck`,
+which catches an over-eager entry in the spec's `EXCLUDES` among the
+modules the tables import. A tag also uploads both zips to the release
+page.

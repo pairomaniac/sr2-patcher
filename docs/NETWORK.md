@@ -178,49 +178,43 @@ and SHOW TEAMS on row 2 searching at once.
 
 ### Three layers
 
-1. **The game's own protocol** - untouched, and it is the game's actual
-   traffic: every message above (chat, entries, the settings block,
-   states, the clock and start time, the 36-byte car state ten times a
-   second, finish and split times) is built by the exe and handed to the
-   DLL as bytes with two flags, *guaranteed or not* and *to everyone or to
-   one player*, and comes back the same way tagged with the sender's index.
-   The replacement delivers exactly those bytes with exactly that meaning.
+1. **The game's own protocol** - untouched. Every message above is built
+   by the exe and handed to the DLL as bytes with two flags, *guaranteed
+   or not* and *to everyone or to one player*, and comes back the same
+   way tagged with the sender's index. The replacement delivers those
+   bytes with that meaning.
 2. **What the stock DLL and DirectPlay did underneath** - the part
-   replaced. DirectPlay's TCP/IP provider ran a full mesh, every machine to
-   every other; but the stock DLL already made the host the authority
-   (it assigned indices, broadcast the roster, owned the reserved slots,
-   kicked), and the exe's protocol is host-centred too (only the host
-   sends the settings block and the start time). What DirectPlay itself
-   contributed was discovery by LAN broadcast, guaranteed delivery,
-   keep-alives and word of a vanished player.
-3. **The replacement** - the same jobs in a star: guests talk to the host,
-   the host forwards. One NAT pair per guest instead of one per pair of
-   players, which is what makes the internet possible without a forwarded
-   port; a guest-to-guest car state takes one extra hop through the host,
-   which at 10 Hz dead reckoning does not show.
+   replaced. DirectPlay ran a full mesh, but the stock DLL already made
+   the host the authority (indices, the roster, the reserved slots,
+   kicks) and the exe's protocol is host-centred too (only the host sends
+   the settings block and the start time). DirectPlay itself contributed
+   LAN discovery, guaranteed delivery, keep-alives and word of a vanished
+   player.
+3. **The replacement** - the same jobs in a star: guests talk to the
+   host, the host forwards. One NAT pair per guest instead of one per
+   pair of players, which is what works without a forwarded port; a
+   guest-to-guest car state takes one extra hop, which at 10 Hz dead
+   reckoning does not show.
 
 ### Three ways in
 
 The rows INTERNET, DIRECT IP and LAN are the exe's types 0, 1 and 2,
 reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
 
-- **INTERNET**: SHOW TEAMS asks the directory servers for the open
-  sessions and they come back as the records the session list draws (team
-  name, players, closed); the DLL asks all three and merges, so a host
-  anywhere is seen from anywhere. JOIN names one at the server it was heard
-  from; the server tells each side the other's public address and port,
-  the host sends a few packets to open its NAT, the guest's joins arrive,
-  and from there the two talk directly with the server out of the loop;
-  a session the server no longer has is answered at once, not waited out.
-  Every datagram to the server carries a token the DLL made up, echoed in
-  the answers, so nothing forged as the server is taken.
-  When nothing has got through after four seconds, the guest sends its
-  traffic through that server and the host follows onto the relay the
-  moment a relayed packet arrives; the relay is per guest, so one guest can
-  be direct and another relayed. A host registers with all three servers
-  every second and takes its entry down when it leaves; five seconds of
-  silence drops it too. The listing is public; the game's own OPEN/CLOSE
-  and START are the controls.
+- **INTERNET**: SHOW TEAMS asks all three directory servers for the open
+  sessions and merges the answers into the records the session list
+  draws. JOIN names one at the server it was heard from; the server tells
+  each side the other's public address and port, the host sends a few
+  packets to open its NAT, the guest's joins arrive, and from there the
+  two talk directly. A session the server no longer has is answered at
+  once. Every datagram to the server carries a token the DLL made up,
+  echoed in the answers, so a forged answer is not taken. When nothing
+  has got through after four seconds the guest sends through the server
+  and the host follows onto the relay when the first relayed packet
+  arrives; the relay is per guest. A host registers with the servers
+  every second and unregisters when it leaves; five seconds of silence
+  drops it too. The listing is public; the game's own OPEN/CLOSE and
+  START are the controls.
 - **DIRECT IP**: the host forwards UDP 47626; the guest types the address,
   or `host:port`, in the entry popup. Blank searches the LAN. What TCP/IP
   did, without DirectPlay.
@@ -264,17 +258,16 @@ dropped, and a directory started for the run.
 
 ## Where it stands
 
-- `lobby`, `netplay` and `padmenu` are default patches. Every part runs
-  under the loopback test, and the game has been played over the DLL
-  between machines. One thing the first runs showed: `FindPlayerByIndex`
-  must hand back a player object for an empty slot, since the room's
-  row draw reads its name whether or not the call succeeded.
+- `lobby`, `netplay` and `padmenu` are default patches; every part runs
+  under the loopback test and the game has been played over the DLL
+  between machines. `FindPlayerByIndex` must hand back a player object
+  for an empty slot: the room's row draw reads its name whether or not
+  the call succeeded.
 - The team room's status line still prints what `gethostbyname` gives,
-  which is the machine's own address: right for a DIRECT IP host on a LAN,
-  meaningless behind a router. The DLL's side of the replacement is
-  there - `Network_StatusLine` at the network object's added slot
-  `+0x38`, which answers with the address the core is using - but
-  nothing in the exe calls it yet.
+  the machine's own address: right for a DIRECT IP host on a LAN,
+  meaningless behind a router. `Network_StatusLine` at the network
+  object's added slot `+0x38` answers with the address the core is
+  using, but nothing in the exe calls it yet.
 
 ## Ports and servers
 

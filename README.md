@@ -39,68 +39,59 @@ things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
 **Download** `sr2-patcher-*-win.zip` from the
 [latest release](https://github.com/pairomaniac/sr2-patcher/releases/latest),
 unzip it anywhere and run `sr2-patcher-*.exe`; the `_internal` folder
-beside it has to stay. It is unsigned, so SmartScreen calls it an unknown
-publisher the first time you run it. If a virus scanner objects, see
-[Virus warnings](#virus-warnings).
+beside it has to stay. It is unsigned, so SmartScreen warns the first
+time. If a virus scanner objects, see [Virus warnings](#virus-warnings).
 
-On Linux, or on Windows if you would rather not run an exe, take
-`-python.zip` from the same page and run the script:
+On Linux, or on Windows without the exe, take `-python.zip` from the same
+page:
 
-1. **Install Python** from [python.org](https://www.python.org/downloads/),
-   3.8 or newer. On the installer's first page, tick **Add python.exe to
-   PATH**. Tk, which draws the window, comes with it. On Linux, see
+1. **Install Python** 3.8 or newer from
+   [python.org](https://www.python.org/downloads/), ticking **Add
+   python.exe to PATH** on the installer's first page. On Linux, see
    [From a terminal](#from-a-terminal).
-2. **Unzip it** somewhere of its own. `MGNetWk.dll` has to stay in the
-   `net` folder beside the script, or [Internet play](#internet-play) has
-   nothing to install.
-3. **Run it.** Double-click `sr2-patcher.py`, or open a terminal in its
-   folder and run `py sr2-patcher.py`.
+2. **Unzip it** somewhere of its own; `MGNetWk.dll` has to stay in the
+   `net` folder beside the script.
+3. **Run it.** Double-click `sr2-patcher.py`, or `py sr2-patcher.py` from
+   a terminal in its folder.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4ff8c15d-4f36-4d15-83b9-e28c1a35c46f" alt="The patcher window, showing its numbered sections" width="480" />
 </p>
 
-The window is split into numbered sections. Work through them in order:
+Work through the numbered sections in order:
 
 1. **GAME FOLDER** - where the game is, or an empty folder to put it in.
-   Everything below works on this one folder. An install of your own has
-   to be unmodified; if yours is refused, see [Builds](#builds).
-2. **INSTALL** - put disc 1's `.cue` in **Install disc**, disc 2's in
-   **Play disc**, then press **Install game** and **Rip soundtrack**.
-   Skip this section if the game is already in the folder above. See
-   [Disc images](#disc-images) and [Music](#music).
-3. **ESSENTIAL PATCHES** - always applied, no tick boxes.
-4. **EXTRA PATCHES** - all ticked, and yours to change. Click the ⓘ
-   beside one to read what it does, then press **Apply patches**.
-5. **ADD-ONS** - on Windows **dgVoodoo 2** is ticked and downloaded when
-   you press Apply. See [Add-ons](#add-ons).
+   An install of your own has to be unmodified; if yours is refused, see
+   [Builds](#builds).
+2. **INSTALL** - disc 1's `.cue` in **Install disc**, disc 2's in **Play
+   disc**, then **Install game** and **Rip soundtrack**. Skip it if the
+   game is already in the folder. See [Disc images](#disc-images) and
+   [Music](#music).
+3. **ESSENTIAL PATCHES** - always applied.
+4. **EXTRA PATCHES** - all ticked, yours to change. The ⓘ beside each
+   says what it does. Press **Apply patches**.
+5. **ADD-ONS** - on Windows **dgVoodoo 2** is ticked and downloaded on
+   Apply. See [Add-ons](#add-ons).
 
 Then run `SEGA RALLY 2.exe` from that folder. **Restore original** puts
-the game back if you change your mind.
+the game back.
 
 ## Virus warnings
 
-Defender and other scanners sometimes flag the patcher. It is a false
-positive: an unsigned program that edits another program is the sort of
-thing they warn about. To allow it in Defender: Windows Security → Virus
-& threat protection → Protection history → the entry for the file →
-Allow, then run it again.
+Defender and other scanners sometimes flag the patcher: an unsigned
+program that edits another program is what they warn about. To allow it
+in Defender: Windows Security → Virus & threat protection → Protection
+history → the entry for the file → Allow, then run it again.
 
-Every release is built on GitHub from this repository, and the build log
-lists the exe's checksum if you want to check that yours matches. If you
-would rather not run an exe at all, the `-python.zip` on the same page is
-the script, which you can read.
-
-The one binary the patcher installs is `MGNetWk.dll` for
-[Internet play](#internet-play), compiled from the C in `net/`. It
-travels as its own file rather than hidden inside the script, and the
-patcher checks it against a known hash before writing it.
+Every release is built on GitHub from this repository and the build log
+lists the exe's checksum. The `-python.zip` on the same page is the
+script itself. The one binary the patcher installs is `MGNetWk.dll` for
+[Internet play](#internet-play), compiled from the C in `net/` and
+checked against a known hash before it is written.
 
 ## Disc images
 
-The patcher reads the images itself. Nothing to mount, no virtual drive,
-and no disc in the drive afterwards.
-
+The patcher reads the images itself: nothing to mount, no virtual drive.
 You need both discs: the game is on the first, the music on the second.
 
 - **Install disc** - a `.cue` with its `.bin` beside it, an `.iso`, a
@@ -128,11 +119,9 @@ Image them once:
 ## What the patches do
 
 **Essential** patches fix what is broken on a modern machine and are
-always applied. **Extra** patches are down to taste: each starts ticked,
-and unticking it takes it back out on the next **Apply patches**.
-
-What each one changes, down to the byte, is in
-[docs/NOTES.md](docs/NOTES.md).
+always applied. **Extra** patches are down to taste: unticking one takes
+it back out on the next **Apply patches**. What each changes, down to
+the byte, is in [docs/NOTES.md](docs/NOTES.md).
 
 ### Essential
 
@@ -144,9 +133,8 @@ What each one changes, down to the byte, is in
   of the replay gallery.
 - **Fix the picture after ALT+TAB** - it comes back instead of staying
   black.
-- **Fix the device scan** - the white window on start. The game read
-  every USB device on the machine and modern keyboards and pads choked
-  it.
+- **Fix the device scan** - the white window on start: the game read
+  every USB device on the machine, and modern ones choked it.
 - **Windowed and borderless** - **ALT+ENTER** switches. Stock it took the
   whole screen at 640x480.
 - **Text and panel fixes** - the menu text, the name you type, the team
@@ -169,31 +157,27 @@ What each one changes, down to the byte, is in
   driving and menu controls rebindable in-game. See [Controls](#controls).
 - **Internet play** - race anyone, no port forwarding. See
   [Internet play](#internet-play).
-- **Loading screens** - the stage card is held for three seconds. Today's
-  machines load faster than you can read it.
+- **Loading screens** - the stage card is held for three seconds;
+  today's machines load faster than you can read it.
 
 ### Add-ons
 
-An add-on is an extra file beside the game rather than an edit to it.
-Tick it and press **Apply patches**; it is downloaded at that point, so a
-scanner may have something to say - see
-[Virus warnings](#virus-warnings).
+An add-on is an extra file beside the game rather than an edit to it,
+downloaded when you press **Apply patches**.
 
 **dgVoodoo 2** is [dege's](https://github.com/dege-diosg/dgVoodoo2)
-DirectDraw on Direct3D 11. Windows' own DirectDraw refuses a picture over
-2048 a side and has grown slow and erratic with this game on some
-machines; this has neither problem, and it waits for the display's
-refresh before showing a frame. It is ticked by default on Windows
-and off under Wine and Proton, which have no such limit. Untick it and
-Apply to take it out again, your settings kept; **Restore original**
-takes those as well.
+DirectDraw on Direct3D 11. Windows' own DirectDraw refuses a picture
+over 2048 a side and is slow and erratic with this game on some
+machines; dgVoodoo has neither problem and waits for the display's
+refresh before showing a frame. Ticked by default on Windows, off under
+Wine and Proton, which have no such limit. Untick it and Apply to take
+it out, your settings kept; **Restore original** takes those as well.
 
 ### Diagnostics
 
-The collapsed **DIAGNOSTICS** section adds logging for a bug report.
-Everything in it is off unless you ask for it, and none of it changes how
-the game plays. What each one writes is in
-[docs/DEVELOPING.md](docs/DEVELOPING.md).
+The collapsed **DIAGNOSTICS** section adds logging for a bug report. All
+off by default, none of it changes how the game plays. What each writes
+is in [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## Widescreen
 
@@ -243,16 +227,14 @@ each player's Start as bound in Device Settings; the other replay
 controls are fixed.
 
 In the menus LB and RB stand in for Page Up and Page Down: they turn
-the pages of the Records screen, and on the car select, LB held from
+the pages of the Records screen, and on the car select LB held from
 pressing A until the car is taken picks the Stratos', Corolla's,
 Impreza's, Lancer Evo VI's or ST185's other colour. In the Replay
-Gallery they step the sort between MODE, CAR and DATE, which F6-F8
-pick on the keyboard.
+Gallery they step the sort between MODE, CAR and DATE, as F6-F8 do.
 
 **Options → Device Settings** is a new page showing both players'
-controls, keyboard and pad side by side. Press a key or a button to
-rebind any of them. The controls are saved as plain text in `SR2.CFG`
-next to the game.
+controls, keyboard and pad side by side; press a key or a button to
+rebind one. They are saved as plain text in `SR2.CFG` beside the game.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/0d95eeed-3834-4f0a-8291-4cc210de0abb" alt="Options menu with Device Settings selected" width="49.5%" />
@@ -275,31 +257,22 @@ and serial:
 - **LAN** - searches the local network.
 
 The team room, the chat, the car and course selection and the race are
-the game's own. Up to four players, on 0.7.1 or later; a patcher from
-before that is refused. How it works is in
-[docs/NETWORK.md](docs/NETWORK.md).
+the game's own. Up to four players, all on 0.7.1 or later. How it works
+is in [docs/NETWORK.md](docs/NETWORK.md).
 
 ### The network log
 
-Create an empty file named `sr2-net.log` beside `SEGA RALLY 2.exe` and
-the game writes a line there for everything the network does: the
-connection opened and how, the team hosted, a join and who it reached,
-a guest seated or refused and why (closed, full, not that team, an
-older patcher), the switch to the relay when no direct path opened,
-a player dropped and why, the team lost. Each line starts with the
-game's own clock in milliseconds. Nothing is logged without the file.
-
-It is the report to send when something goes wrong online - one from
-each machine, since the host and a guest see different halves - and
-the first place to look yourself: a join that fails says on which side
-and for what reason.
+Create an empty `sr2-net.log` beside `SEGA RALLY 2.exe` and the game
+logs its connections, joins, refusals and drops there, with the reason
+for each. Nothing is written without the file. When something goes
+wrong online, send that file from each machine.
 
 ## Music
 
-The soundtrack is thirteen audio tracks on the play disc, which is why a
-stock install is silent without it in the drive. **Rip soundtrack**
-copies them into a `music` folder beside the game, about 550 MB, and the
-**Music from files** patch plays them from there.
+The soundtrack is thirteen audio tracks on the play disc, which is why
+a stock install is silent without it in the drive. **Rip soundtrack**
+copies them into a `music` folder beside the game (about 550 MB) and
+the **Music from files** patch plays them from there.
 
 Or from a terminal:
 
@@ -314,7 +287,7 @@ Any pressing's disc 2 will do: they all carry the same recording.
 The patcher knows the European, American and Australian releases and
 the Japanese reissue, tells them apart by itself, and installs and
 patches the Pentium III build of each - the one the original installer
-chose on any CPU of the last twenty-five years.
+picks on any modern CPU.
 
 | Release | `SEGA RALLY 2.exe` | MD5 | Redump |
 | --- | --- | --- | --- |
@@ -327,10 +300,10 @@ Sega's own 1999 Japanese disc (HCJ-0145) carries the same contents as
 the Australian one, so that row covers both; the Japanese row covers
 DigiCube's and MediaKite's reissues, whose discs are also the same.
 
-Before it writes anything the patcher checks every file it knows by
-size and checksum. If one does not match, nothing is touched and you get
-a line naming it - usually a modified game or a half-patched install, and
-the fix is to install afresh from the disc.
+Before writing anything the patcher checks every file it knows by size
+and checksum. If one does not match, nothing is touched and a line names
+it - usually a modified or half-patched install; install afresh from the
+disc.
 
 Each patched file gets a `.bak` beside it. Apply starts from those every
 time, so patching twice is the same as patching once, and **Restore
@@ -347,12 +320,12 @@ python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
-`--patch` applies every patch unless you name some: by name to apply only
-those (the names are listed at the top of `sr2-patcher.py`), or with a
-leading minus to leave them out, as in `--patch ~/games/sr2 -music`.
-Leaving a patch out also leaves out whatever needs it. The `dgvoodoo`
-add-on is on by default on Windows; `-dgvoodoo` leaves it out, and naming
-it puts it in elsewhere.
+`--patch` applies every patch unless you name some: by name to apply
+only those (listed at the top of `sr2-patcher.py`), or with a leading
+minus to leave them out, as in `--patch ~/games/sr2 -music`. Leaving a
+patch out also leaves out whatever needs it. The `dgvoodoo` add-on is on
+by default on Windows; `-dgvoodoo` leaves it out, naming it puts it in
+elsewhere.
 
 On Linux the terminal commands need nothing extra; the window needs Tk:
 
@@ -362,22 +335,19 @@ sudo dnf install python3-tkinter   # Fedora
 sudo pacman -S tk                  # Arch
 ```
 
-Under Wine or Proton the patched folder runs as it is. The manifests
-beside the exe stand in for the COM registration the installer used to
-do, and the game is declared DPI-aware, so Windows neither scales its
-window nor puts up the compatibility-assistant box about it.
+Under Wine or Proton the patched folder runs as it is: the manifests
+beside the exe replace the installer's COM registration.
 
 ## Reporting a bug
 
-Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues). Say
-which release you have (European, American, Australian, Japanese) - the
-window names it - whether you are on Windows or Wine/Proton, and what
-you were doing just before. For a crash on Windows, the entry under
-Event Viewer → Windows Logs → Application names the faulting module and
-offset, which is usually enough to find it. For anything online,
-`sr2-net.log` from each machine ([The network log](#the-network-log)). For a disc image of a
-release the patcher does not know, or anything that does not fit an
-issue: pairo@segaonline.net.
+Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues) with
+the release (the window names it), Windows or Wine/Proton, and what you
+were doing just before. For a crash on Windows, Event Viewer → Windows
+Logs → Application names the faulting module and offset. For anything
+online, `sr2-net.log` from each machine
+([The network log](#the-network-log)). For a disc image of a release
+the patcher does not know, or anything that does not fit an issue:
+pairo@segaonline.net.
 
 ## Known issues
 
@@ -403,8 +373,8 @@ In no particular order:
 
 ## Working on the patcher
 
-[docs/](docs/README.md) covers how the game works and how the patches are
-made; `tools/check.py` runs every check. The Windows build is
+[docs/](docs/README.md) covers how the game works and how the patches
+are made; `tools/check.py` runs every check. The Windows build is
 `sr2-patcher.spec`, run on a tag by
 [.github/workflows/build.yml](.github/workflows/build.yml).
 
