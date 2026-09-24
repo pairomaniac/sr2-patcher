@@ -1712,8 +1712,9 @@ Confirm on a row snapshots what is down and waits: the row pulses blue to
 white and the bar says to press the button. A key or pad input released
 since the wait began and pressed binds - the row that had it, either
 player's for a key, the same player's for a pad input, takes the row's
-old one - and both configs are saved; ESC, or Start held 60 frames, gives
-up. Left and right on the deadzone row step it 5%, saved through a
+old one - and both configs are saved; ESC pressed since the wait began,
+or Start held 60 frames, gives up. Left and right on the deadzone row
+step it 5%, saved through a
 `DZnnnn` name. DEFAULT puts the shipped set back from the page's data
 block, which follows the strings (`bind_data`): the rows' action ids and
 a live flag, the defaults, the value strings the page fills, a name per

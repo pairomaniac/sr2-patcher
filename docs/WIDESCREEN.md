@@ -406,7 +406,8 @@ primary, which is `MGameD3D`'s back buffer at `0x10012554`; never
 
 `wide2d.asm`'s present hooks that `Blt` in ddraw's own vtable - shared
 by every surface, so it is done once, with `VirtualProtect` around the
-write. Scaling each blit into the box was the first version, and made
+write, and not at all if that refuses. Scaling each blit into the box
+was the first version, and made
 the menu drag: every one became a stretch, and Wine stretches on the
 CPU.
 
@@ -444,7 +445,8 @@ row by row, that time and every time after, without a blit. The blit
 goes on serving on Windows' own DirectDraw and under Wine.
 
 A rect bigger than 640x480, a null one, or another surface's, passes; so
-does everything, unchanged, when the surface cannot be made, and
+does everything, unchanged, when the surface cannot be made - a refused
+create is not tried again until the next back buffer - and
 `d3dtrace` reports the create as `sr2 l hr ddraw surface`, every blit
 sent to the lobby's surface as `sr2 x` and the two surfaces as `sr2 s`
 (DEVELOPING.md, *d3dtrace*). The GDI text

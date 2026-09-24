@@ -282,6 +282,18 @@ def main(argv):
     call('waittick')
     assert var('binding') == 0
     mu.mem_write(KEYS + 1, b'\0')
+    # ESC held as the wait began does not, until released and pressed again
+    mu.mem_write(KEYS + 1, b'\x80')
+    call('snapshot')
+    var('binding', 1)
+    call('waittick')
+    assert var('binding') == 1
+    mu.mem_write(KEYS + 1, b'\0')
+    call('waittick')
+    mu.mem_write(KEYS + 1, b'\x80')
+    call('waittick')
+    assert var('binding') == 0
+    mu.mem_write(KEYS + 1, b'\0')
 
     # the menus' own records are not the rows': binding 1P STEER LEFT to F1 and its pad to LB leaves the arrow, the D-pad and the stick on action 4
     var('shown', 0)
@@ -309,6 +321,16 @@ def main(argv):
     assert sources(CFG1)[9][1] == 0x340 + 15 and sources(CFG1)[6][1] == 0x340 + 12
     assert log['persist'] == [(0, 'DZ1000', 1), (1, 'DZ1000', 1)], log['persist']
     assert (value(0, 2, 0), value(1, 7, 1)) == ('X', 'Y')
+
+    # 6. no input object yet: the bindings find nothing and touch nothing
+    mu.mem_write(HOLDER + 8, struct.pack('<I', 0))
+    assert call('getinput') == 0 and call('getcfg') == 0 and call('keyarray') == 0
+    var('binding', 1)
+    mu.mem_write(KEYS + 0x3b, b'\x80')
+    call('waittick')
+    assert var('binding') == 1
+    mu.mem_write(KEYS + 0x3b, b'\0')
+    mu.mem_write(HOLDER + 8, struct.pack('<I', WRAPPER))
     print('devicestest: %s Options.dll OK' % build)
     return 0
 

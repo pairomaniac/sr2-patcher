@@ -532,12 +532,15 @@ exec:
 ; All of these keep ebx (the image base) and ebp (the blob) and, unless
 ; said, every register but eax.
 
-; eax = the MGInput input object: the holder's wrapper, whose +4 is it.
+; eax = the MGInput input object: the holder's wrapper, whose +4 is it,
+; or 0 before the game has made one.
 getinput:
         mov     eax, [ebx + MAGIC_INPUT]
         mov     eax, [eax + 8]
+        test    eax, eax
+        jz      .none
         mov     eax, [eax + 4]
-        ret
+.none:  ret
 
 ; eax = a COM object, or 0: released.
 release:
@@ -562,12 +565,14 @@ getcfg:
         mov     ecx, eax
         mov     edx, esp
         call    getinput
+        test    eax, eax
+        jz      .none
         push    edx
         push    ecx
         push    eax
         mov     eax, [eax]
         call    [eax + 0x34]            ; GetConfig(player, &cfg)
-        pop     eax
+.none:  pop     eax
         pop     edx
         pop     ecx
         ret
@@ -686,6 +691,8 @@ keyarray:
         push    0
         push    0
         call    getinput
+        test    eax, eax
+        jz      .out
         lea     edx, [esp + 4]
         push    edx
         push    0
@@ -785,10 +792,11 @@ waittick:
         jz      .pads
         mov     esi, eax
         test    byte [esi + KEY_ESC], 0x80
-        jz      .keys
+        jz      .escup
         cmp     byte [ebp + snapkeys - $$ + KEY_ESC], 0
         jne     .keys
         jmp     .giveup
+.escup: mov     byte [ebp + snapkeys - $$ + KEY_ESC], 0  ; released since the wait began: a press now gives up
 .keys:  mov     ecx, 2
 .key:   test    byte [esi + ecx], 0x80
         jz      .keyup

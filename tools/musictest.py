@@ -248,6 +248,7 @@ def main(argv):
     assert log['opened'] == ['S:\\Sega Rally 2\\music\\trace'] + \
         ['S:\\Sega Rally 2\\music\\track%02d.wav' % n for n in range(2, 100)], log['opened'][:3]
     assert log['thread'] and log['events'] == 2, 'no worker thread or events'
+    assert ('CloseHandle', 0x600) in log['calls'], 'the thread handle was kept'
     # a second attach must not rebuild
     log['opened'] = []
     mu.mem_write(esp, struct.pack('<IIII', 0xDEAD0000, BASE, 1, 0))

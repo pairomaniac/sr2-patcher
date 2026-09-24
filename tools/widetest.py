@@ -857,6 +857,7 @@ def test_2d():
     locks = []
     creates = []
     releases = []
+    refuse = [False]                                        # CreateSurface fails, VirtualProtect fails
 
     def stub(mu, address, size_, user):
         esp = mu.reg_read(UC_X86_REG_ESP)
@@ -884,6 +885,9 @@ def test_2d():
             at, size, prot, old = struct.unpack('<IIII', mu.mem_read(esp + 4, 16))
             protects.append((at, size, prot))
             mu.mem_write(old, struct.pack('<I', 0x20))
+            if refuse[0]:
+                mu.reg_write(UC_X86_REG_EAX, 0)
+                return
         elif address == STUBS + 0x40:
             this, rect, src, srect, flags, fx = struct.unpack('<IIIIII', mu.mem_read(esp + 4, 24))
             fill = flags & 0x400 and fx and struct.unpack('<I', mu.mem_read(fx + 0x50, 4))[0]
@@ -906,6 +910,9 @@ def test_2d():
             this, desc, out, outer = struct.unpack('<IIII', mu.mem_read(esp + 4, 16))
             size, flags_, height, width = struct.unpack('<IIII', mu.mem_read(desc, 16))
             creates.append((this, size, flags_, height, width, struct.unpack('<I', mu.mem_read(desc + 0x68, 4))[0]))
+            if refuse[0]:
+                mu.reg_write(UC_X86_REG_EAX, 0x80004005)
+                return
             mu.mem_write(out, struct.pack('<I', VERTS + 0x12700))
             mu.reg_write(UC_X86_REG_EAX, 0)
             return
@@ -1129,6 +1136,49 @@ def test_2d():
     blit(surface + 8, (126, 118, 524, 405), panel)
     if releases != [lobby] or creates != [(ddraw, 0x7c, 0x7, 480, 640, 0x4040)]:
         raise SystemExit('widetest: the lobby surface was not remade for a new back buffer: %r %r' % (releases, creates))
+    # a create refused: the blit passes as it came, and no create is tried again beside that back buffer -
+    # the .bg surface's at the present likewise - until the next one
+    refuse[0] = True
+    mu.mem_write(base + 0x12554, struct.pack('<I', surface + 16))
+    mu.mem_write(surface + 16, struct.pack('<I', ddvtable))
+    del creates[:]
+    del releases[:]
+    if blit(surface + 16, (126, 118, 524, 405), panel) != [(surface + 16, (126, 118, 524, 405), panel)]:
+        raise SystemExit('widetest: a lobby blit without a surface came out %r' % (blits,))
+    blit(surface + 16, (126, 118, 524, 405), panel)
+    present()
+    present()
+    refuse[0] = False
+    blit(surface + 16, (126, 118, 524, 405), panel)
+    present()
+    if releases != [lobby, lobby] or creates != [(ddraw, 0x7c, 0x7, 480, 640, 0x4040), (ddraw, 0x7c, 0x7, 600, 2176, 0x4040)]:
+        raise SystemExit('widetest: a refused create was tried again: %r %r' % (releases, creates))
+    mu.mem_write(base + 0x12554, struct.pack('<I', surface + 24))
+    mu.mem_write(surface + 24, struct.pack('<I', ddvtable))
+    if blit(surface + 24, (126, 118, 524, 405), panel) != [(lobby, (126, 118, 524, 405), panel)] or len(creates) != 3:
+        raise SystemExit('widetest: the lobby surface was not made beside the next back buffer: %r' % (creates,))
+    # the Blt hook: not put in when VirtualProtect is missing or refuses
+    bltorig = copymode - 304                                # bltorig .. bgblit, per the layout before copymode
+    mu.mem_write(base + 0x12554, struct.pack('<I', surface))
+    mu.mem_write(copymode - 16, struct.pack('<I', 0))       # lobbylive: nothing for the present to stretch
+    for missing in (True, False):
+        mu.mem_write(bltorig, struct.pack('<I', 0))
+        mu.mem_write(ddvtable + 0x14, struct.pack('<I', STUBS + 0x40))
+        del protects[:]
+        if missing:
+            procs[b'VirtualProtect'] = 0
+        else:
+            procs[b'VirtualProtect'] = STUBS + 0x30
+            refuse[0] = True
+        present()
+        refuse[0] = False
+        if (struct.unpack('<I', mu.mem_read(ddvtable + 0x14, 4))[0] != STUBS + 0x40 or struct.unpack('<I', mu.mem_read(bltorig, 4))[0]
+                or protects != ([] if missing else [(ddvtable + 0x14, 4, 0x40)])):
+            raise SystemExit('widetest: the Blt hook went in without VirtualProtect: %r' % (protects,))
+    del protects[:]
+    present()
+    if struct.unpack('<I', mu.mem_read(ddvtable + 0x14, 4))[0] != hooked or protects != [(ddvtable + 0x14, 4, 0x40), (ddvtable + 0x14, 4, 0x20)]:
+        raise SystemExit('widetest: the Blt hook did not go in after all: %r' % (protects,))
     mu.mem_write(base + 0x12554, struct.pack('<I', 0))
     if setvp((0, 0, 1920, 1080))[0] or setvp((0, 0, 640, 480), w=640, h=480)[0]:
         raise SystemExit('widetest: a device viewport scaled that should have passed')

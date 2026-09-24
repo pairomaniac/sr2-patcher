@@ -255,6 +255,23 @@ def main():
           not enabled('Install game')
           and app.disc_note.cget('text') == patcher.INSTALL_NO_PATH,
           app.disc_note.cget('text'))
+    # a file that is not a disc is read off the window's thread, then refused
+    junk = os.path.join(tempfile.gettempdir(), 'sr2-guitest-junk.cue')
+    with open(junk, 'w') as fh:
+        fh.write('not a cue sheet\n')
+    app.disc_var.set(junk)
+    reading = False
+    for _ in range(100):
+        pump(20)
+        reading |= app.disc_note.cget('text') == patcher.INSTALL_READING
+        if app.disc_note.cget('text') not in (patcher.INSTALL_NO_PATH, patcher.INSTALL_READING):
+            break
+    check('a file that is not a disc is refused',
+          not enabled('Install game') and app.disc_note.cget('text') not in (
+              patcher.INSTALL_PICK, patcher.INSTALL_NO_PATH, patcher.INSTALL_READING),
+          app.disc_note.cget('text'))
+    check('and was read off the window\'s thread', reading)
+    os.remove(junk)
     app.disc_var.set('')
     pump(400)
 
@@ -274,14 +291,17 @@ def main():
     with open(os.path.join(empty, patcher.EXE), 'wb') as fh:
         fh.write(b'not the game')
     app.game_var.set(empty + os.sep)        # a write the trace will see
+    reading = False
     for _ in range(100):
         pump(20)
+        reading |= app._status_text == patcher.GAME_READING
         if app._status_text.startswith('CANNOT PATCH'):
             break
     check('a folder holding something else is refused',
           not enabled('Apply patches')
           and app._status_text.startswith('CANNOT PATCH'),
           app._status_text)
+    check('and was read off the window\'s thread', reading)
     check('and the refusal says what to do about it',
           bool(app.game_help.cget('text')))
     check('writing to the log opens the log',

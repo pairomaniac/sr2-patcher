@@ -1217,7 +1217,10 @@ startup:
         push    0
         call    dword [ebx + D_CREATETHR]
         test    eax, eax
-        jnz     .done
+        jz      .nothread
+        push    eax                     ; the thread's handle is not needed: closed
+        call    dword [ebx + D_CLOSEH]
+        jmp     .done
 .nothread:
         mov     dword [ebx + D_NTRACKS], 0
 .done:
