@@ -230,7 +230,7 @@ the mapping those packets keep open. The cost is the detour's latency on
 every packet for that guest, and about 15 packets a second each way on
 the server per relayed guest during a race. Not handled: a NAT rebinding
 a mapping mid-session, which the host sees as an unknown address; the
-guest then loses the session after six seconds. DIRECT IP is the one row
+guest then loses the session after twelve seconds. DIRECT IP is the one row
 CGNAT rules out, on the host's side.
 
 ### What the DLL covers
@@ -248,7 +248,7 @@ Against the stock DLL and DirectPlay:
 | `SendTo` guaranteed / not, to one or to all | a reliable class per link (numbered, acknowledged, resent every 250 ms, in order, a 64-deep window) and an unreliable one; the host forwards between guests; the receiver gets the sender's index |
 | `PopUnsequenced`, `DPERR_NOMESSAGES`, `DPERR_BUFFERTOOSMALL` | the same, the same codes |
 | events 0-3: host identified, player created, destroyed, session lost | the same, in the order the exe wants; a guest's `0x4402a0` loop finds its index known the moment `CreatePlayer` returns |
-| DirectPlay's keep-alive and loss detection | a keep-alive every 500 ms; six seconds of silence, or of nothing acknowledged, drops a guest (the others told) or loses the session for a guest; a leave is announced |
+| DirectPlay's keep-alive and loss detection | a keep-alive every 500 ms; twelve seconds of silence, or of nothing acknowledged, drops a guest (the others told) or loses the session for a guest; a leave is announced |
 | `SetOpen`, the reserved slots, a player kicked from a closed slot | the same |
 | chat, names in the team room, the WIN RATIO figures | the exe's own messages (`0x1b`, `0x2a`) - carried, not interpreted; `GetName` answers from the roster |
 | host migration (`DPSYS_HOST`) | not reproduced: a host leaving is *session lost* for everyone, which the exe already handles by returning to the connection screens |

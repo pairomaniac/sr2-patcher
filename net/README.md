@@ -56,7 +56,7 @@ window is full drains its socket for the acks before giving one up. An
 acknowledgement past anything sent is ignored. The others go as they
 are.
 
-A keep-alive goes every 500 ms. Six seconds of silence, or six seconds
+A keep-alive goes every 500 ms. Twelve seconds of silence, or as long
 with nothing acknowledged, is a dead link: a guest dropped by the host,
 or the session lost for a guest.
 

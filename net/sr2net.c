@@ -45,7 +45,7 @@
 #define EVENTS          64
 #define RESEND_MS       250
 #define PING_MS         500
-#define DEAD_MS         6000
+#define DEAD_MS         12000   /* silence that ends a link: past a stage load with the game not polling */
 #define QUERY_MS        400
 #define SESSION_TTL_MS  3000
 #define ENUM_WAIT_MS    3000

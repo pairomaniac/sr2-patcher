@@ -36,7 +36,8 @@ closed (a byte each), the team name, 64 bytes, and the wire version.
 a registration without the right one is answered with C and not listed,
 so a host with a forged source address, which never sees its C, is never
 listed. A session expires after EXPIRE_S without a refresh from its
-host; a relayed guest is forgotten after as long without traffic.
+host; a relayed guest is forgotten after GUEST_EXPIRE_S without traffic,
+and seated again by its next relayed datagram while there is room.
 
 What it refuses: an address that keeps asking for sessions that do not
 exist - MISS_LIMIT different ones in MISS_WINDOW_S; asking again for one
@@ -64,7 +65,8 @@ GUID = 16
 RECORD = 68             # max, players, closed, name[64], version
 COOKIE = 4
 EP = 6
-EXPIRE_S = 5
+EXPIRE_S = 5         # a session without a refresh from its host
+GUEST_EXPIRE_S = 30  # a relayed guest without traffic: longer than the game's own dead timer, so a load does not lose the seat
 MAX_SESSIONS = 5000
 MAX_GUESTS = 8       # relayed guests a session may hold; the game seats 3
 GUESTS_PER_IP = 4    # of them from one address
@@ -84,6 +86,16 @@ sessions = {}   # guid -> {'host': (ip, port), 'token': bytes, 'record': bytes, 
 SECRET = secrets.token_bytes(16)    # the cookies are made from it; a restart makes new ones
 misses = {}     # ip -> [first_miss_t, {guids asked for that were not there}] or [until_t, None] while banned
 lists = {}      # ip -> (tokens, t): the list bucket
+
+
+def seat(e, addr, now):
+    """A guest's relay seat at a session, made if there is room; whether it has one."""
+    if addr not in e['guests']:
+        if len(e['guests']) >= MAX_GUESTS or sum(1 for g in e['guests'] if g[0] == addr[0]) >= GUESTS_PER_IP:
+            return False
+        e['guests'][addr] = {'seen': now, 'bucket': {}}
+        e['joined'] += 1
+    return True
 
 
 def cookie_for(addr, guid):
@@ -152,7 +164,7 @@ def expire(now):
     for g in [g for g, e in sessions.items() if now - e['seen'] > EXPIRE_S]:
         closed(g, 'not refreshed')
     for e in sessions.values():
-        for ep in [ep for ep, ge in e['guests'].items() if now - ge['seen'] > EXPIRE_S]:
+        for ep in [ep for ep, ge in e['guests'].items() if now - ge['seen'] > GUEST_EXPIRE_S]:
             del e['guests'][ep]
 
 
@@ -218,11 +230,8 @@ def handle(sock, data, addr, now):
             miss(addr[0], body, now)
             send(sock, reply(b'N'), addr)
             return
-        if addr not in e['guests']:
-            if len(e['guests']) >= MAX_GUESTS or sum(1 for g in e['guests'] if g[0] == addr[0]) >= GUESTS_PER_IP:
-                return
-            e['guests'][addr] = {'seen': now, 'bucket': {}}
-            e['joined'] += 1
+        if not seat(e, addr, now):
+            return
         e['guests'][addr]['seen'] = now
         e['guests'][addr]['token'] = token
         send(sock, reply(b'P', ep_bytes(e['host'])), addr)
@@ -246,8 +255,8 @@ def handle(sock, data, addr, now):
             e['token'] = token
             send(sock, reply(b'D', rest[EP:], ge['token']), guest)
         else:
-            ge = e['guests'].get(addr)
-            if ge is None or over_rate(ge['bucket'], 'g', now):
+            ge = e['guests'].get(addr) or (seat(e, addr, now) and e['guests'][addr])   # forgotten while silent: seated again
+            if not ge or over_rate(ge['bucket'], 'g', now):
                 return
             ge['seen'] = now
             ge['token'] = token

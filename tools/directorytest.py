@@ -106,6 +106,16 @@ def main():
         for k in range(d.MISS_LIMIT):
             d.handle(sock, head(b'J') + bytes([0xe0 + k]) * 16, a, t + 130)
     check(d.banned(a[0], t + 131) and not d.banned(b[0], t + 131), 'ten different ones is a ban, of that address')
+    # a relayed guest forgotten while silent is seated again by its next datagram
+    with contextlib.redirect_stdout(io.StringIO()):
+        d.handle(sock, head(b'J') + bytes([18]) * 16, b, t + 135)
+        d.sessions[bytes([18]) * 16]['seen'] = t + 135 + d.GUEST_EXPIRE_S     # the host kept refreshing
+        d.expire(t + 135 + d.GUEST_EXPIRE_S + 1)
+        check(b not in d.sessions[bytes([18]) * 16]['guests'], 'the guest forgotten after GUEST_EXPIRE_S')
+        sock.sent.clear()
+        d.handle(sock, head(b'R') + bytes([18]) * 16 + b'hello', b, t + 170)
+    check(b in d.sessions[bytes([18]) * 16]['guests'] and sock.sent and sock.sent[-1][1] == ('192.0.2.18', 6000)
+          and sock.sent[-1][0][9:] == d.ep_bytes(b) + b'hello', 'the guest seated again and its datagram relayed')
     # the host takes its session down
     sock.sent.clear()
     with contextlib.redirect_stdout(io.StringIO()):

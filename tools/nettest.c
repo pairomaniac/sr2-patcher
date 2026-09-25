@@ -496,7 +496,7 @@ int main(void)
         fail("leave");
     ok("guest 2 leaves: DESTROYED 2 at the host and guest 1");
     alive[1] = 0;                       /* guest 1 stops polling */
-    run(8000);
+    run(14000);
     if (!expect_event(0, SR2_EV_DESTROYED, 1) || !expect_event(4, SR2_EV_DESTROYED, 1))
         fail("silence");
     ok("guest 1 goes silent: dropped after the timeout");
