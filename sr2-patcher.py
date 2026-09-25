@@ -490,9 +490,10 @@ def lobby_sites(anchors, surfaces, listopen):
     confirm never picks the modem screen and instead sets the flag the
     team list searches on when it opens (0x4edccc, which the IP entry set
     for its search) for every row but DIRECT IP, the latency after the
-    connection is the DLL's for every type, and SHOW TEAMS on row 2
-    searches as row 0 does. The anchors are the drawer, the cursor wrap,
-    the confirm, the latency test and the SHOW TEAMS jump table, as file offsets,
+    connection is the DLL's for every type, and REFRESH (the SHOW TEAMS
+    button relettered) on row 2 searches as row 0 does. The anchors are
+    the drawer, the cursor wrap, the confirm, the latency test and the
+    SHOW TEAMS jump table, as file offsets,
     then the table's stock and wanted entries; surfaces the two tables the
     drawer indexes; listopen the next-screen slot, the modem screen and
     the flag. Row 1's y does not fit the stock `push imm8`, so that blit
@@ -838,7 +839,7 @@ FEATURES = (
      'car and course selection and the race are the game\'s own; up to four\n'
      'players, all on the same patcher version.\n'
      '\n'
-     'INTERNET\tthe teams open anywhere, listed as the screen opens; SHOW TEAMS asks again.\n'
+     'INTERNET\tthe teams open anywhere, listed as the screen opens; REFRESH asks again.\n'
      'DIRECT IP\tThe host\'s address, or host:port. The host forwards UDP\n'
      '\t47626.\n'
      'LAN\tThe local network, searched.\n'
@@ -6047,6 +6048,25 @@ LOBBY_LABEL_SIZE = (218, 32)
 LOBBY_STATES = ('OFF', 'ON', 'ON2')
 LOBBY_CLEAR = (54, 246)                 # the stock rows' span in the backdrop, cleared
 LOBBY_FILES = tuple('CONNECT_%s_%s.BMP' % (slot, state) for slot in LOBBY_LABELS for state in LOBBY_STATES)
+
+# The team list's SHOW TEAMS button becomes REFRESH, set from the stock
+# buttons' own lettering: the three states of showteam and create in
+# BINDATA\connect\button are 105x19 24-bit BMPs, a 102x16 face with a
+# three-pixel bevel (ON2 the face three pixels down and right), the
+# letters on rows 1-14. R and E are cut from create, S and H from
+# showteam, F is E with its bottom bar cleared; the word is centred on
+# the face at the stock two-pixel letter gap.
+LOBBY_BUTTON_DIR = 'BINDATA\\connect\\button'
+LOBBY_BUTTON_STATES = ('off', 'on', 'on2')
+LOBBY_BUTTON_MD5 = {'showteam': ('eb63942470f1fd42f686179f1f1f1413', '0aa7e865dc9419c971e60af559dd628f', '3adbb7020b7b6e1fdf3622f517de34c8'),
+                    'create': ('4d94191960a75e92b9ecaa890861234b', 'dc5b89b42d87518521db3d969be3d96a', 'a9b28ea66aa92e3918574d650036f522')}
+LOBBY_BUTTON_FILES = tuple('showteam_%s.BMP' % state for state in LOBBY_BUTTON_STATES)
+LOBBY_GLYPHS = {'R': ('create', 35, 41), 'E': ('create', 44, 49), 'F': ('create', 44, 49),
+                'S': ('showteam', 9, 15), 'H': ('showteam', 18, 23)}     # the columns in the OFF and ON files, rows 1-14
+LOBBY_REFRESH = 'REFRESH'
+LOBBY_FACE = (102, 16)
+LOBBY_GLYPH_ROWS = (1, 14)
+LOBBY_GLYPH_GAP = 2
 MPDATA = 'MPDATA.DAT'
 
 
@@ -6065,6 +6085,51 @@ def bmp24(mask, size=LOBBY_LABEL_SIZE):
     head = b'BM' + struct.pack('<IHHI', 54 + len(rows), 0, 0, 54)
     info = struct.pack('<IiiHHIIiiII', 40, w, h, 1, 24, 0, len(rows), 2834, 2834, 0, 0)
     return head + info + bytes(rows)
+
+
+def lobby_buttons(stock):
+    """The three REFRESH button files from the stock showteam and create
+    ones: {state: bytes}."""
+    out = {}
+    for i, state in enumerate(LOBBY_BUTTON_STATES):
+        shift = 3 if state == 'on2' else 0
+        rows = [bytearray(r) for r in bmp24_rows(stock['showteam'][i])]
+        pool = {name: bmp24_rows(stock[name][i]) for name in stock}
+        top, bottom = LOBBY_GLYPH_ROWS
+        face = bytes(rows[top + shift][(LOBBY_FACE[0] - 1 + shift) * 3:(LOBBY_FACE[0] + shift) * 3])   # a face pixel, no letter reaches it
+        for y in range(top + shift, bottom + shift + 1):
+            rows[y][shift * 3:(LOBBY_FACE[0] + shift) * 3] = face * LOBBY_FACE[0]
+        widths = [LOBBY_GLYPHS[c][2] - LOBBY_GLYPHS[c][1] + 1 for c in LOBBY_REFRESH]
+        x = (LOBBY_FACE[0] - sum(widths) - LOBBY_GLYPH_GAP * (len(widths) - 1)) // 2 + shift
+        for c, width in zip(LOBBY_REFRESH, widths):
+            name, x0, _x1 = LOBBY_GLYPHS[c]
+            for y in range(top + shift, bottom + shift + 1):
+                src = pool[name][y][(x0 + shift) * 3:(x0 + shift + width) * 3]
+                if c == 'F' and y >= top + shift + 11:                  # E's bottom bar goes; its stem stays
+                    src = src[:6] + face * (width - 2)
+                rows[y][x * 3:(x + width) * 3] = src
+            x += width + LOBBY_GLYPH_GAP
+        out[state] = bmp24_pack(rows, stock['showteam'][i])
+    return out
+
+
+def bmp24_rows(data):
+    """A 24-bit BMP's rows, top first, as bytes of BGR triples."""
+    w, h = struct.unpack_from('<ii', data, 18)
+    off = struct.unpack_from('<I', data, 10)[0]
+    stride = (w * 3 + 3) & ~3
+    return [data[off + (h - 1 - y) * stride:off + (h - 1 - y) * stride + w * 3] for y in range(h)]
+
+
+def bmp24_pack(rows, like):
+    """Rows back into a BMP with `like`'s header and padding."""
+    w, h = struct.unpack_from('<ii', like, 18)
+    off = struct.unpack_from('<I', like, 10)[0]
+    stride = (w * 3 + 3) & ~3
+    body = bytearray(like[off:])
+    for y in range(h):
+        body[(h - 1 - y) * stride:(h - 1 - y) * stride + w * 3] = rows[y]
+    return like[:off] + bytes(body)
 
 
 def lobby_backdrop(data):
@@ -6102,13 +6167,14 @@ def lobby_backdrop(data):
 def lobby_art(dest, wanted, log):
     """Write the lobby's art, or put the stock files back."""
     folder = os.path.join(dest, *LOBBY_DIR.split('\\'))
+    buttons = os.path.join(dest, *LOBBY_BUTTON_DIR.split('\\'))
     names = (LOBBY_BACKDROP,) + LOBBY_FILES
     if not wanted:
-        for name in names:
-            path = os.path.join(folder, name)
+        for where, name in [(folder, n) for n in names] + [(buttons, n) for n in LOBBY_BUTTON_FILES]:
+            path = os.path.join(where, name)
             if os.path.isfile(path + '.bak'):
                 os.replace(path + '.bak', path)
-                log('patch: %s\\%s back to stock' % (LOBBY_DIR, name))
+                log('patch: %s back to stock' % name)
         return
     for name in names:
         path = os.path.join(folder, name)
@@ -6131,6 +6197,29 @@ def lobby_art(dest, wanted, log):
             os.replace(path, path + '.bak')
         write_whole(path, out)
     log('patch: %s\\%s and the %d button files written, lobby' % (LOBBY_DIR, LOBBY_BACKDROP, len(LOBBY_FILES)))
+    # REFRESH in place of SHOW TEAMS, from the stock lettering when the
+    # stock files are the ones known; otherwise the button stays as it is
+    stock = {}
+    for name, digests in LOBBY_BUTTON_MD5.items():
+        stock[name] = []
+        for state, digest in zip(LOBBY_BUTTON_STATES, digests):
+            path = os.path.join(buttons, '%s_%s.BMP' % (name, state))
+            source = path + '.bak' if os.path.isfile(path + '.bak') else path
+            if not os.path.isfile(source) or md5(source) != digest:
+                log('patch: %s\\%s_%s.BMP is not the file the patcher knows; SHOW TEAMS stays' % (LOBBY_BUTTON_DIR, name, state))
+                stock = None
+                break
+            with open(source, 'rb') as fh:
+                stock[name].append(fh.read())
+        if stock is None:
+            break
+    if stock:
+        for state, out in lobby_buttons(stock).items():
+            path = os.path.join(buttons, 'showteam_%s.BMP' % state)
+            if not os.path.isfile(path + '.bak'):
+                os.replace(path, path + '.bak')
+            write_whole(path, out)
+        log('patch: %s\\showteam_*.BMP written as REFRESH' % LOBBY_BUTTON_DIR)
     clamp_mpdata(dest, log)
 
 
@@ -6779,7 +6868,8 @@ def patch(dest, log=print, keys=None):
 def restore(dest, log=print):
     """The backups back in place, and dgVoodoo 2 out, config and all."""
     found = False
-    for name in PATCHED + (TXR, MPDATA) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES):
+    for name in PATCHED + (TXR, MPDATA) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES) \
+            + tuple(LOBBY_BUTTON_DIR + '\\' + f for f in LOBBY_BUTTON_FILES):
         path = os.path.join(dest, *name.split('\\'))
         if os.path.isfile(path + '.bak'):
             os.replace(path + '.bak', path)

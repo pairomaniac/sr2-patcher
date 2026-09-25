@@ -251,7 +251,7 @@ The connection screen offers three rows in place of IPX, TCP/IP, modem
 and serial:
 
 - **INTERNET** - the teams open anywhere, listed as the screen opens;
-  **SHOW TEAMS** asks again. Joining needs no port forwarding.
+  **REFRESH** asks again. Joining needs no port forwarding.
 - **DIRECT IP** - type the host's address, or `host:port`. The host
   forwards UDP 47626.
 - **LAN** - the local network, searched as the screen opens.

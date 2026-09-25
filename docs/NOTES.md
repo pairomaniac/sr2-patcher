@@ -1139,7 +1139,13 @@ address, fifteen bytes) becomes `cmp eax,1; je; mov [0x4edccc],1` - the
 flag the list's first state (`0x43f210`) searches on, which the IP entry
 sets for its own search - so INTERNET and LAN open the list searching,
 the latency test's `jne` a `jmp`, and the SHOW TEAMS table's third entry
-the first's. `tools/lobbytest.py` runs the confirm under Unicorn.
+the first's. `tools/lobbytest.py` runs the confirm under Unicorn. The
+SHOW TEAMS button itself is relettered REFRESH: its three files in
+`BINDATA\connect\button` (105x19, 24-bit, a 102x16 face and a bevel)
+are rewritten with R and E cut from `create_*`, S and H from
+`showteam_*`, and F from E with its bottom bar cleared, centred at the
+stock letter gap (`lobby_buttons`); the stock files are checked by
+digest first and kept as `.bak`. `tools/buttonstest.py` pins the result.
 `MPDATA.DAT`, which keeps the type from last time, has a stock 3 reset
 to 0 at patch time.
 
