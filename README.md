@@ -173,8 +173,8 @@ either. Untick it and Apply, or **Restore original**, to take it out.
 ### Diagnostics
 
 The collapsed **DIAGNOSTICS** section adds logging for a bug report, all
-off by default. What each writes is in
-[docs/DEVELOPING.md](docs/DEVELOPING.md).
+off by default; see [Reporting a bug](#reporting-a-bug). What each
+writes is in [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## Widescreen
 
@@ -246,6 +246,10 @@ defaults, and the game writes it again as you change things.
   <img src="https://github.com/user-attachments/assets/4eeb4842-b05f-47c0-8f26-d7516f391eba" alt="Multiplayer connection screen offering INTERNET, DIRECT IP and LAN" width="480" />
 </p>
 
+> [!IMPORTANT]
+> Everyone in a team needs patcher **0.7.1 or later**. Older builds cannot
+> join or be joined: update to play.
+
 The connection screen offers three rows in place of IPX, TCP/IP, modem
 and serial:
 
@@ -258,8 +262,8 @@ and serial:
 - **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are
-the game's own. Up to four players, all on 0.7.1 or later. How it works
-is in [docs/NETWORK.md](docs/NETWORK.md).
+the game's own. Up to four players. How it works is in
+[docs/NETWORK.md](docs/NETWORK.md).
 
 ### The network log
 
@@ -343,12 +347,19 @@ beside the exe replace the installer's COM registration.
 
 Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues) with
 the release (the window names it), Windows or Wine/Proton, and what you
-were doing just before. For a crash on Windows, Event Viewer → Windows
-Logs → Application names the faulting module and offset. For anything
-online, `logs\sr2-net.log` from each machine
-([The network log](#the-network-log)). For a disc image of a release
-the patcher does not know, or anything that does not fit an issue:
-pairo@segaonline.net.
+were doing just before.
+
+The game can log what it is doing, and most bugs need that to be found.
+Under **DIAGNOSTICS** in the patcher, tick the boxes you are asked for
+(each is named with its terminal equivalent) and press **Apply
+patches**; or turn them all on from a terminal with
+`--patch <game folder> logs`. Reproduce the bug, then attach the `logs`
+folder from beside `SEGA RALLY 2.exe`. For anything online, the same
+from each machine ([The network log](#the-network-log)). A plain
+**Apply patches** turns the logging off again.
+
+For a disc image of a release the patcher does not know, or anything
+that does not fit an issue: pairo@segaonline.net.
 
 ## Known issues
 

@@ -7885,8 +7885,9 @@ DGVOODOO_WINE = ('Wine and Proton have wined3d, which has no such limit, so '
                  'this is off and not needed there.')
 DGVOODOO_CAPPED = ('Without it the resolution list stops at 2048 a side.')
 
-DIAGNOSTICS_HINT = ('Off unless asked for. Each writes a log beside the game '
-                    'for a bug report; none of them changes how it plays.')
+DIAGNOSTICS_HINT = ('Off unless asked for. Each writes to logs\\ beside the '
+                    'game for a bug report; the name in brackets is what '
+                    '--patch takes.')
 
 MUSIC_HINT = ('Rips the play disc to music\\ beside the game, where the '
               'Music from files patch reads it. About 550 MB.')
@@ -9081,8 +9082,8 @@ def run_tk():
                 var = tk.BooleanVar(value=False)
                 self.diagnostics[key] = var
                 check = self._static_label(ttk.Checkbutton(
-                    row, text=label, variable=var, style='Card.TCheckbutton',
-                    command=self._retally))
+                    row, text='%s  (%s)' % (label, key), variable=var,
+                    style='Card.TCheckbutton', command=self._retally))
                 check.pack(side='left')
                 Info(row, label, tip, self).btn.pack(side='right',
                                                      padx=(6, 2))
