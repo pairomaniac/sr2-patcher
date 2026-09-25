@@ -253,8 +253,8 @@ and serial:
   asks again. No port forwarding on either side.
 - **DIRECT IP** - **CREATE** hosts on UDP 47626, which the host forwards;
   the team room's status line shows the host's local and public address.
-  **SEARCH** asks for that address, or `address:port`, and lists the
-  host's team.
+  **SEARCH** asks for the host's address, or `address:port`, and lists
+  the team.
 - **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are
