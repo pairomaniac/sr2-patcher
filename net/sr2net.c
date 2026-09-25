@@ -248,9 +248,21 @@ int sr2_pop_event(sr2_net *n, sr2_event *ev)
     return SR2_OK;
 }
 
+/* The game's messages (types 0x1b to 0x31) carry the sender's index in
+   their second byte, and the game indexes its tables by it unchecked -
+   an entry (0x2a) lands 0x44 bytes at the row that index names. One that
+   names another index than the one it came by is dropped. */
 static void queue_game(sr2_net *n, int from, const uint8_t *data, int len)
 {
     qmsg *m;
+    if (from < 0 || from >= SR2_MAX_PLAYERS) {
+        nlog(n, "a message from index %d dropped", from);
+        return;
+    }
+    if (len >= 2 && data[0] >= 0x1b && data[0] <= 0x31 && data[1] != from) {
+        nlog(n, "a message %02x from %d naming index %d dropped", data[0], from, data[1]);
+        return;
+    }
     if (n->q_count == QUEUE || len > SR2_MAX_PAYLOAD) {
         nlog(n, "queue full: a message from %d dropped", from);
         return;

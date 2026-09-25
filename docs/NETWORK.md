@@ -257,7 +257,7 @@ Against the stock DLL and DirectPlay:
 | events 0-3: host identified, player created, destroyed, session lost | the same, in the order the exe wants; a guest's `0x4402a0` loop finds its index known the moment `CreatePlayer` returns |
 | DirectPlay's keep-alive and loss detection | a keep-alive every 500 ms; twelve seconds of silence, or of nothing acknowledged, drops a guest (the others told) or loses the session for a guest; a leave is announced |
 | `SetOpen`, the reserved slots, a player kicked from a closed slot | the same |
-| chat, names in the team room, the WIN RATIO figures | the exe's own messages (`0x1b`, `0x2a`) - carried, not interpreted; `GetName` answers from the roster |
+| chat, names in the team room, the WIN RATIO figures | the exe's own messages (`0x1b`, `0x2a`) - carried, not interpreted, with one check: a game message (types `0x1b`-`0x31`) whose second byte, the sender's index, is not the index it came by is dropped and logged, since the exe indexes its tables by that byte unchecked - an entry (`0x2a`) lands 0x44 bytes at the row it names; `GetName` answers from the roster |
 | host migration (`DPSYS_HOST`) | not reproduced: a host leaving is *session lost* for everyone, which the exe already handles by returning to the connection screens |
 | the lockstep methods (`SendSequenced`, `SetReady`, `ReadCurrent`), `EnumConnections`, `SelectConnection`, `ConnectViaLobby`, modem, serial | not reproduced; the exe never used them, or they cannot work today |
 

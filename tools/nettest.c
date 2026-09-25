@@ -206,6 +206,19 @@ static void oversized(void)
     ok("an oversized reliable datagram is dropped; the link after it intact");
 }
 
+/* Guest 1 sends the game's entry message (0x2a) naming index 3 in its
+ * second byte, then one naming its own: the host gets only the second. */
+static void forged_index(void)
+{
+    static const char bad[] = "\x2a\x03z", good[] = "\x2a\x01z";
+    sr2_send(nets[1], 0, bad, sizeof bad, 1, now);
+    sr2_send(nets[1], 0, good, sizeof good, 1, now);
+    run(300);
+    if (!got(0, 1, good) || !empty(0))
+        fail("a game message naming another index got through");
+    ok("a game message naming another index is dropped, one naming its own delivered");
+}
+
 /* A host that answers a join by itself: the welcome carries `index`, and
  * the wire version unless `old`, the shape a host from before it sends. */
 static int fake_host(int who, int index, int old)
@@ -380,6 +393,7 @@ int main(void)
     ok("names and counts everywhere");
 
     oversized();
+    forged_index();
     forged_ack();
     uncookied();
     if (fake_host(5, 1, 0) != SR2_OK || sr2_my_index(nets[5]) != 1)
