@@ -137,7 +137,11 @@ and is not taken.
 Tried and taken out: mapping a screen DLL's rect to the 4:3 box instead,
 for the car select's carousel that leans on the 640 frame's edges to
 hide six of its seven cars. The device's viewport clips the 2D as well,
-and the sides went with the cars, so the carousel is still open.
+and the sides went with the cars. Cutting the 2D at the 4:3 box's edge
+instead (tried for 0.7.1, taken out): the side area is in view on a
+wide picture, so the cut showed as a seam mid-picture on every sprite
+that passes the edge - the menus' slide-in transitions as much as the
+carousel. The carousel's other cars stay in view beside the chosen one.
 
 ## The 2D
 

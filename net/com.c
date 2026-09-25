@@ -8,8 +8,8 @@
  * return E_NOTIMPL. Player ids are index + 1, so none is 0.
  *
  * Log = 1 under [Network] in SR2.CFG beside the exe turns logging on,
- * to sr2-net.log: what the core did, one line each. Staging = 1 there
- * sends INTERNET to the staging directory.
+ * to logs\sr2-net.log: what the core did, one line each. Staging = 1
+ * there sends INTERNET to the staging directory.
  */
 #include <winsock2.h>
 #include <windows.h>
@@ -63,7 +63,7 @@ static int beside_exe(const char *name, char *path, size_t size)
 }
 
 /* A [Network] setting in SR2.CFG beside the exe: Log = 1 writes
- * sr2-net.log, Staging = 1 sends INTERNET to the staging directory. */
+ * logs\sr2-net.log, Staging = 1 sends INTERNET to the staging directory. */
 static int network_setting(const char *key)
 {
     char path[MAX_PATH];
@@ -75,9 +75,11 @@ static int network_setting(const char *key)
 static void log_open(void)
 {
     char path[MAX_PATH];
-    if (g_log || !network_setting("Log") || !beside_exe("sr2-net.log", path, sizeof path))
+    if (g_log || !network_setting("Log") || !beside_exe("logs", path, sizeof path))
         return;
-    g_log = fopen(path, "a");
+    CreateDirectoryA(path, NULL);                   /* logs\, where the other diagnostics write */
+    if (beside_exe("logs\\sr2-net.log", path, sizeof path))
+        g_log = fopen(path, "a");
 }
 
 static int guid_eq(const GUID *a, const GUID *b) { return memcmp(a, b, sizeof(GUID)) == 0; }

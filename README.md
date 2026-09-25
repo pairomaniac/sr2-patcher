@@ -264,7 +264,7 @@ is in [docs/NETWORK.md](docs/NETWORK.md).
 
 Set `Log = 1` under `[Network]` in `SR2.CFG` beside `SEGA RALLY 2.exe`
 (the patcher puts the section there, both keys at 0) and the game logs
-its connections, joins, refusals and drops to `sr2-net.log`, with the
+its connections, joins, refusals and drops to `logs\sr2-net.log`, with the
 reason for each. When something goes wrong online, send that file from
 each machine.
 
@@ -345,7 +345,7 @@ Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues) with
 the release (the window names it), Windows or Wine/Proton, and what you
 were doing just before. For a crash on Windows, Event Viewer → Windows
 Logs → Application names the faulting module and offset. For anything
-online, `sr2-net.log` from each machine
+online, `logs\sr2-net.log` from each machine
 ([The network log](#the-network-log)). For a disc image of a release
 the patcher does not know, or anything that does not fit an issue:
 pairo@segaonline.net.

@@ -82,9 +82,9 @@ fields rather than change them and read a peer's by its version, so
 versions from `SR2_PROTO_MIN` up keep playing together; a change that
 cannot be made that way raises `SR2_PROTO_MIN`. A patcher from before
 the version, which sends none (0.7.0 and earlier), is refused with a
-reason in `sr2-net.log` on both sides.
+reason in `logs\sr2-net.log` on both sides.
 
-`Log = 1` under `[Network]` in `SR2.CFG` turns on `sr2-net.log` beside
+`Log = 1` under `[Network]` in `SR2.CFG` turns on `logs\sr2-net.log` beside
 the exe, a log of what the core did. The patcher writes the section
 with both keys at 0 (the file too, when there is none) and the pad
 annex carries it through a controls save.
@@ -157,7 +157,7 @@ which no sender makes, and a welcome whose index is past the player table.
 A change to `directory.py` or to the wire between it and the DLL goes to
 the staging server first: `test.segaonline.net` (`SR2_STAGING_DIRECTORY`
 in `sr2net.h`). `Staging = 1` under `[Network]` in `SR2.CFG` sends
-INTERNET there instead of the live three; `sr2-net.log` says so. Run
+INTERNET there instead of the live three; `logs\sr2-net.log` says so. Run
 the new `directory.py` there (`tools/directory-install.sh install`),
 set it on two machines, host, list, join direct and through the relay,
 and read both logs and the server's journal. Then update the live
