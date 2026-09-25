@@ -101,7 +101,7 @@ CHECKS = [
      [PY, 'tools/resolutiontest.py', '{game}'], 'game'),
     ('lobby', "the connection screen's confirm, the real exe",
      [PY, 'tools/lobbytest.py', '{game}'], 'game'),
-    ('ipcheck', "the IP entry popup's address check, the real exe",
+    ('ipcheck', "the lobby entries' address check and caps, the real exe",
      [PY, 'tools/ipchecktest.py', '{game}'], 'game'),
     ('buttons', 'the SEARCH button and the IP entry popup from the stock files, pinned',
      [PY, 'tools/buttonstest.py', '{game}'], 'game'),

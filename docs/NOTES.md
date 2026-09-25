@@ -56,7 +56,7 @@ parentheses is what `--patch` takes.
 | **Pad in a replay** (`replaypad`) | `SEGA RALLY 2.exe` | `0x400ea` (5 bytes) (`0x4047a` American, `0x6e99a` Australian), the annex | the two loads at the join of the replay controls' keyboard and joystick paths (`0x440cea`) → `call` asm/replaypad.asm, which ORs the annex's bumpers, left stick, triggers, Y and X into the player's level word, then makes them |
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) → `call` asm/padmenu.asm, which puts the annex's buttons into the level and its directions, Back as TAB and any press as a key into the keyboard's menu word, then makes the edge and the three stores |
 | **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture at its create (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) → `call` asm/loadhold.asm |
-| **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP` and nine button files | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once, relettered SEARCH; the IP entry's OK through asm/ipcheck.asm (`0x3bf4e`, the annex), its popup's lower lines redrawn; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
+| **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP` and nine button files | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once, relettered SEARCH; the IP entry's OK through asm/ipcheck.asm (`0x3bf4e`, the annex), the entries capped by field through asm/entrycap.asm (`0x20310`, `0x1f2f1`, `0x1fc49`, the annex), the popup's lower lines redrawn; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
 | **Network DLL** (`netplay`) | `MUSASHI\MGNetWk.dll`, `SR2.CFG` | the whole file | replaced by the build of `net/`: the stock DLL's CLSID and three vtables over plain UDP - a LAN search, an address typed, and the internet through a directory server; `SR2.CFG`'s `[Network]` section (Staging, Log, both 0) is read, and written when the file has none; see [NETWORK.md](NETWORK.md) and [net/README.md](../net/README.md) |
 | **The clear's height** (`clearsize`, Australian only) | `SEGA RALLY 2.exe` | `0x40b83` (12 bytes), the annex | the mode setter's `mov eax, [WIDTH]` and its two pushes → `call` a thunk that pushes `[HEIGHT]` and `[WIDTH]` and jumps into the clear |
 | **XInput** (`xinput`) | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`), the annex | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm; the Australian build's keyboard-poll address pointed at it instead |
@@ -1174,6 +1174,19 @@ file checked by digest and kept as `.bak`. The face is Liberation Sans
 Narrow Bold, fitted to the stock lines by overlap - 17.5 px, 90% wide,
 half a pixel of tracking, which puts the same ink in the same places
 within a pixel.
+
+The same entry widget serves every text field in the lobby, and its
+character handler took up to 0x800 characters (`0x41fef1`, and again
+at `0x420849`) whatever the field, which the OK then `lstrcpy`d into a
+slot of 16 (the address), 36 (the team name, `0x4ead1c`, followed by
+the driver profiles) or a chat message; only the driver name's OK
+checked its length (20, `0x43acd1`). asm/entrycap.asm sits in the
+init (`0x420f10`, its first two loads) and keeps a cap by the field's
+address - 47 for the address, 35 for the team name, 255 for the chat
+line, 20 for the driver name, which shares the chat's buffer and is
+told apart by the width shown - and the two compares call it instead of
+comparing with 0x800. `tools/ipchecktest.py` covers it with the
+address check.
 
 The lettering is ITC Avant Garde Gothic Demi, 20 px capitals, spaced;
 OFF is the ON at 98/255, ON2 the ON under a glow. `tools/labels.py`

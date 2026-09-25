@@ -44,6 +44,7 @@ Two rules every blob follows:
 | `fullwin.asm` | `MGameD3D.dll` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
 | `ipcheck.asm` | exe | the IP entry popup's OK refused for a blank or malformed address |
+| `entrycap.asm` | exe | the lobby's text entries capped at what their fields hold |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
@@ -394,6 +395,19 @@ address is dropped, the popup's four sound arguments pushed with the
 cancel sound, and the popup's own sound call (`0x43cbac`) continued
 into, so the popup stays up. `tools/ipchecktest.py` runs it on the real
 exe under Unicorn.
+
+## entrycap.asm
+
+In the exe's annex, at the lobby entry widget's init (`0x420f10`) and
+in place of its character handler's two `cmp eax, 0x800`. The init
+takes the field the text comes from and goes back to; the stub keeps a
+cap for it - 47 for the address slot, 35 for the team name, 255 for the
+chat line, 20 for the driver name, which shares the chat's buffer and
+is known by the width shown, the stock 0x800 otherwise - and redoes the
+two loads its call displaced. The compares call the second entry, which
+compares against the kept cap and returns with the flags for the `jae`
+that follows. The section keeps the cap, so it is writable.
+`tools/ipchecktest.py` runs both on the real exe under Unicorn.
 
 ## hudlast.asm
 
