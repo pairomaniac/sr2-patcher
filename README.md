@@ -55,7 +55,7 @@ page:
    a terminal in its folder.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/4ff8c15d-4f36-4d15-83b9-e28c1a35c46f" alt="The patcher window, showing its numbered sections" width="480" />
+  <img src="https://github.com/user-attachments/assets/e84056b7-3ed2-41a9-bc3a-c1d67da97f11" alt="The patcher window, showing its numbered sections" height="700" />
 </p>
 
 Work through the numbered sections in order:
