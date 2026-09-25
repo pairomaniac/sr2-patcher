@@ -9,7 +9,8 @@
  *
  * Log = 1 under [Network] in SR2.CFG beside the exe turns logging on,
  * to logs\sr2-net.log: what the core did, one line each. Staging = 1
- * there sends INTERNET to the staging directory.
+ * there sends INTERNET to the staging directory. The section is written
+ * with both at 0 when the file has none.
  */
 #include <winsock2.h>
 #include <windows.h>
@@ -70,6 +71,19 @@ static int network_setting(const char *key)
     if (!beside_exe("SR2.CFG", path, sizeof path))
         return 0;
     return GetPrivateProfileIntA("Network", key, 0, path) != 0;
+}
+
+/* The [Network] section with both keys at 0 when SR2.CFG has none, at
+ * the object's create - the game's start - so the two settings are in
+ * the file to find, and back after the file is deleted. */
+static void ensure_section(void)
+{
+    char path[MAX_PATH], keys[8];
+    if (!beside_exe("SR2.CFG", path, sizeof path)
+            || GetPrivateProfileStringA("Network", NULL, "", keys, sizeof keys, path))
+        return;
+    WritePrivateProfileStringA("Network", "Staging", "0", path);
+    WritePrivateProfileStringA("Network", "Log", "0", path);
 }
 
 static void log_open(void)
@@ -620,6 +634,7 @@ static network *network_new(void)
         HeapFree(GetProcessHeap(), 0, n);
         return NULL;
     }
+    ensure_section();
     log_open();
     sr2_set_log(n->net, log_line, NULL);
     InterlockedIncrement(&g_objects);

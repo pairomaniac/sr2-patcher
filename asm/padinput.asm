@@ -738,13 +738,19 @@ write_text:
         mov     al, 10
         stosb
 .nodisp:
-        lea     esi, [ebx + netheader - $$]     ; the network section, its two keys as the file has them
+        push    edi                     ; the network section, when the file has one: its two keys as they are
+        lea     eax, [ebx + s_netsect - $$]
+        push    eax
+        call    hassect
+        pop     edi
+        je      .nonet
+        lea     esi, [ebx + netheader - $$]
         call    puts
         lea     esi, [ebx + s_netstaging - $$]
         call    netline
         lea     esi, [ebx + s_netlog - $$]
         call    netline
-        lea     esi, [ebx + tables - $$ + W_TEXT]
+.nonet: lea     esi, [ebx + tables - $$ + W_TEXT]
         sub     edi, esi                ; the length
         push    OPEN_ALWAYS
         push    GENERIC_READ | GENERIC_WRITE
@@ -765,6 +771,23 @@ write_text:
         call    [ebx + fn_closehandle - $$]
 .out:   popad
         ret
+
+; [esp+4] = a section name: ZF clear when the file has that section -
+; GetPrivateProfileStringA with no key lists its keys, none in an empty
+; or absent one. eax, ecx, edx used.
+hassect:
+        lea     eax, [ebx + path - $$]
+        push    eax
+        push    8
+        lea     eax, [ebx + netvalue - $$]
+        push    eax
+        lea     eax, [ebx + s_empty - $$]
+        push    eax
+        push    0
+        push    dword [esp + 0x18]
+        call    [ebx + fn_getpps - $$]
+        cmp     byte [ebx + netvalue - $$], 0
+        ret     4
 
 ; esi = a [Network] key: "key = value" and a newline appended at edi,
 ; the value as the file has it, 0 without one.

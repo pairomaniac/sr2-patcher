@@ -86,8 +86,8 @@ reason in `logs\sr2-net.log` on both sides.
 
 `Log = 1` under `[Network]` in `SR2.CFG` turns on `logs\sr2-net.log` beside
 the exe, a log of what the core did. The patcher writes the section
-with both keys at 0 (the file too, when there is none) and the pad
-annex carries it through a controls save.
+with both keys at 0 when netplay is applied, the DLL writes it at the
+game's start when the file has none, and a controls save carries it.
 
 The game's socket is UDP 47626. When that port is taken - a second copy
 of the game on the machine, say - the DLL binds any free port and says

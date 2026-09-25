@@ -107,21 +107,6 @@ def annex_records(player, table=None):
 
 
 def annex_text(tables=None, deadzones=None, network=('0', '0')):
-    """The text the annex writes, as it lays it out: for the defaults, or
-    for a (key, pad input or None) per action per player; network the
-    [Network] section's Staging and Log values as the file had them."""
-    deadzones = deadzones or (patcher.PAD_DEADZONE, patcher.PAD_DEADZONE)
-    defaults = [[(keys[a], patcher.PAD_DEFAULT[a]) for a in range(13)] for keys in (patcher.KEYS_1P, patcher.KEYS_2P)]
-    tables = [t or defaults[i] for i, t in enumerate(tables or (None, None))]
-    lines = ['; SEGA RALLY 2 settings']
-    for player, table in enumerate(tables):
-        for device in ('Controller', 'Keyboard'):
-            lines += ['', '[%dP %s]' % (player + 1, device)]
-            if device == 'Controller':
-                lines.append('Deadzone = %d' % (deadzones[player] // 100))
-            for action in patcher.TEXT_ORDER:
-                key, pad = table[action]
-                name = patcher.KEY_NAMES[key] if device == 'Keyboard' else ('-' if pad is None else patcher.PAD_NAMES[pad])
-                lines.append('%s = %s' % (patcher.ACTION_NAMES[action], name.replace(' ', '_')))
-    lines += ['', '[Network]', 'Staging = %s' % network[0], 'Log = %s' % network[1]]
-    return ''.join(line + '\n' for line in lines).encode('ascii')
+    """The text the annex writes: the patcher's own layout of it; network
+    None for a file with no [Network] section."""
+    return patcher.settings_text(tables, deadzones, network)

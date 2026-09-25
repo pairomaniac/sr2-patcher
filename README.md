@@ -234,7 +234,9 @@ Gallery they step the sort between MODE, CAR and DATE, as F6-F8 do.
 
 **Options → Device Settings** is a new page showing both players'
 controls, keyboard and pad side by side; press a key or a button to
-rebind one. They are saved as plain text in `SR2.CFG` beside the game.
+rebind one. They are saved as plain text in `SR2.CFG` beside the game,
+with the resolution and the network settings; delete the file for the
+defaults, and the game writes it again as you change things.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/0d95eeed-3834-4f0a-8291-4cc210de0abb" alt="Options menu with Device Settings selected" width="49.5%" />
@@ -263,7 +265,7 @@ is in [docs/NETWORK.md](docs/NETWORK.md).
 ### The network log
 
 Set `Log = 1` under `[Network]` in `SR2.CFG` beside `SEGA RALLY 2.exe`
-(the patcher puts the section there, both keys at 0) and the game logs
+(the patcher writes the section, both keys at 0) and the game logs
 its connections, joins, refusals and drops to `logs\sr2-net.log`, with the
 reason for each. When something goes wrong online, send that file from
 each machine.

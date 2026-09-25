@@ -122,17 +122,23 @@ def main(argv):
         elif name == 'CloseHandle':
             ret = 1
         elif name == 'GetPrivateProfileStringA':
-            # a line of the file, as Windows would read it: [Display] Resolution, [Network] Staging and Log
-            sect, key = cstr(args[0]), cstr(args[1])
-            assert (sect, key) in (('Display', 'Resolution'), ('Network', 'Staging'), ('Network', 'Log')) and cstr(args[5]) == CFG
+            # a line of the file, as Windows would read it: [Display] Resolution, [Network] Staging and Log;
+            # with no key, the section's key names, NUL-separated
+            sect, key = cstr(args[0]), args[1] and cstr(args[1])
+            assert (sect, key) in (('Display', 'Resolution'), ('Network', 'Staging'), ('Network', 'Log'), ('Network', 0)) and cstr(args[5]) == CFG
             value = cstr(args[2]).encode()
+            keys_ = []
             section = None
             for line in (disk['text'] or b'').splitlines():
                 line = line.strip()
                 if line.startswith(b'['):
                     section = line
-                elif section == ('[%s]' % sect).encode() and line.split(b'=')[0].strip() == key.encode():
-                    value = line.split(b'=', 1)[1].strip()
+                elif section == ('[%s]' % sect).encode() and line and not line.startswith(b';'):
+                    if key and line.split(b'=')[0].strip() == key.encode():
+                        value = line.split(b'=', 1)[1].strip()
+                    keys_.append(line.split(b'=')[0].strip())
+            if not key:
+                value = b'\0'.join(keys_)
             mu.mem_write(args[3], value[:args[4] - 1] + b'\0')
             ret = len(value)
         elif name == 'XInputGetState':
@@ -196,7 +202,8 @@ def main(argv):
     ret, _p = call(site(load_off), this, slot0, SCRATCH + 0x1c, buf, 32, got)   # the exe's second, named load: nothing
     assert ret == 0 and struct.unpack('<I', mu.mem_read(got, 4))[0] == 0
 
-    # 2. a save: three records for 2P and a deadzone in the name; the text rewritten
+    # 2. a save: three records for 2P and a deadzone in the name; the text rewritten, without a [Network]
+    # section, since the file had none
     handbrake_b = uctest.annex_records(1, [(0, None)] * 8 + [(0, 13)])[9]
     three = b''.join(uctest.annex_records(1, [(0x11, None), (0x1f, None)])[:2]) + handbrake_b
     name = SCRATCH + 0x40
@@ -204,17 +211,17 @@ def main(argv):
     mu.mem_write(buf, three)
     mu.mem_write(name, b'DZ12000\0')                                   # past the most: clamped as the parser clamps
     ret, _p = call(site(save_off), this, slot1, name, buf, 3)
-    assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 9000)), disk['text'].decode()
+    assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 9000), None), disk['text'].decode()
     mu.mem_write(buf, three)
     mu.mem_write(name, b'DZ4000\0')
     ret, popped = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and popped == 4 + 0x14, (hex(ret), popped)
     assert disk['text'] is not None and disk['opened'][-1] == (CFG, 0xC0000000, 4) and disk['ended'] == 2
-    assert disk['text'] == uctest.annex_text([None, t2], (1000, 4000)), disk['text'].decode()
+    assert disk['text'] == uctest.annex_text([None, t2], (1000, 4000), None), disk['text'].decode()
     recs, count = load(slot1)
     assert recs == uctest.annex_records(1, t2), count
-    # the [Network] section's values survive a save as they stand
-    disk['text'] = disk['text'].replace(b'Staging = 0\nLog = 0\n', b'Staging = 1\nLog = 1\n')
+    # a [Network] section, once in the file, survives a save with its values as they stand
+    disk['text'] += b'\n[Network]\nStaging = 1\nLog = 1\n'
     mu.mem_write(buf, three)
     ret, _p = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 4000), ('1', '1')), disk['text'].decode()
