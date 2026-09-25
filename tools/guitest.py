@@ -170,9 +170,8 @@ def main():
             buttons.setdefault(text_of(w), []).append(w)
     heads = {text_of(w): w for w in everything
              if isinstance(w, ttk.Label)
-             and text_of(w) in ('GAME FOLDER', 'INSTALL', 'ESSENTIAL PATCHES',
-                                'EXTRA PATCHES', 'ADD-ONS', 'DIAGNOSTICS',
-                                'LOG', 'ABOUT')}
+             and text_of(w) in ('GAME FOLDER', 'INSTALL', 'PATCHES',
+                                'ADD-ONS', 'DIAGNOSTICS', 'LOG', 'ABOUT')}
 
     def pump(ms=0):
         root.update_idletasks()
@@ -193,7 +192,7 @@ def main():
 
     # ---- nothing to act on, nothing offered --------------------------
     check('every card the window needs is there',
-          len(heads) == 8, sorted(heads))
+          len(heads) == 7, sorted(heads))
     check('the folder is asked for once, not twice',
           len([w for w in everything
                if isinstance(w, ttk.Entry)
@@ -204,8 +203,7 @@ def main():
                   ('Install game', 'Rip soundtrack', 'Apply patches',
                    'Restore original')))
     check('the numbered cards start open and the rest closed',
-          all(is_open(n) for n in ('GAME FOLDER', 'INSTALL',
-                                   'ESSENTIAL PATCHES', 'EXTRA PATCHES',
+          all(is_open(n) for n in ('GAME FOLDER', 'INSTALL', 'PATCHES',
                                    'ADD-ONS'))
           and not any(is_open(n) for n in ('DIAGNOSTICS', 'LOG', 'ABOUT')))
 
@@ -310,25 +308,13 @@ def main():
     os.rmdir(empty)
 
     # ---- the boxes and the keys they stand for ------------------------
-    check('every extra patch starts ticked',
-          all(app.vars[group].get() for group in patcher.EXTRA))
     check('every diagnostic starts off',
           not any(var.get() for var in app.diagnostics.values()))
-    check('all ticked is every patch',
-          patcher.group_keys(app._groups(), ()) == patcher.PATCH_KEYS)
-    for group in patcher.EXTRA:
-        app.vars[group].set(False)
-    pump()
-    left = patcher.group_keys(app._groups(), ())
-    check('unticking every extra leaves the essential ones',
-          set(left) == set(k for g in patcher.ESSENTIAL
-                           for k in patcher.BY_GROUP[g][2]),
-          '%d keys' % len(left))
-    check('and drops nothing an essential patch needs',
-          all(need in left for key, need in patcher.NEEDS if key in left))
-    for group in patcher.EXTRA:
-        app.vars[group].set(True)
-    pump()
+    check('the window applies every patch',
+          patcher.group_keys(()) == patcher.PATCH_KEYS)
+    check('and a minus on the command line leaves one out with what needs it',
+          set(patcher.parse_keys(['-widescreen', '-xinput'])) == set(patcher.PATCH_KEYS)
+          - {'widescreen', 'widescreen2d', 'widescreen3d', 'resolution', 'xinput', 'devices'})
 
     # ---- every description can be shown ------------------------------
     bubbles = []
@@ -361,7 +347,7 @@ def main():
           sorted(k for _g, _l, _t, keys in patcher.FEATURES for k in keys)
           == sorted(patcher.PATCH_KEYS))
     check('every feature row is displayed',
-          set(patcher.ESSENTIAL) | set(patcher.EXTRA) == set(patcher.BY_GROUP))
+          set(patcher.ESSENTIAL) == set(patcher.BY_GROUP))
     check('every diagnostic has a label',
           set(patcher.DIAGNOSTIC_INFO) == set(patcher.DIAGNOSTIC))
 

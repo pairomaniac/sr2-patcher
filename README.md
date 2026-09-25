@@ -67,10 +67,9 @@ Work through the numbered sections in order:
    disc**, then **Install game** and **Rip soundtrack**. Skip it if the
    game is already in the folder. See [Disc images](#disc-images) and
    [Music](#music).
-3. **ESSENTIAL PATCHES** - always applied.
-4. **EXTRA PATCHES** - all ticked, yours to change. The ⓘ beside each
-   says what it does. Press **Apply patches**.
-5. **ADD-ONS** - on Windows **dgVoodoo 2** is ticked and downloaded on
+3. **PATCHES** - all applied; the ⓘ beside each says what it does.
+   Press **Apply patches**.
+4. **ADD-ONS** - on Windows **dgVoodoo 2** is ticked and downloaded on
    Apply. See [Add-ons](#add-ons).
 
 Then run `SEGA RALLY 2.exe` from that folder. **Restore original** puts
@@ -118,12 +117,11 @@ Image them once:
 
 ## What the patches do
 
-**Essential** patches fix what is broken on a modern machine and are
-always applied. **Extra** patches are down to taste: unticking one takes
-it back out on the next **Apply patches**. What each changes, down to
-the byte, is in [docs/NOTES.md](docs/NOTES.md).
-
-### Essential
+Every patch is applied: each fixes what is broken on a modern machine or
+adds what it lacks, and none has a trade-off - widescreen stays 4:3
+until you pick a size, the gamepad patch keeps the keyboard. To leave one
+out, use the terminal (below). What each changes, down to the byte, is
+in [docs/NOTES.md](docs/NOTES.md).
 
 - **No disc required** - every mode plays with nothing in the drive.
 - **Skip the start-up checks** - a 1999 video card, a 640x480 16-bit
@@ -146,9 +144,6 @@ the byte, is in [docs/NOTES.md](docs/NOTES.md).
   start at 6 rather than full.
 - **No registry** - settings sit beside the game, so the folder can be
   copied anywhere.
-
-### Extra
-
 - **Native widescreen** - the game renders at your screen's size and
   shape instead of 640x480 stretched. See [Widescreen](#widescreen).
 - **Music from files** - the soundtrack plays from the folder instead of

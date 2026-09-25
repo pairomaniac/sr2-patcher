@@ -853,12 +853,13 @@ FEATURES = (
 )
 
 
-# Display order. Essential fixes what is broken on a modern system and
-# has no trade-off, so it is applied without tick boxes; extra is taste,
-# and starts ticked.
+# Display order. None has a trade-off - widescreen stays 4:3 until a size
+# is picked, the pad patch keeps the keyboard - so the window applies
+# them all, without tick boxes; --patch takes a leading minus to leave
+# one out (parse_keys).
 ESSENTIAL = ('nodisc', 'start', 'crashes', 'altab', 'devicescan', 'window',
-             'lettering', 'hud', 'sound', 'settings')
-EXTRA = ('widescreen', 'music', 'gamepad', 'internet', 'loading')
+             'lettering', 'hud', 'sound', 'settings',
+             'widescreen', 'music', 'gamepad', 'internet', 'loading')
 
 BY_GROUP = {group: (label, tip, keys) for group, label, tip, keys in FEATURES}
 
@@ -888,14 +889,11 @@ DIAGNOSTIC_INFO = {
 }
 
 
-def group_keys(groups, extra=()):
-    """The patch keys for a set of feature groups, plus anything named in
-    extra - a diagnostic, the dgvoodoo add-on. Essential groups are in
-    whether they were asked for or not, and a key whose NEEDS is missing
-    goes out with it."""
-    wanted = set(ESSENTIAL) | set(groups)
-    keys = [k for k in PATCH_KEYS
-            if any(k in BY_GROUP[g][2] for g in wanted if g in BY_GROUP)]
+def group_keys(extra=()):
+    """Every feature group's patch keys, plus anything named in extra - a
+    diagnostic, the dgvoodoo add-on. A key whose NEEDS is missing goes
+    out with it."""
+    keys = [k for k in PATCH_KEYS if any(k in BY_GROUP[g][2] for g in ESSENTIAL)]
     keys += [k for k in extra if k not in keys]
     for _ in range(len(NEEDS)):             # a dropped need may drop another
         keys = [k for k in keys if all(need in keys
@@ -7654,9 +7652,9 @@ GAME_HELP = ('Only an untouched Pentium III install is accepted - the build '
              'the original installer chose on any modern CPU. A modified or '
              'mixed copy is refused; install afresh from the disc.')
 
-ESSENTIAL_HINT = ('Always applied. Each fixes something that is broken on a '
-                  'modern system, and none of them has a trade-off.')
-EXTRA_HINT = 'Optional. Untick what you do not want.'
+ESSENTIAL_HINT = ('All applied. Each fixes something that is broken on a '
+                  'modern system or adds what it lacks, and none has a '
+                  'trade-off.')
 
 ADDONS_HINT = ('An extra file beside the game rather than an edit to it. '
                'Applied with the patches: tick it and press Apply patches.')
@@ -7936,7 +7934,6 @@ def run_tk():
 
         def __init__(self, root):
             self.root = root
-            self.vars, self.checks = {}, {}
             self.diagnostics = {}
             self._bodies = []
             self._openers = {}
@@ -7980,12 +7977,10 @@ def run_tk():
             # the same frame five times and it stacks.
             self._section(left, '1  GAME FOLDER', self._game_body)
             self._section(left, '2  INSTALL', self._install_body)
-            self._section(right, '3  ESSENTIAL PATCHES',
+            self._section(right, '3  PATCHES',
                           lambda p: self._feature_body(p, ESSENTIAL,
                                                        ESSENTIAL_HINT))
-            self._section(right, '4  EXTRA PATCHES',
-                          lambda p: self._feature_body(p, EXTRA, EXTRA_HINT))
-            self._section(band, '5  ADD-ONS', self._addons_body)
+            self._section(band, '4  ADD-ONS', self._addons_body)
             self._section(band, 'DIAGNOSTICS', self._diagnostics_body,
                           expanded=False)
             # Side by side at the foot, on the same split as the columns
@@ -8796,7 +8791,7 @@ def run_tk():
             if then:
                 then()
 
-        # -- 3, 4 PATCHES
+        # -- 3 PATCHES
 
         def _feature_body(self, parent, groups, hint):
             if hint:
@@ -8805,30 +8800,18 @@ def run_tk():
                 label, tip, _keys = BY_GROUP[group]
                 row = ttk.Frame(parent, style='Card.TFrame')
                 row.pack(fill='x', pady=self.px(2))
-                if group in ESSENTIAL:
-                    # A permanently ticked box that cannot be clicked reads
-                    # like something is broken. A plain line does not, and
-                    # the card's own heading says these are always applied.
-                    self._static_label(ttk.Label(
-                        row, text=label, style='Card.TLabel',
-                        padding=(2, 3))).pack(side='left')
-                else:
-                    var = tk.BooleanVar(value=True)
-                    self.vars[group] = var
-                    check = self._static_label(ttk.Checkbutton(
-                        row, text=label, variable=var,
-                        style='Card.TCheckbutton', command=self._retally))
-                    check.pack(side='left')
-                    self.checks[group] = check
+                # A permanently ticked box that cannot be clicked reads
+                # like something is broken. A plain line does not, and
+                # the card's own hint says they are all applied.
+                self._static_label(ttk.Label(
+                    row, text=label, style='Card.TLabel',
+                    padding=(2, 3))).pack(side='left')
                 Info(row, label, tip, self).btn.pack(side='right',
                                                      padx=(6, 2))
 
         def _selected(self):
             """How many patches Apply would write right now."""
-            return len(group_keys(self._groups(), self._extras()))
-
-        def _groups(self):
-            return tuple(g for g in EXTRA if self.vars[g].get())
+            return len(group_keys(self._extras()))
 
         def _extras(self):
             keys = tuple(k for k in DIAGNOSTIC if self.diagnostics[k].get())
@@ -8842,7 +8825,7 @@ def run_tk():
                 self._set_status(GAME_READY % (build_name(self.build), self._selected()),
                                  True)
 
-        # -- 5 ADD-ONS, DIAGNOSTICS
+        # -- 4 ADD-ONS, DIAGNOSTICS
 
         def _addons_body(self, parent):
             _hint(parent, ADDONS_HINT, self.dim, self.small, pady=(0, 6))
@@ -9304,7 +9287,7 @@ def run_tk():
 
         def _apply(self):
             dest = self.game_var.get().strip()
-            keys = group_keys(self._groups(), self._extras())
+            keys = group_keys(self._extras())
             self._written = len([k for k in keys if k in PATCH_KEYS])     # the patches: not the add-on, not a diagnostic
             self._log('patch: %d patches to %s' % (self._written, dest))
             self._start('patch', lambda log: patch(dest, log, keys), BUSY)
@@ -9422,7 +9405,7 @@ def selfcheck():
                     raise ValueError('%s: a placeholder left in a stub' % build)
     # The window and the README list features, not keys; a key in neither
     # or in both is a patch nobody is offered or is offered twice.
-    listed = [k for group in ESSENTIAL + EXTRA for k in BY_GROUP[group][2]]
+    listed = [k for group in ESSENTIAL for k in BY_GROUP[group][2]]
     if sorted(listed) != sorted(PATCH_KEYS):
         raise ValueError('FEATURES and the patch table disagree: %s'
                          % ', '.join(sorted(set(listed) ^ set(PATCH_KEYS))))
