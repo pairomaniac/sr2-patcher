@@ -1374,7 +1374,9 @@ the four the exe's screens read (below) - the bindable first, which is
 what the page takes as a row's; only unnamed loads get records, or
 player 1's would double. A save takes the table back out of the exported records (the
 first key and pad source per action), a name beginning `DZ` the digits
-after it as the deadzone, and rewrites the text.
+after it as the deadzone, and rewrites the text - the `[Display]`
+Resolution line and the `[Network]` section's Staging and Log (the
+netplay DLL's, 0 or 1) carried over as the file had them.
 
 The menus' left and right are the steering's actions, so their fixed
 sources are *menu-only* - a key at `0x400` + scancode, read from the

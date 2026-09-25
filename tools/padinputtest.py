@@ -122,15 +122,16 @@ def main(argv):
         elif name == 'CloseHandle':
             ret = 1
         elif name == 'GetPrivateProfileStringA':
-            # the [Display] Resolution line of the file, as Windows would read it
-            assert (cstr(args[0]), cstr(args[1])) == ('Display', 'Resolution') and cstr(args[5]) == CFG
-            value = b''
+            # a line of the file, as Windows would read it: [Display] Resolution, [Network] Staging and Log
+            sect, key = cstr(args[0]), cstr(args[1])
+            assert (sect, key) in (('Display', 'Resolution'), ('Network', 'Staging'), ('Network', 'Log')) and cstr(args[5]) == CFG
+            value = cstr(args[2]).encode()
             section = None
             for line in (disk['text'] or b'').splitlines():
                 line = line.strip()
                 if line.startswith(b'['):
                     section = line
-                elif section == b'[Display]' and line.split(b'=')[0].strip() == b'Resolution':
+                elif section == ('[%s]' % sect).encode() and line.split(b'=')[0].strip() == key.encode():
                     value = line.split(b'=', 1)[1].strip()
             mu.mem_write(args[3], value[:args[4] - 1] + b'\0')
             ret = len(value)
@@ -212,6 +213,11 @@ def main(argv):
     assert disk['text'] == uctest.annex_text([None, t2], (1000, 4000)), disk['text'].decode()
     recs, count = load(slot1)
     assert recs == uctest.annex_records(1, t2), count
+    # the [Network] section's values survive a save as they stand
+    disk['text'] = disk['text'].replace(b'Staging = 0\nLog = 0\n', b'Staging = 1\nLog = 1\n')
+    mu.mem_write(buf, three)
+    ret, _p = call(site(save_off), this, slot1, name, buf, 3)
+    assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 4000), ('1', '1')), disk['text'].decode()
     assert count == 13 + 1 + len(patcher.FIXED_ACTIONS) + len(patcher.FIXED_PADS)
 
     # 3. a fresh session parses that text back; 1P still the defaults

@@ -84,8 +84,9 @@ cannot be made that way raises `SR2_PROTO_MIN`. A patcher from before
 the version, which sends none (0.7.0 and earlier), is refused with a
 reason in `sr2-net.log` on both sides.
 
-`sr2-net.log` beside the exe, created empty, turns on a log of what the
-core did.
+`Log = 1` under `[Network]` in `SR2.CFG` turns on `sr2-net.log` beside
+the exe, a log of what the core did. The pad annex writes the section
+with both keys when it saves the controls, so the file shows them.
 
 The game's socket is UDP 47626. When that port is taken - a second copy
 of the game on the machine, say - the DLL binds any free port and says
@@ -154,14 +155,14 @@ which no sender makes, and a welcome whose index is past the player table.
 
 A change to `directory.py` or to the wire between it and the DLL goes to
 the staging server first: `test.segaonline.net` (`SR2_STAGING_DIRECTORY`
-in `sr2net.h`). An empty file named `sr2-staging.txt` beside the exe sends
+in `sr2net.h`). `Staging = 1` under `[Network]` in `SR2.CFG` sends
 INTERNET there instead of the live three; `sr2-net.log` says so. Run
 the new `directory.py` there (`tools/directory-install.sh install`),
-put the file on two machines, host, list, join direct and through the
-relay, and read both logs and the server's journal. Then update the
-live servers and delete the file. A DLL from before the change is the
-other thing to try against it: it should get nothing, and the journal
-should show nothing odd.
+set it on two machines, host, list, join direct and through the relay,
+and read both logs and the server's journal. Then update the live
+servers and set it back. A DLL from before the change is the other
+thing to try against it: it should get nothing, and the journal should
+show nothing odd.
 
 ## Running a directory server
 

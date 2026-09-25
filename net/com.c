@@ -7,8 +7,9 @@
  * the exe and its manifest are none the wiser. Slots the exe never calls
  * return E_NOTIMPL. Player ids are index + 1, so none is 0.
  *
- * A file named sr2-net.log beside the exe, created empty, turns logging
- * on: what the core did, one line each.
+ * Log = 1 under [Network] in SR2.CFG beside the exe turns logging on,
+ * to sr2-net.log: what the core did, one line each. Staging = 1 there
+ * sends INTERNET to the staging directory.
  */
 #include <winsock2.h>
 #include <windows.h>
@@ -61,22 +62,22 @@ static int beside_exe(const char *name, char *path, size_t size)
     return 1;
 }
 
+/* A [Network] setting in SR2.CFG beside the exe: Log = 1 writes
+ * sr2-net.log, Staging = 1 sends INTERNET to the staging directory. */
+static int network_setting(const char *key)
+{
+    char path[MAX_PATH];
+    if (!beside_exe("SR2.CFG", path, sizeof path))
+        return 0;
+    return GetPrivateProfileIntA("Network", key, 0, path) != 0;
+}
+
 static void log_open(void)
 {
     char path[MAX_PATH];
-    if (g_log || !beside_exe("sr2-net.log", path, sizeof path))
+    if (g_log || !network_setting("Log") || !beside_exe("sr2-net.log", path, sizeof path))
         return;
-    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES)
-        g_log = fopen(path, "a");
-}
-
-/* An empty file named sr2-staging.txt beside the exe sends INTERNET to the
- * staging directory instead of the live ones: how a new server is tried
- * before the live ones take it. */
-static int staging(void)
-{
-    char path[MAX_PATH];
-    return beside_exe("sr2-staging.txt", path, sizeof path) && GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+    g_log = fopen(path, "a");
 }
 
 static int guid_eq(const GUID *a, const GUID *b) { return memcmp(a, b, sizeof(GUID)) == 0; }
@@ -489,9 +490,9 @@ static HRESULT __stdcall Network_OpenConnection(network *n, const DWORD *spec)
     case 1: kind = SR2_KIND_DIRECT; address = (const char *)spec[1]; break;
     case 2:
         kind = SR2_KIND_INTERNET;
-        if (staging()) {
+        if (network_setting("Staging")) {
             address = SR2_STAGING_DIRECTORY;
-            log_line(NULL, "directory: " SR2_STAGING_DIRECTORY ", sr2-staging.txt is beside the exe");
+            log_line(NULL, "directory: " SR2_STAGING_DIRECTORY ", Staging = 1 in SR2.CFG");
         }
         break;
     case 3: kind = SR2_KIND_LAN; break;

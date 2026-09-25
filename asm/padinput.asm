@@ -111,8 +111,9 @@ getbase:
 ; the config exports and rewrites the text. Lines it cannot read keep
 ; the defaults. An old file with the game's 100-byte block ahead of the
 ; text is read past it. A [Display] section belongs to the resolution
-; setting (wide.asm, resolution.asm): the writer copies its Resolution
-; line from the file as it stands, so it survives a save.
+; setting (wide.asm, resolution.asm) and a [Network] section to the
+; netplay DLL (Staging and Log, 0 or 1): the writer copies their lines
+; from the file as they stand, so they survive a save.
 
 %define T_KEYNAMES      0               ; 256 names, NAME bytes each, spaces as _
 %define T_PADNAMES      4096            ; 32 names
@@ -737,6 +738,12 @@ write_text:
         mov     al, 10
         stosb
 .nodisp:
+        lea     esi, [ebx + netheader - $$]     ; the network section, its two keys as the file has them
+        call    puts
+        lea     esi, [ebx + s_netstaging - $$]
+        call    netline
+        lea     esi, [ebx + s_netlog - $$]
+        call    netline
         lea     esi, [ebx + tables - $$ + W_TEXT]
         sub     edi, esi                ; the length
         push    OPEN_ALWAYS
@@ -757,6 +764,33 @@ write_text:
         push    ebp
         call    [ebx + fn_closehandle - $$]
 .out:   popad
+        ret
+
+; esi = a [Network] key: "key = value" and a newline appended at edi,
+; the value as the file has it, 0 without one.
+netline:
+        push    edi
+        push    esi
+        lea     eax, [ebx + path - $$]
+        push    eax
+        push    8
+        lea     eax, [ebx + netvalue - $$]
+        push    eax
+        lea     eax, [ebx + s_zero - $$]
+        push    eax
+        push    esi
+        lea     eax, [ebx + s_netsect - $$]
+        push    eax
+        call    [ebx + fn_getpps - $$]
+        pop     esi
+        pop     edi
+        call    puts
+        lea     esi, [ebx + s_equals - $$]
+        call    puts
+        lea     esi, [ebx + netvalue - $$]
+        call    puts
+        mov     al, 10
+        stosb
         ret
 
 ; esi = a string: appended at edi.
@@ -798,6 +832,13 @@ s_dispsect:     db 'Display', 0
 s_reskey:       db 'Resolution', 0
 s_empty:        db 0
 dispvalue:      times 32 db 0
+netheader:      db 10, '[Network]', 10, 0
+s_netsect:      db 'Network', 0
+s_netstaging:   db 'Staging', 0
+s_netlog:       db 'Log', 0
+s_zero:         db '0', 0
+s_equals:       db ' = ', 0
+netvalue:       times 8 db 0
 controller:     db 'Controller', 0
 keyboard:       db 'Keyboard', 0
 deadzone_name:  db 'Deadzone =', 0
