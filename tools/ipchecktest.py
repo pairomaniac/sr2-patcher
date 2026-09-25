@@ -11,7 +11,8 @@ popup's sound call with the cancel sound's four arguments pushed. Then
 the entry's init run on each field, and the character handler's compare
 on the cap it left: the address slot 47, the team name 35, the chat
 line 255, the driver name 20, anything else the stock 0x800; and the
-paste bounded by the room the cap leaves. Needs
+paste bounded by the room the cap leaves; and the team room's status
+line asked of the DLL's slot, the exe's own lookup kept as the fallback. Needs
 python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -138,7 +139,46 @@ def main(argv):
             got = bytes(mu.mem_read(edit, 16)).split(b'\0')[0].decode()
             assert got == want and mu.reg_read(UC_X86_REG_EAX) == len(want), 'paste %r with %d of %d: %r, %d' % (clip, have, cap, got, mu.reg_read(UC_X86_REG_EAX))
             assert mu.reg_read(UC_X86_REG_EBX) == 0x4444
-    print('ipchecktest: %s: %d addresses accepted, %d entries refused with the cancel sound; %d fields capped; the paste bounded'
+    # the status line: the stub asks the network object's slot +0x38 for
+    # the line into the init's buffer and goes to the draw with one, or
+    # redoes the lea and returns without an object, on an error, or empty
+    status = BASE + patcher._off_to_rva(image, row['sites']['status'])
+    netobj, draw = row['addresses']['NETOBJ'], row['addresses']['DRAW']
+    OBJ, VT, SLOT = STACK + 0x5000, STACK + 0x5100, STACK + 0x5200
+    mu.mem_write(OBJ, struct.pack('<I', VT))
+    mu.mem_write(VT + 0x38, struct.pack('<I', SLOT))
+    stops = (status + 7, draw)
+    calls = []
+
+    def on_slot(mu_, address, size_, user):
+        esp_ = mu_.reg_read(UC_X86_REG_ESP)
+        this, buf, n = struct.unpack('<3I', mu_.mem_read(esp_ + 4, 12))
+        calls.append((this, buf, n))
+        mu_.mem_write(buf, user[0])
+        mu_.reg_write(UC_X86_REG_EAX, user[1])
+    for line, hr, have_obj, want in ((b'Local: 1.2.3.4  Public: 5.6.7.8\0', 0, True, draw),
+                                     (b'\0', 0, True, status + 7), (b'x\0', 0x80004005, True, status + 7), (b'x\0', 0, False, status + 7)):
+        mu.mem_write(SLOT, b'\xc2\x0c\x00')                            # ret 0xc
+        h = mu.hook_add(UC_HOOK_CODE, on_slot, (line, hr), begin=SLOT, end=SLOT + 1)
+        mu.mem_write(netobj, struct.pack('<I', OBJ if have_obj else 0))
+        esp = STACK + 0x8000
+        mu.mem_write(esp + 0x20, b'\xee' * 0x100)
+        mu.reg_write(UC_X86_REG_ESP, esp)
+        mu.reg_write(UC_X86_REG_EBX, 0)
+        mu.reg_write(UC_X86_REG_ESI, 0x5555)
+        calls.clear()
+        mu.emu_start(status, 0, count=200)
+        mu.hook_del(h)
+        eip = mu.reg_read(UC_X86_REG_EIP)
+        assert eip == want, 'status with %r/%#x/%s stopped at 0x%x' % (line, hr, have_obj, eip)
+        assert mu.reg_read(UC_X86_REG_ESP) == esp and mu.reg_read(UC_X86_REG_ESI) == 0x5555
+        if have_obj:
+            assert calls == [(OBJ, esp + 0x20, 0x100)], 'the slot call: %r' % calls
+        if want == draw:
+            assert bytes(mu.mem_read(esp + 0x20, len(line))) == line
+        else:
+            assert mu.reg_read(UC_X86_REG_EAX) == esp + 0x220, 'the lea redone'
+    print('ipchecktest: %s: %d addresses accepted, %d entries refused with the cancel sound; %d fields capped; the paste bounded; the status line'
           % (build, len(ACCEPTED), len(REFUSED), len(cases)))
     return 0
 

@@ -131,7 +131,9 @@ struct sr2_net {
     int       kind;
     sock_addr target;               /* direct: the host typed; lan: where the search goes */
     int       have_target;
-    int       bad_target;           /* direct: the text typed was not an address; the search fails, hosting does not need it */
+    char      target_text[64];      /* direct: the text typed, looked up at the first search; hosting does not need it */
+    int       bad_target;           /* direct: the text was not an address; the search fails */
+    sock_stun *stun;                /* direct: the public address, asked of a STUN server off the game's thread */
     sock_addr servers[MAX_SERVERS]; /* the directory, SR2_KIND_INTERNET */
     int       nservers;
     sock_resolver *resolving;       /* the servers' names being looked up, off the game's thread */
@@ -1065,6 +1067,7 @@ void sr2_destroy(sr2_net *n)
     if (n->sock != SOCK_INVALID)
         sock_close(n->sock);
     sock_resolve_drop(n->resolving);
+    sock_stun_drop(n->stun);
     free(n);
     sock_cleanup();
 }
@@ -1088,20 +1091,29 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
     sock_random((uint8_t *)&n->secret, sizeof n->secret);
     n->have_target = 0;
     n->bad_target = 0;
+    n->target_text[0] = 0;
+    sock_stun_drop(n->stun);
+    n->stun = NULL;
     n->target.addr = htonl(INADDR_BROADCAST);
     n->target.port = SR2_PORT;
     n->nservers = 0;
     sock_resolve_drop(n->resolving);
     n->resolving = NULL;
     memset(n->dcookie, 0, sizeof n->dcookie);
-    if (kind == SR2_KIND_DIRECT && address && address[0]) {
+    if (kind == SR2_KIND_DIRECT) {
         /* the game opens the connection to host as well as to search, with
-           whatever the address box holds; a bad one only matters to a search */
-        if (sock_parse(address, SR2_PORT, &n->target) != 0) {
-            nlog(n, "open: %s is not an address; a search will fail", address);
-            n->bad_target = 1;
-        } else
+           whatever the address box holds: the text is kept and looked up at
+           the first search, so hosting never waits on a resolver */
+        if (address && address[0] && strlen(address) < sizeof n->target_text) {
+            strcpy(n->target_text, address);
             n->have_target = 1;
+        }
+#ifndef SR2_TEST
+        {
+            static const char *const servers[] = SR2_STUN_SERVERS;
+            n->stun = sock_stun_start(servers);
+        }
+#endif
     }
     if (kind == SR2_KIND_INTERNET) {
 #ifdef SR2_TEST
@@ -1123,7 +1135,7 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
             return SR2_ERR;
         }
     }
-    nlog(n, "open: kind %d, port %u, %s", kind, n->port, n->have_target ? address : "search");
+    nlog(n, "open: kind %d, port %u, %s", kind, n->port, n->have_target ? n->target_text : "search");
     if (n->port != SR2_PORT)
         nlog(n, "open: port %u was taken; a LAN search will not find this machine", SR2_PORT);
     return SR2_OK;
@@ -1155,6 +1167,14 @@ int sr2_enum(sr2_net *n, uint32_t now, sr2_session *out, int max)
     int i, c = 0;
     if (n->sock == SOCK_INVALID || n->bad_target)
         return SR2_ERR;
+    if (n->target_text[0]) {            /* the address typed, looked up now */
+        if (sock_parse(n->target_text, SR2_PORT, &n->target) != 0) {
+            nlog(n, "search: %s is not an address", n->target_text);
+            n->bad_target = 1;
+            return SR2_ERR;
+        }
+        n->target_text[0] = 0;
+    }
     if (!n->searching) {
         n->searching = 1;
         n->search_start = now;
@@ -1471,17 +1491,29 @@ int sr2_send(sr2_net *n, int to, const void *data, int len, int reliable, uint32
     return SR2_OK;
 }
 
+/* The team room's status line: "Local: a.b.c.d  Public: e.f.g.h", the
+   local addresses as the machine has them (up to two, for the room's
+   width), the public one as the STUN server saw it - "?" while it has not
+   answered - and the port when it is not the usual one. */
 const char *sr2_status(sr2_net *n)
 {
-    uint32_t addrs[3];
-    int i, c = sock_local(addrs, 3), pos = 0;
-    n->status[0] = 0;
-    for (i = 0; i < c; i++) {
+    uint32_t addrs[2], pub;
+    int i, c = sock_local(addrs, 2), pos = 0;
+    pos += snprintf(n->status, sizeof n->status, "Local: ");
+    for (i = 0; i < c && pos < (int)sizeof n->status; i++) {
         const uint8_t *b = (const uint8_t *)&addrs[i];
-        pos += snprintf(n->status + pos, sizeof n->status - pos, "%s%u.%u.%u.%u:%u",
-                        i ? " , " : "IP Address : ", b[0], b[1], b[2], b[3], n->port);
-        if (pos >= (int)sizeof n->status)
-            break;
+        pos += snprintf(n->status + pos, sizeof n->status - pos, "%s%u.%u.%u.%u", i ? ", " : "", b[0], b[1], b[2], b[3]);
     }
+    if (!c && pos < (int)sizeof n->status)
+        pos += snprintf(n->status + pos, sizeof n->status - pos, "?");
+    if (pos < (int)sizeof n->status) {
+        if (sock_stun_result(n->stun, &pub) > 0) {
+            const uint8_t *b = (const uint8_t *)&pub;
+            pos += snprintf(n->status + pos, sizeof n->status - pos, "  Public: %u.%u.%u.%u", b[0], b[1], b[2], b[3]);
+        } else
+            pos += snprintf(n->status + pos, sizeof n->status - pos, "  Public: ?");
+    }
+    if (n->port != SR2_PORT && pos < (int)sizeof n->status)
+        snprintf(n->status + pos, sizeof n->status - pos, "  Port: %u", n->port);
     return n->status;
 }

@@ -256,7 +256,8 @@ and serial:
   **SEARCH** asks again. Joining needs no port forwarding.
 - **DIRECT IP** - **SEARCH** asks for the host's address, or
   `address:port`, and lists its team; **CREATE** hosts. The host forwards
-  UDP 47626. A blank or malformed entry is refused.
+  UDP 47626; the team room's status line shows its local and public
+  address. A blank or malformed entry is refused.
 - **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are

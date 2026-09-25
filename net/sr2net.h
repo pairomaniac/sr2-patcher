@@ -14,6 +14,7 @@
 
 #define SR2_PORT            47626   /* the game; the directory is SR2_PORT+1 */
 #define SR2_DIRECTORIES     {"segaonline.net", "us.segaonline.net", "jp.segaonline.net", 0}
+#define SR2_STUN_SERVERS    {"stun.l.google.com", "stun1.l.google.com", 0}   /* for the public address on the status line */
 #define SR2_STAGING_DIRECTORY "test.segaonline.net"   /* used instead with Staging = 1 under [Network] in SR2.CFG */
 #define SR2_MAX_PLAYERS     4
 #define SR2_NAME_LEN        64      /* the game's name fields, NUL included */

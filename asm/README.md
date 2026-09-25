@@ -45,6 +45,7 @@ Two rules every blob follows:
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
 | `ipcheck.asm` | exe | the IP entry popup's OK refused for a blank or malformed address |
 | `entrycap.asm` | exe | the lobby's text entries capped at what their fields hold, CTRL+V included |
+| `status.asm` | exe | the team room's status line asked of the netplay DLL: local and public address |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
@@ -412,6 +413,17 @@ room the cap leaves, characters under a space dropped, and the count
 copied returned where the length was. The section keeps the cap, so it
 is writable. `tools/ipchecktest.py` runs all three on the real exe
 under Unicorn.
+
+## status.asm
+
+In the exe's annex, in place of the `lea` that starts the team room's
+own status line on DIRECT IP (`0x43604b`: `gethostbyname` and
+`IP Address : %d.%d.%d.%d`). It asks the netplay DLL's network object
+for the line - its added slot `+0x38`, `Network_StatusLine(buf, len)`,
+`Local: a.b.c.d  Public: e.f.g.h` - into the init's own buffer and
+continues at the draw (`0x43611c`); without a network object, on an
+error or an empty line it redoes the `lea` and returns to the exe's
+code. `tools/ipchecktest.py` runs it under Unicorn with a fake object.
 
 ## hudlast.asm
 

@@ -318,4 +318,137 @@ static inline int sock_resolved(sock_resolver *r, sock_addr *out, int max)
     return i;
 }
 
+/* The machine's public address, asked of a STUN server (RFC 5389, a
+ * binding request from a socket of its own) on a thread of its own, the
+ * servers tried in turn: sock_stun_start begins it, sock_stun_result
+ * says whether it is done and hands over the address, sock_stun_drop
+ * lets go of it. The block is shared with the thread as the resolver's. */
+#define SOCK_STUN_PORT   19302
+#define SOCK_STUN_TRIES  6              /* half a second each */
+#define SOCK_STUN_MAX    4
+
+typedef struct {
+    volatile long refs;
+    volatile long done;
+    char      servers[SOCK_STUN_MAX][64];
+    int       nservers;
+    uint32_t  addr;                     /* network order, 0 for none */
+} sock_stun;
+
+static inline void sock_stun_drop(sock_stun *st)
+{
+    if (st && sock_atomic_add(&st->refs, -1) == 0)
+        free(st);
+}
+
+static inline int sock_stun_ask(const char *server, uint32_t *addr)
+{
+    uint8_t req[20], resp[256];
+    sock_addr to, from;
+    uint16_t bound;
+    sock_t s;
+    int tries, i, found = 0;
+    if (sock_parse(server, SOCK_STUN_PORT, &to) != 0)
+        return 0;
+    s = sock_open(0, &bound);
+    if (s == SOCK_INVALID)
+        return 0;
+    memset(req, 0, sizeof req);         /* a binding request: type 1, no attributes, the magic cookie, an id */
+    req[1] = 1;
+    req[4] = 0x21; req[5] = 0x12; req[6] = 0xa4; req[7] = 0x42;
+    sock_random(req + 8, 12);
+    for (tries = 0; tries < SOCK_STUN_TRIES && !found; tries++) {
+        fd_set rd;
+        struct timeval tv;
+        int n;
+        sock_send(s, &to, req, sizeof req);
+        FD_ZERO(&rd);
+        FD_SET(s, &rd);
+        tv.tv_sec = 0;
+        tv.tv_usec = 500000;
+        if (select((int)s + 1, &rd, NULL, NULL, &tv) <= 0)
+            continue;
+        n = sock_recv(s, &from, resp, sizeof resp);
+        if (n < 20 || resp[0] != 1 || resp[1] != 1 || memcmp(resp + 4, req + 4, 16) != 0)
+            continue;                   /* not a binding response to this request */
+        for (i = 20; i + 4 <= n && !found; ) {
+            int type = (resp[i] << 8) | resp[i + 1], len = (resp[i + 2] << 8) | resp[i + 3];
+            const uint8_t *v = resp + i + 4;
+            if (i + 4 + len > n)
+                break;
+            if ((type == 0x0020 || type == 0x0001) && len >= 8 && v[1] == 1) {   /* XOR-MAPPED-ADDRESS, MAPPED-ADDRESS, IPv4 */
+                memcpy(addr, v + 4, 4);
+                if (type == 0x0020)
+                    *addr ^= *(const uint32_t *)(req + 4);
+                found = 1;
+            }
+            i += 4 + ((len + 3) & ~3);
+        }
+    }
+    sock_close(s);
+    return found;
+}
+
+#ifdef _WIN32
+static inline DWORD WINAPI sock_stun_thread(LPVOID arg)
+#else
+static inline void *sock_stun_thread(void *arg)
+#endif
+{
+    sock_stun *st = (sock_stun *)arg;
+    uint32_t addr = 0;
+    int i;
+    for (i = 0; i < st->nservers && !addr; i++)
+        if (!sock_stun_ask(st->servers[i], &addr))
+            addr = 0;
+    st->addr = addr;
+    sock_atomic_add(&st->done, 1);
+    sock_stun_drop(st);
+    return 0;
+}
+
+static inline sock_stun *sock_stun_start(const char *const *servers)
+{
+    sock_stun *st = (sock_stun *)calloc(1, sizeof *st);
+    int i;
+    if (!st)
+        return NULL;
+    for (i = 0; servers[i] && st->nservers < SOCK_STUN_MAX; i++)
+        if (strlen(servers[i]) < sizeof st->servers[0])
+            strcpy(st->servers[st->nservers++], servers[i]);
+    st->refs = 2;
+#ifdef _WIN32
+    {
+        HANDLE h = CreateThread(NULL, 0, sock_stun_thread, st, 0, NULL);
+        if (!h) {
+            free(st);
+            return NULL;
+        }
+        CloseHandle(h);
+    }
+#else
+    {
+        pthread_t t;
+        if (pthread_create(&t, NULL, sock_stun_thread, st) != 0) {
+            free(st);
+            return NULL;
+        }
+        pthread_detach(t);
+    }
+#endif
+    return st;
+}
+
+/* 1 with the address once the thread has one, 0 when it found none, -1
+ * while it runs or when there is no lookup. */
+static inline int sock_stun_result(sock_stun *st, uint32_t *addr)
+{
+    if (!st || !sock_atomic_add(&st->done, 0))
+        return -1;
+    if (!st->addr)
+        return 0;
+    *addr = st->addr;
+    return 1;
+}
+
 #endif

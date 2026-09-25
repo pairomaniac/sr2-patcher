@@ -219,6 +219,24 @@ static void forged_index(void)
     ok("a game message naming another index is dropped, one naming its own delivered");
 }
 
+/* A network opened DIRECT with text that is no address hosts at once -
+ * the game opens to host with whatever the box holds - and its search
+ * fails; the same with an address searches. */
+static void bad_address_hosts(void)
+{
+    sr2_session found[2];
+    sr2_net *n = sr2_create();
+    sr2_set_log(n, logline, (void *)"bad");
+    if (sr2_open(n, SR2_KIND_DIRECT, "no such host", now) != SR2_OK || sr2_host(n, "TEAM", 4, now) != SR2_OK)
+        fail("a DIRECT open with a bad address did not host");
+    if (sr2_enum(n, now, found, 2) != SR2_ERR)
+        fail("a search with a bad address did not fail");
+    if (sr2_open(n, SR2_KIND_DIRECT, "127.0.0.1", now) != SR2_OK || sr2_enum(n, now, found, 2) == SR2_ERR)
+        fail("a search with an address failed");
+    sr2_destroy(n);
+    ok("a DIRECT open keeps the text: a bad one hosts and fails the search, an address searches");
+}
+
 /* A host that answers a join by itself: the welcome carries `index`, and
  * the wire version unless `old`, the shape a host from before it sends. */
 static int fake_host(int who, int index, int old)
@@ -394,6 +412,7 @@ int main(void)
 
     oversized();
     forged_index();
+    bad_address_hosts();
     forged_ack();
     uncookied();
     if (fake_host(5, 1, 0) != SR2_OK || sr2_my_index(nets[5]) != 1)

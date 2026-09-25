@@ -26,7 +26,8 @@ Three layers in the stock game:
    `DPSESSION_MIGRATEHOST | KEEPALIVE`.
 
 The exe also imports four WSOCK32 functions, only to print its own address
-on the team room's status line (`0x436038`).
+on the team room's status line (`0x436038`; with `lobby` the DLL's line,
+*What the DLL covers*).
 
 ### The network object
 
@@ -224,9 +225,11 @@ reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
   SEARCH asks for the address, or `address:port`, and lists the host's
   team. A blank, over-long or malformed entry is refused at the popup
   (NOTES.md, *The connection screen*). The exe opens the connection with
-  whatever the address box holds for CREATE too; a name that does not
-  resolve is logged and fails the search, not the open, so hosting goes
-  ahead. What TCP/IP did, without DirectPlay.
+  whatever the address box holds for CREATE too, so the DLL keeps the
+  text and looks it up at the first search: hosting never waits on a
+  resolver, and a name that does not resolve fails the search. The team
+  room's status line shows the local and public address (below). What
+  TCP/IP did, without DirectPlay.
 - **LAN**: a broadcast search, no popup.
 
 **Behind CGNAT.** Under carrier-grade or symmetric NAT the port the
@@ -272,11 +275,14 @@ dropped, and a directory started for the run.
   between machines. `FindPlayerByIndex` must hand back a player object
   for an empty slot: the room's row draw reads its name whether or not
   the call succeeded.
-- The team room's status line still prints what `gethostbyname` gives,
-  the machine's own address: right for a DIRECT IP host on a LAN,
-  meaningless behind a router. `Network_StatusLine` at the network
-  object's added slot `+0x38` answers with the address the core is
-  using, but nothing in the exe calls it yet.
+- The team room's status line on DIRECT IP comes from
+  `Network_StatusLine`, the network object's added slot `+0x38`:
+  `Local: a.b.c.d  Public: e.f.g.h`, the local addresses as the machine
+  has them and the public one a STUN server (`stun.l.google.com`, then
+  `stun1`) saw, asked on a thread of the DLL's when the connection
+  opens; `?` while it has not answered, and `Port: n` when 47626 was
+  taken. The exe's own `gethostbyname` line (`0x43604b`) stays as the
+  fallback when the slot answers nothing (asm/status.asm).
 
 ## Ports and servers
 
