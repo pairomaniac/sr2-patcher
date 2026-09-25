@@ -157,10 +157,9 @@ the **session list** `0x43f380` (JOIN / CREATE / SHOWTEAM / CANCEL).
 SHOWTEAM dispatches on the type through `0x43efd8`: IPX opens the
 connection and searches at once, TCP/IP first puts up the **IP entry**
 popup `0x43cd30` (`IP_ENTRY.BMP`; the text goes verbatim to `0x4eacec`,
-a 16-byte slot, empty meaning "broadcast"; with `lobby` a blank,
-malformed or over-long entry is refused there). The search calls `EnumSessions`
-every frame for 30 s while it returns `DPERR_CONNECTING`, then for
-`latency` ms more. JOIN → `JoinSession` + `CreatePlayer`, then a loop with
+a 16-byte slot, empty meaning "broadcast"; `lobby` checks it first). The
+search calls `EnumSessions` every frame for 30 s while it returns
+`DPERR_CONNECTING`, then for `latency` ms more. JOIN → `JoinSession` + `CreatePlayer`, then a loop with
 no timeout until the index is known (`0x4402a0`). CREATE → the team name
 entry → `OpenConnection`, `CreateSession`, `CreatePlayer`. Both go on to
 MSelect's car select and then the **team room** `0x435b90`, whose status
@@ -223,13 +222,12 @@ reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
   OPEN/CLOSE and START are the controls.
 - **DIRECT IP**: the host forwards UDP 47626 and CREATEs; the guest's
   SEARCH asks for the address, or `address:port`, and lists the host's
-  team. A blank, over-long or malformed entry is refused at the popup
-  (NOTES.md, *The connection screen*). The exe opens the connection with
-  whatever the address box holds for CREATE too, so the DLL keeps the
-  text and looks it up at the first search: hosting never waits on a
-  resolver, and a name that does not resolve fails the search. The team
-  room's status line shows the local and public address (below). What
-  TCP/IP did, without DirectPlay.
+  team. The popup refuses anything that is not an address (NOTES.md,
+  *The connection screen*). The exe opens the connection with the
+  address box's text for CREATE too, so the DLL looks it up at the
+  first search, not the open: hosting never waits on a resolver. The
+  team room's status line shows the local and public address (below).
+  What TCP/IP did, without DirectPlay.
 - **LAN**: a broadcast search, no popup.
 
 **Behind CGNAT.** Under carrier-grade or symmetric NAT the port the
@@ -260,7 +258,7 @@ Against the stock DLL and DirectPlay:
 | events 0-3: host identified, player created, destroyed, session lost | the same, in the order the exe wants; a guest's `0x4402a0` loop finds its index known the moment `CreatePlayer` returns |
 | DirectPlay's keep-alive and loss detection | a keep-alive every 500 ms; twelve seconds of silence, or of nothing acknowledged, drops a guest (the others told) or loses the session for a guest; a leave is announced |
 | `SetOpen`, the reserved slots, a player kicked from a closed slot | the same |
-| chat, names in the team room, the WIN RATIO figures | the exe's own messages (`0x1b`, `0x2a`) - carried, not interpreted, with one check: a game message (types `0x1b`-`0x31`) whose second byte, the sender's index, is not the index it came by is dropped and logged, since the exe indexes its tables by that byte unchecked - an entry (`0x2a`) lands 0x44 bytes at the row it names; `GetName` answers from the roster |
+| chat, names in the team room, the WIN RATIO figures | the exe's own messages (`0x1b`, `0x2a`) - carried, not interpreted, except that a game message (types `0x1b`-`0x31`) whose second byte, the sender's index, is not the sender's is dropped: the exe indexes its tables by that byte unchecked; `GetName` answers from the roster |
 | host migration (`DPSYS_HOST`) | not reproduced: a host leaving is *session lost* for everyone, which the exe already handles by returning to the connection screens |
 | the lockstep methods (`SendSequenced`, `SetReady`, `ReadCurrent`), `EnumConnections`, `SelectConnection`, `ConnectViaLobby`, modem, serial | not reproduced; the exe never used them, or they cannot work today |
 
@@ -275,14 +273,13 @@ dropped, and a directory started for the run.
   between machines. `FindPlayerByIndex` must hand back a player object
   for an empty slot: the room's row draw reads its name whether or not
   the call succeeded.
-- The team room's status line on DIRECT IP comes from
-  `Network_StatusLine`, the network object's added slot `+0x38`:
-  `Local: a.b.c.d  Public: e.f.g.h`, the local addresses as the machine
-  has them and the public one a STUN server (`stun.l.google.com`, then
-  `stun1`) saw, asked on a thread of the DLL's when the connection
-  opens; `?` while it has not answered, and `Port: n` when 47626 was
-  taken. The exe's own `gethostbyname` line (`0x43604b`) stays as the
-  fallback when the slot answers nothing (asm/status.asm).
+- The team room's status line on DIRECT IP is `Network_StatusLine`,
+  the network object's added slot `+0x38`: `Local: a.b.c.d  Public:
+  e.f.g.h`, the public address from a STUN server (`stun.l.google.com`,
+  then `stun1`) asked on a thread when the connection opens, `?` until
+  it answers; `Port: n` when 47626 was taken. The exe's own
+  `gethostbyname` line is the fallback when the slot answers nothing
+  (asm/status.asm).
 
 ## Ports and servers
 

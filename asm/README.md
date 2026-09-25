@@ -385,45 +385,39 @@ under Unicorn.
 
 In the exe's annex, called in place of the length compare the IP entry
 popup's OK press makes (`0x43cb4e`; blank meant DirectPlay's broadcast).
-The entry's text is walked once for its length - at most 47, what the
-settings' 16-byte slot and the unused modem number's after it hold -
-and its last colon; the port after the colon is taken as digits in
-1..65535, and the host before it as either a name - letters, digits,
-dots and hyphens, at least one letter - or a dotted quad of four groups
-of at most 255. An address: the compare
-is redone and the press goes on as it did. Anything else: the return
-address is dropped, the popup's four sound arguments pushed with the
-cancel sound, and the popup's own sound call (`0x43cbac`) continued
-into, so the popup stays up. `tools/ipchecktest.py` runs it on the real
-exe under Unicorn.
+The text passes as at most 47 characters - the settings' 16-byte slot
+and the unused modem number's after it - of a dotted quad or a name of
+letters, digits, dots and hyphens, with an optional `:port` in
+1..65535; then the compare is redone and the press goes on. Otherwise
+the return address is dropped, the popup's sound arguments pushed with
+the cancel sound, and its own sound call (`0x43cbac`) continued into,
+so the popup stays up. `tools/ipchecktest.py` runs it on the real exe
+under Unicorn.
 
 ## entrycap.asm
 
 In the exe's annex, at the lobby entry widget's init (`0x420f10`) and
 in place of its character handler's two `cmp eax, 0x800`. The init
-takes the field the text comes from and goes back to; the stub keeps a
-cap for it - 47 for the address slot, 35 for the team name, 255 for the
-chat line, 20 for the driver name, which shares the chat's buffer and
-is known by the width shown, the stock 0x800 otherwise - and redoes the
-two loads its call displaced. The compares call the second entry, which
-compares against the kept cap and returns with the flags for the `jae`
-that follows. The third entry stands in for CTRL+V's `lstrcpyA` of the
-clipboard and the `lstrlenA` after it: the text is copied up to the
-room the cap leaves, characters under a space dropped, and the count
-copied returned where the length was. The section keeps the cap, so it
-is writable. `tools/ipchecktest.py` runs all three on the real exe
-under Unicorn.
+entry keeps a cap for the field the text goes back to - 47 for the
+address slot, 35 for the team name, 255 for the chat line, 20 for the
+driver name, which shares the chat's buffer and is known by the width
+shown, 0x800 otherwise - and redoes the two loads its call displaced.
+The compare entry compares against that cap and returns with the flags
+for the `jae` that follows. The third entry stands in for CTRL+V's
+`lstrcpyA` of the clipboard and the `lstrlenA` after it: it copies up
+to the room the cap leaves, drops characters under a space, and
+returns the count. The section keeps the cap, so it is writable.
+`tools/ipchecktest.py` runs all three on the real exe under Unicorn.
 
 ## status.asm
 
 In the exe's annex, in place of the `lea` that starts the team room's
 own status line on DIRECT IP (`0x43604b`: `gethostbyname` and
 `IP Address : %d.%d.%d.%d`). It asks the netplay DLL's network object
-for the line - its added slot `+0x38`, `Network_StatusLine(buf, len)`,
-`Local: a.b.c.d  Public: e.f.g.h` - into the init's own buffer and
-continues at the draw (`0x43611c`); without a network object, on an
-error or an empty line it redoes the `lea` and returns to the exe's
-code. `tools/ipchecktest.py` runs it under Unicorn with a fake object.
+for the line (its added slot `+0x38`, `Network_StatusLine(buf, len)`)
+into the same buffer and continues at the draw (`0x43611c`); with no
+object, an error or an empty line it redoes the `lea` and returns.
+`tools/ipchecktest.py` runs it under Unicorn with a fake object.
 
 ## hudlast.asm
 

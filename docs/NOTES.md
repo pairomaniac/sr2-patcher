@@ -1152,65 +1152,55 @@ stock files are checked by digest first and kept as `.bak`.
 `tools/buttonstest.py` pins the result. `MPDATA.DAT`, which keeps the
 type from last time, has a stock 3 reset to 0 at patch time.
 
-On DIRECT IP, SEARCH puts up the IP entry (`0x43cd30`; its text goes to
-`0x4d3d1c` - the entry holds 2048 characters and shows 18, scrolling -
-and on OK to the settings at `0x4eacec` by `lstrcpyA`, a 16-byte slot
-with the modem number's 32 after it, so the stock game let a long entry
-run over the settings block). Its OK (`0x43ca20`, at `0x43cb4e`)
-compared the entry's length with zero - blank meant DirectPlay's
-broadcast, which the LAN row is now - and copied the text. That compare
-is a call to asm/ipcheck.asm in the annex, which takes the entry only
-as an address the DLL will open: a dotted quad or a name of letters,
-digits, dots and hyphens, with an optional `:port` of 1 to 65535, at
-most 47 characters in all, which stay within the slot and the modem
-number's, unused since the row went; anything else, blank included, is
-refused with the cancel sound (`0x1c` at the popup's sound call,
-`0x43cbac`) and the popup stays. `tools/ipchecktest.py` runs the check
-on the real exe. The popup's own bitmap, `Ip_entry_US.bmp` in
-`BINDATA\connect\IP_ENTRY`, said under the box that a blank entry
-searches; those two lines are painted over and two on the address form
-and the port drawn in their place from a mask (`lobby_popup`), the stock
+On DIRECT IP, SEARCH puts up the IP entry (`0x43cd30`; the text is
+edited at `0x4d3d1c`, 18 characters shown of 2048, and on OK `lstrcpyA`d
+to the settings at `0x4eacec`, a 16-byte slot with the modem number's
+32 after it, so a long entry ran over the settings block). The OK
+(`0x43ca20`, at `0x43cb4e`) compared the length with zero - blank meant
+DirectPlay's broadcast, now the LAN row - and copied. That compare is a
+call to asm/ipcheck.asm in the annex: a dotted quad or a name of
+letters, digits, dots and hyphens, an optional `:port` of 1 to 65535,
+47 characters at most; anything else is refused with the cancel sound
+(`0x1c` at the popup's sound call, `0x43cbac`) and the popup stays.
+`tools/ipchecktest.py` runs it on the real exe. The popup's bitmap,
+`BINDATA\connect\IP_ENTRY\Ip_entry_US.bmp`, said under the box that a
+blank entry searches; those two lines are painted over and two on the
+address form and the port drawn from a mask (`lobby_popup`), the stock
 file checked by digest and kept as `.bak`. The face is Liberation Sans
-Narrow Bold, fitted to the stock lines by overlap - 17.5 px, 90% wide,
-half a pixel of tracking, which puts the same ink in the same places
-within a pixel.
+Narrow Bold at 17.5 px, 90% wide, half a pixel of tracking, fitted to
+the stock lines by overlap.
 
 The same entry widget serves every text field in the lobby, and its
-character handler took up to 0x800 characters (`0x41fef1`, and again
-at `0x420849`) whatever the field, which the OK then `lstrcpy`d into a
-slot of 16 (the address), 36 (the team name, `0x4ead1c`, followed by
-the driver profiles) or a chat message; only the driver name's OK
-checked its length (20, `0x43acd1`). asm/entrycap.asm sits in the
-init (`0x420f10`, its first two loads) and keeps a cap by the field's
-address - 47 for the address, 35 for the team name, 255 for the chat
-line, 20 for the driver name, which shares the chat's buffer and is
-told apart by the width shown - and the two compares call it instead of
-comparing with 0x800. CTRL+V (`0x420337`, again at `0x420c4c`) pasted
-the clipboard into the buffer at the cursor with `lstrcpyA` and no
-check at all - the buffer's 0x830 bytes, then the entry's own length
-and cursor after it, then whatever a paragraph reaches; the game died
-in the heap's checks as the next characters went in. The paste's
-`lstrcpyA` and the `lstrlenA` after it become one call to the stub's
-third entry, which copies up to the room the cap leaves, drops
-characters under a space, and returns the count copied where the
-length was. `tools/ipchecktest.py` covers it with the address check.
+character handler took up to 0x800 characters (`0x41fef1`, `0x420849`)
+whatever the field, which the OK then `lstrcpy`d into a slot of 16 (the
+address), 36 (the team name, `0x4ead1c`) or a chat message; only the
+driver name's OK checked its length (20, `0x43acd1`). asm/entrycap.asm
+sits in the init (`0x420f10`, its first two loads) and keeps a cap by
+the field's address - 47 for the address, 35 for the team name, 255 for
+the chat line, 20 for the driver name, which shares the chat's buffer
+and is told apart by the width shown - and the two compares call it in
+place of the 0x800. CTRL+V (`0x420337`, `0x420c4c`) `lstrcpyA`d the
+clipboard into the buffer at the cursor with no check, past the
+buffer's 0x830 bytes and the entry's length and cursor after it; a
+pasted paragraph died in the heap's checks. The `lstrcpyA` and the
+`lstrlenA` after it become one call to the stub's third entry, which
+copies up to the room the cap leaves, drops characters under a space,
+and returns the count. `tools/ipchecktest.py` covers both.
 
 The team room's init prints, on DIRECT IP only, `IP Address :` and up to
 three addresses from `gethostbyname` (`0x43604b`-`0x43611c`, `TextOutA`
-at (150, 456) on the background). asm/status.asm is called in place of
-the `lea` that starts that: it asks the DLL's network object for the
-line (slot `+0x38`, `Network_StatusLine`: `Local: a.b.c.d  Public:
-e.f.g.h`, NETWORK.md) into the same buffer and continues at the draw,
-or redoes the `lea` and lets the exe print its own when there is no
-object or no line.
+at (150, 456)). asm/status.asm is called in place of the `lea` that
+starts that: it asks the DLL's network object for the line (slot
+`+0x38`, `Network_StatusLine`, NETWORK.md) into the same buffer and
+continues at the draw, or redoes the `lea` and lets the exe print its
+own when there is no object or no line.
 
 A chat line is kept for the team room's list as `name>text`
 (`0x4350e0`, on sending and on receipt), `wsprintf`ed into a block of
-`(len + 0x13) & ~3` bytes with a 4-byte link at its head: room for the
-text and a name of ten characters, sometimes thirteen. A longer name
-ran the line over the next heap block, and the game died in the heap's
-own checks a few lines later, under Wine as an access violation in
-`ntdll`. `0x344e4` adds 64 to the allocation, the DLL's name length.
+`(len + 0x13) & ~3` bytes: room for the text and a name of ten
+characters. A longer name ran the line over the next heap block and the
+game died in the heap's checks a few lines later. `0x344e4` adds 64 to
+the allocation, the DLL's name length.
 
 The lettering is ITC Avant Garde Gothic Demi, 20 px capitals, spaced;
 OFF is the ON at 98/255, ON2 the ON under a glow. `tools/labels.py`

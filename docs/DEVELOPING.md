@@ -84,8 +84,8 @@ Two more tools for the daily work:
   music offsets - are `asm/mix.inc`, included by `mix.asm` and
   `music.asm`.
 - `python3 tools/kit.py` bundles every build's installed files, minus
-  the assets but with `BINDATA\connect\button` and `IP_ENTRY`, with the first 16 MB of
-  each `data1.cab`, into the gitignored `tools/sr2-kit.tar.gz`: what the
+  the assets but with `BINDATA\connect\button` and `IP_ENTRY`, with the
+  first 16 MB of each `data1.cab`, into the gitignored `tools/sr2-kit.tar.gz`: what the
   notes are written against.
 
 ## The checks
@@ -120,7 +120,7 @@ Australian only and says so on the other builds.
 | `resolution` | the resolution row's init, draw and store under Unicorn, on the real `Options.dll` |
 | `lobby` | the connection screen's confirm under Unicorn, on the real exe: the list opens searching for INTERNET and LAN, not for DIRECT IP |
 | `buttons` | the SEARCH button composed from the install's stock `showteam_*` and `create_*` files, and the IP entry popup from its stock file, against pinned digests (a note when the folder is not there) |
-| `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check - addresses accepted, a blank, over-long or malformed entry refused with the cancel sound - the entries' caps by field, CTRL+V bounded, and the status line's stub |
+| `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check, the caps by field, CTRL+V bounded, and the status line's stub |
 | `clearsize` | the Australian clear's two arguments under Unicorn, on the real exe |
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
 | `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, the input objects and the annex's poll stubbed |

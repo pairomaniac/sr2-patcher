@@ -54,10 +54,9 @@ page:
 3. **Run it.** Double-click `sr2-patcher.py`, or `py sr2-patcher.py` from
    a terminal in its folder.
 
-On Windows the script may fail to fetch dgVoodoo 2 with
-`CERTIFICATE_VERIFY_FAILED`: Python's OpenSSL does not see the root
-certificates Windows fetches on demand. `py -m pip install certifi`
-gives it a list of its own; the exe carries one.
+If the script on Windows fails to fetch dgVoodoo 2 with
+`CERTIFICATE_VERIFY_FAILED`, run `py -m pip install certifi` once. The
+exe does not need it.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e84056b7-3ed2-41a9-bc3a-c1d67da97f11" alt="The patcher window, showing its numbered sections" height="700" />
@@ -122,11 +121,10 @@ Image them once:
 
 ## What the patches do
 
-Every patch is applied: each fixes what is broken on a modern machine or
-adds what it lacks, and none has a trade-off - widescreen stays 4:3
+Every patch is applied; none has a trade-off - widescreen stays 4:3
 until you pick a size, the gamepad patch keeps the keyboard. To leave one
-out, use the terminal (below). What each changes, down to the byte, is
-in [docs/NOTES.md](docs/NOTES.md).
+out, use the [terminal](#from-a-terminal). What each changes, down to
+the byte, is in [docs/NOTES.md](docs/NOTES.md).
 
 - **No disc required** - every mode plays with nothing in the drive.
 - **Skip the start-up checks** - a 1999 video card, a 640x480 16-bit
@@ -136,8 +134,8 @@ in [docs/NOTES.md](docs/NOTES.md).
   of the replay gallery.
 - **Fix the picture after ALT+TAB** - it comes back instead of staying
   black.
-- **Fix the device scan** - the white window on start: the game read
-  every USB device on the machine, and modern ones choked it.
+- **Fix the device scan** - the white window on start, from the game
+  reading every USB device on the machine.
 - **Windowed and borderless** - **ALT+ENTER** switches. Stock it took the
   whole screen at 640x480.
 - **Text and panel fixes** - the menu text, the name you type, the team
@@ -155,10 +153,10 @@ in [docs/NOTES.md](docs/NOTES.md).
   the disc. See [Music](#music).
 - **XInput gamepad support** - a modern pad works everywhere, the
   driving and menu controls rebindable in-game. See [Controls](#controls).
-- **Internet play** - race anyone, no port forwarding. See
-  [Internet play](#internet-play).
+- **Internet play** - online, direct IP and LAN in place of DirectPlay;
+  no port forwarding needed. See [Internet play](#internet-play).
 - **Loading screens** - the stage card is held for three seconds;
-  today's machines load faster than you can read it.
+  today's machines load it faster than you can read it.
 
 ### Add-ons
 
@@ -166,18 +164,17 @@ An add-on is an extra file beside the game rather than an edit to it,
 downloaded when you press **Apply patches**.
 
 **dgVoodoo 2** is [dege's](https://github.com/dege-diosg/dgVoodoo2)
-DirectDraw on Direct3D 11. Windows' own DirectDraw refuses a picture
-over 2048 a side and is slow and erratic with this game on some
-machines; dgVoodoo has neither problem and waits for the display's
-refresh before showing a frame. Ticked by default on Windows, off under
-Wine and Proton, which have no such limit. Untick it and Apply to take
-it out, your settings kept; **Restore original** takes those as well.
+DirectDraw on Direct3D 11. Windows' own DirectDraw stops at 2048 a side
+and is slow and erratic with this game on some machines; dgVoodoo has
+neither problem and syncs to the display's refresh. Ticked by default
+on Windows, off under Wine and Proton, which have neither problem
+either. Untick it and Apply, or **Restore original**, to take it out.
 
 ### Diagnostics
 
-The collapsed **DIAGNOSTICS** section adds logging for a bug report. All
-off by default, none of it changes how the game plays. What each writes
-is in [docs/DEVELOPING.md](docs/DEVELOPING.md).
+The collapsed **DIAGNOSTICS** section adds logging for a bug report, all
+off by default. What each writes is in
+[docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## Widescreen
 
@@ -201,8 +198,8 @@ Two-player split screen follows the same size:
 
 <img src="https://github.com/user-attachments/assets/68e2c826-8400-49fa-8045-b57aa1c7e766" alt="Two-player split screen at 16:9" width="100%" />
 
-On Windows the list stops at 2048 a side without the dgVoodoo 2 add-on -
-see [Known issues](#known-issues).
+On Windows the list stops at 2048 a side without the
+[dgVoodoo 2](#add-ons) add-on.
 
 ## Controls
 
@@ -252,12 +249,12 @@ defaults, and the game writes it again as you change things.
 The connection screen offers three rows in place of IPX, TCP/IP, modem
 and serial:
 
-- **INTERNET** - the teams open anywhere, listed as the screen opens;
-  **SEARCH** asks again. Joining needs no port forwarding.
-- **DIRECT IP** - **SEARCH** asks for the host's address, or
-  `address:port`, and lists its team; **CREATE** hosts. The host forwards
-  UDP 47626; the team room's status line shows its local and public
-  address. A blank or malformed entry is refused.
+- **INTERNET** - every open team, listed as the screen opens; **SEARCH**
+  asks again. No port forwarding on either side.
+- **DIRECT IP** - **CREATE** hosts on UDP 47626, which the host forwards;
+  the team room's status line shows the host's local and public address.
+  **SEARCH** asks for that address, or `address:port`, and lists the
+  host's team.
 - **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are
@@ -267,10 +264,9 @@ is in [docs/NETWORK.md](docs/NETWORK.md).
 ### The network log
 
 Set `Log = 1` under `[Network]` in `SR2.CFG` beside `SEGA RALLY 2.exe`
-(the patcher writes the section, both keys at 0) and the game logs
-its connections, joins, refusals and drops to `logs\sr2-net.log`, with the
-reason for each. When something goes wrong online, send that file from
-each machine.
+and the game logs its connections, joins, refusals and drops to
+`logs\sr2-net.log`. When something goes wrong online, send that file
+from each machine.
 
 ## Music
 
@@ -325,14 +321,12 @@ python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
-`--patch` applies every patch unless you name some: by name to apply
-only those (listed at the top of `sr2-patcher.py`), or with a leading
-minus to leave them out, as in `--patch ~/games/sr2 -music`. Leaving a
-patch out also leaves out whatever needs it. The `dgvoodoo` add-on is on
-by default on Windows; `-dgvoodoo` leaves it out, naming it puts it in
-elsewhere. `--patch ~/games/sr2 logs` turns on every diagnostic and the
-network log for a bug report; `--patch ~/games/sr2` alone takes the
-diagnostics out again, and `Log` in `SR2.CFG` stays as it is.
+`--patch` applies every patch unless you name some (the list is at the
+top of `sr2-patcher.py`); a leading minus leaves one out, as in
+`--patch ~/games/sr2 -music`, along with whatever needs it. The
+`dgvoodoo` add-on follows the same rule and is on by default on Windows.
+`--patch ~/games/sr2 logs` turns on every diagnostic and the network log
+for a bug report; a plain `--patch` takes the diagnostics out again.
 
 On Linux the terminal commands need nothing extra; the window needs Tk:
 
@@ -358,19 +352,19 @@ pairo@segaonline.net.
 
 ## Known issues
 
-- **Windows: error 80004005 at start.** One cause is fixed. If it still
-  happens, tick **Direct3D bring-up** under DIAGNOSTICS, Apply, start the
-  game, and send `logs\d3dinit.log` with the card and driver.
-- **A LAN team nobody can see.** The game uses UDP port 47626; if
-  something else has it on the host (a second copy of the game, say),
-  LAN search cannot find that host. DIRECT IP and INTERNET still work.
-- **Choppy on a 144 or 165 Hz display.** The game runs at a fixed 60
-  frames a second. On Windows, dgVoodoo 2 now waits for the display's
-  refresh; if you installed it with an earlier version, delete
-  `MUSASHI\dgVoodoo.conf` in the game folder and press **Apply patches**
-  to get that. 60 frames still cannot land evenly on a refresh that is
-  not a multiple of 60: a 120 or 60 Hz desktop, or G-SYNC or FreeSync
-  with windowed mode enabled, makes it even.
+All three are rare and hard to reproduce; a report of what led up to
+one helps.
+
+- **Linux: half of the team room black.** Under Wine or Proton, usually
+  after an ALT+TAB, the multiplayer team room can come back with half
+  the screen black or garbled.
+- **The tachometer needle during the countdown.** Now and then the
+  needle is drawn off its pivot for the start countdown, and is right
+  again once the race is under way.
+- **Stuck leaving the Network menu.** Backing out of the Network menu
+  the moment it opens can leave the game in the transition: not
+  crashed, but not going anywhere. Give the menu a second before
+  leaving it.
 
 ## Planned
 
