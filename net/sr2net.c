@@ -131,6 +131,7 @@ struct sr2_net {
     int       kind;
     sock_addr target;               /* direct: the host typed; lan: where the search goes */
     int       have_target;
+    int       bad_target;           /* direct: the text typed was not an address; the search fails, hosting does not need it */
     sock_addr servers[MAX_SERVERS]; /* the directory, SR2_KIND_INTERNET */
     int       nservers;
     sock_resolver *resolving;       /* the servers' names being looked up, off the game's thread */
@@ -1074,6 +1075,7 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
     sock_random((uint8_t *)&n->dtoken, sizeof n->dtoken);
     sock_random((uint8_t *)&n->secret, sizeof n->secret);
     n->have_target = 0;
+    n->bad_target = 0;
     n->target.addr = htonl(INADDR_BROADCAST);
     n->target.port = SR2_PORT;
     n->nservers = 0;
@@ -1081,11 +1083,13 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
     n->resolving = NULL;
     memset(n->dcookie, 0, sizeof n->dcookie);
     if (kind == SR2_KIND_DIRECT && address && address[0]) {
+        /* the game opens the connection to host as well as to search, with
+           whatever the address box holds; a bad one only matters to a search */
         if (sock_parse(address, SR2_PORT, &n->target) != 0) {
-            nlog(n, "open: %s is not an address", address);
-            return SR2_ERR;
-        }
-        n->have_target = 1;
+            nlog(n, "open: %s is not an address; a search will fail", address);
+            n->bad_target = 1;
+        } else
+            n->have_target = 1;
     }
     if (kind == SR2_KIND_INTERNET) {
 #ifdef SR2_TEST
@@ -1137,7 +1141,7 @@ void sr2_set_directory(sr2_net *n, uint32_t addr, uint16_t port)
 int sr2_enum(sr2_net *n, uint32_t now, sr2_session *out, int max)
 {
     int i, c = 0;
-    if (n->sock == SOCK_INVALID)
+    if (n->sock == SOCK_INVALID || n->bad_target)
         return SR2_ERR;
     if (!n->searching) {
         n->searching = 1;

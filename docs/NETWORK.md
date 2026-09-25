@@ -223,8 +223,10 @@ reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
 - **DIRECT IP**: the host forwards UDP 47626 and CREATEs; the guest's
   SEARCH asks for the address, or `address:port`, and lists the host's
   team. A blank, over-long or malformed entry is refused at the popup
-  (NOTES.md, *The connection screen*). What TCP/IP did, without
-  DirectPlay.
+  (NOTES.md, *The connection screen*). The exe opens the connection with
+  whatever the address box holds for CREATE too; a name that does not
+  resolve is logged and fails the search, not the open, so hosting goes
+  ahead. What TCP/IP did, without DirectPlay.
 - **LAN**: a broadcast search, no popup.
 
 **Behind CGNAT.** Under carrier-grade or symmetric NAT the port the
