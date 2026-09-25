@@ -248,9 +248,10 @@ The connection screen offers three rows in place of IPX, TCP/IP, modem
 and serial:
 
 - **INTERNET** - the teams open anywhere, listed as the screen opens;
-  **REFRESH** asks again. Joining needs no port forwarding.
-- **DIRECT IP** - type the host's address, or `host:port`. The host
-  forwards UDP 47626.
+  **SEARCH** asks again. Joining needs no port forwarding.
+- **DIRECT IP** - **SEARCH** asks for the host's address, or
+  `address:port`, and lists its team; **CREATE** hosts. The host forwards
+  UDP 47626. A blank or malformed entry is refused.
 - **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are

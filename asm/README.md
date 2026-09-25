@@ -43,6 +43,7 @@ Two rules every blob follows:
 | `bgrow.asm` | exe, `Title.dll` | a .bg picture into the back buffer at either depth, or composed with its side areas for one blit to stretch; built twice |
 | `fullwin.asm` | `MGameD3D.dll` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
+| `ipcheck.asm` | exe | the IP entry popup's OK refused for a blank or malformed address |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
@@ -377,6 +378,22 @@ The section keeps the five user32 entry points it resolves on first use,
 so it is writable, and reaches its own data from a call/pop base since
 its address is only known once appended. `tools/altentertest.py` runs it
 under Unicorn.
+
+## ipcheck.asm
+
+In the exe's annex, called in place of the length compare the IP entry
+popup's OK press makes (`0x43cb4e`; blank meant DirectPlay's broadcast).
+The entry's text is walked once for its length - at most 47, what the
+settings' 16-byte slot and the unused modem number's after it hold -
+and its last colon; the port after the colon is taken as digits in
+1..65535, and the host before it as either a name - letters, digits,
+dots and hyphens, at least one letter - or a dotted quad of four groups
+of at most 255. An address: the compare
+is redone and the press goes on as it did. Anything else: the return
+address is dropped, the popup's four sound arguments pushed with the
+cancel sound, and the popup's own sound call (`0x43cbac`) continued
+into, so the popup stays up. `tools/ipchecktest.py` runs it on the real
+exe under Unicorn.
 
 ## hudlast.asm
 

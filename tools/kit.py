@@ -5,7 +5,7 @@
 
 For every build named in ~/.sr2-test: the installed game without BINDATA\\
 and music\\ (the executables, DLLs, manifests, help and config) - but
-with BINDATA\\connect\\button, which the buttons check needs - with each
+with BINDATA\\connect\\button and IP_ENTRY, which the buttons check needs - with each
 patched file replaced by its .bak so the kit holds the originals, and the
 first 16 MB of the install disc's data1.cab as data1.head. Not the
 repository's to distribute; the tarball is gitignored.
@@ -22,7 +22,7 @@ from uctest import patcher  # noqa: E402
 
 OUT = os.path.join(HERE, 'sr2-kit.tar.gz')
 SKIP = ('bindata', 'music')
-KEEP = ('bindata/connect/button',)       # small, and a check composes from it
+KEEP = ('bindata/connect/button', 'bindata/connect/ip_entry')   # small, and a check composes from them
 HEAD = 16 << 20
 
 

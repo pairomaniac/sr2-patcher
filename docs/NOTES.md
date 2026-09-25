@@ -56,7 +56,7 @@ parentheses is what `--patch` takes.
 | **Pad in a replay** (`replaypad`) | `SEGA RALLY 2.exe` | `0x400ea` (5 bytes) (`0x4047a` American, `0x6e99a` Australian), the annex | the two loads at the join of the replay controls' keyboard and joystick paths (`0x440cea`) → `call` asm/replaypad.asm, which ORs the annex's bumpers, left stick, triggers, Y and X into the player's level word, then makes them |
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) → `call` asm/padmenu.asm, which puts the annex's buttons into the level and its directions, Back as TAB and any press as a key into the keyboard's menu word, then makes the edge and the three stores |
 | **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture at its create (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) → `call` asm/loadhold.asm |
-| **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP` and nine button files | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
+| **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP` and nine button files | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once, relettered SEARCH; the IP entry's OK through asm/ipcheck.asm (`0x3bf4e`, the annex), its popup's lower lines redrawn; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
 | **Network DLL** (`netplay`) | `MUSASHI\MGNetWk.dll`, `SR2.CFG` | the whole file | replaced by the build of `net/`: the stock DLL's CLSID and three vtables over plain UDP - a LAN search, an address typed, and the internet through a directory server; `SR2.CFG`'s `[Network]` section (Staging, Log, both 0) is read, and written when the file has none; see [NETWORK.md](NETWORK.md) and [net/README.md](../net/README.md) |
 | **The clear's height** (`clearsize`, Australian only) | `SEGA RALLY 2.exe` | `0x40b83` (12 bytes), the annex | the mode setter's `mov eax, [WIDTH]` and its two pushes → `call` a thunk that pushes `[HEIGHT]` and `[WIDTH]` and jumps into the clear |
 | **XInput** (`xinput`) | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`), the annex | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm; the Australian build's keyboard-poll address pointed at it instead |
@@ -1144,14 +1144,36 @@ flag the list's first state (`0x43f210`) searches on, which the IP entry
 sets for its own search - so INTERNET and LAN open the list searching,
 the latency test's `jne` a `jmp`, and the SHOW TEAMS table's third entry
 the first's. `tools/lobbytest.py` runs the confirm under Unicorn. The
-SHOW TEAMS button itself is relettered REFRESH: its three files in
+SHOW TEAMS button itself is relettered SEARCH: its three files in
 `BINDATA\connect\button` (105x19, 24-bit, a 102x16 face and a bevel)
-are rewritten with R and E cut from `create_*`, S and H from
-`showteam_*`, and F from E with its bottom bar cleared, centred at the
-stock letter gap (`lobby_buttons`); the stock files are checked by
-digest first and kept as `.bak`. `tools/buttonstest.py` pins the result.
-`MPDATA.DAT`, which keeps the type from last time, has a stock 3 reset
-to 0 at patch time.
+are rewritten with E, A, R and C cut from `create_*` and S and H from
+`showteam_*`, centred at the stock letter gap (`lobby_buttons`); the
+stock files are checked by digest first and kept as `.bak`.
+`tools/buttonstest.py` pins the result. `MPDATA.DAT`, which keeps the
+type from last time, has a stock 3 reset to 0 at patch time.
+
+On DIRECT IP, SEARCH puts up the IP entry (`0x43cd30`; its text goes to
+`0x4d3d1c` - the entry holds 2048 characters and shows 18, scrolling -
+and on OK to the settings at `0x4eacec` by `lstrcpyA`, a 16-byte slot
+with the modem number's 32 after it, so the stock game let a long entry
+run over the settings block). Its OK (`0x43ca20`, at `0x43cb4e`)
+compared the entry's length with zero - blank meant DirectPlay's
+broadcast, which the LAN row is now - and copied the text. That compare
+is a call to asm/ipcheck.asm in the annex, which takes the entry only
+as an address the DLL will open: a dotted quad or a name of letters,
+digits, dots and hyphens, with an optional `:port` of 1 to 65535, at
+most 47 characters in all, which stay within the slot and the modem
+number's, unused since the row went; anything else, blank included, is
+refused with the cancel sound (`0x1c` at the popup's sound call,
+`0x43cbac`) and the popup stays. `tools/ipchecktest.py` runs the check
+on the real exe. The popup's own bitmap, `Ip_entry_US.bmp` in
+`BINDATA\connect\IP_ENTRY`, said under the box that a blank entry
+searches; those two lines are painted over and two on the address form
+and the port drawn in their place from a mask (`lobby_popup`), the stock
+file checked by digest and kept as `.bak`. The face is Liberation Sans
+Narrow Bold, fitted to the stock lines by overlap - 17.5 px, 90% wide,
+half a pixel of tracking, which puts the same ink in the same places
+within a pixel.
 
 The lettering is ITC Avant Garde Gothic Demi, 20 px capitals, spaced;
 OFF is the ON at 98/255, ON2 the ON under a glow. `tools/labels.py`

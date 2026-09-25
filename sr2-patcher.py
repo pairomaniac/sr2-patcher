@@ -80,7 +80,7 @@ BUILDS = {
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -99,7 +99,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc),
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfd0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470ff0, 'HUDRESET': 0x46cec0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd80},
     },
     'American': {
@@ -126,7 +126,7 @@ BUILDS = {
                   'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
-                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd),
+                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
@@ -141,7 +141,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc),
+                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc,
                       'RENDERER': 0x50b210, 'SETVIEWPORT': 0x46c1e0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429e50, 'TREEDRAW': 0x471220, 'HUDRESET': 0x46d0d0, 'LATEFLAG': 0x4e69ec, 'FADEDRAW': 0x46bf90},
     },
     'Australian': {
@@ -169,7 +169,7 @@ BUILDS = {
                   'clearsize': 0x40b83,
                   'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
-                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d),
+                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8,
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
@@ -185,7 +185,7 @@ BUILDS = {
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
         'addresses': {'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
-                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14),
+                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c,
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
     },
     # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
@@ -223,7 +223,7 @@ BUILDS = {
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e,
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -241,7 +241,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc),
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
     },
 }
@@ -491,8 +491,9 @@ def lobby_sites(anchors, surfaces, listopen):
     confirm never picks the modem screen and instead sets the flag the
     team list searches on when it opens (0x4edccc, which the IP entry set
     for its search) for every row but DIRECT IP, the latency after the
-    connection is the DLL's for every type, and REFRESH (the SHOW TEAMS
-    button relettered) on row 2 searches as row 0 does. The anchors are
+    connection is the DLL's for every type, and SEARCH (the SHOW TEAMS
+    button relettered) on row 2 searches as row 0 does; the IP entry's
+    OK goes through asm/ipcheck.asm (apply_ipcheck). The anchors are
     the drawer, the cursor wrap, the confirm, the latency test and the
     SHOW TEAMS jump table, as file offsets,
     then the table's stock and wanted entries; surfaces the two tables the
@@ -628,7 +629,8 @@ def patches(build):
         'd3dtrace': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace'),
         'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'resolution': ('Options.dll', resolution_sites(row['addresses']['OPTSETTINGS']), 'apply_resolution'),
-        'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN']), None),
+        'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN'])
+                 + ((site['ipcheck'], bytes.fromhex('3935') + struct.pack('<I', row['addresses']['IPLEN']), None),), 'apply_ipcheck'),
         'netplay': ('MUSASHI\\MGNetWk.dll', (), 'apply_netplay'),
     }
     if 'clearsize' in site:
@@ -844,9 +846,9 @@ FEATURES = (
      'car and course selection and the race are the game\'s own; up to four\n'
      'players, all on the same patcher version.\n'
      '\n'
-     'INTERNET\tthe teams open anywhere, listed as the screen opens; REFRESH asks again.\n'
-     'DIRECT IP\tThe host\'s address, or host:port. The host forwards UDP\n'
-     '\t47626.\n'
+     'INTERNET\tthe teams open anywhere, listed as the screen opens; SEARCH asks again.\n'
+     'DIRECT IP\tSEARCH asks for the host\'s address, or address:port;\n'
+     '\tCREATE hosts. The host forwards UDP 47626.\n'
      'LAN\tThe local network, searched.\n'
      'In place of\tIPX, TCP/IP, modem and serial.', ('netplay', 'lobby')),
 
@@ -4206,6 +4208,17 @@ SORTPAD_BLOB = bytes.fromhex(
     '000000c383ec088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff'
     '01c039c2c390909000000000'
 )
+IPCHECK_BLOB = bytes.fromhex(
+    '5356575152beb3b3b3b3e8200000005a595f5e5b85c07408833db4b4b4b400c3'
+    '586a006a006a006a1c68b5b5b5b5c331c983caff8a040e84c074093c3a750289'
+    'ca41ebf085c90f84c000000083f92f0f87b700000089cf83faff743989d78d5a'
+    '0139cb0f83a300000031d20fb6041e83e83083f8090f87910000006bd20a01c2'
+    '81faffff00000f87800000004339cb72da85d2747785ff747331db31d20fb604'
+    '1e3c2e74183c2d741483e83083f809760c8a041e0c202c613c197750424339fb'
+    '72db85d2754031db31c983caff0fb6041e3c2e750b83faff74324183caffeb17'
+    '83e83083faff750231d26bd20a01c281faff00000077154339fb72d183faff74'
+    '0b83f9037506b801000000c331c0c3'
+)
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
     'MAGIC_IATMCI': 0xE2E2E2E2,
@@ -4252,6 +4265,9 @@ EXE_MAGICS = {
     'PADPREV': 0xB2B2B2B2,
     'MENUKEYS': 0xCFCFCFCF,
     'PADPOLL': 0xDFDFDFDF,
+    'IPEDIT': 0xB3B3B3B3,
+    'IPLEN': 0xB4B4B4B4,
+    'IPDENY': 0xB5B5B5B5,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 DEVICES_MAGICS = {
@@ -5185,6 +5201,15 @@ def apply_activate(buf, build):
     return out
 
 
+def apply_ipcheck(buf, build):
+    """The IP entry popup's address check in the exe, called in place of
+    the OK press's length compare."""
+    row = BUILDS[build]
+    out, rva = append_section(buf, exe_blob(IPCHECK_BLOB, build), chars=CODE_SECTION)
+    _branch(out, row['sites']['ipcheck'], rva, 6)
+    return out
+
+
 def apply_textcolor(buf, build):
     """The SetTextColor stub in the exe; the eight calls and two loads of
     the import slot become a call to it and a load of its address."""
@@ -6086,24 +6111,116 @@ LOBBY_STATES = ('OFF', 'ON', 'ON2')
 LOBBY_CLEAR = (54, 246)                 # the stock rows' span in the backdrop, cleared
 LOBBY_FILES = tuple('CONNECT_%s_%s.BMP' % (slot, state) for slot in LOBBY_LABELS for state in LOBBY_STATES)
 
-# The team list's SHOW TEAMS button becomes REFRESH, set from the stock
+# The team list's SHOW TEAMS button becomes SEARCH, set from the stock
 # buttons' own lettering: the three states of showteam and create in
 # BINDATA\connect\button are 105x19 24-bit BMPs, a 102x16 face with a
 # three-pixel bevel (ON2 the face three pixels down and right), the
-# letters on rows 1-14. R and E are cut from create, S and H from
-# showteam, F is E with its bottom bar cleared; the word is centred on
-# the face at the stock two-pixel letter gap.
+# letters on rows 1-14. E, A, R and C are cut from create, S and H from
+# showteam; the word is centred on the face at the stock two-pixel
+# letter gap.
 LOBBY_BUTTON_DIR = 'BINDATA\\connect\\button'
 LOBBY_BUTTON_STATES = ('off', 'on', 'on2')
 LOBBY_BUTTON_MD5 = {'showteam': ('eb63942470f1fd42f686179f1f1f1413', '0aa7e865dc9419c971e60af559dd628f', '3adbb7020b7b6e1fdf3622f517de34c8'),
                     'create': ('4d94191960a75e92b9ecaa890861234b', 'dc5b89b42d87518521db3d969be3d96a', 'a9b28ea66aa92e3918574d650036f522')}
 LOBBY_BUTTON_FILES = tuple('showteam_%s.BMP' % state for state in LOBBY_BUTTON_STATES)
-LOBBY_GLYPHS = {'R': ('create', 35, 41), 'E': ('create', 44, 49), 'F': ('create', 44, 49),
+LOBBY_GLYPHS = {'C': ('create', 26, 32), 'R': ('create', 35, 41), 'E': ('create', 44, 49), 'A': ('create', 51, 58),
                 'S': ('showteam', 9, 15), 'H': ('showteam', 18, 23)}     # the columns in the OFF and ON files, rows 1-14
-LOBBY_REFRESH = 'REFRESH'
+LOBBY_SEARCH = 'SEARCH'
 LOBBY_FACE = (102, 16)
 LOBBY_GLYPH_ROWS = (1, 14)
 LOBBY_GLYPH_GAP = 2
+# The IP entry popup, Ip_entry_US.bmp in BINDATA\connect\IP_ENTRY, a
+# 385x184 24-bit BMP: its two lines under the box said a blank entry
+# searches, which the LAN row does now. They are painted over and
+# LOBBY_POPUP_MASK, two lines on the address form and the port, drawn
+# in their place - an 8-bit mask of the popup's width over the rows
+# cleared, white text on black as the stock lettering, set in Liberation
+# Sans Narrow Bold fitted to the stock lines by overlap (17.5 px, 90%
+# wide, half a pixel of tracking).
+LOBBY_POPUP_DIR = 'BINDATA\\connect\\IP_ENTRY'
+LOBBY_POPUP_FILE = 'Ip_entry_US.bmp'
+LOBBY_POPUP_MD5 = '0cfc0058684ff07d8207d3467e7a0d4c'
+LOBBY_POPUP_SIZE = (385, 184)
+LOBBY_POPUP_CLEAR = (111, 178, 1, 379)  # the rows and columns inside the frame under the box
+LOBBY_POPUP_MASK = (
+    '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'
+    'M5nJTP979F+tApR8')
 MPDATA = 'MPDATA.DAT'
 
 
@@ -6125,7 +6242,7 @@ def bmp24(mask, size=LOBBY_LABEL_SIZE):
 
 
 def lobby_buttons(stock):
-    """The three REFRESH button files from the stock showteam and create
+    """The three SEARCH button files from the stock showteam and create
     ones: {state: bytes}."""
     out = {}
     for i, state in enumerate(LOBBY_BUTTON_STATES):
@@ -6136,18 +6253,31 @@ def lobby_buttons(stock):
         face = bytes(rows[top + shift][(LOBBY_FACE[0] - 1 + shift) * 3:(LOBBY_FACE[0] + shift) * 3])   # a face pixel, no letter reaches it
         for y in range(top + shift, bottom + shift + 1):
             rows[y][shift * 3:(LOBBY_FACE[0] + shift) * 3] = face * LOBBY_FACE[0]
-        widths = [LOBBY_GLYPHS[c][2] - LOBBY_GLYPHS[c][1] + 1 for c in LOBBY_REFRESH]
+        widths = [LOBBY_GLYPHS[c][2] - LOBBY_GLYPHS[c][1] + 1 for c in LOBBY_SEARCH]
         x = (LOBBY_FACE[0] - sum(widths) - LOBBY_GLYPH_GAP * (len(widths) - 1)) // 2 + shift
-        for c, width in zip(LOBBY_REFRESH, widths):
+        for c, width in zip(LOBBY_SEARCH, widths):
             name, x0, _x1 = LOBBY_GLYPHS[c]
             for y in range(top + shift, bottom + shift + 1):
-                src = pool[name][y][(x0 + shift) * 3:(x0 + shift + width) * 3]
-                if c == 'F' and y >= top + shift + 11:                  # E's bottom bar goes; its stem stays
-                    src = src[:6] + face * (width - 2)
-                rows[y][x * 3:(x + width) * 3] = src
+                rows[y][x * 3:(x + width) * 3] = pool[name][y][(x0 + shift) * 3:(x0 + shift + width) * 3]
             x += width + LOBBY_GLYPH_GAP
         out[state] = bmp24_pack(rows, stock['showteam'][i])
     return out
+
+
+def lobby_popup(stock):
+    """Ip_entry_US.bmp with the lines under the box replaced."""
+    rows = [bytearray(r) for r in bmp24_rows(stock)]
+    top, bottom, left, right = LOBBY_POPUP_CLEAR
+    w = LOBBY_POPUP_SIZE[0]
+    mask = zlib.decompress(base64.b64decode(''.join(LOBBY_POPUP_MASK)))
+    for y in range(top, bottom + 1):
+        rows[y][left * 3:(right + 1) * 3] = bytes(3 * (right + 1 - left))
+        line = mask[(y - top) * w:(y - top + 1) * w]
+        for x in range(left, right + 1):
+            v = line[x]
+            if v:
+                rows[y][x * 3:x * 3 + 3] = bytes((v, v, v))
+    return bmp24_pack(rows, stock)
 
 
 def bmp24_rows(data):
@@ -6206,8 +6336,9 @@ def lobby_art(dest, wanted, log):
     folder = os.path.join(dest, *LOBBY_DIR.split('\\'))
     buttons = os.path.join(dest, *LOBBY_BUTTON_DIR.split('\\'))
     names = (LOBBY_BACKDROP,) + LOBBY_FILES
+    popup = lobby_popup_path(dest)
     if not wanted:
-        for where, name in [(folder, n) for n in names] + [(buttons, n) for n in LOBBY_BUTTON_FILES]:
+        for where, name in [(folder, n) for n in names] + [(buttons, n) for n in LOBBY_BUTTON_FILES] + [popup]:
             path = os.path.join(where, name)
             if os.path.isfile(path + '.bak'):
                 os.replace(path + '.bak', path)
@@ -6256,8 +6387,32 @@ def lobby_art(dest, wanted, log):
             if not os.path.isfile(path + '.bak'):
                 os.replace(path, path + '.bak')
             write_whole(path, out)
-        log('patch: %s\\showteam_*.BMP written as REFRESH' % LOBBY_BUTTON_DIR)
+        log('patch: %s\\showteam_*.BMP written as SEARCH' % LOBBY_BUTTON_DIR)
+    # the popup's lines under the box, from the stock file when it is the one known
+    path = os.path.join(*popup)
+    source = path + '.bak' if os.path.isfile(path + '.bak') else path
+    if not os.path.isfile(source) or md5(source) != LOBBY_POPUP_MD5:
+        log('patch: %s\\%s is not the file the patcher knows; its text stays' % (LOBBY_POPUP_DIR, LOBBY_POPUP_FILE))
+    else:
+        with open(source, 'rb') as fh:
+            data = fh.read()
+        if not os.path.isfile(path + '.bak'):
+            os.replace(path, path + '.bak')
+        write_whole(path, lobby_popup(data))
+        log('patch: %s\\%s written with the port lines' % (LOBBY_POPUP_DIR, LOBBY_POPUP_FILE))
     clamp_mpdata(dest, log)
+
+
+def lobby_popup_path(dest):
+    """(folder, name) of the IP entry popup's file: the installer's own
+    casing of the name where one is there, so a case-sensitive Wine
+    finds one file, not two."""
+    folder = os.path.join(dest, *LOBBY_POPUP_DIR.split('\\'))
+    if os.path.isdir(folder):
+        for name in os.listdir(folder):
+            if name.lower() == LOBBY_POPUP_FILE.lower():
+                return folder, name
+    return folder, LOBBY_POPUP_FILE
 
 
 def clamp_mpdata(dest, log):
@@ -6961,8 +7116,9 @@ def patch(dest, log=print, keys=None):
 def restore(dest, log=print):
     """The backups back in place, and dgVoodoo 2 out, config and all."""
     found = False
+    popup = lobby_popup_path(dest)
     for name in PATCHED + (TXR, MPDATA) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES) \
-            + tuple(LOBBY_BUTTON_DIR + '\\' + f for f in LOBBY_BUTTON_FILES):
+            + tuple(LOBBY_BUTTON_DIR + '\\' + f for f in LOBBY_BUTTON_FILES) + (LOBBY_POPUP_DIR + '\\' + popup[1],):
         path = os.path.join(dest, *name.split('\\'))
         if os.path.isfile(path + '.bak'):
             os.replace(path + '.bak', path)
@@ -9419,7 +9575,7 @@ def selfcheck():
                     taken[(name, i)] = key
             sites += len(ss)
         for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB, TITLEROW_BLOB, TEXTCOLOR_BLOB, WIDE_BLOB, WIDE_US_BLOB,
-                     VOLTRACE_BLOB, FRAMETRACE_BLOB, LOADHOLD_BLOB, HUDLAST_BLOB, PADMENU_BLOB, REPLAYPAD_BLOB, PAGEPAD_BLOB):
+                     VOLTRACE_BLOB, FRAMETRACE_BLOB, LOADHOLD_BLOB, HUDLAST_BLOB, PADMENU_BLOB, REPLAYPAD_BLOB, PAGEPAD_BLOB, IPCHECK_BLOB):
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
                     raise ValueError('%s: a placeholder left in a stub' % build)

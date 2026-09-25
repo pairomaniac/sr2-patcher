@@ -156,7 +156,8 @@ the **session list** `0x43f380` (JOIN / CREATE / SHOWTEAM / CANCEL).
 SHOWTEAM dispatches on the type through `0x43efd8`: IPX opens the
 connection and searches at once, TCP/IP first puts up the **IP entry**
 popup `0x43cd30` (`IP_ENTRY.BMP`; the text goes verbatim to `0x4eacec`,
-16 bytes, empty meaning "broadcast"). The search calls `EnumSessions`
+a 16-byte slot, empty meaning "broadcast"; with `lobby` a blank,
+malformed or over-long entry is refused there). The search calls `EnumSessions`
 every frame for 30 s while it returns `DPERR_CONNECTING`, then for
 `latency` ms more. JOIN → `JoinSession` + `CreatePlayer`, then a loop with
 no timeout until the index is known (`0x4402a0`). CREATE → the team name
@@ -174,8 +175,9 @@ UDP. The exe, its lobby and its protocol are as they were; the manifests
 already point the CLSID at the file. The `lobby` patch is the only one
 that touches the exe: the connection screen's three rows, the confirm
 that used to reach the modem screen and now opens the list searching
-for INTERNET and LAN, the latency read for every type, and SHOW TEAMS -
-relettered REFRESH - on row 2 searching at once.
+for INTERNET and LAN, the latency read for every type, SHOW TEAMS -
+relettered SEARCH - on row 2 searching at once, and the IP entry's
+address check.
 
 ### Three layers
 
@@ -218,9 +220,11 @@ reaching the DLL as `OpenConnection` kinds 2, 1 and 3.
   seconds of silence drops it too. The servers' names are looked up on
   a thread of the DLL's own. The listing is public; the game's own
   OPEN/CLOSE and START are the controls.
-- **DIRECT IP**: the host forwards UDP 47626; the guest types the address,
-  or `host:port`, in the entry popup. Blank searches the LAN. What TCP/IP
-  did, without DirectPlay.
+- **DIRECT IP**: the host forwards UDP 47626 and CREATEs; the guest's
+  SEARCH asks for the address, or `address:port`, and lists the host's
+  team. A blank, over-long or malformed entry is refused at the popup
+  (NOTES.md, *The connection screen*). What TCP/IP did, without
+  DirectPlay.
 - **LAN**: a broadcast search, no popup.
 
 **Behind CGNAT.** Under carrier-grade or symmetric NAT the port the

@@ -32,7 +32,8 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('WIDE_BLOB', 'wide.asm', ()), ('WIDE_US_BLOB', 'wide.asm', ('-DUS',)),
          ('WIDE2D_BLOB', 'wide2d.asm', ()), ('WIDEGL_BLOB', 'widegl.asm', ()), ('RESOLUTION_BLOB', 'resolution.asm', ()),
          ('LOADHOLD_BLOB', 'loadhold.asm', ()), ('HUDLAST_BLOB', 'hudlast.asm', ()), ('D3DINIT_BLOB', 'd3dinit.asm', ()),
-         ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ())]
+         ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
+         ('IPCHECK_BLOB', 'ipcheck.asm', ())]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -83,6 +84,9 @@ EXE_MAGICS = {
     'PADPREV': 0xB2B2B2B2,
     'MENUKEYS': 0xCFCFCFCF,
     'PADPOLL': 0xDFDFDFDF,
+    'IPEDIT': 0xB3B3B3B3,
+    'IPLEN': 0xB4B4B4B4,
+    'IPDENY': 0xB5B5B5B5,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
@@ -99,6 +103,7 @@ EXE_BLOB_MAGICS = {
     'PADMENU_BLOB': ('PADPOLL',) * 2 + ('MENUKEYS',) * 3 + ('PADLEVEL', 'PADEDGE') + ('PADPREV',) * 2,
     'REPLAYPAD_BLOB': ('PADPOLL',) * 2,
     'PAGEPAD_BLOB': ('PADPOLL',) * 2,
+    'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,
