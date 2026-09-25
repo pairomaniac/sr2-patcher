@@ -826,7 +826,7 @@ putpercent:
         pop     ecx
         ret
 
-heading:        db '; SEGA RALLY 2 controls', 10, 0
+heading:        db '; SEGA RALLY 2 settings', 10, 0
 dispheader:     db 10, '[Display]', 10, 'Resolution = ', 0
 s_dispsect:     db 'Display', 0
 s_reskey:       db 'Resolution', 0

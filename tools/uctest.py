@@ -113,7 +113,7 @@ def annex_text(tables=None, deadzones=None, network=('0', '0')):
     deadzones = deadzones or (patcher.PAD_DEADZONE, patcher.PAD_DEADZONE)
     defaults = [[(keys[a], patcher.PAD_DEFAULT[a]) for a in range(13)] for keys in (patcher.KEYS_1P, patcher.KEYS_2P)]
     tables = [t or defaults[i] for i, t in enumerate(tables or (None, None))]
-    lines = ['; SEGA RALLY 2 controls']
+    lines = ['; SEGA RALLY 2 settings']
     for player, table in enumerate(tables):
         for device in ('Controller', 'Keyboard'):
             lines += ['', '[%dP %s]' % (player + 1, device)]
