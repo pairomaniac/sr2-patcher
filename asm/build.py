@@ -107,7 +107,7 @@ EXE_BLOB_MAGICS = {
     'REPLAYPAD_BLOB': ('PADPOLL',) * 2,
     'PAGEPAD_BLOB': ('PADPOLL',) * 2,
     'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
-    'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF'),
+    'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF', 'IPLEN'),
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,

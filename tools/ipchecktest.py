@@ -10,7 +10,8 @@ compare's flags; a blank, over-long or malformed one must land on the
 popup's sound call with the cancel sound's four arguments pushed. Then
 the entry's init run on each field, and the character handler's compare
 on the cap it left: the address slot 47, the team name 35, the chat
-line 255, the driver name 20, anything else the stock 0x800. Needs
+line 255, the driver name 20, anything else the stock 0x800; and the
+paste bounded by the room the cap leaves. Needs
 python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -104,14 +105,40 @@ def main(argv):
         assert mu.reg_read(UC_X86_REG_ESP) == esp, 'init for %#x: stack' % field
         assert (mu.reg_read(UC_X86_REG_EAX), mu.reg_read(UC_X86_REG_ECX)) == (0x1111, 0x2222), 'init for %#x: the loads' % field
         for site in (first, second):
-            for length, over in ((cap - 1, False), (cap, True), (cap + 1, True)):
+            for count, over in ((cap - 1, False), (cap, True), (cap + 1, True)):
                 mu.reg_write(UC_X86_REG_ESP, esp)
-                mu.reg_write(UC_X86_REG_EAX, length)
+                mu.reg_write(UC_X86_REG_EAX, count)
                 mu.reg_write(UC_X86_REG_EBX, 0x4444)
                 mu.emu_start(site, 0, count=100)
                 assert mu.reg_read(UC_X86_REG_EIP) == site + 5 and mu.reg_read(UC_X86_REG_EBX) == 0x4444
-                assert bool(mu.reg_read(UC_X86_REG_EFLAGS) & CF) != over, 'field %#x: %d against a cap of %d' % (field, length, cap)
-    print('ipchecktest: %s: %d addresses accepted, %d entries refused with the cancel sound; %d fields capped'
+                assert bool(mu.reg_read(UC_X86_REG_EFLAGS) & CF) != over, 'field %#x: %d against a cap of %d' % (field, count, cap)
+    # the paste: the clipboard's text into the buffer at the cursor, up to
+    # the cap's room, control characters dropped, the count returned
+    pastes = [BASE + patcher._off_to_rva(image, off) for off in row['sites']['paste']]
+    CLIP = STACK + 0x4000
+    stops = tuple(site + 9 for site in pastes) + (init + 8,)
+    for site in pastes:
+        for cap, have, clip, want in ((255, 0, 'abc', 'abc'), (255, 250, 'abcdefgh', 'abcde'), (255, 255, 'abc', ''),
+                                      (255, 3, 'a\r\nb\tc', 'abc'), (0x800, 0x7fe, 'xyz', 'xy')):
+            mu.mem_write(length, struct.pack('<I', have))
+            mu.mem_write(CLIP, clip.encode() + b'\0')
+            mu.mem_write(edit, b'\xee' * 16)
+            # the cap: run the init with a field that gives it
+            field = {255: row['addresses']['LINEBUF'], 0x800: 0x1234}[cap]
+            mu.mem_write(esp, struct.pack('<6I', 0, 0, 0, 0, field, 0x1a))
+            mu.reg_write(UC_X86_REG_ESP, esp)
+            mu.emu_start(init, 0, count=200)
+            mu.mem_write(esp, struct.pack('<2I', edit, CLIP))       # lstrcpy's dest and src, as pushed before the call
+            mu.reg_write(UC_X86_REG_ESP, esp)
+            mu.reg_write(UC_X86_REG_ESI, CLIP)
+            mu.reg_write(UC_X86_REG_EBX, 0x4444)
+            mu.emu_start(site, 0, count=2000)
+            assert mu.reg_read(UC_X86_REG_EIP) == site + 9, 'paste stopped at 0x%x' % mu.reg_read(UC_X86_REG_EIP)
+            assert mu.reg_read(UC_X86_REG_ESP) == esp + 8, 'paste: the stack'
+            got = bytes(mu.mem_read(edit, 16)).split(b'\0')[0].decode()
+            assert got == want and mu.reg_read(UC_X86_REG_EAX) == len(want), 'paste %r with %d of %d: %r, %d' % (clip, have, cap, got, mu.reg_read(UC_X86_REG_EAX))
+            assert mu.reg_read(UC_X86_REG_EBX) == 0x4444
+    print('ipchecktest: %s: %d addresses accepted, %d entries refused with the cancel sound; %d fields capped; the paste bounded'
           % (build, len(ACCEPTED), len(REFUSED), len(cases)))
     return 0
 

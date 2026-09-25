@@ -44,7 +44,7 @@ Two rules every blob follows:
 | `fullwin.asm` | `MGameD3D.dll` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
 | `ipcheck.asm` | exe | the IP entry popup's OK refused for a blank or malformed address |
-| `entrycap.asm` | exe | the lobby's text entries capped at what their fields hold |
+| `entrycap.asm` | exe | the lobby's text entries capped at what their fields hold, CTRL+V included |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
@@ -406,8 +406,12 @@ chat line, 20 for the driver name, which shares the chat's buffer and
 is known by the width shown, the stock 0x800 otherwise - and redoes the
 two loads its call displaced. The compares call the second entry, which
 compares against the kept cap and returns with the flags for the `jae`
-that follows. The section keeps the cap, so it is writable.
-`tools/ipchecktest.py` runs both on the real exe under Unicorn.
+that follows. The third entry stands in for CTRL+V's `lstrcpyA` of the
+clipboard and the `lstrlenA` after it: the text is copied up to the
+room the cap leaves, characters under a space dropped, and the count
+copied returned where the length was. The section keeps the cap, so it
+is writable. `tools/ipchecktest.py` runs all three on the real exe
+under Unicorn.
 
 ## hudlast.asm
 

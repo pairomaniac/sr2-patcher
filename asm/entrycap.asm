@@ -6,7 +6,10 @@
 ; characters (0x41fef1, and again at 0x420849) whatever the field. The
 ; fields are far smaller - the address slot 16 bytes, the team name's
 ; 36, the chat line a message - and the exe copies the text into them
-; with lstrcpy, so a long entry wrote over what follows. Two entries:
+; with lstrcpy, so a long entry wrote over what follows. CTRL+V
+; (0x4203ba, and again at 0x420cd5) pastes the clipboard into the
+; entry's buffer with lstrcpy and no check at all, past the buffer's
+; 0x830 bytes and the entry's own state after it. Three entries:
 ;
 ;   +0  init   called in place of the init's first two loads: the cap
 ;              for this field, by the field's address (and the width
@@ -14,6 +17,11 @@
 ;              and the two loads redone past the return address.
 ;   +5  cap    called in place of `cmp eax, 0x800`: the same compare
 ;              against the kept cap. Flags survive the return.
+;   +10 paste  called in place of the paste's lstrcpy and the lstrlen
+;              of the clipboard after it: the clipboard's text copied
+;              up to the room the cap leaves, control characters
+;              dropped, and the count copied returned as the lstrlen
+;              was.
 ;
 ; The exe is never relocated, so the fields' addresses are absolute,
 ; filled from the build's row; the blob's own is not known until it is
@@ -24,6 +32,7 @@ bits 32
 %define IPSLOT          0xB6B6B6B6      ; 0x4eacec, the address in the connection settings
 %define TEAMSLOT        0xB7B7B7B7      ; 0x4ead1c, the team name there
 %define LINEBUF         0xB8B8B8B8      ; 0x4d3b1c, the chat line's and the driver name's start
+%define EDITLEN         0xB4B4B4B4      ; 0x4d454c, the entry's length
 %define DEFAULT         0x800           ; the stock cap
 %define IPMAX           47              ; the address slot and the unused modem number's after it, less the NUL (asm/ipcheck.asm)
 %define TEAMMAX         35              ; the team name's 36 bytes, less the NUL
@@ -33,6 +42,7 @@ bits 32
 
         jmp     near init               ; +0
         jmp     near cap                ; +5
+        jmp     near paste              ; +10
 
 getbase:
         call    .here
@@ -76,5 +86,37 @@ cap:
         cmp     eax, [ebx + limit]
         pop     ebx
         ret
+
+; [esp+4] the entry's buffer at the cursor, [esp+8] the clipboard's
+; text: the text copied there up to the cap's room, NUL-terminated,
+; characters under a space left out. eax = the count copied. stdcall,
+; as the lstrcpy it replaces.
+paste:
+        push    ebx
+        push    esi
+        push    edi
+        call    getbase
+        mov     edi, [esp + 0x10]
+        mov     esi, [esp + 0x14]
+        mov     ecx, [ebx + limit]
+        sub     ecx, [EDITLEN]          ; the room
+        xor     eax, eax
+        cmp     ecx, 0
+        jle     .end
+.copy:  mov     dl, [esi]
+        inc     esi
+        test    dl, dl
+        jz      .end
+        cmp     dl, ' '
+        jb      .copy
+        mov     [edi + eax], dl
+        inc     eax
+        cmp     eax, ecx
+        jb      .copy
+.end:   mov     byte [edi + eax], 0
+        pop     edi
+        pop     esi
+        pop     ebx
+        ret     8
 
 limit:  dd DEFAULT

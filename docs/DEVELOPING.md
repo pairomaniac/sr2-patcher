@@ -120,7 +120,7 @@ Australian only and says so on the other builds.
 | `resolution` | the resolution row's init, draw and store under Unicorn, on the real `Options.dll` |
 | `lobby` | the connection screen's confirm under Unicorn, on the real exe: the list opens searching for INTERNET and LAN, not for DIRECT IP |
 | `buttons` | the SEARCH button composed from the install's stock `showteam_*` and `create_*` files, and the IP entry popup from its stock file, against pinned digests (a note when the folder is not there) |
-| `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check - addresses accepted, a blank, over-long or malformed entry refused with the cancel sound - and the entries' caps by field |
+| `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check - addresses accepted, a blank, over-long or malformed entry refused with the cancel sound - and the entries' caps by field, CTRL+V bounded |
 | `clearsize` | the Australian clear's two arguments under Unicorn, on the real exe |
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
 | `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, the input objects and the annex's poll stubbed |
