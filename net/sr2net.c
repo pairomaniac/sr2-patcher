@@ -1080,6 +1080,7 @@ void sr2_set_log(sr2_net *n, void (*fn)(void *, const char *), void *ctx)
 
 int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
 {
+    uint32_t pub;
     if (n->sock != SOCK_INVALID)
         sock_close(n->sock);
     n->sock = sock_open(SR2_PORT, &n->port);
@@ -1092,8 +1093,10 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
     n->have_target = 0;
     n->bad_target = 0;
     n->target_text[0] = 0;
-    sock_stun_drop(n->stun);
-    n->stun = NULL;
+    if (kind != SR2_KIND_DIRECT || sock_stun_result(n->stun, &pub) <= 0) {
+        sock_stun_drop(n->stun);        /* a public address already found is kept: every SEARCH opens anew */
+        n->stun = NULL;
+    }
     n->target.addr = htonl(INADDR_BROADCAST);
     n->target.port = SR2_PORT;
     n->nservers = 0;
@@ -1109,7 +1112,7 @@ int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
             n->have_target = 1;
         }
 #ifndef SR2_TEST
-        {
+        if (!n->stun) {
             static const char *const servers[] = SR2_STUN_SERVERS;
             n->stun = sock_stun_start(servers);
         }

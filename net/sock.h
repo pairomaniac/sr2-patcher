@@ -399,8 +399,7 @@ static inline void *sock_stun_thread(void *arg)
     uint32_t addr = 0;
     int i;
     for (i = 0; i < st->nservers && !addr; i++)
-        if (!sock_stun_ask(st->servers[i], &addr))
-            addr = 0;
+        sock_stun_ask(st->servers[i], &addr);
     st->addr = addr;
     sock_atomic_add(&st->done, 1);
     sock_stun_drop(st);

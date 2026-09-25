@@ -3,16 +3,13 @@
 
     python3 tools/ipchecktest.py GAMEDIR    # the install folder
 
-A copy of the exe patched in memory, the rewritten OK press run on a set
-of entries: an address or a name, either with a port, must come back to
-the press's own code with the registers as they were and the length
-compare's flags; a blank, over-long or malformed one must land on the
-popup's sound call with the cancel sound's four arguments pushed. Then
-the entry's init run on each field, and the character handler's compare
-on the cap it left: the address slot 47, the team name 35, the chat
-line 255, the driver name 20, anything else the stock 0x800; and the
-paste bounded by the room the cap leaves; and the team room's status
-line asked of the DLL's slot, the exe's own lookup kept as the fallback. Needs
+A copy of the exe patched in memory: the OK press run on a set of
+entries, an address coming back to the press's code with the registers
+as they were and the compare's flags, anything else landing on the
+popup's sound call with the cancel sound pushed; the entry's init run
+on each field and the character handler's compare on the cap it left;
+the paste bounded by the room the cap leaves; the status line asked of
+the DLL's slot, the exe's own lookup as the fallback. Needs
 python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -94,7 +91,6 @@ def main(argv):
     # sites with a length under, at and over the cap
     fields = {row['addresses']['IPSLOT']: (0x12, 47), row['addresses']['TEAMSLOT']: (0x12, 35),
               row['addresses']['LINEBUF']: (0x1a, 255), row['addresses']['LINEBUF'] + 1: (0x12, 0x800), 0x1234: (0x12, 0x800)}
-    fields[row['addresses']['LINEBUF']] = (0x1a, 255)
     cases = [(field, width, cap) for field, (width, cap) in fields.items()] + [(row['addresses']['LINEBUF'], 0x12, 20)]
     stops = (init + 8, first + 5, second + 5)
     for field, width, cap in cases:
