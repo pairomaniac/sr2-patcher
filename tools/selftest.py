@@ -31,25 +31,25 @@ from uctest import patcher
 # EXPECTED_CAPPED: the files the capped resolution table changes.
 EXPECTED_CAPPED = {
     'European': {
-        'SEGA RALLY 2.exe': '4159b950f5b844585e1918a1c14e955d',
+        'SEGA RALLY 2.exe': 'b6af392597111ad083dfd478381b47e4',
         'Options.dll': '2b3820776c71a1d79c850cdd20633bcb',
     },
     'American': {
-        'SEGA RALLY 2.exe': '41141e144ee592e8c9870f1b7ec86c0b',
+        'SEGA RALLY 2.exe': '2a28718d3ea704faab225982bc269559',
         'Options.dll': '2b3820776c71a1d79c850cdd20633bcb',
     },
     'Australian': {
-        'SEGA RALLY 2.exe': '352ab40d22e4f28d5dd90f307506456b',
+        'SEGA RALLY 2.exe': 'fe3f99edffd86866c58f9668d16f7315',
         'Options.dll': '9ece57286ac7c71e5d01bdbeb233a4b2',
     },
     'Japanese (DigiCube, MediaKite)': {
-        'SEGA RALLY 2.exe': '1b7deb0a7b7008d93800cf38345bb660',
+        'SEGA RALLY 2.exe': '59c44635ae168f8bfe2882b17cb86e28',
         'Options.dll': '2b3820776c71a1d79c850cdd20633bcb',
     },
 }
 EXPECTED = {
     'European': {
-        'SEGA RALLY 2.exe': 'f54fac7cbea61148e99ee98973114743',
+        'SEGA RALLY 2.exe': 'cb6e7363220373ae4f4caf9ca47a6ecc',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
         'MUSASHI\\MGameD3D.dll': '31516b1229bb5922bc61f9b1daf8fb89',
         'MUSASHI\\MGAudio.dll': '7793a537317e3a45dd51c1776af63e90',
@@ -61,7 +61,7 @@ EXPECTED = {
         'ReplayGallery.dll': '26b937c025a7da3f2a9117424821089a',
     },
     'American': {
-        'SEGA RALLY 2.exe': '3a9e13fd8c70eca48e9050fd39dd60b5',
+        'SEGA RALLY 2.exe': '0023417d656b8311bb4e44ad598974c1',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
         'MUSASHI\\MGameD3D.dll': '31516b1229bb5922bc61f9b1daf8fb89',
         'MUSASHI\\MGAudio.dll': '7793a537317e3a45dd51c1776af63e90',
@@ -73,7 +73,7 @@ EXPECTED = {
         'ReplayGallery.dll': '26b937c025a7da3f2a9117424821089a',
     },
     'Australian': {
-        'SEGA RALLY 2.exe': '18a28ab050a424b93862f73b01345358',
+        'SEGA RALLY 2.exe': 'fa6763a63de33ca508a3d3b7c2f6fd39',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
         'MUSASHI\\MGameD3D.dll': '31516b1229bb5922bc61f9b1daf8fb89',
         'MUSASHI\\MGAudio.dll': '0ef438db85e4d4d28d7b42084edcff07',
@@ -85,7 +85,7 @@ EXPECTED = {
         'ReplayGallery.dll': 'df6943632cc46c835bc5b7bf0c33c8b6',
     },
     'Japanese (DigiCube, MediaKite)': {
-        'SEGA RALLY 2.exe': '298e7a9b9dd67524e3f711e762a4c0c0',
+        'SEGA RALLY 2.exe': 'a3f84ef9cf68145090a6b840f3a79efd',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
         'MUSASHI\\MGameD3D.dll': '31516b1229bb5922bc61f9b1daf8fb89',
         'MUSASHI\\MGAudio.dll': '7793a537317e3a45dd51c1776af63e90',

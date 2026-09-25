@@ -250,11 +250,11 @@ rebind one. They are saved as plain text in `SR2.CFG` beside the game.
 The connection screen offers three rows in place of IPX, TCP/IP, modem
 and serial:
 
-- **INTERNET** - **SHOW TEAMS** lists the teams open anywhere. Joining
-  needs no port forwarding.
+- **INTERNET** - the teams open anywhere, listed as the screen opens;
+  **SHOW TEAMS** asks again. Joining needs no port forwarding.
 - **DIRECT IP** - type the host's address, or `host:port`. The host
   forwards UDP 47626.
-- **LAN** - searches the local network.
+- **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are
 the game's own. Up to four players, all on 0.7.1 or later. How it works

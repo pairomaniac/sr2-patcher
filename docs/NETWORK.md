@@ -173,8 +173,9 @@ the same three vtables, the game's bytes carried unchanged, over plain
 UDP. The exe, its lobby and its protocol are as they were; the manifests
 already point the CLSID at the file. The `lobby` patch is the only one
 that touches the exe: the connection screen's three rows, the confirm
-that used to reach the modem screen, the latency read for every type,
-and SHOW TEAMS on row 2 searching at once.
+that used to reach the modem screen and now opens the list searching
+for INTERNET and LAN, the latency read for every type, and SHOW TEAMS
+on row 2 searching at once.
 
 ### Three layers
 

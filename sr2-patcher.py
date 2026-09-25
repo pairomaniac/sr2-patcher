@@ -98,7 +98,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc),
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfd0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470ff0, 'HUDRESET': 0x46cec0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd80},
     },
     'American': {
@@ -140,7 +140,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0),
+                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc),
                       'RENDERER': 0x50b210, 'SETVIEWPORT': 0x46c1e0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429e50, 'TREEDRAW': 0x471220, 'HUDRESET': 0x46d0d0, 'LATEFLAG': 0x4e69ec, 'FADEDRAW': 0x46bf90},
     },
     'Australian': {
@@ -184,7 +184,7 @@ BUILDS = {
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
         'addresses': {'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
-                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28),
+                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14),
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
     },
     # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
@@ -240,7 +240,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc),
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
     },
 }
@@ -483,20 +483,27 @@ def wide_sites(offsets, addresses, american):
 LOBBY_ROWS = (82, 134, 186)             # the three rows' y, at the stock pitch, centred in the panel (stock 54, 106, 158, 210)
 
 
-def lobby_sites(anchors, surfaces):
+def lobby_sites(anchors, surfaces, listopen):
     """The connection screen as three rows - INTERNET, DIRECT IP, LAN - in
     place of IPX, TCP/IP, MODEM, SERIAL: the drawer (0x43bd30) blits the
     rows at LOBBY_ROWS and not the fourth, the cursor wraps in 0..2, the
-    confirm never picks the modem screen, the latency after the connection
-    is the DLL's for every type, and SHOW TEAMS on row 2 searches at once
-    as row 0 does. The anchors are the drawer, the cursor wrap, the confirm,
-    the latency test and the SHOW TEAMS jump table, as file offsets, then
-    the table's stock and wanted entries; surfaces the two tables the
-    drawer indexes. Row 1's y does not fit the stock `push imm8`, so that
-    blit is re-encoded in place: its `add esi,4` dropped for a `push imm32`,
-    the next blit reading `[esi+8]`."""
+    confirm never picks the modem screen and instead sets the flag the
+    team list searches on when it opens (0x4edccc, which the IP entry set
+    for its search) for every row but DIRECT IP, the latency after the
+    connection is the DLL's for every type, and SHOW TEAMS on row 2
+    searches as row 0 does. The anchors are the drawer, the cursor wrap,
+    the confirm, the latency test and the SHOW TEAMS jump table, as file offsets,
+    then the table's stock and wanted entries; surfaces the two tables the
+    drawer indexes; listopen the next-screen slot, the modem screen and
+    the flag. Row 1's y does not fit the stock `push imm8`, so that blit
+    is re-encoded in place: its `add esi,4` dropped for a `push imm32`, the
+    next blit reading `[esi+8]`."""
     drawer, wrap, confirm, latency, table, stock, wanted = anchors
     handles, surface = surfaces
+    nextscreen, modem, flag = listopen
+    # cmp eax,2; mov [next],modem; je +10 -> cmp eax,1; je +10; mov dword [flag],1
+    modemcheck = bytes.fromhex('83f802c705') + struct.pack('<II', nextscreen, modem) + bytes.fromhex('740a')
+    searchflag = bytes.fromhex('83f801740ac705') + struct.pack('<II', flag, 1)
     blit = (bytes.fromhex('8b4604') + bytes.fromhex('8b14c5') + struct.pack('<I', handles + 4)
             + bytes.fromhex('8b0cc5') + struct.pack('<I', handles) + bytes.fromhex('8b0485') + struct.pack('<I', surface))
     tail = bytes.fromhex('895424108d542404526a6a6a00894c24188b0850ff511c')
@@ -511,7 +518,7 @@ def lobby_sites(anchors, surfaces):
         (wrap + 0x8, b'\x03', b'\x02'),
         (wrap + 0x28, b'\x03', b'\x02'),
         (wrap + 0x36, b'\x03', b'\x02'),
-        (confirm + 0x12, bytes.fromhex('740a'), bytes.fromhex('9090')),
+        (confirm + 0x5, modemcheck, searchflag),
         (latency + 0x7, bytes.fromhex('7513'), bytes.fromhex('eb13')),
         (table + 8, struct.pack('<I', stock), struct.pack('<I', wanted)),
     )
@@ -618,7 +625,7 @@ def patches(build):
             (WIDEGL_SITES[4], bytes.fromhex('558bec81eca8000000'), None),
             (WIDEGL_SITES[5], bytes.fromhex('8b44240c8b4c2408'), None)), 'apply_widegl'),
         'resolution': ('Options.dll', resolution_sites(row['addresses']['OPTSETTINGS']), 'apply_resolution'),
-        'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF']), None),
+        'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN']), None),
         'netplay': ('MUSASHI\\MGNetWk.dll', (), 'apply_netplay'),
     }
     if 'clearsize' in site:
@@ -831,7 +838,7 @@ FEATURES = (
      'car and course selection and the race are the game\'s own; up to four\n'
      'players, all on the same patcher version.\n'
      '\n'
-     'INTERNET\tSHOW TEAMS, the teams open anywhere.\n'
+     'INTERNET\tthe teams open anywhere, listed as the screen opens; SHOW TEAMS asks again.\n'
      'DIRECT IP\tThe host\'s address, or host:port. The host forwards UDP\n'
      '\t47626.\n'
      'LAN\tThe local network, searched.\n'

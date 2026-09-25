@@ -90,10 +90,10 @@ Two more tools for the daily work:
 ## The checks
 
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-There are 33. The first 21, down to `gui`, need only nasm, pyflakes,
+There are 34. The first 21, down to `gui`, need only nasm, pyflakes,
 Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C compiler, and
 CI runs them; every test that maps a PE image does it through
-`tools/uctest.py`. The last twelve need the discs and the games and skip
+`tools/uctest.py`. The last thirteen need the discs and the games and skip
 without them; `devices` also needs nasm, whose listing it reads. A tool
 that cannot run exits 77 and is reported SKIP, never OK. `clearsize` is
 Australian only and says so on the other builds.
@@ -117,6 +117,7 @@ Australian only and says so on the other builds.
 | `padinput`, `dinput8`, `nogeneric` | the pad annex, the DirectInput 8 create and type translation, and the device-list filter under Unicorn, on the build's real `MGInput.dll` |
 | `devices` | the Device Settings page's binding under Unicorn, on the real `Options.dll` over stubbed input objects |
 | `resolution` | the resolution row's init, draw and store under Unicorn, on the real `Options.dll` |
+| `lobby` | the connection screen's confirm under Unicorn, on the real exe: the list opens searching for INTERNET and LAN, not for DIRECT IP |
 | `clearsize` | the Australian clear's two arguments under Unicorn, on the real exe |
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
 | `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, the input objects and the annex's poll stubbed |

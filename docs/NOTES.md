@@ -1134,8 +1134,12 @@ the stock pitch centred in the panel (`LOBBY_ROWS`). Row 1's 134 does
 not fit the drawer's `push imm8`, so that blit is re-encoded in place:
 its `add esi, 4` goes, `push 0x86` takes the room, and the next blit
 reads `[esi+8]`; the fourth blit is jumped over. The cursor wraps in
-0..2, the confirm's `je` to the modem screen is two nops, the latency
-test's `jne` a `jmp`, and the SHOW TEAMS table's third entry the first's.
+0..2, the confirm's modem check (`cmp eax,2` and the modem screen's
+address, fifteen bytes) becomes `cmp eax,1; je; mov [0x4edccc],1` - the
+flag the list's first state (`0x43f210`) searches on, which the IP entry
+sets for its own search - so INTERNET and LAN open the list searching,
+the latency test's `jne` a `jmp`, and the SHOW TEAMS table's third entry
+the first's. `tools/lobbytest.py` runs the confirm under Unicorn.
 `MPDATA.DAT`, which keeps the type from last time, has a stock 3 reset
 to 0 at patch time.
 
