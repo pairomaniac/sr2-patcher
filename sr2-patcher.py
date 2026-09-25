@@ -4,7 +4,8 @@
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab, then patch with the defaults
     python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game: every patch, the ones KEYS names, or all but the ones it names with a minus (-music);
-                                                    the dgvoodoo add-on with them on Windows, named or -dgvoodoo elsewhere or not
+                                                    the dgvoodoo add-on with them on Windows, named or -dgvoodoo elsewhere or not;
+                                                    a diagnostic by name, or logs for every one of them and the network log
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
     python3 sr2-patcher.py --restore DIR            put the original files back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -695,8 +696,11 @@ def patches(build):
 
 
 # Diagnostics: applied only by name (--patch DIR KEYS), never by default.
+# netlog is Log = 1 in SR2.CFG rather than a patch; the word logs is every
+# one of them but d3dtrace2d, which d3dtrace covers.
 DIAGNOSTIC = ('voltrace', 'frametrace', 'gltrace', 'd3dtrace', 'd3dtrace2d', 'd3dinit')
-BYNAME = DIAGNOSTIC
+BYNAME = DIAGNOSTIC + ('netlog',)
+LOGS = tuple(k for k in BYNAME if k != 'd3dtrace2d')
 
 # Every patch any build has, in table order.
 PATCH_KEYS = tuple(k for k in dict.fromkeys(k for b in BUILDS for k in patches(b)) if k not in BYNAME)
@@ -6640,6 +6644,20 @@ def write_settings(dest, keys, log):
     log('patch: SR2.CFG completed: %s' % ', '.join(['[%s]' % n for n in missing] + (['the display block dropped'] if dropped else [])))
 
 
+def network_log_on(dest, log):
+    """Log = 1 under [Network] in SR2.CFG, the section written first if the
+    file has none (netlog on the command line)."""
+    cfg = os.path.join(dest, 'SR2.CFG')
+    with open(cfg, 'rb') as fh:
+        text = fh.read()
+    if b'[Network]' not in text:
+        text = text.rstrip(b'\r\n') + b'\n\n[Network]\nStaging = 0\nLog = 1\n'
+    else:
+        text = re.sub(rb'(?m)^(Log\s*=\s*)\S*', rb'\g<1>1', text, count=1)
+    write_whole(cfg, text)
+    log('patch: Log = 1 in SR2.CFG, the network log on')
+
+
 # --- dgVoodoo 2 -----------------------------------------------------------
 # Not ours and not bundled: fetched from its GitHub release at the user's
 # request rather than shipped. Windows' own Direct3D refuses a target over
@@ -6894,6 +6912,8 @@ def patch(dest, log=print, keys=None):
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
     write_settings(dest, keys, log)
+    if 'netlog' in keys:
+        network_log_on(dest, log)
     lobby_art(dest, 'lobby' in keys, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
@@ -9436,8 +9456,10 @@ def parse_keys(words):
     added to either, the windowed mode to any list, and the dgvoodoo
     add-on where it is the default unless named with a minus. Words may be
     separated by commas or spaces (PowerShell hands a,b over as two). A
-    list that names a patch without what it needs is refused by patch()."""
+    list that names a patch without what it needs is refused by patch().
+    The word logs is every diagnostic and the network log."""
     keys = [('-' if k.startswith('-') else '') + k.lstrip('-') for w in words for k in w.split(',') if k]
+    keys = [k for key in keys for k in (LOGS if key == 'logs' else (key,))]
     unknown = [k for k in keys if k.lstrip('-') not in PATCH_KEYS + BYNAME + ADDONS]
     if unknown:
         raise ValueError('no patch named %s; the patches are %s, the diagnostics %s, the add-ons %s'

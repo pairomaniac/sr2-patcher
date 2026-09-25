@@ -323,7 +323,9 @@ only those (listed at the top of `sr2-patcher.py`), or with a leading
 minus to leave them out, as in `--patch ~/games/sr2 -music`. Leaving a
 patch out also leaves out whatever needs it. The `dgvoodoo` add-on is on
 by default on Windows; `-dgvoodoo` leaves it out, naming it puts it in
-elsewhere.
+elsewhere. `--patch ~/games/sr2 logs` turns on every diagnostic and the
+network log for a bug report; `--patch ~/games/sr2` alone takes the
+diagnostics out again, and `Log` in `SR2.CFG` stays as it is.
 
 On Linux the terminal commands need nothing extra; the window needs Tk:
 
