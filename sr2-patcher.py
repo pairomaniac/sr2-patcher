@@ -615,9 +615,6 @@ def patches(build):
             (WIDE2D_SITES[6], bytes.fromhex('83ec08568b74241457'), None),
             (WIDE2D_SITES[7], bytes.fromhex('a10c24011083ec10'), None),
             (WIDE2D_SITES[8], bytes.fromhex('33c0b91f0000008d7c2420f3ab'), None)), 'apply_wide2d'),
-        'gltrace': ('MUSASHI\\MGameGL.dll', (), 'apply_gltrace'),
-        'd3dtrace': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace'),
-        'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'widescreen3d': ('MUSASHI\\MGameGL.dll', (
             (WIDEGL_SITES[0], bytes.fromhex('558bec83ec2889742404'), None),
             (WIDEGL_SITES[1], bytes.fromhex('558bec83ec18891c24'), None),
@@ -625,6 +622,10 @@ def patches(build):
             (WIDEGL_SITES[3], bytes.fromhex('8b44240c8b4c2408'), None),
             (WIDEGL_SITES[4], bytes.fromhex('558bec81eca8000000'), None),
             (WIDEGL_SITES[5], bytes.fromhex('8b44240c8b4c2408'), None)), 'apply_widegl'),
+        # the three trace flags after the blobs that carry them: the table's order is the transforms'
+        'gltrace': ('MUSASHI\\MGameGL.dll', (), 'apply_gltrace'),
+        'd3dtrace': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace'),
+        'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'resolution': ('Options.dll', resolution_sites(row['addresses']['OPTSETTINGS']), 'apply_resolution'),
         'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN']), None),
         'netplay': ('MUSASHI\\MGNetWk.dll', (), 'apply_netplay'),

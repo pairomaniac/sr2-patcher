@@ -143,7 +143,8 @@ def main(argv):
     trials += [with_needs({d}) for d in diagnostics] + [set(keys) | {d} for d in diagnostics]
     trials += [with_needs(set(random.sample(keys, random.randint(3, len(keys) - 1))) | {random.choice(diagnostics)})
                for _ in range(20)]
-    keys += diagnostics                             # the order apply_all takes them in; the pin below is the patches alone
+    keys += diagnostics
+    keys = [k for k in patcher.patches(build) if k in keys]     # the table's order, as patch() applies them; the pin below is the patches alone
     for name in patcher.PATCHED:
         path = os.path.join(game, *name.split('\\'))
         pristine = path + '.bak' if os.path.isfile(path + '.bak') else path
