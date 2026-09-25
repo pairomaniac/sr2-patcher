@@ -6573,6 +6573,28 @@ def carry_display_block(dest, log):
         log('patch: the display block of SR2.CFG carried to SR2.DSP')
 
 
+NETWORK_SECTION = '[Network]\nStaging = 0\nLog = 0\n'
+
+
+def write_network_section(dest, log):
+    """SR2.CFG with a [Network] section for the netplay DLL's two settings,
+    so they are there to find: the file made when there is none, the
+    section added to a text one without it. A stock file with the game's
+    display block ahead of the text is left alone; the DLL reads 0 from it
+    and the pad annex writes the section on its first save."""
+    cfg = os.path.join(dest, 'SR2.CFG')
+    if not os.path.isfile(cfg):
+        write_whole(cfg, ('; SEGA RALLY 2 settings\n\n' + NETWORK_SECTION).encode('ascii'))
+        log('patch: SR2.CFG written with its [Network] section')
+        return
+    with open(cfg, 'rb') as fh:
+        text = fh.read()
+    if not text.lstrip().startswith((b';', b'[')) or b'[Network]' in text:
+        return
+    write_whole(cfg, text.rstrip(b'\r\n') + b'\n\n' + NETWORK_SECTION.encode('ascii'))
+    log('patch: the [Network] section added to SR2.CFG')
+
+
 # --- dgVoodoo 2 -----------------------------------------------------------
 # Not ours and not bundled: fetched from its GitHub release at the user's
 # request rather than shipped. Windows' own Direct3D refuses a target over
@@ -6826,6 +6848,8 @@ def patch(dest, log=print, keys=None):
         log('patch: %s back to stock' % TXR)
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
+    if 'netplay' in keys and 'netplay' in table:
+        write_network_section(dest, log)
     lobby_art(dest, 'lobby' in keys, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]

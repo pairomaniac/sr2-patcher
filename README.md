@@ -263,10 +263,10 @@ is in [docs/NETWORK.md](docs/NETWORK.md).
 ### The network log
 
 Set `Log = 1` under `[Network]` in `SR2.CFG` beside `SEGA RALLY 2.exe`
-(the file is written when you save controls; the section is there with
-both keys at 0) and the game logs its connections, joins, refusals and
-drops to `sr2-net.log`, with the reason for each. When something goes
-wrong online, send that file from each machine.
+(the patcher puts the section there, both keys at 0) and the game logs
+its connections, joins, refusals and drops to `sr2-net.log`, with the
+reason for each. When something goes wrong online, send that file from
+each machine.
 
 ## Music
 

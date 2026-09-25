@@ -85,8 +85,9 @@ the version, which sends none (0.7.0 and earlier), is refused with a
 reason in `sr2-net.log` on both sides.
 
 `Log = 1` under `[Network]` in `SR2.CFG` turns on `sr2-net.log` beside
-the exe, a log of what the core did. The pad annex writes the section
-with both keys when it saves the controls, so the file shows them.
+the exe, a log of what the core did. The patcher writes the section
+with both keys at 0 (the file too, when there is none) and the pad
+annex carries it through a controls save.
 
 The game's socket is UDP 47626. When that port is taken - a second copy
 of the game on the machine, say - the DLL binds any free port and says
