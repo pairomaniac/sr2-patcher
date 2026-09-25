@@ -12,9 +12,10 @@
 #     tools/sr2.sh BUILD show             print the paths it would use and exit
 #
 # BUILD is eu, us, au, jp (Sega's disc) or jp_mk (the DigiCube and
-# MediaKite reissue). A variable that is empty in ~/.sr2-test shows as N/A
-# in show; an action that needs it stops. logs/ is in the repository
-# root and gitignored.
+# MediaKite reissue), or all: every build with a game folder in
+# ~/.sr2-test, one after another, for everything but run and debug. A
+# variable that is empty in ~/.sr2-test shows as N/A in show; an action
+# that needs it stops. logs/ is in the repository root and gitignored.
 # Under umu, Proton writes Wine's output to a file of its own rather than
 # the terminal (PROTON_LOG); the terminal only shows umu's lines. The file
 # is steam-<id>.log in PROTON_LOG_DIR, which is why that is pointed at
@@ -30,9 +31,23 @@ LOG=$LOGS/sr2.log
 
 die() { echo "sr2.sh: $*" >&2; exit 1; }
 
+if [ "${1:-}" = all ]; then
+    shift
+    case "${1:-run}" in run|debug) die "all: run and debug take one build" ;; esac
+    failed=""
+    for b in eu us au jp jp_mk; do
+        v=SR2_GAME_${b^^}
+        if [ -z "${!v:-}" ]; then echo "== $b: no game folder in $CONF"; continue; fi
+        echo "== $b"
+        "$0" "$b" "$@" || failed="$failed $b"
+    done
+    [ -z "$failed" ] || die "failed:$failed"
+    exit 0
+fi
+
 case "${1:-}" in
     eu|us|au|jp|jp_mk) BUILD=${1^^}; shift ;;
-    *) die "usage: tools/sr2.sh eu|us|au|jp|jp_mk install|rip|patch|restore|run|debug|show" ;;
+    *) die "usage: tools/sr2.sh eu|us|au|jp|jp_mk|all install|rip|patch|restore|run|debug|show" ;;
 esac
 game_var=SR2_GAME_$BUILD
 disc_var=SR2_DISC_$BUILD

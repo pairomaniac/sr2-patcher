@@ -53,8 +53,9 @@ tools/sr2.sh au run             # play it
 ```
 
 `tools/sr2.sh BUILD ACTION` works on one build with the paths from
-`~/.sr2-test`; BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`, and ACTION
-is `run` when left out:
+`~/.sr2-test`; BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`, or `all` for
+every build that has a game folder (not for `run` and `debug`), and
+ACTION is `run` when left out:
 
 | Action | Does |
 | --- | --- |
