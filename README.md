@@ -54,6 +54,11 @@ page:
 3. **Run it.** Double-click `sr2-patcher.py`, or `py sr2-patcher.py` from
    a terminal in its folder.
 
+On Windows the script may fail to fetch dgVoodoo 2 with
+`CERTIFICATE_VERIFY_FAILED`: Python's OpenSSL does not see the root
+certificates Windows fetches on demand. `py -m pip install certifi`
+gives it a list of its own; the exe carries one.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e84056b7-3ed2-41a9-bc3a-c1d67da97f11" alt="The patcher window, showing its numbered sections" height="700" />
 </p>
