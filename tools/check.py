@@ -61,7 +61,7 @@ CHECKS = [
      [PY, 'tools/fullwintest.py'], ''),
     ('altenter', 'the ALT+ENTER toggle under Unicorn',
      [PY, 'tools/altentertest.py'], ''),
-    ('starting', "the team room's starting line under Unicorn, every build",
+    ('starting', "the team room's starting box under Unicorn, every build",
      [PY, 'tools/startingtest.py'], ''),
     ('loadhold', 'the loading screens\' hold under Unicorn',
      [PY, 'tools/loadholdtest.py'], ''),

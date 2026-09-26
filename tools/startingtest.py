@@ -4,12 +4,12 @@
     python3 tools/startingtest.py
 
 STARTING_BLOB is called in place of the race setup, with gdi32, the
-room's background surface, MGameD3D and the room's draw replaced by
-recording stubs. It must resolve gdi32 once, write the line centred on
-the status strip's row with the row cleared to its own pixel colour,
-give the DC back, draw the room and present it, and reach the setup with
-the stack and the callee-saved registers as the site left them; without
-gdi32, a surface or a DC it must reach the setup having drawn nothing.
+room's background surface and MGameD3D replaced by recording stubs. It
+must resolve gdi32 once, draw the box centred on the surface - border,
+fill, the two lines each centred - give the DC back, blit the box alone
+onto the back buffer and present, and reach the setup with the stack
+and the callee-saved registers as the site left them; without gdi32, a
+surface or a DC it must reach the setup having drawn nothing.
 Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -24,11 +24,14 @@ from unicorn.x86_const import (UC_X86_REG_EAX, UC_X86_REG_ESP, UC_X86_REG_EBX, U
                                UC_X86_REG_EBP)
 
 CODE, FAKE, STACK, RETURN = 0x63e000, 0x40000000, 0x30000000, 0xdead0000
-HDC, FONT, PIXEL, WIDTH, CX, CY = 0x7777, 0x8888, 0x123456, 640, 300, 16
-LINE = 'STARTING - WAITING FOR THE OTHERS'
-STUBS = {'LoadLibraryA': 4, 'GetProcAddress': 8, 'SelectObject': 8, 'SetTextColor': 8, 'GetPixel': 12,
+HDC, FONT, WIDTH, HEIGHT = 0x7777, 0x8888, 640, 480
+LINES = ('STARTING THE RACE', 'WAITING FOR THE OTHER PLAYERS')
+EXTENT = {LINES[0]: (200, 18), LINES[1]: (330, 18)}
+PAD_X, PAD_Y, GAP, EDGE = 28, 14, 6, 2
+TEXT, BORDER, BOX = 0xffffff, 0xc8c8c8, 0x462814
+STUBS = {'LoadLibraryA': 4, 'GetProcAddress': 8, 'SelectObject': 8, 'SetTextColor': 8,
          'SetBkColor': 8, 'SetBkMode': 8, 'GetTextExtentPoint32A': 16, 'ExtTextOutA': 32,
-         'GetDC': 8, 'ReleaseDC': 8, 'Present': 4, 'After': 4, 'RoomDraw': 0, 'RaceSetup': 0}
+         'GetDC': 8, 'ReleaseDC': 8, 'SetTarget': 8, 'Blit': 16, 'Present': 4, 'After': 4, 'RaceSetup': 0}
 
 
 class Machine:
@@ -51,14 +54,15 @@ class Machine:
         self.surface, self.d3d = FAKE + 0x800, FAKE + 0x900       # the objects, their vtables after them
         mu.mem_write(self.surface, struct.pack('<I', self.surface + 0x40))
         mu.mem_write(self.surface + 0x40 + 0x28, struct.pack('<II', self.addr['GetDC'], self.addr['ReleaseDC']))
+        mu.mem_write(self.surface + 0x40 + 0x1c, struct.pack('<I', self.addr['Blit']))
+        mu.mem_write(self.surface + 0x40 + 0x34, struct.pack('<I', self.addr['SetTarget']))
         mu.mem_write(self.d3d, struct.pack('<I', self.d3d + 0x40))
         mu.mem_write(self.d3d + 0x40 + 0x80, struct.pack('<I', self.addr['Present']))
         mu.mem_write(self.d3d + 0x40 + 0x88, struct.pack('<I', self.addr['After']))
         mu.mem_write(a['ROOMBG'], struct.pack('<I', self.surface))
-        mu.mem_write(a['ROOMSIZE'], struct.pack('<II', WIDTH, 480))
+        mu.mem_write(a['ROOMSIZE'], struct.pack('<II', WIDTH, HEIGHT))
         mu.mem_write(a['ROOMFONT'], struct.pack('<I', FONT))
         mu.mem_write(a['GAMED3D'], struct.pack('<I', self.d3d))
-        mu.mem_write(a['ROOMDRAW'], b'\xe9' + struct.pack('<i', self.addr['RoomDraw'] - a['ROOMDRAW'] - 5))
         mu.mem_write(a['RACESETUP'], b'\xe9' + struct.pack('<i', self.addr['RaceSetup'] - a['RACESETUP'] - 5))
         self.byaddr = {v: k for k, v in self.addr.items()}
         mu.hook_add(UC_HOOK_CODE, self.hook)
@@ -81,25 +85,21 @@ class Machine:
         elif name == 'GetDC':
             self.calls.append(('GetDC', self.arg(0)))
             mu.mem_write(self.arg(1), struct.pack('<I', HDC if self.have['dc'] else 0))
-        elif name == 'GetPixel':
-            self.calls.append(('GetPixel', self.arg(0), self.arg(1), self.arg(2)))
-            result = PIXEL
         elif name == 'GetTextExtentPoint32A':
             text = bytes(mu.mem_read(self.arg(1), self.arg(2))).decode()
             self.calls.append(('GetTextExtentPoint32A', self.arg(0), text))
-            mu.mem_write(self.arg(3), struct.pack('<II', CX, CY))
+            mu.mem_write(self.arg(3), struct.pack('<II', *EXTENT[text]))
         elif name == 'ExtTextOutA':
-            rect = struct.unpack('<4i', mu.mem_read(self.arg(4), 16))
+            rect = struct.unpack('<4i', mu.mem_read(self.arg(4), 16)) if self.arg(4) else None
             text = bytes(mu.mem_read(self.arg(5), self.arg(6))).decode()
             self.calls.append(('ExtTextOutA', self.arg(0), self.arg(1), self.arg(2), self.arg(3), rect, text, self.arg(7)))
-        elif name in ('SelectObject', 'SetTextColor', 'SetBkColor', 'SetBkMode', 'ReleaseDC'):
+        elif name == 'Blit':
+            rect = struct.unpack('<4i', mu.mem_read(self.arg(3), 16))
+            self.calls.append(('Blit', self.arg(0), self.arg(1), self.arg(2), rect))
+        elif name in ('SelectObject', 'SetTextColor', 'SetBkColor', 'SetBkMode', 'ReleaseDC', 'SetTarget'):
             self.calls.append((name, self.arg(0), self.arg(1)))
         elif name in ('Present', 'After'):
             self.calls.append((name, self.arg(0)))
-        elif name == 'RoomDraw':
-            self.calls.append(('RoomDraw',))
-            mu.reg_write(UC_X86_REG_EAX, 0x11111111)          # the draw's scratch, as the real one leaves it
-            return
         elif name == 'RaceSetup':
             self.calls.append(('RaceSetup', mu.reg_read(UC_X86_REG_ESP)))
             return
@@ -130,11 +130,20 @@ class Machine:
 def main():
     for build in ('European', 'American', 'Australian', 'Japanese (DigiCube, MediaKite)'):
         m = Machine(build)
-        want = [('GetDC', m.surface), ('SelectObject', HDC, FONT), ('SetTextColor', HDC, -1),
-                ('GetPixel', HDC, 2, 458), ('SetBkColor', HDC, PIXEL), ('SetBkMode', HDC, 2),
-                ('GetTextExtentPoint32A', HDC, LINE),
-                ('ExtTextOutA', HDC, (WIDTH - CX) // 2, 456, 2, (0, 456, WIDTH, 456 + CY), LINE, 0),
-                ('ReleaseDC', m.surface, HDC), ('RoomDraw',), ('Present', m.d3d), ('After', m.d3d)]
+        (cx1, cy1), (cx2, cy2) = EXTENT[LINES[0]], EXTENT[LINES[1]]
+        w, h = max(cx1, cx2) + 2 * PAD_X, cy1 + cy2 + GAP + 2 * PAD_Y
+        left, top = (WIDTH - w) // 2, (HEIGHT - h) // 2
+        outer = (left, top, left + w, top + h)
+        inner = (left + EDGE, top + EDGE, left + w - EDGE, top + h - EDGE)
+        want = [('GetDC', m.surface), ('SelectObject', HDC, FONT),
+                ('GetTextExtentPoint32A', HDC, LINES[0]), ('GetTextExtentPoint32A', HDC, LINES[1]),
+                ('SetBkMode', HDC, 2), ('SetBkColor', HDC, BORDER), ('ExtTextOutA', HDC, 0, 0, 2, outer, '', 0),
+                ('SetBkColor', HDC, BOX), ('ExtTextOutA', HDC, 0, 0, 2, inner, '', 0),
+                ('SetBkMode', HDC, 1), ('SetTextColor', HDC, TEXT),
+                ('ExtTextOutA', HDC, (WIDTH - cx1) // 2, top + PAD_Y, 0, None, LINES[0], 0),
+                ('ExtTextOutA', HDC, (WIDTH - cx2) // 2, top + PAD_Y + cy1 + GAP, 0, None, LINES[1], 0),
+                ('ReleaseDC', m.surface, HDC), ('SetTarget', m.surface, 0), ('Blit', m.surface, left, top, outer),
+                ('Present', m.d3d), ('After', m.d3d)]
         got = m.start()
         if got != want:
             raise SystemExit('startingtest: %s: the line: %r' % (build, got))
@@ -154,7 +163,7 @@ def main():
         m2.have['gdi32'] = True
         if m2.start() != want or m2.loads != 2:
             raise SystemExit('startingtest: %s: gdi32 not tried again' % build)
-    print('starting: the line centred on the strip\'s row, the row cleared to its colour, the room drawn and presented, then the setup; nothing without gdi32, a surface or a DC; every build')
+    print('starting: the box centred on the room, its two lines centred in it, blitted alone and presented, then the setup; nothing without gdi32, a surface or a DC; every build')
     return 0
 
 

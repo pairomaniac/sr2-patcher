@@ -43,7 +43,7 @@ Two rules every blob follows:
 | `bgrow.asm` | exe, `Title.dll` | a .bg picture into the back buffer at either depth, or composed with its side areas for one blit to stretch; built twice |
 | `fullwin.asm` | `MGameD3D.dll` | the windowed mode filling the monitor: window sizing and a letterboxed present |
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
-| `starting.asm` | exe | a line on the team room while the race setup gathers the players |
+| `starting.asm` | exe | a box on the team room while the race setup gathers the players |
 | `ipcheck.asm` | exe | the IP entry popup's OK refused for a blank or malformed address |
 | `entrycap.asm` | exe | the lobby's text entries capped at what their fields hold, CTRL+V included |
 | `status.asm` | exe | the team room's status line asked of the netplay DLL: local and public address |
@@ -424,16 +424,16 @@ object, an error or an empty line it redoes the `lea` and returns.
 
 In the exe's annex, in place of the two calls into the race setup
 (`0x438dc0`), which spins for the other players without drawing. It
-writes `STARTING - WAITING FOR THE OTHERS` centred on the status row of
-the room's background surface with gdi32 (resolved once through the
-import slots: `SelectObject` the lobby's font, `SetTextColor`,
-`GetPixel` for the row's colour, `SetBkColor`, `SetBkMode`,
-`GetTextExtentPoint32A`, `ExtTextOutA` with the row's rectangle), calls
-the room's draw and MGameD3D's present, and jumps to the setup, which
-returns to the site. Placeholders: the surface and size tables, the
-font, the draw, the setup, MGameD3D's object, LoadLibraryA and
-GetProcAddress. `tools/startingtest.py` runs it under Unicorn on every
-build.
+draws a box - a border, a dark fill, `STARTING THE RACE` and `WAITING
+FOR THE OTHER PLAYERS` centred - in the middle of the room's background
+surface with gdi32 (resolved once through the import slots:
+`SelectObject` the lobby's font, `GetTextExtentPoint32A`, `SetBkMode`,
+`SetBkColor`, `SetTextColor`, `ExtTextOutA` for the fills and the
+lines), blits the box's rectangle alone onto the back buffer through the
+surface's wrapper, calls MGameD3D's present, and jumps to the setup,
+which returns to the site. Placeholders: the surface and size tables,
+the font, the setup, MGameD3D's object, LoadLibraryA and GetProcAddress.
+`tools/startingtest.py` runs it under Unicorn on every build.
 
 ## hudlast.asm
 
