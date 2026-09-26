@@ -99,8 +99,12 @@ keep-alive of the DLL's own - loss detection was DirectPlay's.
 ### The exe's protocol
 
 Every message the exe sends goes through `SendTo` with the type in byte 0
-and the sender's index in byte 1; received ones are dispatched by type at
-`0x438922` through the table at `0x438c78`. The receive loop `0x438720`
+and, in most, the sender's index in byte 1 - not in all: the clock request
+`0x20` carries a 0 there (`0x438f64`), and the host's `0x25` its own 0.
+Received ones index a table by byte 1 first (`0x438902`), then dispatch
+by type at `0x438922` through the table at `0x438c78`; the handlers that
+read byte 1 as a player index are `0x1b`, `0x23`, `0x24`, `0x28`, `0x2a`
+and `0x2e`. The receive loop `0x438720`
 (`Poll`, the events, then `PopUnsequenced` until `NOMESSAGES`) runs every
 frame in the team room, during the MSelect screens and in the race.
 
