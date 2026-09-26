@@ -1,9 +1,9 @@
 # Developing sr2-patcher
 
-How to build, what to run before pushing, and what each check is for.
-For using the patcher see [README.md](../README.md); for what the patches
-do see [NOTES.md](NOTES.md); for the assembly sources see
-[asm/](../asm/).
+This document says how to build the patcher, what to run before pushing,
+and what each check is for. [README.md](../README.md) says how to use the
+patcher, [NOTES.md](NOTES.md) says what the patches do, and
+[asm/](../asm/) holds the assembly sources.
 
 ## The two layers
 
@@ -12,9 +12,10 @@ asm/*.asm  ──nasm──►  hex strings in sr2-patcher.py  ──►  the on
  you edit             asm/build.py writes these
 ```
 
-`sr2-patcher.py` cannot read `asm/` at runtime, so the machine code is
-baked in as text between GENERATED markers by `asm/build.py`. **Never
-edit a blob by hand**; the next build run discards it.
+`sr2-patcher.py` cannot read `asm/` at runtime. So `asm/build.py`
+assembles the sources and writes the machine code into the script as hex
+text between GENERATED markers. **Never edit a blob by hand.** The next
+build run overwrites it.
 
 ## Setup, once
 
@@ -23,8 +24,8 @@ sh tools/setup-dev.sh          # says what is missing and the install line
 cp tools/sr2-test.example ~/.sr2-test
 ```
 
-Everything comes from the distribution; no venv, no pip. None of it is
-needed to run the patcher.
+Every package comes from the distribution; there is no venv and no pip.
+None of them is needed to run the patcher, only to work on it.
 
 | Package | For |
 | --- | --- |
@@ -37,12 +38,14 @@ needed to run the patcher.
 | `tkinter` | the window |
 | `xvfb` | the `gui` check |
 
-`~/.sr2-test` names, per build, the install disc, the play disc, the
-installed game and the Wine prefix: `SR2_DISC_EU`, `SR2_PLAY_EU`,
-`SR2_GAME_EU`, `SR2_PFX_EU`, and `US`, `AU`, `JP` (Sega's own disc) and
-`JP_MK` (the DigiCube and MediaKite reissue) likewise; the example file
-describes each. One left empty shows as N/A in `check.py` and `sr2.sh
-BUILD show`, not as a skip.
+`~/.sr2-test` names four paths per build: the install disc, the play
+disc, the installed game and the Wine prefix. For the European build the
+variables are `SR2_DISC_EU`, `SR2_PLAY_EU`, `SR2_GAME_EU` and
+`SR2_PFX_EU`. The other builds use the same names with `US`, `AU`, `JP`
+(Sega's own disc) or `JP_MK` (the DigiCube and MediaKite reissue) in
+place of `EU`. The example file describes each variable. A variable that
+is in the file but left empty shows as N/A in `check.py` and in `sr2.sh
+BUILD show`; it is not counted as a skip.
 
 ## Daily loop
 
@@ -52,82 +55,92 @@ python3 tools/check.py          # everything
 tools/sr2.sh au run             # play it
 ```
 
-`tools/sr2.sh BUILD ACTION` works on one build with the paths from
-`~/.sr2-test`; BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`, or `all` for
-every build that has a game folder (not for `run` and `debug`), and
-ACTION is `run` when left out:
+`tools/sr2.sh BUILD ACTION` works on one build, with the paths taken
+from `~/.sr2-test`. BUILD is `eu`, `us`, `au`, `jp` or `jp_mk`. It can
+also be `all`, which runs the action on every build that has a game
+folder; `run` and `debug` do not take `all`. ACTION is `run` when it is
+left out:
 
 | Action | Does |
 | --- | --- |
-| `install [LANG]` | install from the disc and patch; English unless given |
-| `rip` | rip the play disc's music into the game folder |
-| `patch [KEYS]` | patch the installed game; KEYS a comma list to apply only those |
-| `restore` | put the original files back |
-| `run` | run under umu (Proton) or plain wine; the Wine log goes to `logs/` |
-| `debug [CHANNELS]` | the same with `WINEDEBUG=+seh,+loaddll,+mci`, or the channels given |
-| `show` | print the paths it would use |
+| `install [LANG]` | installs from the disc and patches; the language is English unless LANG is given |
+| `rip` | rips the play disc's music into the game folder |
+| `patch [KEYS]` | patches the installed game; with KEYS, a comma-separated list, only those patches are applied |
+| `restore` | puts the original files back |
+| `run` | runs the game under umu (Proton) or plain wine; the Wine log goes to `logs/` |
+| `debug [CHANNELS]` | the same as `run`, with `WINEDEBUG=+seh,+loaddll,+mci` or the channels given |
+| `show` | prints the paths it would use |
 
-Some patches need others, and the patcher refuses a set without them:
-`xinput` needs `noregistry` (which gives the game's own block a file of
-its own and leaves `SR2.CFG` to the text), `devices` needs `xinput`,
-`nogeneric` needs `dinput8`, `music` needs `cdlevel`, `lobby` and
-`netplay` need each other, `starting` needs `lobby`, and the three
-other widescreen patches need `widescreen`. Among the diagnostics
-`gltrace` needs `widescreen3d`, `d3dtrace` and `d3dtrace2d`
-`widescreen2d`, `netlog` `netplay`. `windowed` and `borderless` are
-always in.
+Some patches need others, and the patcher refuses a set that names a
+patch without what it needs:
 
-Two more tools for the daily work:
+- `xinput` needs `noregistry`. `noregistry` gives the game's own
+  settings block a file of its own, `SR2.DSP`, and leaves `SR2.CFG` to
+  the controls text that `xinput` writes.
+- `devices` needs `xinput`.
+- `nogeneric` needs `dinput8`.
+- `music` needs `cdlevel`.
+- `lobby` and `netplay` need each other.
+- `starting` needs `lobby`.
+- `widescreen2d`, `widescreen3d` and `resolution` need `widescreen`.
+- Among the diagnostics, `gltrace` needs `widescreen3d`, `d3dtrace` and
+  `d3dtrace2d` need `widescreen2d`, and `netlog` needs `netplay`.
+
+`windowed` and `borderless` are always in the set.
+
+Two more tools serve the daily work:
 
 - `tools/loudness.py GAMEDIR` measures the CD rips against the streamed
-  music and says what `CD_DB - STREAM_DB` makes them equally loud at
-  equal sliders. The mix's numbers - the effects' range and the two
-  music offsets - are `asm/mix.inc`, included by `mix.asm` and
-  `music.asm`.
-- `python3 tools/kit.py` bundles every build's installed files, minus
-  the assets but with `BINDATA\connect\button` and `IP_ENTRY`, with the
-  first 16 MB of each `data1.cab`, into the gitignored `tools/sr2-kit.tar.gz`: what the
-  notes are written against.
+  music and says what value of `CD_DB - STREAM_DB` makes them equally
+  loud at equal slider settings. The mix's numbers - the effects' range
+  and the two music offsets - live in `asm/mix.inc`, which `mix.asm` and
+  `music.asm` include.
+- `python3 tools/kit.py` bundles every build's installed files into the
+  gitignored `tools/sr2-kit.tar.gz`. It leaves out the assets, except
+  `BINDATA\connect\button` and `IP_ENTRY`, and adds the first 16 MB of
+  each `data1.cab`. The notes are written against this bundle.
 
 ## The checks
 
-`tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-There are 37. The first 22, down to `gui`, need only nasm, pyflakes,
-Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C compiler, and
-CI runs them; every test that maps a PE image does it through
-`tools/uctest.py`. The last fifteen need the discs and the games and skip
-without them; `devices` also needs nasm, whose listing it reads. A tool
-that cannot run exits 77 and is reported SKIP, never OK; `clearsize` is
-Australian only and skips on the other builds.
+`tools/check.py` runs every check. `--list` names them and `--only a,b`
+picks some. There are 37. The first 22, down to `gui`, need only nasm,
+pyflakes, Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C
+compiler, and CI runs them. Every test that maps a PE image does so
+through `tools/uctest.py`. The last fifteen need the discs and the
+installed games, and they skip without them. `devices` also needs nasm,
+because it reads nasm's listing. A tool that cannot run exits 77 and is
+reported SKIP, never OK. `clearsize` applies to the Australian build only
+and skips on the others.
 
 | Check | Catches |
 | --- | --- |
-| `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, a placeholder left unfilled |
+| `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, or a placeholder left unfilled |
 | `asm` | `asm/` edited without `asm/build.py` being run |
-| `labels` | `tools/labels.py` edited without being run: the labels rendered here against the baked ones, a rasteriser's few pixels of difference allowed (skips without Pillow and the font) |
+| `labels` | `tools/labels.py` edited without being run. The labels are rendered here and compared with the baked ones; a rasteriser's few pixels of difference are allowed. Skips without Pillow and the font |
 | `net` | `net/` edited without `net/build.py` being run |
-| `nettest` | the network core: a host and five guests over loopback, a third of the datagrams dropped - joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going, an oversized reliable datagram and a welcome with a seat past the table; the name lookup on its thread; then a directory server started for the run (a failure to start fails the check), a session found through it, a direct join and a relayed one (skips without a C compiler) |
-| `directorytest` | the directory server's list limit per address, the token, the registration cookie, N and X, with a hand-set clock |
+| `nettest` | the network core. A host and five guests run over loopback with a third of the datagrams dropped, and the test covers joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going away, an oversized reliable datagram, and a welcome with a seat past the table. It also checks the name lookup on its own thread. Then a directory server is started for the run (a failure to start fails the check), a session is found through it, and one guest joins directly and one through the relay. Skips without a C compiler |
+| `directorytest` | the directory server's list limit per address, the token, the registration cookie, and N and X, with a hand-set clock |
 | `lint` | pyflakes |
-| `bgrow`, `wide`, `fullwin`, `altenter`, `starting`, `loadhold`, `padmenu`, `pagepad`, `hudlast`, `frametrace`, `d3dinit`, `texrange`, `replayfree` | those stubs under Unicorn, with the exe's routines stubbed (`wide` runs the European and the American exe blobs); `tools/uctest.py` is what the tests share |
+| `bgrow`, `wide`, `fullwin`, `altenter`, `starting`, `loadhold`, `padmenu`, `pagepad`, `hudlast`, `frametrace`, `d3dinit`, `texrange`, `replayfree` | those stubs under Unicorn, with the exe's routines stubbed. `wide` runs both the European and the American exe blobs. `tools/uctest.py` holds what these tests share |
 | `cab` | the disc and cabinet readers on a real dump |
-| `dgvoodoo` | the dgVoodoo 2 add-on's download and unpack against a made-up release |
-| `gui` | the window driven headlessly: the widgets reachable, the palette measured, the feature rows against the patch keys (skips without a display) |
-| `offsets` | every original byte string in the file, every patch alone, every pair, a hundred random sets and the diagnostics in sets of their own applying, the all-on result at its pinned MD5 with the full resolution table and with the capped one; an install older than the tables is noted, not failed |
+| `dgvoodoo` | the dgVoodoo 2 add-on's download and unpack, against a made-up release |
+| `gui` | the window driven headlessly: every widget is reachable, the palette's contrast is measured, and the feature rows are compared with the patch keys. Skips without a display |
+| `offsets` | the tables against a real install. Every original byte string is in the file; every patch applies alone, in every pair, in a hundred random sets, and with the diagnostics in sets of their own; and the all-on result has its pinned MD5, both with the full resolution table and with the capped one. An install older than the tables is noted, not failed |
 | `music` | the music hook under Unicorn, on the build's real `MGAudio.dll` |
 | `altab` | the alt-tab stub and the rewritten restore routine under Unicorn |
-| `padinput`, `dinput8`, `nogeneric` | the pad annex, the DirectInput 8 create and type translation, and the device-list filter under Unicorn, on the build's real `MGInput.dll` |
+| `padinput`, `dinput8`, `nogeneric` | the pad annex, the DirectInput 8 create and type translation, and the device-list filter, each under Unicorn on the build's real `MGInput.dll` |
 | `devices` | the Device Settings page's binding under Unicorn, on the real `Options.dll` over stubbed input objects |
 | `resolution` | the resolution row's init, draw and store under Unicorn, on the real `Options.dll` |
-| `lobby` | the connection screen's confirm under Unicorn, on the real exe: the list opens searching for INTERNET and LAN, not for DIRECT IP |
-| `buttons` | the SEARCH button composed from the install's stock `showteam_*` and `create_*` files, and the IP entry popup from its stock file, against pinned digests (a note for a file the install lacks) |
-| `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check, the caps by field, CTRL+V bounded, and the status line's stub |
+| `lobby` | the connection screen's confirm under Unicorn, on the real exe: the list opens searching for INTERNET and LAN, and not for DIRECT IP |
+| `buttons` | the SEARCH button composed from the install's stock `showteam_*` and `create_*` files, and the IP entry popup composed from its stock file, both against pinned digests. A file the install lacks gives a note |
+| `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check, the caps by field, CTRL+V kept within the cap, and the status line's stub |
 | `clearsize` | the Australian clear's two arguments under Unicorn, on the real exe |
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
-| `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, the input objects and the annex's poll stubbed |
+| `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, with the input objects and the annex's poll stubbed |
 
-A truncated `data1.cab` works for `cab` (`head -c 16M`), as long as it
-keeps the `.cab` name. To exercise the disc reader without a dump:
+A truncated `data1.cab` (`head -c 16M`) is enough for `cab`, as long as
+it keeps the `.cab` name. To exercise the disc reader without a dump,
+wrap the truncated cab in an image:
 
 ```bash
 genisoimage -o sr2.iso -graft-points DATA1.CAB=data1.head
@@ -146,62 +159,63 @@ chmod +x .git/hooks/pre-push
 
 ## Adding a patch
 
-A patch is a key in `patches()`: the file, its `(offset, original bytes,
-replacement)` sites, and a transform or `None`. Exe offsets come from the
-build's row in `BUILDS`; a DLL site is the same in every build. A
-transform takes the image and the build name; an exe stub gets its
-addresses through `EXE_MAGICS` placeholders that `exe_blob` fills from
-the row. `patch()` verifies the originals, writes the sites, then runs
-the transform.
+A patch is a key in `patches()`. Its entry names the file, lists its
+sites as `(offset, original bytes, replacement)`, and names a transform
+or `None`. Exe offsets come from the build's row in `BUILDS`; a DLL site
+is the same in every build. A transform takes the image and the build
+name. An exe stub gets its addresses through `EXE_MAGICS` placeholders,
+which `exe_blob` fills from the row. `patch()` verifies the original
+bytes, writes the sites, and then runs the transform.
 
-Code goes in `asm/`, as a transform. The shapes:
+Code goes in `asm/` and is installed by a transform. These are the
+shapes a transform takes:
 
 | Shape | Examples |
 | --- | --- |
-| a blob in the file's annex, sites pointed at it with `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `starting`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
-| a blob in a relocated DLL's annex, finding its own base | `music`, `borderless`, `xinput` |
+| a blob in the file's annex, with the sites pointed at it by `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `starting`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
+| a blob in a relocated DLL's annex, which finds its own base | `music`, `borderless`, `xinput` |
 | a routine rewritten in place | `restoreall` |
-| plain sites plus a transform that drops relocation entries | `borderless`, `texrange` |
+| plain sites, plus a transform that drops relocation entries | `borderless`, `texrange` |
 | a whole file replaced from a baked build | `netplay`; `lobby` also writes art and `MPDATA.DAT` beside the exe |
 
-The annex is one `.sr2` section per file, appended by the first patch
-that needs it and grown by the rest (`append_section`), so any set of
-patches fits; each transform appends its own, so any patch can be left
-out.
+The annex is one `.sr2` section per file. The first patch that needs it
+appends it, and the rest grow it (`append_section`), so any set of
+patches fits. Each transform appends its own data, so any patch can be
+left out.
 
 When a patch changes what it writes, update `EXPECTED` in
-`tools/selftest.py` (and `EXPECTED_CAPPED` for the exe or `Options.dll`,
-pinned under the capped resolution table); document it in NOTES.md's
-table and MAP.md.
+`tools/selftest.py`. For the exe or `Options.dll` also update
+`EXPECTED_CAPPED`, which is pinned under the capped resolution table.
+Then document the change in NOTES.md's table and in MAP.md.
 
 ## Adding a build
 
-A row in `BUILDS`: the fingerprints, the exe sites, the SetTextColor
-sites, the import slots and the addresses. Where a build's file differs
-in shape - the older `MGInput.dll`'s static polls (`kbdpoll`), its
-six-byte type read, the exe's `pagepad` site - the row carries the
-original bytes or the extra site; nothing in the code tests the build's
-name. No stub may name an exe address in its source (`asm/build.py`
-refuses one); everything a stub reads goes through a placeholder and
-the row.
+A build is a row in `BUILDS`: the fingerprints, the exe sites, the
+SetTextColor sites, the import slots and the addresses. Where a build's
+file differs in shape, the row carries the original bytes or the extra
+site; examples are the older `MGInput.dll`'s static polls (`kbdpoll`),
+its six-byte type read, and the exe's `pagepad` site. Nothing in the
+code tests the build's name. No stub may name an exe address in its
+source, and `asm/build.py` refuses one that does; everything a stub
+reads goes through a placeholder and the row.
 
-`tools/discsurvey.py` gives the fingerprints. Find each site by searching
-the new exe for the European site's bytes with addresses and `rel32`s
-masked, and read the hit back in a disassembler. `check_build` compares
-the row with the exe's import table and the `call` sites, so a wrong row
-fails before anything is written.
+`tools/discsurvey.py` gives the fingerprints. To find each site, search
+the new exe for the European site's bytes with the addresses and
+`rel32`s masked, and read the hit back in a disassembler. `check_build`
+compares the row with the exe's import table and the `call` sites, so a
+wrong row fails before anything is written.
 
-A rebuild of a known exe is the easy case; `Japanese (DigiCube,
+A rebuild of a known exe is the easy case, and `Japanese (DigiCube,
 MediaKite)` is the example. Search it for each European site's bytes
-unmasked first: the hits come back at the old offset or at a constant
+unmasked first. The hits come back at the old offset or at a constant
 delta, which shows where code moved. Data addresses stay put if the
-sections do. `tools/selftest.py` on an install from the disc then checks
-every site and pins the result.
+sections do. Then run `tools/selftest.py` on an install from the disc;
+it checks every site and pins the result.
 
 ## Reading a Wine log
 
 `tools/sr2.sh BUILD debug` sets `WINEDEBUG=+seh,+loaddll,+mci`, or the
-channels given. In the log:
+channels given. These lines in the log are the ones to look for:
 
 | Line | Means |
 | --- | --- |
@@ -212,115 +226,121 @@ channels given. In the log:
 
 ## Diagnostics
 
-A diagnostic is a patch applied only by name, or by its box in the
-window; naming one adds it to the set, `logs` names them all but
-`d3dtrace2d`, and a plain patch takes them out:
+A diagnostic is a patch that is applied only when it is named, or when
+its box in the window is ticked. Naming one adds it to the set; the word
+`logs` names all of them but `d3dtrace2d`; and a plain patch with no
+diagnostic named takes them out again:
 
 ```
 tools/sr2.sh eu patch voltrace
 python3 sr2-patcher.py --patch ~/games/sr2 frametrace
 ```
 
-`voltrace` and `gltrace` report on `+debugstr` (`tools/sr2.sh eu debug
-debugstr`; DebugView on Windows); the rest write to `logs\`. `netlog`
-is not a patch but `Log = 1` in `SR2.CFG`, the DLL's own log
-(net/README.md).
+`voltrace` and `gltrace` report through `+debugstr` (`tools/sr2.sh eu
+debug debugstr`, or DebugView on Windows). The rest write files under
+`logs\`. `netlog` is not a patch: it sets `Log = 1` in `SR2.CFG`, which
+turns on the netplay DLL's own log (net/README.md).
 
 ### voltrace
 
 Five volume entry points in the exe report their arguments as `sr2 vN
-this a1 a2 a3`. Sited in the European and DigiCube/MediaKite builds; the
-box does nothing on the others.
+this a1 a2 a3`. The sites are known in the European and DigiCube/MediaKite
+builds; on the other builds the box does nothing.
 
-An empty `music\trace` beside the tracks does the same for the music
-hook: every command it receives as `sr2 <id> <msg> <flags> <p1> <p2>
-<p3>`, and the worker every operation it answers as `sr2 op <op> <arg>
-<result> <last DirectSound HRESULT>`, in decimal.
+An empty file `music\trace` beside the tracks makes the music hook report
+in the same way. The hook reports every command it receives as `sr2 <id>
+<msg> <flags> <p1> <p2> <p3>`, and the worker reports every operation it
+performs as `sr2 op <op> <arg> <result> <last DirectSound HRESULT>`. The
+values are in decimal.
 
 ### frametrace
 
-For the frame pacing. The frame gate logs every drawn frame to
-`logs\frames.log` in the game folder: a header with the ticks per 1/60 s, then
-the counters at the gate's entry, after the blit and at its exit, the
-simulation steps and the gate's flags. Play, quit, and:
+This diagnostic is for the frame pacing. The frame gate logs every drawn
+frame to `logs\frames.log` in the game folder. The file starts with a
+header giving the ticks per 1/60 s; then each line holds the counter at
+the gate's entry, after the blit and at its exit, the simulation steps,
+and the gate's flags. Play, quit, and run
 
 ```
 python3 tools/frames.py ~/games/sr2/logs/frames.log
 ```
 
-prints the frame rate, the spread of the intervals, the catch-up frames
-and the worst intervals with when they happened. NOTES.md, *Frame
-timing*, says what the numbers mean.
+which prints the frame rate, the spread of the intervals, the catch-up
+frames, and the worst intervals with the time each happened. NOTES.md,
+*Frame timing*, says what the numbers mean.
 
 Take a baseline of the stock configuration first and read every later
-log against it. One change per run; the `-key` form gives the A/B
-without touching anything else.
+log against it. Make one change per run; the `-key` form gives an A/B
+comparison without touching anything else.
 
 ### gltrace
 
-For the widescreen work: MGameGL's viewport and projection calls, all in
-hex.
+This diagnostic is for the widescreen work. It reports MGameGL's viewport
+and projection calls, all in hex.
 
 | Line | Reports |
 | --- | --- |
-| `sr2 vp L T R B cx cy r1 r2` | `SetViewport` as called: the rect and centre, the return address and the one a wrapper's frame above it |
-| `sr2 vp> ...` | the same as it went on |
-| `sr2 fov a W H a>` | `SetPerspective`: the angle, the picture's size, the angle as it went on |
-| `sr2 ct cx cy cx> cy>` | `SetCentre` |
-| `sr2 pj x y x> y>` | the projection, floats, the first 2000 |
-| `sr2 gp id v v>` | the parameters the getter converts |
+| `sr2 vp L T R B cx cy r1 r2` | `SetViewport` as called: the rect and the centre, then `r1`, the return address, and `r2`, the return address one stack frame up, past a wrapper |
+| `sr2 vp> ...` | the same call as it went on after conversion |
+| `sr2 fov a W H a>` | `SetPerspective`: the angle, the picture's size, and the angle as it went on |
+| `sr2 ct cx cy cx> cy>` | `SetCentre`: the centre as called and as it went on |
+| `sr2 pj x y x> y>` | the projection, as floats; only the first 2000 are reported |
+| `sr2 gp id v v>` | the parameters the getter converts: the id, the value read, the value returned |
 
 ### d3dtrace, d3dtrace2d
 
-Every present as `sr2 p`, a frame's end, and every draw through
-MGameD3D's six hooked entries, the first 400000, to `OutputDebugString`
-(DebugView on Windows, `WINEDEBUG` under Wine) and to
-`logs\d3dtrace.log` in the game folder:
+`d3dtrace` reports every present as `sr2 p`, which marks a frame's end,
+and every draw through MGameD3D's six hooked entries, up to the first
+400000. The lines go to `OutputDebugString` (DebugView on Windows,
+`WINEDEBUG` under Wine) and to `logs\d3dtrace.log` in the game folder:
 
 ```
 sr2 d e fvf count ret x0 y0 z0 tex kind
 ```
 
-`e` is the entry (q, t, l, i, s, f: quad, triangle, list, indexed,
-strip, fan), `ret` the draw's return address - the `loaddll` lines in
-the same log say whose - then the first vertex in hex before any
-scaling, and the selected texture and its kind. The menus' quads fill
-those 400000 in a couple of minutes; `d3dtrace2d` instead reports only
-the 2D draws that are not quads - the lists, strips and fans, which is
-the HUD's text and the race's background layers - and nothing else,
-which is a race and its results rather than a lap of one.
+`e` is the entry: q, t, l, i, s or f for quad, triangle, list, indexed,
+strip or fan. `ret` is the draw's return address; the `loaddll` lines in
+the same log say which module it is in. Then come the first vertex in
+hex, before any scaling, and the selected texture and its kind. The
+menus' quads fill those 400000 lines in a couple of minutes.
+`d3dtrace2d` instead reports only the 2D draws that are not quads - the
+lists, strips and fans, which are the HUD's text and the race's
+background layers - and nothing else. That is enough for a race and its
+results rather than one lap.
 
-Two more lines, for the side bars (WIDESCREEN.md, *The side bars*):
+Two more lines serve the side bars (WIDESCREEN.md, *The side bars*):
 
 | Line | Reports |
 | --- | --- |
-| `sr2 b why tex kind xmin xmax ymin ymax` | every quad that reaches the bar's decision; why 1 not a quad, 2 shorter than 160, 3 no texture selected, 4 the texture is not a picture, 5 the bar drawn |
-| `sr2 t why slot flags size first bad left kind` | every texture create; why 1 past the table, 2 paletted or a render target, 3 no pixels, 4 a transparent pixel, 5 the kind kept |
+| `sr2 b why tex kind xmin xmax ymin ymax` | every quad that reaches the bar's decision. `why` is 1 for not a quad, 2 for shorter than 160, 3 for no texture selected, 4 for a texture that is not a picture, and 5 for the bar drawn |
+| `sr2 t why slot flags size first bad left kind` | every texture create. `why` is 1 for past the table, 2 for paletted or a render target, 3 for no pixels, 4 for a transparent pixel, and 5 for the kind kept |
 | `sr2 l hr ddraw surface` | the lobby's surface create |
-| `sr2 x hr this source flags L T R B [l t r b]` | every blit sent to the lobby's surface, as it went: the result, the two surfaces, the flags, the destination rect and the source rect if one |
-| `sr2 s surface hr flags w h pf bpp caps pixel` | after each, the source and then the destination: `Lock`'s result, the description's flags, size, pixel format flags, bit count and caps, and the pixel at (0, 240), 0 on a surface with no such row |
+| `sr2 x hr this source flags L T R B [l t r b]` | every blit sent to the lobby's surface, as it went: the result, the two surfaces, the flags, the destination rect, and the source rect if there is one |
+| `sr2 s surface hr flags w h pf bpp caps pixel` | after each blit, one line for the source and one for the destination: `Lock`'s result, the description's flags, size, pixel format flags, bit count and caps, and the pixel at (0, 240), which is 0 on a surface with no such row |
 
 ### d3dinit
 
-For a "Failed to initialize" box. Every step of MGameD3D's bring-up -
-the DirectDraw object, the cooperative level and the window or display
-mode, the surfaces, the device, the textures - appends `<site> <hr>
-<w>x<h> <tw>x<th>` to `logs\d3dinit.log` in the game folder: the store's RVA in
-`MGameD3D.dll`, its HRESULT, the picture size in force and the device's
-largest texture from its caps (0 until the device enumeration). The last
-line with a negative `hr` is the call that failed; MAP.md's `Init` row
+This diagnostic is for a "Failed to initialize" box. Every step of
+MGameD3D's bring-up - the DirectDraw object, the cooperative level and
+the window or display mode, the surfaces, the device, the textures -
+appends `<site> <hr> <w>x<h> <tw>x<th>` to `logs\d3dinit.log` in the
+game folder. The fields are the store's RVA in `MGameD3D.dll`, its
+HRESULT, the picture size in force, and the device's largest texture
+from its caps, which is 0 until the device enumeration. The last line
+with a negative `hr` names the call that failed, and MAP.md's `Init` row
 says which function each site is in. The device enumeration's sites
 (`0x1a34` to `0x1be3`) and the texture format enumeration's (`0x3b6d`,
-`0x3bc7`) are in the list too, and after site `0x20c5` one more line:
+`0x3bc7`) are in the list too. After site `0x20c5` one more line is
+written:
 
 ```
 fmt <slots> <chosen> <not565>
 ```
 
-`slots` has a bit per texture format slot the enumeration filled (bit 0
-the first of the 13, `0x10012594` on), `chosen` the slot the DLL picked
-and `not565` its flag for a chosen format other than R5G6B5. On either
-system:
+`slots` has one bit per texture format slot the enumeration filled; bit
+0 is the first of the 13 slots, at `0x10012594`. `chosen` is the slot
+the DLL picked, and `not565` is its flag for a chosen format other than
+R5G6B5. The command is the same on either system:
 
 ```
 python3 sr2-patcher.py --patch ~/games/sr2 d3dinit
@@ -328,95 +348,101 @@ python3 sr2-patcher.py --patch ~/games/sr2 d3dinit
 
 ## Commits
 
-Commits are the author's own: `pairo <pairo@segaonline.net>`, no
-co-author or session trailers, whatever tool wrote the change.
+Commits are the author's own, `pairo <pairo@segaonline.net>`, whatever
+tool wrote the change. They carry no co-author or session trailers.
 
 ### Working with a patch file
 
-Changes arrive as `git format-patch` files against `origin/main` as it
-is at that moment; a patch against an older commit fails on every file
-it touches. Apply them with `git am` on a clean tree.
+Changes arrive as `git format-patch` files made against `origin/main` as
+it is at that moment. A patch made against an older commit fails on
+every file it touches. Apply them with `git am` on a clean tree.
 
 ## Releasing
 
-The tag does the work: pushing one runs the checks, builds the exe and
-creates the release with both zips on it. Releases before v0.4.0 were
-marked pre-releases; from v0.4.0 they are not. On a clean `main` with the
-checks passing:
+The tag does the work. Pushing one runs the checks, builds the exe, and
+creates the release with both zips attached. Releases before v0.4.0 were
+marked pre-releases; from v0.4.0 on they are not. On a clean `main` with
+the checks passing:
 
 ```
 git tag -a v0.4.0 -m "v0.4.0"
 git push origin v0.4.0
 ```
 
-`VERSION` stays `dev` in the repository; the workflow stamps it from the
+`VERSION` stays `dev` in the repository. The workflow stamps it with the
 tag name less its `v`, so the exe's filename, its Windows file properties
-and `--version` say the tag's number (the zips carry the `v`). A push that is not a tag
-builds the same two zips as an artifact named with the short SHA.
+and `--version` all say the tag's number; the zips carry the `v`. A push
+that is not a tag builds the same two zips as an artifact named with the
+short SHA.
 
-Then write the notes over the generated ones: *Changes*, *Requirements*,
-*Known issues*, plain, only what has been seen.
+Then write the notes over the generated ones. The sections are
+*Changes*, *Requirements* and *Known issues*, in plain words, and they
+say only what has been seen.
 
 ```
 gh release edit v0.4.0 --notes-file notes.md
 ```
 
-Moving the tag (`git tag -f`, `git push --force origin
-refs/tags/v0.4.0`) re-runs the build and re-uploads the zips but leaves
-the notes as they are; `gh release view` shows all three.
+Moving the tag (`git tag -f`, then `git push --force origin
+refs/tags/v0.4.0`) re-runs the build and re-uploads the zips, but leaves
+the notes as they are. `gh release view` shows the notes and both zips.
 
 Before a release, put the exe through VirusTotal by hand and read the
-verdicts; the build log prints its checksum and a lookup link.
+verdicts. The build log prints the exe's checksum and a lookup link.
 
 ## The window
 
-`run_tk` and the tables above it are the whole of it: `FEATURES` is what
-the window lists and the README describes - one row per thing somebody
-would say the patcher does, with the patch keys it takes - and
-`group_keys` turns the boxes into the key set `patch` is given, dropping
-anything whose `NEEDS` went with it. `--selfcheck` holds the two
-together: every patch in exactly one row, every diagnostic with a label.
+`run_tk` and the tables above it are the whole of the window. `FEATURES`
+is what the window lists and what the README describes: one row per
+thing somebody would say the patcher does, with the patch keys that
+thing takes. `group_keys` turns the ticked boxes into the key set that
+`patch` is given, and drops any key whose `NEEDS` went out with an
+unticked box. `--selfcheck` holds the two together: every patch is in
+exactly one row, and every diagnostic has a label.
 
 `tools/assets.py` bakes `assets/SR2PatcherLogo2.png` and
 `assets/SR2PatcherIcon.png` into the script as the logo and the window
 icon, and writes `assets/icon.ico` for the exe. Run it after changing
-the artwork; never edit the blob by hand.
+the artwork. Never edit the blob by hand.
 
-`tools/guitest.py` drives the window under xvfb: what each button is
-offered for, which cards start open, that every description opens, and
-that the disc and folder probes run off the window's thread. It skips
-with no display; CI installs xvfb. Its first pass needs no display: every
-pair of `PALETTE` colours that carries meaning against the contrast WCAG
-asks - 4.5:1 for text, 3:1 for a border or a tick, 1.25:1 between each
-surface and the one behind it. The colours are quantised out of the box
-art, the Stratos watercolour and the cabinet; pick a new one from the
-artwork and then measure it. The band behind the logo is an image, since
-the canvas does not antialias, redrawn once a resize has stopped.
+`tools/guitest.py` drives the window under xvfb. It checks what each
+button is offered for, which cards start open, that every description
+opens, and that the disc and folder probes run off the window's thread.
+It skips when there is no display; CI installs xvfb. Its first pass
+needs no display: it measures every pair of `PALETTE` colours that
+carries meaning against the contrast WCAG asks for, which is 4.5:1 for
+text, 3:1 for a border or a tick, and 1.25:1 between each surface and
+the one behind it. The colours were quantised out of the box art, the
+Stratos watercolour and the cabinet. To change one, pick a new colour
+from the artwork and then measure it. The band behind the logo is an
+image, because the canvas does not antialias; it is redrawn once a
+resize has stopped.
 
-The window opens `LINE_CAP` lines of its own text tall - 48 puts the
-heading of the last numbered card on screen. `winfo_screenheight` is
-every monitor together, so it is only the upper bound. `_settle_height`
-re-measures for the first half second after the window is mapped, since
-nothing measured before that can be trusted, and then stops so the
-window can be dragged.
+The window opens `LINE_CAP` lines of its own text tall; 48 lines puts the
+heading of the last numbered card on screen. `winfo_screenheight`
+reports every monitor together, so it serves only as the upper bound.
+`_settle_height` re-measures the window for the first half second after
+it is mapped, because nothing measured before that can be trusted. Then
+it stops, so the window can be dragged.
 
 ## The Windows build
 
-`sr2-patcher.spec` is the whole build: the version comes out of the
+`sr2-patcher.spec` is the whole build. The version comes out of the
 script's `VERSION` line, `net/MGNetWk.dll` goes in as data, and the
-result is a one-dir bundle - the exe beside an `_internal` folder, which
-fewer scanners object to than a one-file exe.
+result is a one-dir bundle: the exe beside an `_internal` folder. Fewer
+scanners object to that than to a one-file exe.
 
     pip install pyinstaller
     pyinstaller sr2-patcher.spec
 
 The `windows` job in
 [.github/workflows/build.yml](../.github/workflows/build.yml) runs it on
-every push to main and on a tag, after `verify` passes. It builds
-PyInstaller's bootloader from source rather than taking the wheel's,
-which every PyInstaller exe shares and scanners know; stamps the version
-from the tag, or the short SHA; checks that tkinter, the certifi CA list
-and the netplay DLL are in the bundle; and runs the exe's `--selfcheck`,
-which catches an over-eager entry in the spec's `EXCLUDES` among the
-modules the tables import. A tag also uploads both zips to the release
-page.
+every push to main and on a tag, after `verify` passes. The job does four
+things beyond the build. It builds PyInstaller's bootloader from source
+rather than taking the wheel's, because every PyInstaller exe shares the
+wheel's bootloader and scanners know it. It stamps the version from the
+tag, or from the short SHA. It checks that tkinter, the certifi CA list
+and the netplay DLL are in the bundle. And it runs the exe's
+`--selfcheck`, which catches an over-eager entry in the spec's
+`EXCLUDES` among the modules the tables import. On a tag the job also
+uploads both zips to the release page.
