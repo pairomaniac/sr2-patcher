@@ -354,16 +354,23 @@ windowed present, inside the 16-byte frame that routine had made, and
 leaves through that frame's `ret 4`. It takes the client rect in screen
 coordinates, fits the back buffer's aspect into it, fills whichever bars
 have area with `Blt(DDBLT_COLORFILL)` and blits the back buffer into the
-middle, storing the result where the original did. The counter after
-the blit goes to `t_blt` for frametrace.asm, `QueryPerformanceCounter`
-resolved on the first present; the annex is writable for them.
+middle, storing the result where the original did. The primary surface
+is the primary monitor, on Windows and Wine alike, so a client rect that
+leaves it (`GetSystemMetrics`) is presented through GDI instead: the
+back buffer's `GetDC` stretched into the window's with `StretchBlt`, the
+bars `PatBlt`, DD_OK stored. The counter after the blit goes to `t_blt`
+for frametrace.asm; `QueryPerformanceCounter` and the six user32 and
+gdi32 entry points are resolved on the first present, and the blit is
+kept if any is missing. The annex is writable for them.
 
 **`sizewindow`** (+5) has `MoveWindow`'s stdcall shape and is called in
 its place from the windowed init, which runs on every screen change. It
 leaves a framed window (ALT+ENTER) alone and moves a `WS_POPUP` one to
-the monitor under the cursor - `GetCursorPos`, `MonitorFromPoint`,
-`GetMonitorInfoA`, resolved through the DLL's own `LoadLibraryA` and
-`GetProcAddress` - or where the game asked if any step fails.
+the monitor under the cursor the first time - `GetCursorPos`,
+`MonitorFromPoint`, `GetMonitorInfoA`, resolved through the DLL's own
+`LoadLibraryA` and `GetProcAddress` - and to the monitor it is on after
+that (`MonitorFromWindow`), so the one ALT+ENTER chose is kept; or where
+the game asked if any step fails.
 
 `tools/fullwintest.py` runs both under Unicorn with those calls recorded.
 

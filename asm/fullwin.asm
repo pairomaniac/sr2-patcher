@@ -11,15 +11,24 @@
 ;                   already made its 16-byte frame; leaves through that
 ;                   frame's `ret 4`.
 ;   +5  sizewindow  MoveWindow's stdcall shape: a WS_POPUP window is moved
-;                   to cover the monitor under the cursor, or where the game
-;                   asked if user32 will not say; a framed one (ALT+ENTER,
-;                   asm/altenter.asm) is left as the player has it. Called
-;                   from 0x100026be - on every screen change, since the
-;                   game brings the renderer up again for each screen.
+;                   to cover the monitor under the cursor the first time,
+;                   the monitor it is on after that (ALT+ENTER may have
+;                   taken it elsewhere), or where the game asked if user32
+;                   will not say; a framed one (asm/altenter.asm) is left
+;                   as the player has it. Called from 0x100026be - on every
+;                   screen change, since the game brings the renderer up
+;                   again for each screen.
 ;
 ; The window class is WS_POPUP, so a window the size of its monitor is
 ; what Wine and Windows treat as fullscreen, with no display mode change
 ; behind it.
+;
+; The primary surface is the primary monitor: DirectDraw's default device
+; reaches no other, on Windows or Wine. A client rect that leaves it is
+; presented through GDI instead - the back buffer's DC stretched into the
+; window's, the bars filled with PatBlt - which reaches any monitor. The
+; six user32 and gdi32 entry points are resolved with the counter below
+; and kept here; if any is missing the DirectDraw blit is kept.
 ;
 ; The counter after the blit is kept in t_blt for the frametrace
 ; diagnostic, which finds it through the jump the patcher puts at the
@@ -47,11 +56,20 @@ bits 32
 %define IAT_GETPROC         0xf0ac
 
 %define BLT             0x14            ; IDirectDrawSurface4::Blt
+%define GETDC           0x44            ; IDirectDrawSurface4::GetDC
+%define RELEASEDC       0x68            ; IDirectDrawSurface4::ReleaseDC
 %define DDBLT_COLORFILL 0x400
 %define DDBLT_WAIT      0x1000000
 %define MONITOR_DEFAULTTONEAREST 2
 %define GWL_STYLE       -16
 %define WS_POPUP        0x80000000
+%define SM_CXSCREEN     0
+%define SM_CYSCREEN     1
+%define COLORONCOLOR    3
+%define BLACKNESS       0x42
+%define SRCCOPY         0xcc0020
+%define NUSER           3               ; user32 entries at the head of names
+%define NFUNCS          6
 
         jmp     near present            ; +0
         jmp     near sizewindow         ; +5
@@ -67,11 +85,14 @@ getbase:
 
 ; ------------------------------------------------------------- present
 ; Frame: rc [ebp-0x10], dest [ebp-0x20], bar [ebp-0x30], sw/sh/dw/dh
-; [ebp-0x40..-0x4c], DDBLTFX (100 bytes) [ebp-0xb0].
+; [ebp-0x40..-0x4c], cw/ch [ebp-0x50/-0x54], the surface's and the
+; window's DC [ebp-0x58/-0x5c], dx/dy [ebp-0x60/-0x64], DDBLTFX (100
+; bytes) [ebp-0xc8]. rc and dest are screen coordinates, dx/dy and the
+; bars of the GDI path client ones.
 present:
         push    ebp
         mov     ebp, esp
-        sub     esp, 0xb0
+        sub     esp, 0xc8
         push    ebx
         push    esi
         push    edi
@@ -92,10 +113,12 @@ present:
         push    eax
         push    dword [ebx + HWND]
         call    [ebx + IAT_CLIENTTOSCREEN]
-        mov     esi, [ebp - 0x08]       ; cw
-        sub     esi, [ebp - 0x10]
-        mov     edi, [ebp - 0x04]       ; ch
-        sub     edi, [ebp - 0x0c]
+        mov     eax, [ebp - 0x08]
+        sub     eax, [ebp - 0x10]
+        mov     [ebp - 0x50], eax       ; cw
+        mov     eax, [ebp - 0x04]
+        sub     eax, [ebp - 0x0c]
+        mov     [ebp - 0x54], eax       ; ch
         mov     ecx, [ebx + SRCRECT + 8]
         sub     ecx, [ebx + SRCRECT]
         mov     [ebp - 0x40], ecx       ; sw
@@ -106,44 +129,63 @@ present:
         jz      .none
         test    edx, edx
         jz      .none
-        mov     eax, esi
+        mov     eax, [ebp - 0x50]
         imul    eax, edx                ; cw * sh
-        mov     ecx, edi
+        mov     ecx, [ebp - 0x54]
         imul    ecx, [ebp - 0x40]       ; ch * sw
         cmp     eax, ecx
         jb      .bywidth
-        mov     [ebp - 0x4c], edi       ; dh = ch
+        mov     eax, [ebp - 0x54]
+        mov     [ebp - 0x4c], eax       ; dh = ch
         mov     eax, ecx
         xor     edx, edx
         div     dword [ebp - 0x44]
         mov     [ebp - 0x48], eax       ; dw = ch * sw / sh
         jmp     .fit
 .bywidth:
-        mov     [ebp - 0x48], esi       ; dw = cw
+        mov     ecx, [ebp - 0x50]
+        mov     [ebp - 0x48], ecx       ; dw = cw
         xor     edx, edx
         div     dword [ebp - 0x40]
         mov     [ebp - 0x4c], eax       ; dh = cw * sh / sw
 .fit:
-        mov     eax, esi
+        mov     eax, [ebp - 0x50]
         sub     eax, [ebp - 0x48]
         shr     eax, 1
+        mov     [ebp - 0x60], eax       ; dx
         add     eax, [ebp - 0x10]
         mov     [ebp - 0x20], eax       ; dest.left
         add     eax, [ebp - 0x48]
         mov     [ebp - 0x18], eax       ; dest.right
-        mov     eax, edi
+        mov     eax, [ebp - 0x54]
         sub     eax, [ebp - 0x4c]
         shr     eax, 1
+        mov     [ebp - 0x64], eax       ; dy
         add     eax, [ebp - 0x0c]
         mov     [ebp - 0x1c], eax       ; dest.top
         add     eax, [ebp - 0x4c]
         mov     [ebp - 0x14], eax       ; dest.bottom
 
-        lea     edi, [ebp - 0xb0]       ; DDBLTFX, fill colour 0
+        cmp     dword [esi + f_patblt], 0    ; the last resolved: all six are
+        je      .ddraw
+        mov     eax, [ebp - 0x10]
+        or      eax, [ebp - 0x0c]
+        js      .gdi                    ; left of or above the primary monitor
+        push    SM_CXSCREEN
+        call    [esi + f_getsystemmetrics]
+        cmp     [ebp - 0x08], eax
+        jg      .gdi                    ; past its right edge
+        push    SM_CYSCREEN
+        call    [esi + f_getsystemmetrics]
+        cmp     [ebp - 0x04], eax
+        jg      .gdi                    ; below it
+
+.ddraw:
+        lea     edi, [ebp - 0xc8]       ; DDBLTFX, fill colour 0
         xor     eax, eax
         mov     ecx, 25
         rep stosd
-        mov     dword [ebp - 0xb0], 100
+        mov     dword [ebp - 0xc8], 100
 
         mov     eax, [ebp - 0x10]       ; top bar: l, t, r, dest.top
         mov     [ebp - 0x30], eax
@@ -184,7 +226,81 @@ present:
         push    eax
         call    [ecx + BLT]
         mov     [ebx + LASTHR], eax
-        call    getbase                 ; esi was the client width by now
+        jmp     .stamp
+
+.gdi:
+        mov     eax, [ebx + BACK]
+        mov     ecx, [eax]
+        lea     edx, [ebp - 0x58]
+        push    edx
+        push    eax
+        call    [ecx + GETDC]
+        test    eax, eax
+        jnz     .ddraw                  ; no DC to read: the blit, for what it reaches
+        push    dword [ebx + HWND]
+        call    [esi + f_getdc]
+        test    eax, eax
+        jz      .release
+        mov     [ebp - 0x5c], eax
+        push    COLORONCOLOR
+        push    eax
+        call    [esi + f_setstretchbltmode]
+
+        xor     eax, eax                ; top bar: 0, 0, cw, dy
+        mov     [ebp - 0x30], eax
+        mov     [ebp - 0x2c], eax
+        mov     eax, [ebp - 0x50]
+        mov     [ebp - 0x28], eax
+        mov     eax, [ebp - 0x64]
+        mov     [ebp - 0x24], eax
+        call    patbar
+        mov     eax, [ebp - 0x64]       ; bottom bar: 0, dy + dh, cw, ch - dy - dh
+        add     eax, [ebp - 0x4c]
+        mov     [ebp - 0x2c], eax
+        mov     ecx, [ebp - 0x54]
+        sub     ecx, eax
+        mov     [ebp - 0x24], ecx
+        call    patbar
+        mov     eax, [ebp - 0x64]       ; left bar: 0, dy, dx, dh
+        mov     [ebp - 0x2c], eax
+        mov     eax, [ebp - 0x60]
+        mov     [ebp - 0x28], eax
+        mov     eax, [ebp - 0x4c]
+        mov     [ebp - 0x24], eax
+        call    patbar
+        mov     eax, [ebp - 0x60]       ; right bar: dx + dw, dy, cw - dx - dw, dh
+        add     eax, [ebp - 0x48]
+        mov     [ebp - 0x30], eax
+        mov     ecx, [ebp - 0x50]
+        sub     ecx, eax
+        mov     [ebp - 0x28], ecx
+        call    patbar
+
+        push    SRCCOPY
+        push    dword [ebp - 0x44]      ; sh
+        push    dword [ebp - 0x40]      ; sw
+        push    dword [ebx + SRCRECT + 4]
+        push    dword [ebx + SRCRECT]
+        push    dword [ebp - 0x58]
+        push    dword [ebp - 0x4c]      ; dh
+        push    dword [ebp - 0x48]      ; dw
+        push    dword [ebp - 0x64]      ; dy
+        push    dword [ebp - 0x60]      ; dx
+        push    dword [ebp - 0x5c]
+        call    [esi + f_stretchblt]
+        push    dword [ebp - 0x5c]
+        push    dword [ebx + HWND]
+        call    [esi + f_releasedc]
+.release:
+        mov     eax, [ebx + BACK]
+        mov     ecx, [eax]
+        push    dword [ebp - 0x58]
+        push    eax
+        call    [ecx + RELEASEDC]
+        xor     eax, eax                ; DD_OK
+        mov     [ebx + LASTHR], eax
+
+.stamp:
         call    stamp
         mov     [esi + t_blt], eax
         mov     eax, [ebx + LASTHR]     ; the blit's result, as the original returned it
@@ -224,7 +340,7 @@ fillbar:
         jle     .skip
         mov     eax, [ebx + PRIMARY]
         mov     ecx, [eax]
-        lea     edx, [ebp - 0xb0]
+        lea     edx, [ebp - 0xc8]
         push    edx
         push    DDBLT_COLORFILL | DDBLT_WAIT
         push    0
@@ -236,23 +352,78 @@ fillbar:
 .skip:
         ret
 
+; The bar at [ebp-0x30] - x, y, w, h - filled black in the window's DC,
+; if it has any area.
+patbar:
+        cmp     dword [ebp - 0x28], 0
+        jle     .skip
+        cmp     dword [ebp - 0x24], 0
+        jle     .skip
+        push    BLACKNESS
+        push    dword [ebp - 0x24]
+        push    dword [ebp - 0x28]
+        push    dword [ebp - 0x2c]
+        push    dword [ebp - 0x30]
+        push    dword [ebp - 0x5c]
+        call    [esi + f_patblt]
+.skip:
+        ret
+
 ; Resolves QueryPerformanceCounter into pqpc, -1 when kernel32 will not
-; say, so it is asked once.
+; say, so it is asked once; then the GDI present's six into funcs, in
+; the order of names, stopping at the first missing.
 resolve:
         mov     dword [esi + pqpc], -1
         lea     eax, [esi + s_kernel32]
         push    eax
         call    [ebx + IAT_LOADLIB]
         test    eax, eax
-        jz      .done
+        jz      .user32
         lea     ecx, [esi + s_qpc]
         push    ecx
         push    eax
         call    [ebx + IAT_GETPROC]
         test    eax, eax
-        jz      .done
+        jz      .user32
         mov     [esi + pqpc], eax
+.user32:
+        lea     eax, [esi + s_user32]
+        push    eax
+        call    [ebx + IAT_LOADLIB]
+        test    eax, eax
+        jz      .done
+        mov     edi, eax
+        xor     ecx, ecx
+.user:  call    getone
+        jz      .done
+        inc     ecx
+        cmp     ecx, NUSER
+        jb      .user
+        lea     eax, [esi + s_gdi32]
+        push    eax
+        call    [ebx + IAT_LOADLIB]
+        test    eax, eax
+        jz      .done
+        mov     edi, eax
+.gdi:   call    getone
+        jz      .done
+        inc     ecx
+        cmp     ecx, NFUNCS
+        jb      .gdi
 .done:  ret
+
+; funcs[ecx] = GetProcAddress(edi, names[ecx]); ecx kept, ZF set on a miss.
+getone:
+        push    ecx
+        mov     eax, [esi + names + ecx * 4]
+        add     eax, esi
+        push    eax
+        push    edi
+        call    [ebx + IAT_GETPROC]
+        pop     ecx
+        mov     [esi + funcs + ecx * 4], eax
+        test    eax, eax
+        ret
 
 ; ---------------------------------------------------------- sizewindow
 ; stdcall (hwnd, x, y, w, h, repaint).
@@ -277,6 +448,8 @@ sizewindow:
         test    eax, eax
         jz      .asasked
         mov     edi, eax
+        cmp     byte [esi + placed], 0
+        jne     .bywindow
         lea     eax, [esi + s_getcursorpos]
         push    eax
         push    edi
@@ -298,6 +471,18 @@ sizewindow:
         push    dword [ebp - 0x2c]
         push    dword [ebp - 0x30]
         call    eax
+        jmp     .monitor
+.bywindow:
+        lea     eax, [esi + s_monitorfromwindow]
+        push    eax
+        push    edi
+        call    [ebx + IAT_GETPROC]
+        test    eax, eax
+        jz      .asasked
+        push    MONITOR_DEFAULTTONEAREST
+        push    dword [ebp + 8]
+        call    eax
+.monitor:
         test    eax, eax
         jz      .asasked
         mov     [ebp - 0x34], eax
@@ -325,6 +510,7 @@ sizewindow:
         push    dword [ebp - 0x24]      ; left
         push    dword [ebp + 8]
         call    [ebx + IAT_MOVEWINDOW]
+        mov     byte [esi + placed], 1
         jmp     .done
 .asasked:
         push    dword [ebp + 0x1c]
@@ -343,10 +529,31 @@ sizewindow:
         ret     0x18
 
 s_user32            db 'user32.dll', 0
+s_gdi32             db 'gdi32.dll', 0
 s_getcursorpos      db 'GetCursorPos', 0
 s_monitorfrompoint  db 'MonitorFromPoint', 0
+s_monitorfromwindow db 'MonitorFromWindow', 0
 s_getmonitorinfo    db 'GetMonitorInfoA', 0
 s_kernel32          db 'kernel32.dll', 0
 s_qpc               db 'QueryPerformanceCounter', 0
+s_getsystemmetrics  db 'GetSystemMetrics', 0
+s_getdc             db 'GetDC', 0
+s_releasedc         db 'ReleaseDC', 0
+s_setstretchbltmode db 'SetStretchBltMode', 0
+s_stretchblt        db 'StretchBlt', 0
+s_patblt            db 'PatBlt', 0
+
+names:  dd s_getsystemmetrics, s_getdc, s_releasedc, s_setstretchbltmode, s_stretchblt, s_patblt
+
+placed              db 0                ; sizewindow has placed the window
+        align 4
 pqpc                dd 0                ; 0 not asked, -1 none
 t_blt               dd 0                ; the counter after the blit
+; Filled with pqpc, in the order of names.
+funcs:
+f_getsystemmetrics  dd 0
+f_getdc             dd 0
+f_releasedc         dd 0
+f_setstretchbltmode dd 0
+f_stretchblt        dd 0
+f_patblt            dd 0

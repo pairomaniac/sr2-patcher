@@ -136,8 +136,8 @@ the byte, is in [docs/NOTES.md](docs/NOTES.md).
   black.
 - **Fix the device scan** - the white window on start, from the game
   reading every USB device on the machine.
-- **Windowed and borderless** - **ALT+ENTER** switches. Stock it took the
-  whole screen at 640x480.
+- **Windowed and borderless** - **ALT+ENTER** switches, on whichever
+  monitor the window is on. Stock it took the whole screen at 640x480.
 - **Text and panel fixes** - the menu text, the name you type, the team
   list and the chat were all invisible, and the team room's panels came
   out black with dgVoodoo 2.

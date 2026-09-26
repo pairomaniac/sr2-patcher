@@ -880,7 +880,10 @@ it where the game asked if any of that fails. A framed window - ALT+ENTER
 - is left as the player has it, since the init, and with it this call,
 runs again on every screen change: the game tears the renderer down and
 brings it back up between screens (`SetClipper(NULL)`,
-`SetCooperativeLevel`, new primary, clipper and back buffer).
+`SetCooperativeLevel`, new primary, clipper and back buffer). Once it
+has placed the window it goes by the monitor the window is on
+(`MonitorFromWindow`) rather than the cursor, so a borderless window
+ALT+ENTER put on another monitor stays there through the next screen.
 
 A `WS_POPUP` window the size of its monitor is what Wine reports to the
 compositor as fullscreen, with no display mode behind it to restore on
@@ -892,6 +895,26 @@ the back buffer's aspect into the client rect, fills the bars with
 still 640x480, point-sampled up, until a wide size is chosen. The 96
 bytes of the old present carry nine relocation entries and the call one;
 all go, since the bytes are dead or relative.
+
+**Another monitor.** The game creates DirectDraw on the default device
+(`DirectDrawCreate` with the null GUID, `0x10002da0`), whose primary
+surface is the primary monitor: on Windows the other monitors are
+separate devices, on Wine `ddraw` sizes its front buffer to output 0 and
+`DirectDrawCreate` takes no other. A blit whose destination leaves that
+surface fails - Wine's `wined3d_texture_blt` refuses the rect, the
+window stays white; Windows with dgVoodoo 2 drew black with a strip of
+garbage - so a window ALT+ENTER had put on a second monitor, or dragged
+across the edge of the first, showed nothing. The present now checks
+the client rect against `GetSystemMetrics(SM_CXSCREEN, SM_CYSCREEN)`,
+the primary monitor's size, and presents through GDI when it leaves it:
+`IDirectDrawSurface4::GetDC` on the back buffer, `StretchBlt`
+(`COLORONCOLOR`) into the window's DC, the bars `PatBlt(BLACKNESS)`,
+`ReleaseDC` both. The six entry points are resolved on the first present
+with `QueryPerformanceCounter`; if any is missing the blit is kept. On
+the primary monitor nothing changes. GDI costs a readback of the back
+buffer and a software stretch per frame, fine for 640x480 into 1440p;
+whether dgVoodoo's window takes GDI drawing over its swap chain is
+untested.
 
 The present keeps the counter after its blit in the annex, which is
 writable for it, for `frametrace`; `QueryPerformanceCounter` is resolved
