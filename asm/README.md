@@ -434,9 +434,10 @@ lines), raises a flag, blits the box's rectangle alone onto the back
 buffer through the surface's wrapper, calls MGameD3D's present, and
 jumps to the setup, which returns to the site; the second, in place of
 the frame gate's present call (`0x428835`), blits the box over what the
-frame drew while the flag is up, then presents; the third, in place of
-the room init's surface load (`0x435c02`), takes the flag down and jumps
-to the load. Placeholders: the surface and size tables, the font, the
+frame drew while the flag is up, then presents; the third, over the
+first eight bytes of the lobby's surface loader (`0x406fa0`), which
+every lobby screen's init calls, takes the flag down and goes on into
+the loader. Placeholders: the surface and size tables, the font, the
 load, the setup, MGameD3D's object, LoadLibraryA and GetProcAddress. `tools/startingtest.py` runs the three under Unicorn
 on every build.
 

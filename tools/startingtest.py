@@ -12,8 +12,9 @@ present, and reach the setup with the stack and the callee-saved
 registers as the site left them; without gdi32, a surface or a DC it
 must reach the setup having drawn nothing. The second entry, the gate's
 present, must blit the box while the flag is up and then present as the
-displaced code did; the third, the surface load, must take the flag
-down and load.
+displaced code did; the third, over the lobby's surface loader's first
+eight bytes, must take the flag down and go on into the loader with
+those bytes done.
 Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -69,7 +70,9 @@ class Machine:
         mu.mem_write(a['ROOMFONT'], struct.pack('<I', FONT))
         mu.mem_write(a['GAMED3D'], struct.pack('<I', self.d3d))
         mu.mem_write(a['RACESETUP'], b'\xe9' + struct.pack('<i', self.addr['RaceSetup'] - a['RACESETUP'] - 5))
-        mu.mem_write(a['ROOMLOAD'], b'\xe9' + struct.pack('<i', self.addr['RoomLoad'] - a['ROOMLOAD'] - 5))
+        # the loader: its first eight bytes are the site (the stub does them), the rest a stub that undoes them
+        mu.mem_write(a['ROOMLOAD'] + 8, b'\xe9' + struct.pack('<i', self.addr['RoomLoad'] - a['ROOMLOAD'] - 8 - 5))
+        mu.mem_write(self.addr['RoomLoad'], b'\x5b\x83\xc4\x20\xc3')          # pop ebx; add esp, 0x20; ret
         self.byaddr = {v: k for k, v in self.addr.items()}
         mu.hook_add(UC_HOOK_CODE, self.hook)
 
@@ -110,7 +113,8 @@ class Machine:
             self.calls.append(('RaceSetup', mu.reg_read(UC_X86_REG_ESP)))
             return
         elif name == 'RoomLoad':
-            self.calls.append(('RoomLoad', mu.reg_read(UC_X86_REG_ESP)))
+            esp = mu.reg_read(UC_X86_REG_ESP)
+            self.calls.append(('RoomLoad', esp + 0x24, mu.reg_read(UC_X86_REG_EBX)))   # past the loader's own eight bytes
             return
         mu.reg_write(UC_X86_REG_EAX, result)
 
@@ -126,6 +130,7 @@ class Machine:
         for reg, mark in ((UC_X86_REG_EBX, 0xb0b0b0b0), (UC_X86_REG_ESI, 0x51515151), (UC_X86_REG_EDI, 0xd1d1d1d1), (UC_X86_REG_EBP, 0xb5b5b5b5)):
             mu.reg_write(reg, mark)
         mu.mem_write(self.row['addresses']['ROOMBG'], struct.pack('<I', self.surface if self.have['surface'] else 0))
+        mu.mem_write(esp + 0x14, struct.pack('<I', 0x7ab1e))         # the loader's fifth argument, which its eight bytes load
         mu.emu_start(CODE + entry, RETURN, timeout=2000000, count=5000)
         kept = [mu.reg_read(r) for r in (UC_X86_REG_EBX, UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EBP)]
         if kept != [0xb0b0b0b0, 0x51515151, 0xd1d1d1d1, 0xb5b5b5b5]:
@@ -133,7 +138,8 @@ class Machine:
         if mu.reg_read(UC_X86_REG_ESP) != esp + 4:
             raise SystemExit('startingtest: %s: entry %d: stack wrong on return' % (self.build, entry))
         if last:
-            if not self.calls or self.calls[-1] != (last, esp):
+            want = (last, esp) if last == 'RaceSetup' else (last, esp, 0x7ab1e)
+            if not self.calls or self.calls[-1] != want:
                 raise SystemExit('startingtest: %s: entry %d: %s not reached with the site\'s stack: %r' % (self.build, entry, last, self.calls[-3:]))
             return self.calls[:-1]
         return self.calls

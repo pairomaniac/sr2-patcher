@@ -80,7 +80,7 @@ BUILDS = {
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x35002,
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -126,7 +126,7 @@ BUILDS = {
                   'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
-                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x35332,
+                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x6600,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
@@ -169,7 +169,7 @@ BUILDS = {
                   'clearsize': 0x40b83,
                   'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
-                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df), 'startpresent': (0x4c877, 0x4c8ff), 'startload': 0x5ea22,
+                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df), 'startpresent': (0x4c877, 0x4c8ff), 'startload': 0xfdf0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8,
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
@@ -223,7 +223,7 @@ BUILDS = {
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x35002,
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -566,7 +566,7 @@ def patches(build):
         'altab': (EXE, ((site['activate'], b'\xe8', None),), 'apply_activate'),
         'starting': (EXE, tuple((off, b'\xe8', None) for off in site['starting'])
                      + tuple((off, bytes.fromhex('50ff9180000000'), None) for off in site['startpresent'])
-                     + ((site['startload'], b'\xe8', None),), 'apply_starting'),
+                     + ((site['startload'], bytes.fromhex('83ec20538b5c2438'), None),), 'apply_starting'),
         'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
             (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
             for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
@@ -4256,33 +4256,34 @@ STATUS_BLOB = bytes.fromhex(
 )
 STARTING_BLOB = bytes.fromhex(
     'e90a000000e9f5010000e91b0200005356575583ec2489e6e8000000005d81ed'
-    '1d00000083bdd402000000753f8d85f002000050ff15e3e3e3e385c00f84af01'
-    '000089c331ff8b84bdd802000001e85053ff15e4e4e4e485c00f849201000089'
-    '84bdc00200004783ff0672daa1bbbbbbbb85c00f84780100008b108d0e5150ff'
-    '52288b1e85db0f8465010000ff35bdbdbdbd53ff95c00200008d4604506a118d'
-    '854b0300005053ff95d00200008d460c506a1d8d855c0300005053ff95d00200'
+    '1d00000083bde002000000753f8d85fc02000050ff15e3e3e3e385c00f84af01'
+    '000089c331ff8b84bde402000001e85053ff15e4e4e4e485c00f849201000089'
+    '84bdcc0200004783ff0672daa1bbbbbbbb85c00f84780100008b108d0e5150ff'
+    '52288b1e85db0f8465010000ff35bdbdbdbd53ff95cc0200008d4604506a118d'
+    '85570300005053ff95dc0200008d460c506a1d8d85680300005053ff95dc0200'
     '008b46043b460c73038b460c83c0388b4e08034e1083c122babcbcbcbc8b7a04'
-    '8b1229c2d1fa8995b002000001c28995b802000089fa29cad1fa8995b4020000'
-    '01ca8995bc0200008b85b002000083c0028946148b85b402000083c002894618'
-    '8b85b802000083e80289461c8b85bc02000083e8028946206a0253ff95cc0200'
-    '0068ffffff0053ff95c80200008d85b0020000e821010000680808080053ff95'
-    'c80200008d4614e80d0100006a0153ff95cc02000068ffffff0053ff95c40200'
-    '008bbdb402000083c70e8d854b030000b9110000008b5604e8f0000000037e08'
-    '83c7068d855c030000b91d0000008b560ce8d7000000a1bbbbbbbb8b105350ff'
-    '522cc785ac02000001000000e878000000a1eaeaeaea85c074178b1050ff9280'
+    '8b1229c2d1fa8995bc02000001c28995c402000089fa29cad1fa8995c0020000'
+    '01ca8995c80200008b85bc02000083c0028946148b85c002000083c002894618'
+    '8b85c402000083e80289461c8b85c802000083e8028946206a0253ff95d80200'
+    '0068ffffff0053ff95d40200008d85bc020000e82c010000680808080053ff95'
+    'd40200008d4614e8180100006a0153ff95d802000068ffffff0053ff95d00200'
+    '008bbdc002000083c70e8d8557030000b9110000008b5604e8fb000000037e08'
+    '83c7068d8568030000b91d0000008b560ce8e2000000a1bbbbbbbb8b105350ff'
+    '522cc785b802000001000000e883000000a1eaeaeaea85c074178b1050ff9280'
     '000000a1eaeaeaea8b1050ff928800000083c4245d5f5e5bb8bfbfbfbfffe055'
-    'e8000000005d81ed0502000083bdac020000007405e82f0000005da1eaeaeaea'
-    '8b0850ff9180000000c355e8000000005d81ed30020000c785ac020000000000'
-    '005db8a1a1a1a1ffe0a1bbbbbbbb85c074268b106a0050ff5234a1bbbbbbbb8b'
-    '108d8db002000051ffb5b4020000ffb5b002000050ff521cc36a006a0050506a'
-    '026a006a0053ff95d4020000c36a0051506a006a0057b8bcbcbcbc8b0029d0d1'
-    'f85053ff95d4020000c390900000000000000000000000000000000000000000'
-    '000000000000000000000000000000000000000000000000fa02000007030000'
-    '140300001f030000290300003f03000067646933322e646c6c0053656c656374'
-    '4f626a6563740053657454657874436f6c6f7200536574426b436f6c6f720053'
-    '6574426b4d6f64650047657454657874457874656e74506f696e743332410045'
-    '7874546578744f757441005354415254494e4720544845205241434557414954'
-    '494e4720464f5220544845204f5448455220504c415945525300'
+    'e8000000005d81ed0502000083bdb8020000007405e83a0000005da1eaeaeaea'
+    '8b0850ff9180000000c355e8000000005d81ed30020000c785b8020000000000'
+    '005d83ec20538b5c2438b8a1a1a1a183c008ffe0a1bbbbbbbb85c074268b106a'
+    '0050ff5234a1bbbbbbbb8b108d8dbc02000051ffb5c0020000ffb5bc02000050'
+    'ff521cc36a006a0050506a026a006a0053ff95e0020000c36a0051506a006a00'
+    '57b8bcbcbcbc8b0029d0d1f85053ff95e0020000c39090900000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000000603000013030000200300002b030000350300004b03000067646933'
+    '322e646c6c0053656c6563744f626a6563740053657454657874436f6c6f7200'
+    '536574426b436f6c6f7200536574426b4d6f6465004765745465787445787465'
+    '6e74506f696e7433324100457874546578744f757441005354415254494e4720'
+    '544845205241434557414954494e4720464f5220544845204f5448455220504c'
+    '415945525300'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -5271,19 +5272,21 @@ def apply_starting(buf, build):
     """starting.asm: its first entry in place of the two calls into the
     race setup (the host's START and the guest's on the host's word), its
     second in place of the frame gate's present call (two on the
-    Australian build, whose gate has two paths), its third in place of
-    the room init's surface load. The annex keeps the gdi32 entry points
-    it resolves, the flag and the box's rectangle, so it is writable."""
+    Australian build, whose gate has two paths), its third over the first
+    eight bytes of the lobby's surface loader, which every lobby screen's
+    init calls. The annex keeps the gdi32 entry points it resolves, the
+    flag and the box's rectangle, so it is writable."""
     row = BUILDS[build]
     for off in row['sites']['starting']:
         _check_call(buf, off, row['addresses']['RACESETUP'], 'the race setup')
-    _check_call(buf, row['sites']['startload'], row['addresses']['ROOMLOAD'], "the room's surface load")
+    if _off_to_rva(buf, row['sites']['startload']) + _image_base(buf) != row['addresses']['ROOMLOAD']:
+        raise ValueError("the surface loader's site is not at ROOMLOAD")
     out, rva = append_section(buf, exe_blob(STARTING_BLOB, build))
     for off in row['sites']['starting']:
         _branch(out, off, rva)
     for off in row['sites']['startpresent']:
         _branch(out, off, rva + 5, 7)
-    _branch(out, row['sites']['startload'], rva + 10)
+    _branch(out, row['sites']['startload'], rva + 10, 8, b'\xe9')
     return out
 
 

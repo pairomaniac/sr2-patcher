@@ -24,14 +24,16 @@
 ; so the frames the host's room goes on drawing keep the box, whatever
 ; the room's six draw layers put under it.
 ;
-; +10, in place of the init's call that loads the room's surfaces
-; (0x435c02): the flag down, since the background comes back fresh and
-; the box is gone from it, then the load.
+; +10, over the first eight bytes of the lobby's surface loader
+; (0x406fa0), which every lobby screen's init calls for its own set into
+; the same table: the flag down, since the surface the box was in is
+; gone with the room, then the displaced bytes and the rest of the
+; loader.
 ;
 ; Placeholders the patcher fills from the build's row: the room's
 ; surface table (ROOMBG, entry 0 the background) and its size table
 ; (ROOMSIZE, entry 0 width and height), the lobby's font (ROOMFONT),
-; the room's surface load (ROOMLOAD), the setup (RACESETUP), MGameD3D's
+; the lobby's surface loader (ROOMLOAD), the setup (RACESETUP), MGameD3D's
 ; object (GAMED3D), and LoadLibraryA's and GetProcAddress's import
 ; slots.
 
@@ -74,7 +76,7 @@ bits 32
 
         jmp     near start              ; +0, the setup's sites
         jmp     near present            ; +5, the gate's present
-        jmp     near fresh              ; +10, the room's surface load
+        jmp     near fresh              ; +10, the lobby's surface loader
 
 start:  push    ebx
         push    esi
@@ -250,15 +252,21 @@ present:
         call    [ecx + D_PRESENT]
         ret
 
-; The room's surface load, at its init: the background comes back fresh, so the flag goes down.
+; The lobby's surface loader, entered by the jmp over its first eight bytes: a
+; screen is loading its surfaces, so the flag goes down; then those bytes, and
+; on into the loader, with the stack as its caller left it.
 fresh:  push    ebp
         call    .here
 .here:  pop     ebp
         sub     ebp, .here
         mov     dword [ebp + flag], 0
         pop     ebp
+        sub     esp, 0x20               ; the loader's first eight bytes
+        push    ebx
+        mov     ebx, [esp + 0x38]
         mov     eax, ROOMLOAD
-        jmp     eax                     ; the load returns to the site
+        add     eax, 8
+        jmp     eax
 
 ; ebp = the blob: the box's rectangle from the background onto the back buffer, at its place.
 blit:   mov     eax, [ROOMBG]
