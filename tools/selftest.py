@@ -51,7 +51,7 @@ EXPECTED = {
     'European': {
         'SEGA RALLY 2.exe': '45b08acb3e38e6778e140ac9f527eca6',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
-        'MUSASHI\\MGameD3D.dll': '4fe7680739d7b2a9ec457082338171b6',
+        'MUSASHI\\MGameD3D.dll': '2fdba927154ccb2cc0e22cb43b675059',
         'MUSASHI\\MGAudio.dll': '7793a537317e3a45dd51c1776af63e90',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
@@ -63,7 +63,7 @@ EXPECTED = {
     'American': {
         'SEGA RALLY 2.exe': '3f9a26788429d85e074441c93b29e773',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
-        'MUSASHI\\MGameD3D.dll': '4fe7680739d7b2a9ec457082338171b6',
+        'MUSASHI\\MGameD3D.dll': '2fdba927154ccb2cc0e22cb43b675059',
         'MUSASHI\\MGAudio.dll': '7793a537317e3a45dd51c1776af63e90',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
@@ -75,7 +75,7 @@ EXPECTED = {
     'Australian': {
         'SEGA RALLY 2.exe': 'e3fa725e226c818251a260311c31126d',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
-        'MUSASHI\\MGameD3D.dll': '4fe7680739d7b2a9ec457082338171b6',
+        'MUSASHI\\MGameD3D.dll': '2fdba927154ccb2cc0e22cb43b675059',
         'MUSASHI\\MGAudio.dll': '0ef438db85e4d4d28d7b42084edcff07',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
@@ -87,7 +87,7 @@ EXPECTED = {
     'Japanese (DigiCube, MediaKite)': {
         'SEGA RALLY 2.exe': 'bb85a86feae05aa6131fe42b1c0f4ccd',
         'MUSASHI\\MGameGL.dll': '0dddd6b6300d818c009d409043b2424c',
-        'MUSASHI\\MGameD3D.dll': '4fe7680739d7b2a9ec457082338171b6',
+        'MUSASHI\\MGameD3D.dll': '2fdba927154ccb2cc0e22cb43b675059',
         'MUSASHI\\MGAudio.dll': '7793a537317e3a45dd51c1776af63e90',
         'MUSASHI\\MGSound.dll': 'f53d3c4ca507da0f04e8a81f0882388b',
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',

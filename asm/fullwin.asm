@@ -405,6 +405,7 @@ resolve:
         test    eax, eax
         jz      .done
         mov     edi, eax
+        mov     ecx, NUSER              ; the call kept no ecx
 .gdi:   call    getone
         jz      .done
         inc     ecx

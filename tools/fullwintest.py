@@ -58,8 +58,9 @@ class Machine:
         mu.mem_map(FAKE, 0x1000)
         mu.mem_write(BASE + SELF, blob)
         self.addr = {name: FAKE + i * 16 for i, name in enumerate(STUBS)}
-        for name, pops in STUBS.items():
-            mu.mem_write(self.addr[name], (b'\xc2' + struct.pack('<H', pops)) if pops else b'\xc3')
+        for name, pops in STUBS.items():   # ecx and edx clobbered, as a real callee may
+            mu.mem_write(self.addr[name], b'\xb9\xef\xbe\xad\xde\xba\xef\xbe\xad\xde'
+                         + ((b'\xc2' + struct.pack('<H', pops)) if pops else b'\xc3'))
         for name, rva in SLOTS.items():
             mu.mem_write(BASE + rva, struct.pack('<I', self.addr[name]))
         vtable, surface = BASE + 0x18000, BASE + 0x18100
