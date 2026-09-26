@@ -816,17 +816,17 @@ to initialize" box.
 Every step of the renderer's Init ends with `mov [0x10011fc4], eax` -
 the DLL's last-HRESULT slot - and a `jl` out on failure. The patcher
 turns each of those stores in the bring-up tree (`D3DINIT_SITES`) into a
-call to `entry`. `entry` does the store and appends one line, `<site>
-<hr> <w>x<h> <tw>x<th>`, to `logs\d3dinit.log` in the game folder: the
-store's RVA, the HRESULT, the picture size in the init struct's copy, and
+call to `entry`. `entry` does the store and appends one line,
+`<site> <hr> <w>x<h> <tw>x<th>`, to `logs\d3dinit.log` in the game
+folder: the store's RVA, the HRESULT, the picture size in the init struct's copy, and
 the largest texture the device's caps allow (from the `D3DDEVICEDESC` at
 `0x10012430`, which the device enumeration fills; 0 before that). So the
 last line with a negative `hr` names the call that failed.
 
 After the second of Init's stores (`FMTSITE`, by which point the texture
-formats have been enumerated) one more line is written: `fmt <slots>
-<chosen> <not565>` - which of the thirteen format slots the device
-filled, the slot picked for 16-bit textures, and the "not 565" flag.
+formats have been enumerated) one more line is written:
+`fmt <slots> <chosen> <not565>` - which of the thirteen format slots the
+device filled, the slot picked for 16-bit textures, and the "not 565" flag.
 
 Flags and registers are preserved, because the site's `jl` reads the
 result of a `test` made before the store. The absolute address in each

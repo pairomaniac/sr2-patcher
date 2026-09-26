@@ -248,9 +248,9 @@ this a1 a2 a3`. The sites are known in the European and DigiCube/MediaKite
 builds; on the other builds the box does nothing.
 
 An empty file `music\trace` beside the tracks makes the music hook report
-in the same way. The hook reports every command it receives as `sr2 <id>
-<msg> <flags> <p1> <p2> <p3>`, and the worker reports every operation it
-performs as `sr2 op <op> <arg> <result> <last DirectSound HRESULT>`. The
+in the same way. The hook reports every command it receives as
+`sr2 <id> <msg> <flags> <p1> <p2> <p3>`, and the worker reports every
+operation it performs as `sr2 op <op> <arg> <result> <last DirectSound HRESULT>`. The
 values are in decimal.
 
 ### frametrace
