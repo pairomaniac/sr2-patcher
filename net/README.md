@@ -56,9 +56,11 @@ window is full drains its socket for the acks before giving one up. An
 acknowledgement past anything sent is ignored. The others go as they
 are.
 
-A keep-alive goes every 500 ms. Twelve seconds of silence, or as long
-with nothing acknowledged, is a dead link: a guest dropped by the host,
-or the session lost for a guest.
+A keep-alive goes every 500 ms. Forty-five seconds of silence, or as
+long with nothing acknowledged, is a dead link: a guest dropped by the
+host, or the session lost for a guest. The game does not poll through a
+stage load, which can run past 12 s under Proton, and the exe itself
+waits up to 45 s for a racer.
 
 The host owns the player list. It assigns indices - the lowest free,
 unreserved slot, as the stock DLL did - and sends the roster on every
@@ -70,8 +72,8 @@ host, so a search cannot be made a reflector. A join is `JOIN` with the
 session's id, an eight-byte nonce the guest made up, the wire version
 (`SR2_PROTO`) and a cookie. The host answers a join from an address it
 has not seen with `CHALLENGE` carrying the cookie that address needs -
-made from a secret of the host's and the address, nothing kept per
-address - and seats only a join that brings it back, so a forged source
+a keyed hash (SipHash) of the address under a secret of the host's,
+nothing kept per address - and seats only a join that brings it back, so a forged source
 gets 20 bytes and no seat. Then `WELCOME` (the guest's index, the
 host's, the reserved slots, the roster and the version) or `REFUSE`
 (closed, full, not that session, or another version).
@@ -85,7 +87,9 @@ the version, which sends none (0.7.0 and earlier), is refused with a
 reason in `logs\sr2-net.log` on both sides.
 
 `Log = 1` under `[Network]` in `SR2.CFG` turns on `logs\sr2-net.log` beside
-the exe, a log of what the core did. The patcher writes the section
+the exe, a log of what the core did: the patcher's `netlog` diagnostic
+(the **Network log** box, or `--patch DIR netlog`; `logs` includes it),
+and a plain Apply sets it back to 0. The patcher writes the section
 with both keys at 0 when netplay is applied, the DLL writes it at the
 game's start when the file has none, and a controls save carries it.
 

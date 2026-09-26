@@ -53,7 +53,8 @@ def main(argv):
     if os.path.isfile(path + '.bak'):
         path += '.bak'
     if not os.path.isfile(path):
-        print('buttonstest: SEARCH composed from the stock lettering, three states as pinned; no %s in this install' % name)
+        print('buttonstest: SEARCH composed from the stock lettering, three states as pinned')
+        print('note: no %s in this install; the popup was not tested' % name)
         return 0
     with open(path, 'rb') as fh:
         data = fh.read()

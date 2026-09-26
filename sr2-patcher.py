@@ -4,8 +4,8 @@
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab, then patch with the defaults
     python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game: every patch, the ones KEYS names, or all but the ones it names with a minus (-music);
-                                                    the dgvoodoo add-on with them on Windows, named or -dgvoodoo elsewhere or not;
-                                                    a diagnostic by name, or logs for every one of them and the network log
+                                                    the dgvoodoo add-on on Windows unless -dgvoodoo, elsewhere only when named;
+                                                    a diagnostic by name (voltrace, frametrace, gltrace, d3dtrace, d3dtrace2d, d3dinit, netlog), or logs for all of them
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
     python3 sr2-patcher.py --restore DIR            put the original files back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -440,7 +440,9 @@ SURFMEM_SITE = 0x7cb2                   # MGameD3D, the offscreen surface create
 # step list 0x10002160, the fullscreen extras 0x100022e0, the DirectDraw
 # object 0x10002d80/0x10002df0/0x100024b0/0x10002eb0, the cooperative
 # level and window 0x100025d0, the surfaces 0x10003320/0x10003500/
-# 0x10003520, the device 0x10003840, the textures 0x100071e0, 0x10005fe0.
+# 0x10003520, the device 0x10003840, the textures 0x100071e0. Not the
+# two in the viewport setter 0x10005fe0 (0x6114, 0x612f): it runs every
+# frame and filled the log's 4096 lines before anything else could.
 D3DINIT_SITES = (0x1a34, 0x1a8c, 0x1ac1, 0x1ada, 0x1af6, 0x1b12, 0x1b2e, 0x1b4f, 0x1b6c, 0x1b9a, 0x1be3, 0x3b6d, 0x3bc7,
                  0x20a3, 0x20c5, 0x20d5, 0x20e5, 0x20ef, 0x1ff5, 0x200b,
                  0x2175, 0x21be, 0x21e6, 0x2200, 0x2210, 0x2220, 0x2234, 0x2244, 0x225c,
@@ -449,7 +451,7 @@ D3DINIT_SITES = (0x1a34, 0x1a8c, 0x1ac1, 0x1ada, 0x1af6, 0x1b12, 0x1b2e, 0x1b4f,
                  0x25f9, 0x262d, 0x26de, 0x270d, 0x2725,
                  0x332d, 0x34ea, 0x3517, 0x3593, 0x35c9, 0x35fb, 0x3626, 0x366e, 0x36c7, 0x3701, 0x3718, 0x373b, 0x3757, 0x3772, 0x377b,
                  0x388c, 0x38a3, 0x38e3, 0x38fe, 0x3919, 0x393e,
-                 0x7222, 0x7253, 0x6038, 0x6114, 0x612f)
+                 0x7222, 0x7253, 0x6038)
 D3DINIT_STORE = bytes.fromhex('a3c41f0110')   # `mov [0x10011fc4], eax`
 REPLAYFREE_SITES = (0x2f65, 0x3b1f)     # ReplayGallery, the gallery's new and its End's free
 SORTPAD_SITE = 0x1b64                   # ReplayGallery, after the list's row update in its browse state; every build
@@ -877,29 +879,34 @@ ESSENTIAL = ('nodisc', 'start', 'crashes', 'altab', 'devicescan', 'window',
 
 BY_GROUP = {group: (label, tip, keys) for group, label, tip, keys in FEATURES}
 
-# The diagnostics, which are patches applied only by name or by their box
-# in the window. Each writes a log beside the game for a bug report; see
-# docs/DEVELOPING.md.
+# The diagnostics, applied only by name or by their box in the window,
+# for a bug report: a log in logs\ beside the game, or lines to the
+# debugger (OutputDebugString: DebugView on Windows, WINEDEBUG=+debugstr
+# under Wine). See docs/DEVELOPING.md.
 DIAGNOSTIC_INFO = {
     'voltrace': ('Volume calls', 'Reports every call into the five volume '
-                 'routines on +debugstr, for a slider that is not doing what '
-                 'it says. The European and DigiCube/MediaKite releases only.'),
+                 'routines to the debugger, for a slider that is not doing '
+                 'what it says. The European and DigiCube/MediaKite '
+                 'releases; the box does nothing on the others.'),
     'frametrace': ('Frame pacing', 'Logs every drawn frame to '
                    'logs\\frames.log: when it started, how long it took and '
                    'what it waited for. For stutter and for a frame rate that '
                    'is not 60.'),
     'gltrace': ('MGameGL draws', 'Reports the 3D renderer\'s viewports, '
-                'angles and projections on +debugstr. For a picture that is '
-                'the wrong shape at a widescreen size.'),
-    'd3dtrace': ('MGameD3D draws', 'Reports every draw MGameD3D makes on '
-                 '+debugstr. The loudest of them; for something drawn in the '
-                 'wrong place.'),
+                'angles and projections to the debugger. For a picture that '
+                'is the wrong shape at a widescreen size.'),
+    'd3dtrace': ('MGameD3D draws', 'Logs every draw MGameD3D makes to '
+                 'logs\\d3dtrace.log. The loudest of them; for something '
+                 'drawn in the wrong place.'),
     'd3dtrace2d': ('MGameD3D 2D draws', 'The same for the 2D lists, strips '
                    'and fans only - the menus, the HUD and the text.'),
     'd3dinit': ('Direct3D bring-up', 'Logs every step of MGameD3D\'s '
                 'start-up with its HRESULT to logs\\d3dinit.log. This is '
                 'the one to send for "Failed to initialize. Error code '
                 '80004005".'),
+    'netlog': ('Network log', 'Logs the connections, joins, refusals and '
+               'drops of online play to logs\\sr2-net.log. For anything '
+               'online, from each machine.'),
 }
 
 
@@ -4219,13 +4226,13 @@ SORTPAD_BLOB = bytes.fromhex(
 IPCHECK_BLOB = bytes.fromhex(
     '5356575152beb3b3b3b3e8200000005a595f5e5b85c07408833db4b4b4b400c3'
     '586a006a006a006a1c68b5b5b5b5c331c983caff8a040e84c074093c3a750289'
-    'ca41ebf085c90f84c000000083f92f0f87b700000089cf83faff743989d78d5a'
-    '0139cb0f83a300000031d20fb6041e83e83083f8090f87910000006bd20a01c2'
-    '81faffff00000f87800000004339cb72da85d2747785ff747331db31d20fb604'
-    '1e3c2e74183c2d741483e83083f809760c8a041e0c202c613c197750424339fb'
-    '72db85d2754031db31c983caff0fb6041e3c2e750b83faff74324183caffeb17'
-    '83e83083faff750231d26bd20a01c281faff00000077154339fb72d183faff74'
-    '0b83f9037506b801000000c331c0c3'
+    'ca41ebf085c90f84c500000083f92f0f87bc00000089cf83faff743989d78d5a'
+    '0139cb0f83a800000031d20fb6041e83e83083f8090f87960000006bd20a01c2'
+    '81faffff00000f87850000004339cb72da85d2747c85ff747831db31d20fb604'
+    '1e3c2e74183c2d741483e83083f809760c8a041e0c202c613c197755424339fb'
+    '72db85d2754531db31c983caff0fb6041e3c2e750b83faff74374183caffeb1c'
+    '83e83083f809772983faff750231d26bd20a01c281faff00000077154339fb72'
+    'cc83faff740b83f9037506b801000000c331c0c3'
 )
 ENTRYCAP_BLOB = bytes.fromhex(
     'e917000000e968000000e971000000e8000000005b81eb14000000c353e8edff'
@@ -4237,8 +4244,8 @@ ENTRYCAP_BLOB = bytes.fromhex(
     '0000080000'
 )
 STATUS_BLOB = bytes.fromhex(
-    'a1b9b9b9b985c074228d4c2424680001000051508b10ff523885c0750e807c24'
-    '240074075868babababac38d842424020000c3'
+    'a1b9b9b9b985c0742a8d4c2424680001000051508b10ff523885c07516807c24'
+    '2400740f58c744241c0100000068babababac38d842424020000c3'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -4502,8 +4509,8 @@ LOBBY_LABELS = {
 # MUSASHI\MGNetWk.dll, built from net/ and carried beside the patcher
 # rather than inside it; MGNETWK_SRC the sources' hash, MGNETWK_SHA the
 # file's.
-MGNETWK_SRC = 'd4b8ca951983100970b274629d9c556eff119cfd1c84266e20ad78caec2d9660'
-MGNETWK_SHA = 'b0162c7ef8da4f768a16bf6a86f520df55610aed8278cd36756757c628048b33'
+MGNETWK_SRC = 'c7b8e56492719fc38dd283032e970611b25163d64f45ab41de56e679fb341b67'
+MGNETWK_SHA = '8fcc62e9faca4e42bcdbf8b57ad71f709a200f982f767ac484b1f2c03aee5409'
 # --- GENERATED by net/build.py: END ---
 
 MGNETWK_NAME = 'MGNetWk.dll'
@@ -5678,7 +5685,6 @@ HINT_GLYPHS = {'S': (104, 59, 112), 'H': (49, 59, 57), 'E': (175, 211, 182), 'C'
 HINT_SPACING, HINT_SPACE, HINT_ROWS, HINT_MARGIN = 1, 5, 17, 2   # the margin: white texels each side, so the edges filter to white
 HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to bind it, or hit ESC to keep it')
 HINT_STRIP_TOPS = (130, 150, 170, 190)  # the lines' two halves each on the appended sheet, from x 1
-HINT_SHEET = 4
 
 # The twenty-one letters the hint lines need, cut from sheet 4 of the
 # English OPTIONS.TXR at the boxes above: 565 texels, each glyph
@@ -6838,18 +6844,30 @@ def write_settings(dest, keys, log):
     log('patch: SR2.CFG completed: %s' % ', '.join(['[%s]' % n for n in missing] + (['the display block dropped'] if dropped else [])))
 
 
-def network_log_on(dest, log):
-    """Log = 1 under [Network] in SR2.CFG, the section written first if the
-    file has none (netlog on the command line)."""
+def network_log(dest, on, log):
+    """Log under [Network] in SR2.CFG 1 or 0: the netlog diagnostic, on
+    when named or ticked and off by a plain Apply like the others. The
+    section is written when the file lacks it; a file that is not there
+    is left that way when the log is off."""
     cfg = os.path.join(dest, 'SR2.CFG')
-    with open(cfg, 'rb') as fh:
-        text = fh.read()
+    text = b''
+    if os.path.isfile(cfg):
+        with open(cfg, 'rb') as fh:
+            text = fh.read()
+    value = b'1' if on else b'0'
     if b'[Network]' not in text:
-        text = text.rstrip(b'\r\n') + b'\n\n[Network]\nStaging = 0\nLog = 1\n'
+        if not on:
+            return
+        block = settings_text(network=('0', '1'), controls=False)
+        new = text.rstrip(b'\r\n') + b'\n\n' + block.split(b'\n\n', 1)[1] if text.strip() else block
     else:
-        text = re.sub(rb'(?m)^(Log\s*=\s*)\S*', rb'\g<1>1', text, count=1)
-    write_whole(cfg, text)
-    log('patch: Log = 1 in SR2.CFG, the network log on')
+        new, n = re.subn(rb'(?m)^(Log\s*=\s*)\S*', rb'\g<1>' + value, text, count=1)
+        if not n:
+            new = re.sub(rb'(?m)^\[Network\][^\n]*\n', lambda m: m.group(0) + b'Log = ' + value + b'\n', text, count=1)
+    if new == text:
+        return
+    write_whole(cfg, new.lstrip(b'\r\n'))
+    log('patch: Log = %s in SR2.CFG, the network log %s' % (value.decode('ascii'), 'on' if on else 'off'))
 
 
 # --- dgVoodoo 2 -----------------------------------------------------------
@@ -7106,8 +7124,7 @@ def patch(dest, log=print, keys=None):
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
     write_settings(dest, keys, log)
-    if 'netlog' in keys:
-        network_log_on(dest, log)
+    network_log(dest, 'netlog' in keys, log)
     lobby_art(dest, 'lobby' in keys, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
@@ -7177,7 +7194,6 @@ def restore(dest, log=print):
 # asks for them by number, so a different layout is a different disc.
 SR2_AUDIO = tuple(range(2, 15))
 MUSIC_SUBDIR = 'music'
-WAV_HEADER = WAV_HDR
 
 
 class Cancelled(Exception):
@@ -7382,7 +7398,7 @@ def probe_play_disc(cue):
     """The audio tracks of the play disc and what they rip to."""
     spans = list(audio_spans(parse_cue(cue)))
     return {'tracks': tuple(t['no'] for t, _s, _e in spans),
-            'bytes': sum((end - start) * RAW + WAV_HEADER
+            'bytes': sum((end - start) * RAW + WAV_HDR
                          for _t, start, end in spans)}
 
 
@@ -7861,7 +7877,7 @@ NO_GAME = 'No game folder selected'
 NO_GAME_YET = 'Nothing installed there yet. Install it below.'
 GAME_TO_CREATE = 'That folder does not exist yet. Install game creates it.'
 GAME_READING = 'Reading the folder\u2026'
-GAME_READY = 'READY - %s release. %d patches selected. Press Apply patches.'
+GAME_READY = 'READY - %s release, %d patches. Press Apply patches.'
 GAME_PATCHED = 'Already patched - %s release. Apply patches writes it again.'
 GAME_HELP = ('Only an untouched Pentium III install is accepted - the build '
              'the original installer chose on any modern CPU. A modified or '
@@ -7885,9 +7901,8 @@ DGVOODOO_WINE = ('Wine and Proton have wined3d, which has no such limit, so '
                  'this is off and not needed there.')
 DGVOODOO_CAPPED = ('Without it the resolution list stops at 2048 a side.')
 
-DIAGNOSTICS_HINT = ('Off unless asked for. Each writes to logs\\ beside the '
-                    'game for a bug report; the name in brackets is what '
-                    '--patch takes.')
+DIAGNOSTICS_HINT = ('Off unless asked for. Each logs something for a bug '
+                    'report; the name in brackets is what --patch takes.')
 
 MUSIC_HINT = ('Rips the play disc to music\\ beside the game, where the '
               'Music from files patch reads it. About 550 MB.')
@@ -7900,8 +7915,8 @@ MUSIC_NO_AUDIO = ('This image has no audio tracks - the music is not in it. '
 MUSIC_ODD_AUDIO = ('This image has %d audio tracks; the play disc has %d. '
                    'Ripping it will not give the right music.')
 
-# %d is the number of patches written. The count is the one thing anybody
-# can check against what they ticked, and it is what a bug report needs.
+# %d is the number of patches written, the build's own: what a bug
+# report needs.
 DONE = 'Done - %d patches written. Restore original puts the game back.'
 FAILED = 'Failed - see the log below. Every file written has its .bak beside it; Apply starts from those.'
 RESTORED = 'Restored. The original files are back in place.'
@@ -9026,11 +9041,12 @@ def run_tk():
                                                      padx=(6, 2))
 
         def _selected(self):
-            """How many patches Apply would write right now."""
-            return len(group_keys(self._extras()))
+            """How many patches Apply would write right now: the build's,
+            not the add-on or a diagnostic."""
+            return len([k for k in group_keys(self._extras()) if k in patches(self.build)])
 
         def _extras(self):
-            keys = tuple(k for k in DIAGNOSTIC if self.diagnostics[k].get())
+            keys = tuple(k for k in BYNAME if self.diagnostics[k].get())
             if self.dgvoodoo.get():
                 keys += ADDONS
             return keys
@@ -9075,7 +9091,7 @@ def run_tk():
 
         def _diagnostics_body(self, parent):
             _hint(parent, DIAGNOSTICS_HINT, self.dim, self.small, pady=(0, 6))
-            for key in DIAGNOSTIC:
+            for key in BYNAME:
                 label, tip = DIAGNOSTIC_INFO[key]
                 row = ttk.Frame(parent, style='Card.TFrame')
                 row.pack(fill='x', pady=self.px(2))
@@ -9504,7 +9520,7 @@ def run_tk():
         def _apply(self):
             dest = self.game_var.get().strip()
             keys = group_keys(self._extras())
-            self._written = len([k for k in keys if k in PATCH_KEYS])     # the patches: not the add-on, not a diagnostic
+            self._written = self._selected()
             self._log('patch: %d patches to %s' % (self._written, dest))
             self._start('patch', lambda log: patch(dest, log, keys), BUSY)
 
@@ -9628,7 +9644,7 @@ def selfcheck():
                          % ', '.join(sorted(set(listed) ^ set(PATCH_KEYS))))
     if len(listed) != len(set(listed)):
         raise ValueError('a patch is in two feature rows')
-    if set(DIAGNOSTIC_INFO) != set(DIAGNOSTIC):
+    if set(DIAGNOSTIC_INFO) != set(BYNAME):
         raise ValueError('a diagnostic has no label')
     for table in RESOLUTION_TABLES.values():
         resolution_groups(table)
@@ -9642,7 +9658,7 @@ def selfcheck():
 # What a key needs: dropping the second drops the first with it.
 NEEDS = (('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
          ('widescreen2d', 'widescreen'), ('widescreen3d', 'widescreen'), ('resolution', 'widescreen'),
-         ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'))
+         ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'))
 # The game's mode, not options: borderless full screen, framed with ALT+ENTER.
 FIXED = ('windowed', 'borderless')
 
@@ -9656,11 +9672,11 @@ def parse_keys(words):
     list that names a patch without what it needs is refused by patch().
     The word logs is every diagnostic and the network log."""
     keys = [('-' if k.startswith('-') else '') + k.lstrip('-') for w in words for k in w.split(',') if k]
-    keys = [k for key in keys for k in (LOGS if key == 'logs' else (key,))]
+    keys = [k for key in keys for k in ([key[:1] * key.startswith('-') + k for k in LOGS] if key.lstrip('-') == 'logs' else (key,))]
     unknown = [k for k in keys if k.lstrip('-') not in PATCH_KEYS + BYNAME + ADDONS]
     if unknown:
-        raise ValueError('no patch named %s; the patches are %s, the diagnostics %s, the add-ons %s'
-                         % (unknown[0].lstrip('-'), ', '.join(PATCH_KEYS), ', '.join(DIAGNOSTIC), ', '.join(ADDONS)))
+        raise ValueError('no patch named %s; the patches are %s, the diagnostics %s (logs for all of them), the add-ons %s'
+                         % (unknown[0].lstrip('-'), ', '.join(PATCH_KEYS), ', '.join(BYNAME), ', '.join(ADDONS)))
     named = [k for k in keys if not k.startswith('-')]
     extra = BYNAME + ADDONS
     wanted = [k for k in named if k not in extra] or list(PATCH_KEYS)

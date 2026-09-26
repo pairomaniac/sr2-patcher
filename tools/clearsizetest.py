@@ -10,8 +10,9 @@ it was called from, and leave the arguments where the caller's own
 `add esp, 8` will take them off - the clear is cdecl. Anything else and
 the site's return address is not where the game left it.
 
-Nothing to do on the other three builds, which pass the height already.
-Needs python3-unicorn; exits 77 with a note when it is missing.
+Nothing to do on the other three builds, which pass the height already:
+exits 77, a skip. Needs python3-unicorn; exits 77 with a note when it is
+missing.
 """
 import struct
 import sys
@@ -33,8 +34,8 @@ def main(argv):
         return 2
     build = patcher.check_build(argv[1])
     if 'clearsize' not in patcher.patches(build):
-        print('note: clearsize is Australian only; nothing was run on the %s build' % build.lower())
-        return 0
+        print('clearsize is Australian only; nothing to run on the %s build' % build.lower())
+        return uctest.SKIPPED
     buf = uctest.stock(argv[1], patcher.EXE)
     out = patcher.apply_clearsize(buf, build)
 

@@ -68,14 +68,14 @@ Two rules every blob follows:
 | `frametrace.asm` | exe | a diagnostic: every drawn frame's counter and step count appended to `logs\\frames.log` |
 | `voltrace.asm` | exe | a diagnostic: five volume entry points report their arguments through `OutputDebugStringA` |
 | `d3dinit.asm` | `MGameD3D.dll` | a diagnostic: every step of the bring-up with its HRESULT appended to `logs\\d3dinit.log` |
-| `build.py` | - | assembles the above and splices them into the patcher; `MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |
+| `build.py` | - | assembles the above and splices them into the patcher; `MUSIC_MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |
 
 The `mixerless` stub is three instructions, written by `apply_mixerless`
 in the patcher rather than assembled here. Each file's placeholders are
 named after it: `DEVICES_MAGICS`, `PADINPUT_MAGICS`, `DINPUT8_MAGICS`,
-`NOGENERIC_MAGICS`, `RESOLUTION_MAGICS`; sortpad's one (`SORTPAD_MAGICS`
-here) and voltrace's and frametrace's return slots (`0xE7E7E7E1` on)
-the patcher fills by their values.
+`NOGENERIC_MAGICS`, `RESOLUTION_MAGICS`, `SORTPAD_MAGICS`; voltrace's and
+frametrace's return slots (`0xE7E7E7E1` on) are `SITE_MAGICS`, counted
+per blob.
 
 The trace formats the diagnostics and the widescreen blobs print are in
 [docs/DEVELOPING.md](../docs/DEVELOPING.md), *Diagnostics*.

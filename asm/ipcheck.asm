@@ -120,7 +120,9 @@ check:
         inc     ecx
         or      edx, -1
         jmp     .more
-.digit: sub     eax, '0'                ; a digit: the class pass left nothing else
+.digit: sub     eax, '0'                ; a digit, or the hyphen the class pass let through
+        cmp     eax, 9
+        ja      .bad
         cmp     edx, -1
         jne     .accum
         xor     edx, edx

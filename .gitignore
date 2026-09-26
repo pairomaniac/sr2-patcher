@@ -17,7 +17,8 @@ data1.cab
 data1.head
 
 # The kit for working on the game, written by tools/kit.py: every build's
-# installed files minus BINDATA and music, and data1.head. Beside it the
+# installed files minus music and BINDATA (but the lobby's button and IP
+# entry art), and data1.head. Beside it the
 # update files that Sega released, bundled by hand. Not the repository's
 # to distribute.
 tools/sr2-kit.tar.gz

@@ -326,7 +326,7 @@ def main():
             bubbles.append(widget)
     find(root)
     check('every patch and diagnostic has a description button',
-          len(bubbles) >= len(patcher.FEATURES) + len(patcher.DIAGNOSTIC),
+          len(bubbles) >= len(patcher.FEATURES) + len(patcher.BYNAME),
           '%d buttons' % len(bubbles))
     shown = 0
     for btn in bubbles:
@@ -349,7 +349,7 @@ def main():
     check('every feature row is displayed',
           set(patcher.ESSENTIAL) == set(patcher.BY_GROUP))
     check('every diagnostic has a label',
-          set(patcher.DIAGNOSTIC_INFO) == set(patcher.DIAGNOSTIC))
+          set(patcher.DIAGNOSTIC_INFO) == set(patcher.BYNAME))
 
     root.destroy()
     if FAILED:

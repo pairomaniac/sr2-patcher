@@ -56,7 +56,7 @@ parentheses is what `--patch` takes.
 | **Pad in a replay** (`replaypad`) | `SEGA RALLY 2.exe` | `0x400ea` (5 bytes) (`0x4047a` American, `0x6e99a` Australian), the annex | the two loads at the join of the replay controls' keyboard and joystick paths (`0x440cea`) → `call` asm/replaypad.asm, which ORs the annex's bumpers, left stick, triggers, Y and X into the player's level word, then makes them |
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) → `call` asm/padmenu.asm, which puts the annex's buttons into the level and its directions, Back as TAB and any press as a key into the keyboard's menu word, then makes the edge and the three stores |
 | **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture at its create (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) → `call` asm/loadhold.asm |
-| **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP` and nine button files | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once, relettered SEARCH; the IP entry's OK through asm/ipcheck.asm (`0x3bf4e`, the annex), the entries capped by field and CTRL+V bounded through asm/entrycap.asm (`0x20310`, `0x1f2f1`, `0x1fc49`, `0x1f7ba`, `0x200d5`, the annex), the team room's status line from the DLL through asm/status.asm (`0x3544b`, the annex), the chat line's block 64 bytes larger (`0x344e4`), the popup's lower lines redrawn; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
+| **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3c2`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP`, nine button files, three `showteam_*` files and `Ip_entry_US.bmp` | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once, relettered SEARCH; the IP entry's OK through asm/ipcheck.asm (`0x3bf4e`, the annex), the entries capped by field and CTRL+V bounded through asm/entrycap.asm (`0x20310`, `0x1f2f1`, `0x1fc49`, `0x1f7ba`, `0x200d5`, the annex), the team room's status line from the DLL through asm/status.asm (`0x3544b`, the annex), the chat line's block 64 bytes larger (`0x344e4`), the popup's lower lines redrawn; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
 | **Network DLL** (`netplay`) | `MUSASHI\MGNetWk.dll`, `SR2.CFG` | the whole file | replaced by the build of `net/`: the stock DLL's CLSID and three vtables over plain UDP - a LAN search, an address typed, and the internet through a directory server; `SR2.CFG`'s `[Network]` section (Staging, Log, both 0) is read, and written when the file has none; see [NETWORK.md](NETWORK.md) and [net/README.md](../net/README.md) |
 | **The clear's height** (`clearsize`, Australian only) | `SEGA RALLY 2.exe` | `0x40b83` (12 bytes), the annex | the mode setter's `mov eax, [WIDTH]` and its two pushes → `call` a thunk that pushes `[HEIGHT]` and `[WIDTH]` and jumps into the clear |
 | **XInput** (`xinput`) | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`), the annex | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm; the Australian build's keyboard-poll address pointed at it instead |
@@ -64,9 +64,11 @@ parentheses is what `--patch` takes.
 | **Devices of no kind** (`nogeneric`) | `MUSASHI\MGInput.dll` | `0x26d2` (5 bytes; Australian `0x2694`), the annex | the device loop's null-GUID branch and the two instructions after it → `jmp` asm/nogeneric.asm; needs `dinput8` |
 
 In the exe, which is never relocated, VA = offset − 0x400 + 0x401000
-inside `.text` (− 0x600 in the American). In the DLLs raw and virtual
-layouts coincide, so VA = offset + 0x10000000 at the preferred base. The
-DLLs are relocated at load, which is why every patch that lands in one is
+inside `.text` (− 0x600 in the American). In the Musashi DLLs raw and
+virtual layouts coincide, so VA = offset + 0x10000000 at the preferred
+base; in `MGameGL.dll`, `Title.dll`, `Options.dll` and `ReplayGallery.dll`
+`.text` starts at raw 0x400 for RVA 0x1000, so VA = offset + 0x10000c00.
+The DLLs are relocated at load, which is why every patch that lands in one is
 position-independent and drops the relocation entries of the bytes it
 replaces.
 
@@ -173,8 +175,8 @@ Ten files are patched in every build - `SEGA RALLY 2.exe`,
 `MUSASHI\MGameD3D.dll`, `MUSASHI\MGameGL.dll`, `MUSASHI\MGAudio.dll`,
 `MUSASHI\MGSound.dll`, `MUSASHI\MGInput.dll`, `MUSASHI\MGNetWk.dll`,
 `Title.dll`, `Options.dll`, `ReplayGallery.dll` - and
-`BINDATA\MISC\OPTIONS.TXR`. Each gets a `.bak`
-beside it, the untouched original. The patcher always starts from those,
+`BINDATA\MISC\OPTIONS.TXR`, the lobby's art and `MPDATA.DAT`. Each gets
+a `.bak` beside it, the untouched original. The patcher always starts from those,
 so patching twice is patching once and restoring is a rename; a file that
 a run with fewer keys leaves alone goes back to its `.bak`, so the keys
 given are the patches in place.
@@ -1250,9 +1252,9 @@ reads the pad through the page poll MGInput's annex publishes
 (`PADPOLL`, the shared `asm/padpoll.inc`), takes an input past half its
 range as down, and does nothing when the slot is empty.
 
-`MGInput.dll` (`0x10000000`, relocated; one build in the European and
-American releases, an older one in the Australian with the same
-interfaces at other addresses) reads every action. Four patches touch
+`MGInput.dll` (`0x10000000`, relocated; one build in the European,
+American and DigiCube/MediaKite releases, an older one in the Australian
+with the same interfaces at other addresses) reads every action. Four patches touch
 it: `xinput`, `dinput8`, `nogeneric` and, in the exe, `noregistry`.
 
 #### The model

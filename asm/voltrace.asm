@@ -11,9 +11,7 @@
 ;   v5  0x46ece0  play with parameters (sound, mode, param)
 ;
 ; IAT_LOADLIB and IAT_GETPROC are the usual placeholders, resolved on
-; every call. Each thunk ends in `jmp [abs]` through a placeholder
-; 0xE7E7E7En that the patcher points at a dword after the blob holding
-; the site's VA + the displaced length.
+; every call.
 
 bits 32
 

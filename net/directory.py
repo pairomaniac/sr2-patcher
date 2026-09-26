@@ -37,7 +37,8 @@ a registration without the right one is answered with C and not listed,
 so a host with a forged source address, which never sees its C, is never
 listed. A session expires after EXPIRE_S without a refresh from its
 host; a relayed guest is forgotten after GUEST_EXPIRE_S without traffic,
-and seated again by its next relayed datagram while there is room.
+and seated again by its next relayed datagram, told by its token, while
+there is room.
 
 What it refuses: an address that keeps asking for sessions that do not
 exist - MISS_LIMIT different ones in MISS_WINDOW_S; asking again for one
@@ -48,7 +49,8 @@ relayed packets a second per guest each way, which a race never reaches
 and a tunnel cannot exceed; more than LIST_RATE lists a second to one
 address, since a list is far larger than the request and the source of a
 UDP request can be forged. It forwards only between a session's host and
-the guests that joined it through here. The list puts open sessions
+the guests that joined it through here, and takes a host's X and R by
+its token as well as its address, which every list gives away. The list puts open sessions
 first, the newest of them first, and stops at LIST_MAX.
 """
 
@@ -66,9 +68,10 @@ RECORD = 68             # max, players, closed, name[64], version
 COOKIE = 4
 EP = 6
 EXPIRE_S = 5         # a session without a refresh from its host
-GUEST_EXPIRE_S = 30  # a relayed guest without traffic: longer than the game's own dead timer, so a load does not lose the seat
+GUEST_EXPIRE_S = 60  # a relayed guest without traffic: longer than the game's own dead timer (45 s), so a load does not lose the seat
 MAX_SESSIONS = 5000
 MAX_GUESTS = 8       # relayed guests a session may hold; the game seats 3
+MAX_LEFT = 16        # forgotten guests a session remembers, for their seat back
 GUESTS_PER_IP = 4    # of them from one address
 PER_IP = 8           # as Virtual-On's rendezvous.py
 LIST_MAX = 16        # the game shows 15
@@ -82,7 +85,8 @@ BAN_S = 600
 MAX_MISSES = 10000   # addresses remembered for their misses; the oldest forgotten past it
 
 sessions = {}   # guid -> {'host': (ip, port), 'token': bytes, 'record': bytes, 'seen': t,
-                #          'guests': {ep: {'seen': t, 'token': bytes, 'bucket': {}}}, 'relayed': bool}
+                #          'guests': {ep: {'seen': t, 'token': bytes, 'bucket': {}}}, 'left': {ep: token},
+                #          'relayed': bool}
 SECRET = secrets.token_bytes(16)    # the cookies are made from it; a restart makes new ones
 misses = {}     # ip -> [first_miss_t, {guids asked for that were not there}] or [until_t, None] while banned
 lists = {}      # ip -> (tokens, t): the list bucket
@@ -94,8 +98,17 @@ def seat(e, addr, now):
         if len(e['guests']) >= MAX_GUESTS or sum(1 for g in e['guests'] if g[0] == addr[0]) >= GUESTS_PER_IP:
             return False
         e['guests'][addr] = {'seen': now, 'bucket': {}}
+        e['left'].pop(addr, None)
         e['joined'] += 1
     return True
+
+
+def unseat(e, addr):
+    """A relayed guest forgotten for its silence, remembered by its token so
+    its next datagram seats it again; a stranger's does not."""
+    e['left'][addr] = e['guests'].pop(addr)['token']
+    while len(e['left']) > MAX_LEFT:
+        del e['left'][next(iter(e['left']))]
 
 
 def cookie_for(addr, guid):
@@ -165,7 +178,7 @@ def expire(now):
         closed(g, 'not refreshed')
     for e in sessions.values():
         for ep in [ep for ep, ge in e['guests'].items() if now - ge['seen'] > GUEST_EXPIRE_S]:
-            del e['guests'][ep]
+            unseat(e, ep)
 
 
 def over_rate(bucket, side, now, rate=RELAY_RATE, burst=RELAY_RATE):
@@ -201,7 +214,7 @@ def handle(sock, data, addr, now):
             if sum(1 for s in sessions.values() if s['host'][0] == addr[0]) >= PER_IP:
                 return
             e = sessions[guid] = {'host': addr, 'token': token, 'record': record, 'seen': now, 'guests': {},
-                                  'joined': 0, 'relayed': False}
+                                  'left': {}, 'joined': 0, 'relayed': False}
             print("'%s' opened by %s:%d (%d open)" % (session_name(e), *addr, len(sessions)), flush=True)
         elif e['host'] != addr:
             return                        # someone else's id
@@ -211,7 +224,7 @@ def handle(sock, data, addr, now):
 
     elif op == b'X':
         e = sessions.get(body) if len(body) == GUID else None
-        if e is not None and e['host'] == addr:
+        if e is not None and e['host'] == addr and e['token'] == token:   # the address is in every list: the token is not
             closed(body, 'the host left')
 
     elif op == b'L':
@@ -245,7 +258,7 @@ def handle(sock, data, addr, now):
             return
         rest = body[GUID:]
         if addr == e['host']:
-            if len(rest) < EP:
+            if len(rest) < EP or e['token'] != token:
                 return
             guest = ep_addr(rest[:EP])
             ge = e['guests'].get(guest)
@@ -255,7 +268,9 @@ def handle(sock, data, addr, now):
             e['token'] = token
             send(sock, reply(b'D', rest[EP:], ge['token']), guest)
         else:
-            ge = e['guests'].get(addr) or (seat(e, addr, now) and e['guests'][addr])   # forgotten while silent: seated again
+            ge = e['guests'].get(addr)
+            if ge is None and e['left'].get(addr) == token:                # forgotten while silent: seated again
+                ge = seat(e, addr, now) and e['guests'][addr]
             if not ge or over_rate(ge['bucket'], 'g', now):
                 return
             ge['seen'] = now
@@ -280,31 +295,35 @@ def status(unit=UNIT, days=7):
         print(out.stderr.strip() or 'journalctl failed')
         return 1
     now = time.time()
-    day = {'opened': 0, 'closed': 0, 'joined': 0, 'relayed': 0}
-    week = dict(day)
-    for line in out.stdout.splitlines():
-        head = line.split(None, 1)
-        try:
-            ts = float(head[0])
-        except (IndexError, ValueError):
-            continue
-        for key, mark in (('opened', ' opened by '), ('closed', ' closed: ')):
-            if mark in line:
-                week[key] += 1
-                if now - ts <= 86400:
-                    day[key] += 1
-        if ' closed: ' in line:
-            tail = line.split(' closed: ', 1)[1]
-            n = int(tail.split()[0])
-            week['joined'] += n
-            week['relayed'] += tail.endswith('relayed')
-            if now - ts <= 86400:
-                day['joined'] += n
-                day['relayed'] += tail.endswith('relayed')
+    lines = out.stdout.splitlines()
+    day, week = status_counts(lines, now, 86400), status_counts(lines, now, days * 86400)
     print('%-16s%12s%12s' % (unit, '24 hours', '%d days' % days))
     for key in ('opened', 'closed', 'joined', 'relayed'):
         print('  %-14s%12d%12d' % (key, day[key], week[key]))
     return 0
+
+
+def status_counts(lines, now, within=None):
+    """What the journal's `short-unix` lines say happened in the last
+    `within` seconds. A team name is any printable text, so a line is
+    told by its end, not by what it contains."""
+    counts = {'opened': 0, 'closed': 0, 'joined': 0, 'relayed': 0}
+    ends = tuple(', %s, %s' % (how, why) for how in ('direct', 'relayed') for why in ('not refreshed', 'the host left'))
+    for line in lines:
+        try:
+            ts = float(line.split(None, 1)[0])
+        except (IndexError, ValueError):
+            continue
+        if within is not None and now - ts > within:
+            continue
+        if line.endswith(' open)'):
+            counts['opened'] += 1
+        elif line.endswith(ends) and ' closed: ' in line:
+            tail = line.rsplit(' closed: ', 1)[1].split(', ')
+            counts['closed'] += 1
+            counts['joined'] += int(tail[0].split()[0])
+            counts['relayed'] += tail[1] == 'relayed'
+    return counts
 
 
 def main():

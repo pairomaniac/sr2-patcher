@@ -32,7 +32,7 @@ CANCEL = 0x1c
 ACCEPTED = ('192.168.1.20', '192.168.1.20:47626', '10.0.0.1:1', '1.2.3.4:65535', '255.255.255.255',
             'host', 'my-host.example.com', 'a1:7', 'x' * 47, 'x' * 41 + ':47626')
 REFUSED = ('', '192.168.1', '192.168.1.256', '1.2.3.4.5', '1..2.3', '1.2.3.', '.1.2.3', '12345',
-           ':47626', '1.2.3.4:', '1.2.3.4:0', '1.2.3.4:65536', '1.2.3.4:4a', '1.2.3.4:1:2', 'host name',
+           ':47626', '1.2.3.4:', '1.2.3.4:0', '1.2.3.4:65536', '1.2.3.4:4a', '1.2.3.4:1:2', 'host name', '1-2.3.4.5', '1.2.3.4-',
            'x' * 48, 'x' * 42 + ':47626')
 
 
@@ -136,8 +136,10 @@ def main(argv):
             assert got == want and mu.reg_read(UC_X86_REG_EAX) == len(want), 'paste %r with %d of %d: %r, %d' % (clip, have, cap, got, mu.reg_read(UC_X86_REG_EAX))
             assert mu.reg_read(UC_X86_REG_EBX) == 0x4444
     # the status line: the stub asks the network object's slot +0x38 for
-    # the line into the init's buffer and goes to the draw with one, or
-    # redoes the lea and returns without an object, on an error, or empty
+    # the line into the init's buffer and goes to the draw with one (the
+    # frame's WSAStartup result marked failed, so the exe makes no
+    # WSACleanup after it), or redoes the lea and returns without an
+    # object, on an error, or empty
     status = BASE + patcher._off_to_rva(image, row['sites']['status'])
     netobj, draw = row['addresses']['NETOBJ'], row['addresses']['DRAW']
     OBJ, VT, SLOT = STACK + 0x5000, STACK + 0x5100, STACK + 0x5200
@@ -158,6 +160,7 @@ def main(argv):
         h = mu.hook_add(UC_HOOK_CODE, on_slot, (line, hr), begin=SLOT, end=SLOT + 1)
         mu.mem_write(netobj, struct.pack('<I', OBJ if have_obj else 0))
         esp = STACK + 0x8000
+        mu.mem_write(esp + 0x1c, b'\0' * 4)                       # the stale word the exe would WSACleanup on
         mu.mem_write(esp + 0x20, b'\xee' * 0x100)
         mu.reg_write(UC_X86_REG_ESP, esp)
         mu.reg_write(UC_X86_REG_EBX, 0)
@@ -172,6 +175,7 @@ def main(argv):
             assert calls == [(OBJ, esp + 0x20, 0x100)], 'the slot call: %r' % calls
         if want == draw:
             assert bytes(mu.mem_read(esp + 0x20, len(line))) == line
+            assert struct.unpack('<I', mu.mem_read(esp + 0x1c, 4))[0] != 0, 'the WSAStartup slot left 0: an unmatched WSACleanup'
         else:
             assert mu.reg_read(UC_X86_REG_EAX) == esp + 0x220, 'the lea redone'
     print('ipchecktest: %s: %d addresses accepted, %d entries refused with the cancel sound; %d fields capped; the paste bounded; the status line'

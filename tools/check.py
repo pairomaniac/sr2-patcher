@@ -41,11 +41,11 @@ CHECKS = [
     ('lint', 'pyflakes',
      [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py', 'tools/cabtest.py',
       'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py', 'tools/bgrowtest.py',
-      'tools/fullwintest.py', 'tools/texrangetest.py', 'tools/replayfreetest.py', 'tools/altentertest.py', 'tools/clearsizetest.py', 'tools/lobbytest.py', 'tools/buttonstest.py', 'tools/loadholdtest.py', 'tools/padmenutest.py', 'tools/replaypadtest.py', 'tools/pagepadtest.py', 'tools/sortpadtest.py', 'tools/discsurvey.py', 'tools/kit.py',
+      'tools/fullwintest.py', 'tools/texrangetest.py', 'tools/replayfreetest.py', 'tools/altentertest.py', 'tools/clearsizetest.py', 'tools/lobbytest.py', 'tools/ipchecktest.py', 'tools/buttonstest.py', 'tools/loadholdtest.py', 'tools/padmenutest.py', 'tools/replaypadtest.py', 'tools/pagepadtest.py', 'tools/sortpadtest.py', 'tools/discsurvey.py', 'tools/kit.py',
       'tools/frametracetest.py', 'tools/frames.py', 'tools/d3dinittest.py', 'tools/dgvoodootest.py',
       'tools/selftest.py', 'tools/guitest.py', 'tools/assets.py', 'tools/padinputtest.py', 'tools/devicestest.py', 'tools/widetest.py',
       'tools/resolutiontest.py', 'tools/dinput8test.py', 'tools/nogenerictest.py', 'tools/hudlasttest.py', 'tools/loudness.py', 'tools/txrdump.py', 'tools/uctest.py', 'tools/labels.py', 'tools/nettest.py', 'tools/directorytest.py', 'net/build.py', 'net/directory.py', 'tools/padbits.py'], ''),
-    ('labels', 'the baked labels against a render (skips without Pillow)',
+    ('labels', 'the baked labels against a render (skips without Pillow or the font)',
      [PY, 'tools/labels.py', '--check'], ''),
     ('net', 'net/ matches the MGNetWk.dll build the script carries',
      [PY, 'net/build.py', '--check'], ''),
@@ -103,7 +103,7 @@ CHECKS = [
      [PY, 'tools/lobbytest.py', '{game}'], 'game'),
     ('ipcheck', "the lobby entries' address check and caps, the real exe",
      [PY, 'tools/ipchecktest.py', '{game}'], 'game'),
-    ('buttons', 'the SEARCH button and the IP entry popup from the stock files, pinned',
+    ('buttons', 'the SEARCH button and the IP entry popup from the stock files',
      [PY, 'tools/buttonstest.py', '{game}'], 'game'),
     ('clearsize', "the clear's two arguments, the real exe",
      [PY, 'tools/clearsizetest.py', '{game}'], 'game'),
@@ -203,7 +203,11 @@ def main():
             run = [a.replace('{disc}', disc or '').replace('{game}', game or '') for a in cmd]
             run = [a for a in run if a]
             start = time.time()
-            proc = subprocess.run(run, capture_output=True, text=True, errors='replace', timeout=TIMEOUT)
+            try:
+                proc = subprocess.run(run, capture_output=True, text=True, errors='replace', timeout=TIMEOUT)
+            except subprocess.TimeoutExpired as exc:
+                proc = subprocess.CompletedProcess(run, 1, (exc.stdout or b'').decode('utf-8', 'replace'),
+                                                   'timed out after %d s' % TIMEOUT)
             took = time.time() - start
             if proc.returncode == SKIPPED:      # the tool said it could not run, which is not a pass
                 print('  %s%s SKIP%s  %-60s %s(%s)%s'

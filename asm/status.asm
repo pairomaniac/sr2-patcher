@@ -9,7 +9,10 @@
 ; starts the exe's lookup, it asks the DLL for the line into the same
 ; buffer and, given one, continues at the draw; without a network
 ; object, an error, or an empty line, it redoes the `lea` and returns
-; to the exe's own code.
+; to the exe's own code. The exe's path also calls WSAStartup and keeps
+; its result in the frame, to WSACleanup after the draw when it was 0;
+; the DLL's path skips the call, so it marks the slot failed, or the
+; stale word there would end the DLL's own Winsock reference.
 ;
 ; The exe is never relocated, so the addresses are absolute, filled
 ; from the build's row.
@@ -22,6 +25,7 @@ bits 32
 %define BUF             0x20            ; the line's buffer in the init's frame, 0x100 bytes
 %define BUFLEN          0x100
 %define WSADATA         0x220           ; what the displaced `lea eax, [esp + 0x220]` took
+%define WSARESULT       0x1c            ; WSAStartup's result in the frame: 0 has the exe WSACleanup after the draw
 
         mov     eax, [NETOBJ]
         test    eax, eax
@@ -37,6 +41,7 @@ bits 32
         cmp     byte [esp + 4 + BUF], 0
         je      .own
         pop     eax                     ; the return: on to the draw instead
+        mov     dword [esp + WSARESULT], 1   ; no WSAStartup was made: no WSACleanup either
         push    DRAW
         ret
 .own:   lea     eax, [esp + 4 + WSADATA]

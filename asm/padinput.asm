@@ -20,7 +20,7 @@
 ; The registry helper's load and save, which the config's Persist calls
 ; with (this, slot "0"/"1", name, buf, count[, &got]), are replaced by
 ; the store below. A save whose name starts "DZ" takes the digits after
-; it as that player's stick deadzone, 0-10000; input 0x3f reads it back.
+; it as that player's stick deadzone, 0-9000; input 0x3f reads it back.
 ;
 ; The entries sit at fixed offsets. Load, save and update are reached by
 ; a jmp from the site; update's displaced bytes, and the poll's, the

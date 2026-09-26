@@ -173,8 +173,7 @@ either. Untick it and Apply, or **Restore original**, to take it out.
 ### Diagnostics
 
 The collapsed **DIAGNOSTICS** section adds logging for a bug report, all
-off by default; see [Reporting a bug](#reporting-a-bug). What each
-writes is in [docs/DEVELOPING.md](docs/DEVELOPING.md).
+off by default; see [Reporting a bug](#reporting-a-bug).
 
 ## Widescreen
 
@@ -265,13 +264,6 @@ The team room, the chat, the car and course selection and the race are
 the game's own. Up to four players. How it works is in
 [docs/NETWORK.md](docs/NETWORK.md).
 
-### The network log
-
-Set `Log = 1` under `[Network]` in `SR2.CFG` beside `SEGA RALLY 2.exe`
-and the game logs its connections, joins, refusals and drops to
-`logs\sr2-net.log`. When something goes wrong online, send that file
-from each machine.
-
 ## Music
 
 The soundtrack is thirteen audio tracks on the play disc, which is why
@@ -329,8 +321,8 @@ python3 sr2-patcher.py --restore ~/games/sr2
 top of `sr2-patcher.py`); a leading minus leaves one out, as in
 `--patch ~/games/sr2 -music`, along with whatever needs it. The
 `dgvoodoo` add-on follows the same rule and is on by default on Windows.
-`--patch ~/games/sr2 logs` turns on every diagnostic and the network log
-for a bug report; a plain `--patch` takes the diagnostics out again.
+`--patch ~/games/sr2 logs` turns on every diagnostic for a bug report;
+a plain `--patch` turns them off again.
 
 On Linux the terminal commands need nothing extra; the window needs Tk:
 
@@ -351,11 +343,10 @@ were doing just before.
 
 The game can log what it is doing, and most bugs need that to be found.
 Under **DIAGNOSTICS** in the patcher, tick the boxes you are asked for
-(each is named with its terminal equivalent) and press **Apply
-patches**; or turn them all on from a terminal with
+and press **Apply patches**; or turn them all on from a terminal with
 `--patch <game folder> logs`. Reproduce the bug, then attach the `logs`
-folder from beside `SEGA RALLY 2.exe`. For anything online, the same
-from each machine ([The network log](#the-network-log)). A plain
+folder from beside `SEGA RALLY 2.exe`. For anything online, tick
+**Network log** on every machine and send each one's folder. A plain
 **Apply patches** turns the logging off again.
 
 For a disc image of a release the patcher does not know, or anything

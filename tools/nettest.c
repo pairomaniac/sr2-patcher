@@ -320,6 +320,35 @@ static void forged_ack(void)
     ok("an ack past anything sent is ignored; the window resends under loss");
 }
 
+/* A guest's reliable broadcast reaches the host while its window to
+ * another guest is full: the host does not take it (nor acknowledge it,
+ * so it comes again) until that window has room, and nobody gets it
+ * before then; once the road is open every message arrives, in order. */
+static void forward_held(void)
+{
+    char order[16];
+    int k, seq_ok = 1;
+    drop_to = sr2_port(nets[3]);        /* nothing from the host reaches guest 3 */
+    for (k = 0; k < 64; k++) {          /* the host's window to 3 fills: WINDOW reliable messages unacknowledged */
+        snprintf(order, sizeof order, "w%d", k);
+        if (sr2_send(nets[0], 3, order, (int)strlen(order) + 1, 1, now) != SR2_OK)
+            fail("the host's window to guest 3 did not take 64 messages");
+    }
+    sr2_send(nets[1], -1, "b1", 3, 1, now);
+    run(600);
+    if (got(2, 1, "b1"))
+        fail("a reliable broadcast forwarded to guest 2 while it could not be to guest 3");
+    drop_to = 0;
+    run(1500);
+    for (k = 0; k < 64 && seq_ok; k++) {
+        snprintf(order, sizeof order, "w%d", k);
+        seq_ok = got(3, 0, order);
+    }
+    if (!seq_ok || !got(3, 1, "b1") || !got(2, 1, "b1") || !got(0, 1, "b1") || !empty(0) || !empty(2) || !empty(3))
+        fail("the held broadcast did not arrive once everywhere, after the window's messages");
+    ok("a reliable broadcast is held, unacknowledged, while a forward target's window is full");
+}
+
 /* A join from a socket that has never been challenged, with the right
  * session but no cookie, and one with a made-up cookie: a challenge each
  * time, no seat, no welcome, nothing but 20 bytes back. */
@@ -414,6 +443,7 @@ int main(void)
     forged_index();
     bad_address_hosts();
     forged_ack();
+    forward_held();
     uncookied();
     if (fake_host(5, 1, 0) != SR2_OK || sr2_my_index(nets[5]) != 1)
         fail("a welcome with seat 1");
@@ -529,7 +559,7 @@ int main(void)
         fail("leave");
     ok("guest 2 leaves: DESTROYED 2 at the host and guest 1");
     alive[1] = 0;                       /* guest 1 stops polling */
-    run(14000);
+    run(47000);
     if (!expect_event(0, SR2_EV_DESTROYED, 1) || !expect_event(4, SR2_EV_DESTROYED, 1))
         fail("silence");
     ok("guest 1 goes silent: dropped after the timeout");
@@ -556,8 +586,8 @@ int main(void)
             fail("open internet with the names");
         if (sr2_enum(nets[5], now, found, SR2_MAX_SESSIONS) != SR2_CONNECTING)
             fail("a search while the names are looked up");
-        for (t = 0, c = SR2_CONNECTING; t < 3000 && c == SR2_CONNECTING; t++) {
-            run(10);
+        for (t = (int)time(NULL), c = SR2_CONNECTING; (int)time(NULL) - t < 30 && c == SR2_CONNECTING;) {
+            run(10);                    /* a resolver that is slow to fail a name gets real time, not ticks */
             c = sr2_enum(nets[5], now, found, SR2_MAX_SESSIONS);
         }
         if (c != 0)

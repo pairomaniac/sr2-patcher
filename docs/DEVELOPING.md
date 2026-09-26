@@ -91,13 +91,13 @@ Two more tools for the daily work:
 ## The checks
 
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-There are 35. The first 21, down to `gui`, need only nasm, pyflakes,
+There are 36. The first 21, down to `gui`, need only nasm, pyflakes,
 Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C compiler, and
 CI runs them; every test that maps a PE image does it through
-`tools/uctest.py`. The last fourteen need the discs and the games and skip
+`tools/uctest.py`. The last fifteen need the discs and the games and skip
 without them; `devices` also needs nasm, whose listing it reads. A tool
-that cannot run exits 77 and is reported SKIP, never OK. `clearsize` is
-Australian only and says so on the other builds.
+that cannot run exits 77 and is reported SKIP, never OK; `clearsize` is
+Australian only and skips on the other builds.
 
 | Check | Catches |
 | --- | --- |
@@ -119,7 +119,7 @@ Australian only and says so on the other builds.
 | `devices` | the Device Settings page's binding under Unicorn, on the real `Options.dll` over stubbed input objects |
 | `resolution` | the resolution row's init, draw and store under Unicorn, on the real `Options.dll` |
 | `lobby` | the connection screen's confirm under Unicorn, on the real exe: the list opens searching for INTERNET and LAN, not for DIRECT IP |
-| `buttons` | the SEARCH button composed from the install's stock `showteam_*` and `create_*` files, and the IP entry popup from its stock file, against pinned digests (a note when the folder is not there) |
+| `buttons` | the SEARCH button composed from the install's stock `showteam_*` and `create_*` files, and the IP entry popup from its stock file, against pinned digests (a note for a file the install lacks) |
 | `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check, the caps by field, CTRL+V bounded, and the status line's stub |
 | `clearsize` | the Australian clear's two arguments under Unicorn, on the real exe |
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
@@ -210,15 +210,18 @@ channels given. In the log:
 ## Diagnostics
 
 A diagnostic is a patch applied only by name, or by its box in the
-window; naming one adds it to the set:
+window; naming one adds it to the set, `logs` names them all but
+`d3dtrace2d`, and a plain patch takes them out:
 
 ```
 tools/sr2.sh eu patch voltrace
 python3 sr2-patcher.py --patch ~/games/sr2 frametrace
 ```
 
-All but `frametrace` and `d3dinit` report on `+debugstr`: `tools/sr2.sh
-eu debug debugstr`.
+`voltrace` and `gltrace` report on `+debugstr` (`tools/sr2.sh eu debug
+debugstr`; DebugView on Windows); the rest write to `logs\`. `netlog`
+is not a patch but `Log = 1` in `SR2.CFG`, the DLL's own log
+(net/README.md).
 
 ### voltrace
 
@@ -343,8 +346,8 @@ git push origin v0.4.0
 ```
 
 `VERSION` stays `dev` in the repository; the workflow stamps it from the
-tag name less its `v`, so the tag, the exe's filename, its Windows file
-properties and `--version` cannot disagree. A push that is not a tag
+tag name less its `v`, so the exe's filename, its Windows file properties
+and `--version` say the tag's number (the zips carry the `v`). A push that is not a tag
 builds the same two zips as an artifact named with the short SHA.
 
 Then write the notes over the generated ones: *Changes*, *Requirements*,

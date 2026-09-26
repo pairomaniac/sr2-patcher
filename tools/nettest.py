@@ -3,7 +3,7 @@
 
     python3 tools/nettest.py
 
-Skips itself, passing, when no compiler is found.
+Exits 77, a skip, when no compiler is found.
 """
 import os
 import shutil
@@ -20,7 +20,7 @@ def main():
     cc = os.environ.get('CC') or shutil.which('cc') or shutil.which('gcc') or shutil.which('clang')
     if not cc:
         print('nettest: skipped (no C compiler)')
-        return 0
+        return 77
     with tempfile.TemporaryDirectory() as tmp:
         exe = os.path.join(tmp, 'nettest')
         cmd = [cc, '-std=gnu99', '-O1', '-Wall', '-Wextra', '-DSR2_TEST', '-I', os.path.join(ROOT, 'net'),

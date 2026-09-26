@@ -10,7 +10,8 @@ idle address's bucket forgotten; a full list of 16 sessions still one
 datagram under 1472 bytes, open sessions first and the newest of those
 first; the token echoed and the form from before it ignored; a join to
 no session answered N and counted once however often it is asked; the
-host's X taking the session down.
+host's X taking the session down, by its token; a forgotten guest seated
+again by its token and a stranger not; the status counts.
 """
 import contextlib
 import importlib.util
@@ -106,23 +107,37 @@ def main():
         for k in range(d.MISS_LIMIT):
             d.handle(sock, head(b'J') + bytes([0xe0 + k]) * 16, a, t + 130)
     check(d.banned(a[0], t + 131) and not d.banned(b[0], t + 131), 'ten different ones is a ban, of that address')
-    # a relayed guest forgotten while silent is seated again by its next datagram
+    # a relayed guest forgotten while silent is seated again by its next datagram; a stranger's seats nobody
     with contextlib.redirect_stdout(io.StringIO()):
         d.handle(sock, head(b'J') + bytes([18]) * 16, b, t + 135)
         d.sessions[bytes([18]) * 16]['seen'] = t + 135 + d.GUEST_EXPIRE_S     # the host kept refreshing
         d.expire(t + 135 + d.GUEST_EXPIRE_S + 1)
         check(b not in d.sessions[bytes([18]) * 16]['guests'], 'the guest forgotten after GUEST_EXPIRE_S')
         sock.sent.clear()
+        d.handle(sock, d.MAGIC + b'R' + b'\x99' * 4 + bytes([18]) * 16 + b'hello', b, t + 170)
+        check(b not in d.sessions[bytes([18]) * 16]['guests'] and not sock.sent, 'seated again with another token')
+        d.handle(sock, head(b'R') + bytes([18]) * 16 + b'hello', ('203.0.113.77', 5000), t + 170)
+        check(('203.0.113.77', 5000) not in d.sessions[bytes([18]) * 16]['guests'] and not sock.sent, 'a stranger seated by R')
         d.handle(sock, head(b'R') + bytes([18]) * 16 + b'hello', b, t + 170)
     check(b in d.sessions[bytes([18]) * 16]['guests'] and sock.sent and sock.sent[-1][1] == ('192.0.2.18', 6000)
           and sock.sent[-1][0][9:] == d.ep_bytes(b) + b'hello', 'the guest seated again and its datagram relayed')
-    # the host takes its session down
+    # the host's own relayed datagrams and its X need its token as well as its address, which every list gives away
     sock.sent.clear()
     with contextlib.redirect_stdout(io.StringIO()):
+        d.handle(sock, d.MAGIC + b'R' + b'\x99' * 4 + bytes([18]) * 16 + d.ep_bytes(b) + b'hi', ('192.0.2.18', 6000), t + 171)
+        check(not sock.sent, 'R from the host\'s address with another token relayed')
+        d.handle(sock, head(b'R') + bytes([18]) * 16 + d.ep_bytes(b) + b'hi', ('192.0.2.18', 6000), t + 171)
+        check(sock.sent and sock.sent[-1][1] == b and sock.sent[-1][0][9:] == b'hi', 'the host\'s datagram relayed to the guest')
         d.handle(sock, head(b'X') + bytes([18]) * 16, ('192.0.2.99', 6000), t + 140)
         check(bytes([18]) * 16 in d.sessions, 'X from another address ignored')
+        d.handle(sock, d.MAGIC + b'X' + b'\x99' * 4 + bytes([18]) * 16, ('192.0.2.18', 6000), t + 140)
+        check(bytes([18]) * 16 in d.sessions, 'X from the host\'s address with another token taken')
         d.handle(sock, head(b'X') + bytes([18]) * 16, ('192.0.2.18', 6000), t + 140)
     check(bytes([18]) * 16 not in d.sessions, 'X from the host closes it')
+    # the status counts read the journal by its line ends, whatever a team name holds
+    lines = ['1000.0 \'a closed: 9 x\' opened by 192.0.2.1:6000 (1 open)',
+             '1001.0 \'a closed: 9 x\' by 192.0.2.1:6000 closed: 2 joined here, relayed, the host left']
+    check(d.status_counts(lines, 1002.0) == {'opened': 1, 'closed': 1, 'joined': 2, 'relayed': 1}, 'the status counts')
     print('directory: lists held to %d/s per address after %d, %d bytes at the most; the token, the cookie, N, X'
           % (d.LIST_RATE, d.LIST_BURST, most))
     return 0
