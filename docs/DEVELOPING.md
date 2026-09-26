@@ -91,7 +91,7 @@ Two more tools for the daily work:
 ## The checks
 
 `tools/check.py` runs them all; `--list` names them, `--only a,b` picks.
-There are 36. The first 21, down to `gui`, need only nasm, pyflakes,
+There are 37. The first 22, down to `gui`, need only nasm, pyflakes,
 Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C compiler, and
 CI runs them; every test that maps a PE image does it through
 `tools/uctest.py`. The last fifteen need the discs and the games and skip
@@ -108,7 +108,7 @@ Australian only and skips on the other builds.
 | `nettest` | the network core: a host and five guests over loopback, a third of the datagrams dropped - joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going, an oversized reliable datagram and a welcome with a seat past the table; the name lookup on its thread; then a directory server started for the run (a failure to start fails the check), a session found through it, a direct join and a relayed one (skips without a C compiler) |
 | `directorytest` | the directory server's list limit per address, the token, the registration cookie, N and X, with a hand-set clock |
 | `lint` | pyflakes |
-| `bgrow`, `wide`, `fullwin`, `altenter`, `loadhold`, `padmenu`, `pagepad`, `hudlast`, `frametrace`, `d3dinit`, `texrange`, `replayfree` | those stubs under Unicorn, with the exe's routines stubbed (`wide` runs the European and the American exe blobs); `tools/uctest.py` is what the tests share |
+| `bgrow`, `wide`, `fullwin`, `altenter`, `starting`, `loadhold`, `padmenu`, `pagepad`, `hudlast`, `frametrace`, `d3dinit`, `texrange`, `replayfree` | those stubs under Unicorn, with the exe's routines stubbed (`wide` runs the European and the American exe blobs); `tools/uctest.py` is what the tests share |
 | `cab` | the disc and cabinet readers on a real dump |
 | `dgvoodoo` | the dgVoodoo 2 add-on's download and unpack against a made-up release |
 | `gui` | the window driven headlessly: the widgets reachable, the palette measured, the feature rows against the patch keys (skips without a display) |
@@ -157,7 +157,7 @@ Code goes in `asm/`, as a transform. The shapes:
 
 | Shape | Examples |
 | --- | --- |
-| a blob in the file's annex, sites pointed at it with `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
+| a blob in the file's annex, sites pointed at it with `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `starting`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
 | a blob in a relocated DLL's annex, finding its own base | `music`, `borderless`, `xinput` |
 | a routine rewritten in place | `restoreall` |
 | plain sites plus a transform that drops relocation entries | `borderless`, `texrange` |

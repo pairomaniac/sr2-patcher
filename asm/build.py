@@ -34,7 +34,7 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('LOADHOLD_BLOB', 'loadhold.asm', ()), ('HUDLAST_BLOB', 'hudlast.asm', ()), ('D3DINIT_BLOB', 'd3dinit.asm', ()),
          ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
          ('IPCHECK_BLOB', 'ipcheck.asm', ()), ('ENTRYCAP_BLOB', 'entrycap.asm', ()),
-         ('STATUS_BLOB', 'status.asm', ())]
+         ('STATUS_BLOB', 'status.asm', ()), ('STARTING_BLOB', 'starting.asm', ())]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -93,6 +93,11 @@ EXE_MAGICS = {
     'LINEBUF': 0xB8B8B8B8,
     'NETOBJ': 0xB9B9B9B9,
     'DRAW': 0xBABABABA,
+    'ROOMBG': 0xBBBBBBBB,
+    'ROOMSIZE': 0xBCBCBCBC,
+    'ROOMFONT': 0xBDBDBDBD,
+    'ROOMDRAW': 0xBEBEBEBE,
+    'RACESETUP': 0xBFBFBFBF,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
@@ -112,6 +117,7 @@ EXE_BLOB_MAGICS = {
     'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
     'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF', 'IPLEN'),
     'STATUS_BLOB': ('NETOBJ', 'DRAW'),
+    'STARTING_BLOB': ('LOADLIB', 'GETPROC') + ('ROOMBG',) * 2 + ('ROOMFONT', 'ROOMSIZE', 'ROOMDRAW') + ('GAMED3D',) * 2 + ('RACESETUP',),
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,

@@ -127,7 +127,8 @@ frame in the team room, during the MSelect screens and in the race.
 
 Race setup (`0x438dc0`, before MainMode loads): state 0xa, wait up to 15 s
 for every racer; clients sync the clock against the host; state 0x10, wait
-again. At the start line (`0x41c8d0`): state 0x81, the host sends the start
+again. The waits spin without drawing, so `starting` (NOTES.md, *The
+starting line*) puts a line on the room and presents it first. At the start line (`0x41c8d0`): state 0x81, the host sends the start
 time when every racer is loaded (or after 30 s) and all count down to the
 same host-clock instant.
 

@@ -261,8 +261,9 @@ and serial:
 - **LAN** - the local network, searched as the screen opens.
 
 The team room, the chat, the car and course selection and the race are
-the game's own. Up to four players. How it works is in
-[docs/NETWORK.md](docs/NETWORK.md).
+the game's own. Up to four players. After START the room says the race
+is starting while the players are gathered, which can take a few
+seconds. How it works is in [docs/NETWORK.md](docs/NETWORK.md).
 
 ## Music
 

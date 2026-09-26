@@ -80,7 +80,7 @@ BUILDS = {
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b,
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf),
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -99,7 +99,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c,
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'ROOMDRAW': 0x436310, 'RACESETUP': 0x438dc0,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfd0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470ff0, 'HUDRESET': 0x46cec0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd80},
     },
     'American': {
@@ -126,7 +126,7 @@ BUILDS = {
                   'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
-                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b,
+                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef),
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
@@ -141,7 +141,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc, 'IPSLOT': 0x4eaddc, 'TEAMSLOT': 0x4eae0c, 'LINEBUF': 0x4d3c0c, 'NETOBJ': 0x4eacfc, 'DRAW': 0x43624c,
+                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc, 'IPSLOT': 0x4eaddc, 'TEAMSLOT': 0x4eae0c, 'LINEBUF': 0x4d3c0c, 'NETOBJ': 0x4eacfc, 'DRAW': 0x43624c, 'ROOMBG': 0x4eaed0, 'ROOMSIZE': 0x4eaf90, 'ROOMFONT': 0x4e85b4, 'ROOMDRAW': 0x436440, 'RACESETUP': 0x438ef0,
                       'RENDERER': 0x50b210, 'SETVIEWPORT': 0x46c1e0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429e50, 'TREEDRAW': 0x471220, 'HUDRESET': 0x46d0d0, 'LATEFLAG': 0x4e69ec, 'FADEDRAW': 0x46bf90},
     },
     'Australian': {
@@ -169,7 +169,7 @@ BUILDS = {
                   'clearsize': 0x40b83,
                   'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
-                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b,
+                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df),
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8,
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
@@ -185,7 +185,7 @@ BUILDS = {
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
         'addresses': {'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
-                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c, 'IPSLOT': 0x549e34, 'TEAMSLOT': 0x549e64, 'LINEBUF': 0x5245c4, 'NETOBJ': 0x549d54, 'DRAW': 0x45fb3c,
+                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c, 'IPSLOT': 0x549e34, 'TEAMSLOT': 0x549e64, 'LINEBUF': 0x5245c4, 'NETOBJ': 0x549d54, 'DRAW': 0x45fb3c, 'ROOMBG': 0x549f28, 'ROOMSIZE': 0x549fe8, 'ROOMFONT': 0x545efc, 'ROOMDRAW': 0x45fd30, 'RACESETUP': 0x464f40,
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
     },
     # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
@@ -223,7 +223,7 @@ BUILDS = {
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b,
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf),
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -241,7 +241,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c,
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'ROOMDRAW': 0x436310, 'RACESETUP': 0x438dc0,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
     },
 }
@@ -319,6 +319,7 @@ RESTORE_RELOCS = 10
 #   nogeneric   HID devices of no kind (LED controllers, spare collections) left out of MGInput's device list; needs dinput8
 #   lobby       the connection screen's rows INTERNET, DIRECT IP and LAN, and the art for them
 #   netplay     MGNetWk.dll replaced by the UDP build of net/, the directory for INTERNET
+#   starting    the team room says the race is starting while the setup gathers the players
 #   clearsize   the mode setter's clear given the height as well (Australian)
 #   win9x       the Windows 9x check returns "fine" (Australian)
 #   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian exe)
@@ -563,6 +564,7 @@ def patches(build):
              bytes.fromhex('8d8608010000508d460450ff15') + slot('lstrcpyA') + bytes.fromhex('e9cf000000'))), None),
         'nocardwarn': (EXE, ((site['cardwarn'], b'\x6a\x05', b'\xeb\x27'),), None),
         'altab': (EXE, ((site['activate'], b'\xe8', None),), 'apply_activate'),
+        'starting': (EXE, tuple((off, b'\xe8', None) for off in site['starting']), 'apply_starting'),
         'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
             (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
             for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
@@ -860,7 +862,9 @@ FEATURES = (
      'DIRECT IP\tSEARCH asks for the host\'s address, or address:port;\n'
      '\tCREATE hosts. The host forwards UDP 47626.\n'
      'LAN\tThe local network, searched.\n'
-     'In place of\tIPX, TCP/IP, modem and serial.', ('netplay', 'lobby')),
+     'In place of\tIPX, TCP/IP, modem and serial.\n'
+     'START\tthe room says the race is starting while the players are\n'
+     '\tgathered, which can take a few seconds.', ('netplay', 'lobby', 'starting')),
 
     ('loading', 'Loading screens',
      'The stage\'s card - its artwork and its name - held for three\n'
@@ -4248,6 +4252,25 @@ STATUS_BLOB = bytes.fromhex(
     'a1b9b9b9b985c0742a8d4c2424680001000051508b10ff523885c07516807c24'
     '2400740f58c744241c0100000068babababac38d842424020000c3'
 )
+STARTING_BLOB = bytes.fromhex(
+    '5356575583ec1c89e6e8000000005d81ed0e00000083bd6801000000753f8d85'
+    '8801000050ff15e3e3e3e385c00f840d01000089c331ff8b84bd6c01000001e8'
+    '5053ff15e4e4e4e485c00f84f00000008984bd500100004783ff0772daa1bbbb'
+    'bbbb85c00f84d60000008b108d0e5150ff52288b1e85db0f84c3000000ff35bd'
+    'bdbdbd53ff95500100006aff53ff955401000068ca0100006a0253ff95580100'
+    '005053ff955c0100006a0253ff95600100008d4604506a218d85ec0100005053'
+    'ff9564010000a1bcbcbcbc89c72b4604d1f8c7460c00000000c74610c8010000'
+    '897e148b4e0881c1c8010000894e186a006a218d8dec010000518d4e0c516a02'
+    '68c80100005053ff9568010000a1bbbbbbbb8b105350ff522cb8bebebebeffd0'
+    'a1eaeaeaea85c074178b1050ff9280000000a1eaeaeaea8b1050ff9288000000'
+    '83c41c5d5f5e5bb8bfbfbfbfffe0909000000000000000000000000000000000'
+    '000000000000000000000000920100009f010000ac010000b5010000c0010000'
+    'ca010000e001000067646933322e646c6c0053656c6563744f626a6563740053'
+    '657454657874436f6c6f7200476574506978656c00536574426b436f6c6f7200'
+    '536574426b4d6f64650047657454657874457874656e74506f696e7433324100'
+    '457874546578744f757441005354415254494e47202d2057414954494e472046'
+    '4f5220544845204f544845525300'
+)
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
     'MAGIC_IATMCI': 0xE2E2E2E2,
@@ -4302,6 +4325,11 @@ EXE_MAGICS = {
     'LINEBUF': 0xB8B8B8B8,
     'NETOBJ': 0xB9B9B9B9,
     'DRAW': 0xBABABABA,
+    'ROOMBG': 0xBBBBBBBB,
+    'ROOMSIZE': 0xBCBCBCBC,
+    'ROOMFONT': 0xBDBDBDBD,
+    'ROOMDRAW': 0xBEBEBEBE,
+    'RACESETUP': 0xBFBFBFBF,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 DEVICES_MAGICS = {
@@ -5224,6 +5252,19 @@ def _call_target(buf, off):
 def _check_call(buf, off, target, what):
     if _call_target(buf, off) != target:
         raise ValueError('the call at 0x%x does not go to %s' % (off, what))
+
+
+def apply_starting(buf, build):
+    """starting.asm in place of the two calls into the race setup, the
+    host's START and the guest's on the host's word. The annex keeps the
+    gdi32 entry points it resolves, so it is writable."""
+    row = BUILDS[build]
+    for off in row['sites']['starting']:
+        _check_call(buf, off, row['addresses']['RACESETUP'], 'the race setup')
+    out, rva = append_section(buf, exe_blob(STARTING_BLOB, build))
+    for off in row['sites']['starting']:
+        _branch(out, off, rva)
+    return out
 
 
 def apply_activate(buf, build):
@@ -9673,7 +9714,7 @@ def selfcheck():
 
 
 # What a key needs: dropping the second drops the first with it.
-NEEDS = (('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
+NEEDS = (('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
          ('widescreen2d', 'widescreen'), ('widescreen3d', 'widescreen'), ('resolution', 'widescreen'),
          ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'))
 # The game's mode, not options: borderless full screen, framed with ALT+ENTER.
