@@ -246,7 +246,7 @@ defaults, and the game writes it again as you change things.
 </p>
 
 > [!IMPORTANT]
-> Everyone in a team needs patcher **0.7.1 or later**. Older builds cannot
+> Everyone in a team needs patcher **0.8.0 or later**. Older builds cannot
 > join or be joined: update to play.
 
 The connection screen offers three rows in place of IPX, TCP/IP, modem
@@ -370,13 +370,6 @@ to one helps.
   the moment it opens can leave the game in the transition: not
   crashed, but not going anywhere. Give the menu a second before
   leaving it.
-- **Proton: ALT+ENTER stops working after the desktop moved the
-  borderless window.** Moving the fullscreen game to another monitor
-  with a desktop shortcut (Meta+Arrow and the like) leaves Proton's
-  Wine waiting for a window event that never comes, and the next
-  ALT+ENTER shrinks the picture without changing the window. Switch to
-  the framed window first, move that, then ALT+ENTER on the new
-  monitor. Seen on Proton 11 builds, not on Windows.
 
 ## Planned
 
