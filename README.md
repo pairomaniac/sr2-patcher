@@ -357,8 +357,8 @@ that does not fit an issue: pairo@segaonline.net.
 
 ## Known issues
 
-All three are rare and hard to reproduce; a report of what led up to
-one helps.
+The first three are rare and hard to reproduce; a report of what led up
+to one helps.
 
 - **Linux: half of the team room black.** Under Wine or Proton, usually
   after an ALT+TAB, the multiplayer team room can come back with half
@@ -370,6 +370,13 @@ one helps.
   the moment it opens can leave the game in the transition: not
   crashed, but not going anywhere. Give the menu a second before
   leaving it.
+- **Proton: ALT+ENTER stops working after the desktop moved the
+  borderless window.** Moving the fullscreen game to another monitor
+  with a desktop shortcut (Meta+Arrow and the like) leaves Proton's
+  Wine waiting for a window event that never comes, and the next
+  ALT+ENTER shrinks the picture without changing the window. Switch to
+  the framed window first, move that, then ALT+ENTER on the new
+  monitor. Seen on Proton 11 builds, not on Windows.
 
 ## Planned
 
