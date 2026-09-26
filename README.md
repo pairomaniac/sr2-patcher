@@ -318,8 +318,8 @@ python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
-`--patch` applies every patch unless you name some (the list is at the
-top of `sr2-patcher.py`); a leading minus leaves one out, as in
+`--patch` applies every patch unless you name some (the table in
+`docs/NOTES.md` has the names); a leading minus leaves one out, as in
 `--patch ~/games/sr2 -music`, along with whatever needs it. The
 `dgvoodoo` add-on follows the same rule and is on by default on Windows.
 `--patch ~/games/sr2 logs` turns on every diagnostic for a bug report;

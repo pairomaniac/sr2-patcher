@@ -330,7 +330,8 @@ RESTORE_RELOCS = 10
 # calls on +debugstr, frametrace logs every drawn frame to logs\\frames.log,
 # gltrace MGameGL's viewports and angles, d3dtrace and d3dtrace2d
 # MGameD3D's draws (all, or the 2D lists, strips and fans), d3dinit
-# every step of MGameD3D's bring-up with its HRESULT to logs\\d3dinit.log.
+# every step of MGameD3D's bring-up with its HRESULT to logs\\d3dinit.log,
+# netlog the netplay DLL's journal to logs\\sr2-net.log (SR2.CFG Log = 1).
 
 # The first bytes of the five volume entry points voltrace hooks.
 VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),

@@ -60,7 +60,7 @@ A keep-alive goes every 500 ms. Forty-five seconds of silence, or as
 long with nothing acknowledged, is a dead link: a guest dropped by the
 host, or the session lost for a guest. The game does not poll through a
 stage load, which can run past 12 s under Proton, and the exe itself
-waits up to 45 s for a racer.
+waits 15 s at setup and 30 s at the start line.
 
 The host owns the player list. It assigns indices - the lowest free,
 unreserved slot, as the stock DLL did - and sends the roster on every

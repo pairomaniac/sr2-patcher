@@ -71,10 +71,11 @@ Some patches need others, and the patcher refuses a set without them:
 `xinput` needs `noregistry` (which gives the game's own block a file of
 its own and leaves `SR2.CFG` to the text), `devices` needs `xinput`,
 `nogeneric` needs `dinput8`, `music` needs `cdlevel`, `lobby` and
-`netplay` need each other, and the three other widescreen patches need
-`widescreen`. Among the diagnostics `gltrace` needs `widescreen3d`,
-`d3dtrace` and `d3dtrace2d` `widescreen2d`. `windowed` and `borderless`
-are always in.
+`netplay` need each other, `starting` needs `lobby`, and the three
+other widescreen patches need `widescreen`. Among the diagnostics
+`gltrace` needs `widescreen3d`, `d3dtrace` and `d3dtrace2d`
+`widescreen2d`, `netlog` `netplay`. `windowed` and `borderless` are
+always in.
 
 Two more tools for the daily work:
 
@@ -169,7 +170,9 @@ patches fits; each transform appends its own, so any patch can be left
 out.
 
 When a patch changes what it writes, update `EXPECTED` in
-`tools/selftest.py`; document it in NOTES.md's table and MAP.md.
+`tools/selftest.py` (and `EXPECTED_CAPPED` for the exe or `Options.dll`,
+pinned under the capped resolution table); document it in NOTES.md's
+table and MAP.md.
 
 ## Adding a build
 
@@ -226,7 +229,8 @@ is not a patch but `Log = 1` in `SR2.CFG`, the DLL's own log
 ### voltrace
 
 Five volume entry points in the exe report their arguments as `sr2 vN
-this a1 a2 a3`. Sited in the European build only.
+this a1 a2 a3`. Sited in the European and DigiCube/MediaKite builds; the
+box does nothing on the others.
 
 An empty `music\trace` beside the tracks does the same for the music
 hook: every command it receives as `sr2 <id> <msg> <flags> <p1> <p2>
@@ -236,7 +240,7 @@ hook: every command it receives as `sr2 <id> <msg> <flags> <p1> <p2>
 ### frametrace
 
 For the frame pacing. The frame gate logs every drawn frame to
-`logs\\frames.log` in the game folder: a header with the ticks per 1/60 s, then
+`logs\frames.log` in the game folder: a header with the ticks per 1/60 s, then
 the counters at the gate's entry, after the blit and at its exit, the
 simulation steps and the gate's flags. Play, quit, and:
 
@@ -271,7 +275,7 @@ hex.
 Every present as `sr2 p`, a frame's end, and every draw through
 MGameD3D's six hooked entries, the first 400000, to `OutputDebugString`
 (DebugView on Windows, `WINEDEBUG` under Wine) and to
-`logs\\d3dtrace.log` in the game folder:
+`logs\d3dtrace.log` in the game folder:
 
 ```
 sr2 d e fvf count ret x0 y0 z0 tex kind
@@ -301,7 +305,7 @@ Two more lines, for the side bars (WIDESCREEN.md, *The side bars*):
 For a "Failed to initialize" box. Every step of MGameD3D's bring-up -
 the DirectDraw object, the cooperative level and the window or display
 mode, the surfaces, the device, the textures - appends `<site> <hr>
-<w>x<h> <tw>x<th>` to `logs\\d3dinit.log` in the game folder: the store's RVA in
+<w>x<h> <tw>x<th>` to `logs\d3dinit.log` in the game folder: the store's RVA in
 `MGameD3D.dll`, its HRESULT, the picture size in force and the device's
 largest texture from its caps (0 until the device enumeration). The last
 line with a negative `hr` is the call that failed; MAP.md's `Init` row

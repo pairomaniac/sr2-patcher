@@ -924,7 +924,7 @@ on the first present.
 
 `frametrace`, a diagnostic applied by name, hooks the gate's entry
 (`0x4287f0`, `mov eax,[0x4d6a3c]`) and its exit (`0x42890b`, the five
-bytes before `pop ebx; ret`) and logs every drawn frame to `logs\\frames.log`
+bytes before `pop ebx; ret`) and logs every drawn frame to `logs\frames.log`
 beside the exe: the counter at the entry, after the borderless present's
 blit (found through the borderless patch's jump at MGameD3D's present),
 at the exit, the step count and the gate's four flags (*Frame timing*),

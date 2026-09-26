@@ -11,7 +11,8 @@ Six DLLs have a section here. `MGameGL.dll`'s addresses are in
 WIDESCREEN.md, `ReplayGallery.dll` has three sites and no section of its
 own, and `MGNetWk.dll` is replaced whole rather than patched
 (NETWORK.md). Section 10 lists every patch's sites whatever file they
-are in.
+are in; the diagnostics' are with their sections in asm/README.md and
+NOTES.md.
 
 ## 1. The repository
 
@@ -22,7 +23,8 @@ are in.
 | `tools/check.py` | runs every check; `tools/selftest.py` applies the tables to a real install, `tools/cabtest.py` reads a real disc, the `*test.py` beside them run the stubs under Unicorn |
 | `tools/iso2bin.py` | wraps an .iso as MODE1/2352 bin + cue, to test the disc reader without a dump |
 | `tools/sr2.sh`, `tools/sr2-test.example` | installs, rips, patches, restores or runs one build with the paths from `~/.sr2-test`, whose template the example is |
-| `tools/frames.py` | reads the `logs\\frames.log` the frametrace diagnostic writes: frame rate, intervals, catch-ups, the worst gaps |
+| `tools/frames.py` | reads the `logs\frames.log` the frametrace diagnostic writes: frame rate, intervals, catch-ups, the worst gaps |
+| `tools/query.py` | sends the DLL's T_QUERY to one host or the LAN broadcast and prints the T_SESSION answers: whether a host can be reached on 47626 |
 | `tools/discsurvey.py` | hashes every file on one or more install discs and lists what differs; `--play` lists a play disc's label, root and tracks |
 | `tools/setup-dev.sh` | says what the toolchain is missing |
 | `tools/loudness.py` | the RMS of the CD rips and the streamed music, and the `CD_DB - STREAM_DB` that makes them equal at equal sliders |
@@ -52,15 +54,15 @@ The regions, in file order:
 | Install | `install_groups`, `write_manifests`, `install` |
 | Music patch | `append_section`, `_off_to_rva`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Restore-all patch | `apply_restore` |
-| Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_windowed`; `apply_clearsize`, `apply_loadhold`, `apply_padmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter` |
+| Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_windowed`; `apply_clearsize`, `apply_loadhold`, `apply_padmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter`, `apply_starting` |
 | Gamepad | `apply_xinput` and the pad annex (`annex_tables` and the tables before it); `apply_dinput8`, `apply_nogeneric`, `_fill_relative` |
 | No-mixer patch | `apply_mixerless` |
 | Mix patch | `apply_mix` (its second entry from `BLOB_LABELS`), `apply_sfxoptions` |
 | Device Settings | `apply_devices`, `patch_txr` and the page's tables |
-| Connection rows | `lobby_sites`, `apply_entries`; `LOBBY_DIR`, `LOBBY_BACKDROP_MD5`, `lobby_mask`, `bmp24`, `lobby_backdrop`, `lobby_buttons`, `lobby_popup`, `lobby_art`, `clamp_mpdata`; `write_settings`, `network_log` |
+| Connection rows | `lobby_sites`, `apply_entries`; `LOBBY_DIR`, `LOBBY_BACKDROP_MD5`, `lobby_mask`, `bmp24`, `lobby_backdrop`, `lobby_buttons`, `lobby_popup`, `lobby_art`, `clamp_mpdata` |
 | Diagnostics and the rest of the exe | `apply_voltrace`, `apply_frametrace`, `apply_titlebg`, `apply_widescreen`, `apply_gltrace`, `apply_d3dtrace`, `apply_d3dtrace2d` |
 | The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`, `apply_fullwin` |
-| Patch | `md5`, `check_build`, `carry_display_block`, `write_settings`, `patch`, `restore` |
+| Patch | `md5`, `check_build`, `carry_display_block`, `write_settings`, `network_log`, `patch`, `restore` |
 | Window | `run_tk` and the classes under the `# Window` comment |
 | CLI | `selfcheck`, `NEEDS`, `parse_keys`, `main` |
 
@@ -100,7 +102,7 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x454cf0` | sprites at 3D points: each projected through MGameGL `+0x78` (`0x454ea6`, `0x454f0e`, `0x454f40`) and drawn as a 2D triangle list at `0x45510f`; `0x407840` a trail strip the same way (`0x407965`, `0x4079fd`) | widescreen3d |
 | `0x448c70` | the race's background layers: a sky over (0, 0, 640, 256) and a sea over (0, 256, 640, 480) - `.SKY` and `.SEA` course files loaded at `0x462b80`, `MGLBackground` objects made at `0x462e10`; the sea's class at `0x49dca4` (`0x4633b0` update, `0x463500` draw), a ground plane `MGLBackground` builds at `0x100030a0` from the renderer's focal and centre and draws as 2D strips at `0x10003de0` | widescreen3d |
 | `0x4219f0` | the resolution mode setter: the mode at `0x4d5e54`, the size into the struct, the renderer re-inited; `0x421450` reloads the textures, `0x4216a0` sets the viewport (`0x46bfd0`) and the 84.375° field of view (`0x46bf90`, MGameGL `+0x114`); the rect table at `0x4b12f0` | widescreen |
-| `0x47f2d0` | the input wrapper's update (vtable `0x4a158c` `+8`): the button mask at `+0x34` from `GetActionState` on actions 10, 11, 12, 2-5 to bits 0, 1, 6, 9-12, ±5000 the threshold; `0x43f8e0` packs it into the pad's menu flags at `0x4ef7e4`, `0x4edcb4` the frame's, `0x4d5e08` the keyboard's from `0x41fe20` (NOTES.md, *The menus' directions*) | xinput |
+| `0x47f2d0` | the input wrapper's update (vtable `0x4a158c` `+8`): the button mask at `+0x34` from `GetActionState` on actions 10, 11, 12, 2-5 to bits 0, 1, 6, 9-12, ±5000 the threshold; `0x43f8e0` packs it into the pad's menu flags at `0x4ef7e4`, `0x4edcb4` the frame's, `0x4d5e08` the keyboard's from `0x41fe20` (NOTES.md, *The menus' directions*) | pagepad, padmenu |
 | `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | windowed |
 | `0x4272b0` | language from `GetUserDefaultLangID`, 0 Japanese to 6 other, into the settings block's `+0x60`; `0x4edcd0` its copy, the lobby's `_US` bitmaps and font when not 0 (NOTES.md, *Invisible lobby text*) | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
@@ -109,7 +111,8 @@ Entry point `0x488b46`. The base build differs in layout (`.rdata`
 | `0x427600` | main init; `0x427657` constructs the loader; `0x427b10` the rest, one `jl` at `0x427e05` to the error box `0x4404b0` ("Failed to initialize. Error code %X") | - |
 | `0x426ea0` | device select by the `display` string; `0x427240` the card warning, string 5 OK/Cancel | nocardwarn |
 | `0x46e160` | the CD wrapper's SetVolume(percent, flags): values = percent × the level read at startup / 100, to MGAudio's method; called from `0x473c5c` (the menu's level, step × 11.11), `0x473f11` (the race's, step × 9, bit 31), `0x474210` (the mute at a race start, bit 31), `0x4741bc` (an entry's percentage: the fade) | cdlevel |
-| `0x4280a0` | one frame: step, `0x428000`, `0x4287f0` (present, catch-up steps, the spin until 1/60 s), draw; `0x427eef` the timer init, QPF/60; `0x4287a0` the counter; `0x4288a6` the catch-up test, `0x42890b` the gate's exit (NOTES.md, *Frame timing*) | frametrace |
+| `0x4280a0` | one frame: step, `0x428000`, `0x4287f0` (present, catch-up steps, the spin until 1/60 s), draw; `0x427eef` the timer init, QPF/60; `0x4287a0` the counter; `0x4288a6` the catch-up test, `0x42890b` the gate's exit; `0x428835` the present call (NOTES.md, *Frame timing*) | frametrace, starting |
+| `0x438dc0` | the race setup online: the players' cars and the stage, blocking on `timeGetTime` until every player has answered; called at `0x4373c8` (the host's START) and `0x4365bf` (a guest, on the host's word). `0x406fa0` the lobby's surface loader, called by every lobby screen's init (NOTES.md, *The starting box*) | starting |
 | `0x4187b0` | the race state's draw: the scene pass `0x418b00`, the full viewport through `0x46bfd0`, the HUD `0x429d70` at `0x418ab1` while `+0x3c` is set, the reset `0x46cec0`; the frame's root-tree draw `0x470ff0` at `0x4280f2` carries the lake and the fade node (`0x426930` → `0x46bd80`, the renderer's fade quad) (NOTES.md, *HUD after the water*) | hudlast |
 | `0x419af0` | the ending, the race state's sub-state 8: `0x418f30` its scene pass (the zoom to the window through `0x41905f`), `0x48656c` the credits' draw, `0x4198fc` and `0x419ab7` the two branches that gate it (WIDESCREEN.md, *The credits*) | - |
 | `0x4350e0` | a chat line kept for the team room's list: `name>text` into `(len + 0x13) & ~3` bytes behind a link, from the send (`0x436833`) and the receipt of message `0x1b` (`0x438c1e`); `0x4386d0` the send itself. Patched by lobby (chatline) |
@@ -152,12 +155,13 @@ Image base `0x10000000`; file offset = VA − `0x10000000`.
 | Address | What |
 | --- | --- |
 | `0x10003e70` | fills the video-memory texture descriptor; caps at `0x10003e91`, AGP variant at `0x10003eb7`; `0x100043f0` the `Load`, `0x10004385` releases the system copy |
-| `0x10003ff2` | creates the video-memory texture and `Load`s it from its system-memory twin |
+| `0x10003ff2` | creates the video-memory texture and `Load`s it from its system-memory twin; `0x1000411c` the create call. Patched by widescreen2d |
+| `0x10004430` | releases texture N, no check of N against the count. Patched by texrange |
 | `0x10004530` | creates the system-memory texture (and palette); colour key `{0,0}` at `0x10012734` set at `0x100046ce` and `0x100043d1` |
 | `0x10003cf0` | `EnumTextureFormats` callback: slots at `0x10012594`, 32 bytes each (0 P8, 1 X1R5G5B5, 2 R5G6B5, 3 A1R5G5B5, 4 A4R4G4B4, 5 P4, 6-10 DXT, 11 X8R8G8B8, 12 a 16-bit RGB); the default picked from the list at `0x1000f79c`, chosen index in `0x10012740`, "not 565" flag `0x1001273c`. Patched by texfmt |
 | `0x10004af0`, `0x10004bb0` | 16-bit texture copy: as is for 555, expanded for 565 |
 | `0x100025d0` | cooperative level and mode: fullscreen path to `0x1000263c`, windowed after; the desktop-depth check at `0x1000271e`; the window sized at `0x100026be`. Patched by anydepth, borderless |
-| `0x10004d50` | present: `Flip` when fullscreen, `Blt` to the client rect when windowed, from `0x10004d7b`. Patched by borderless |
+| `0x10004d50` | present: `Flip` when fullscreen, `Blt` to the client rect when windowed, from `0x10004d7b`. Patched by borderless, widescreen2d; read by frametrace |
 | `0x10004cb0` | `+0x58`, the flip flags: `DDFLIP_WAIT` or `NOVSYNC`, `INTERVAL2`-`4`; the exe sets (1, 1). `0x10004d30` `+0x54`, `WaitForVerticalBlank(BLOCKBEGIN)`, never called by the exe |
 | `0x1001240c` | the fullscreen flag; `0x100123f8`–`0x10012408` hwnd, width, height, bpp, refresh |
 | `0x10007b30` | offscreen surface create: `dwCaps` by the wrapper's kind at `+0x14` - 0 and 1 `0x840` system memory, 2 `0x4040` video memory (`0x10007cab`), 3 `0x20004040` non-local, 4 and 5 the primary and the back buffer, 6 a texture. Patched by surfmem |

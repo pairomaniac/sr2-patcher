@@ -66,17 +66,17 @@ Two rules every blob follows:
 | `mix.asm` | `MGSound.dll` | every buffer's dB range remapped to −43..−8 in `SetRange`, and the streamed music on that curve plus `STREAM_DB` |
 | `mix.inc` | - | the mix's numbers: the effects' range, the two music offsets; `mix.asm` and `music.asm` include it |
 | `padpoll.inc` | - | one pad input through MGInput's annex's page poll, and the past-half test; `padmenu.asm`, `replaypad.asm`, `pagepad.asm` and `sortpad.asm` include it |
-| `frametrace.asm` | exe | a diagnostic: every drawn frame's counter and step count appended to `logs\\frames.log` |
+| `frametrace.asm` | exe | a diagnostic: every drawn frame's counter and step count appended to `logs\frames.log` |
 | `voltrace.asm` | exe | a diagnostic: five volume entry points report their arguments through `OutputDebugStringA` |
-| `d3dinit.asm` | `MGameD3D.dll` | a diagnostic: every step of the bring-up with its HRESULT appended to `logs\\d3dinit.log` |
+| `d3dinit.asm` | `MGameD3D.dll` | a diagnostic: every step of the bring-up with its HRESULT appended to `logs\d3dinit.log` |
 | `build.py` | - | assembles the above and splices them into the patcher; `MUSIC_MAGICS` lists the placeholders the patcher fills in the music blob, `EXE_MAGICS` the addresses it fills in the exe stubs from the build's row |
 
 The `mixerless` stub is three instructions, written by `apply_mixerless`
 in the patcher rather than assembled here. Each file's placeholders are
 named after it: `DEVICES_MAGICS`, `PADINPUT_MAGICS`, `DINPUT8_MAGICS`,
 `NOGENERIC_MAGICS`, `RESOLUTION_MAGICS`, `SORTPAD_MAGICS`; voltrace's and
-frametrace's return slots (`0xE7E7E7E1` on) are `SITE_MAGICS`, counted
-per blob.
+frametrace's return slots (`0xE7E7E7E1` on), and frametrace's third, the
+borderless present's stamp offset, are `SITE_MAGICS`, counted per blob.
 
 The trace formats the diagnostics and the widescreen blobs print are in
 [docs/DEVELOPING.md](../docs/DEVELOPING.md), *Diagnostics*.
@@ -332,7 +332,7 @@ is for the side bars' sake and replays the thirteen bytes it took.
 `widegl` and `wide2d` each carry a trace, off unless the `gltrace` or
 `d3dtrace` diagnostic sets its flag; the patcher finds the flag by a
 marker string in the annex. `wide2d`'s lines also go to
-`logs\\d3dtrace.log`, opened on the first line as `d3dinit.asm` opens
+`logs\d3dtrace.log`, opened on the first line as `d3dinit.asm` opens
 its log.
 
 **`resolution.asm`** follows `devices.asm`'s pattern for `Options.dll`,
@@ -379,10 +379,11 @@ the game asked if any step fails.
 In the exe's annex, in front of the text-input handler the window
 procedure calls for every message it has no case for (`0x426cbc` →
 `0x41fe20`, cdecl). ALT+ENTER - `WM_SYSKEYDOWN`, `VK_RETURN`, ALT bit
-set, repeat bit clear - toggles the window between `WS_POPUP` over its
-monitor and `WS_OVERLAPPEDWINDOW` with a client area of the picture's
-size, centred on that monitor, and answers 0; any other message goes on
-to the handler by `push`/`ret`, the stack untouched.
+set - toggles the window between `WS_POPUP` over its monitor and
+`WS_OVERLAPPEDWINDOW` with a client area of the picture's size, centred
+on that monitor, and answers 0; a repeat (bit 30) is answered 0 without
+toggling; any other message goes on to the handler by `push`/`ret`, the
+stack untouched.
 
 The section keeps the five user32 entry points it resolves on first use,
 so it is writable, and reaches its own data from a call/pop base since
@@ -606,7 +607,7 @@ gate ends by taking the counter into `eax` and storing it as the frame's
 time, with the step count in `ebx`, and its last five bytes before `pop
 ebx; ret` jump to `trace`.
 
-That appends `<entry> <blit> <exit> <steps> <flags>` to `logs\\frames.log`
+That appends `<entry> <blit> <exit> <steps> <flags>` to `logs\frames.log`
 in the game folder, the folder made on the first frame - blit read from fullwin.asm's stamp, found once through
 the jump the borderless patch put at MGameD3D's present - opening it on
 the first frame with a header `budget <ticks> qpc <0|1>` from the timer
@@ -636,11 +637,15 @@ renderer's Init ends with `mov [0x10011fc4], eax`, the DLL's
 last-HRESULT slot, and a `jl` out on a failure; the patcher makes each
 of those stores in the bring-up tree (`D3DINIT_SITES`) a call to
 `entry`, which does the store and appends `<site> <hr> <w>x<h>
-<tw>x<th>` to `logs\\d3dinit.log` in the game folder, the folder made
+<tw>x<th>` to `logs\d3dinit.log` in the game folder, the folder made
 on the first call - the store's RVA, the HRESULT, the picture size in
 the init struct's copy and the largest texture in the device's caps
 (`D3DDEVICEDESC` at `0x10012430`, kept by the device enumeration; 0
-before it). Flags and registers are kept,
+before it). After the second of Init's stores (`FMTSITE`, the texture
+formats enumerated by then) one more line, `fmt <slots> <chosen>
+<not565>`: which of the thirteen format slots the device filled, the
+slot picked for 16-bit textures and the "not 565" flag. Flags and
+registers are kept,
 since the site's `jl` reads the `test` before the store; the absolute
 in each replaced store loses its relocation entry.
 
