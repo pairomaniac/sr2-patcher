@@ -7,13 +7,14 @@
 ; from the host's START and the guest's on the host's word. It draws a
 ; box with two lines in the middle of the room's background surface
 ; (the one the strip's `IP Address :` went on, MGameD3D's wrapper: GetDC
-; +0x28, ReleaseDC +0x2c, the target +0x34, the blit +0x1c; the surface
-; is loaded afresh on every entry to the room, so the box stays in it
-; harmlessly), blits that box alone onto the back buffer - through the
-; widescreen patch's hook when it is there, so it lands on the room's
-; last frame and not over it - presents as the frame gate would, then
-; goes on to the setup, which returns to the site. Without gdi32, a
-; surface or a DC it goes straight to the setup.
+; +0x28, ReleaseDC +0x2c, the target +0x34, the blit +0x1c), blits that
+; box alone onto the back buffer - through the widescreen patch's hook
+; when it is there, so it lands on the room's last frame and not over
+; it - presents as the frame gate would, puts the background back as it
+; was (a copy of the box's rectangle kept in a memory bitmap: the host's
+; room draws on after the setup, and the box would show between the
+; panels), then goes on to the setup, which returns to the site. Without
+; gdi32, a surface or a DC it goes straight to the setup.
 ;
 ; Placeholders the patcher fills from the build's row: the room's
 ; surface table (ROOMBG, entry 0 the background) and its size table
@@ -33,9 +34,10 @@ bits 32
 
 %define OPAQUE          2               ; SetBkMode, and ETO_OPAQUE
 %define TRANSPARENT     1
-%define TEXT            0x00ffffff      ; COLORREFs: the lines, the border, the box
-%define BORDER          0x00c8c8c8
-%define BOX             0x00462814      ; a dark blue; never black, which a keyed blit would drop
+%define TEXT            0x00ffffff      ; COLORREFs: the lines, the border, the box, as the game's own popups
+%define BORDER          0x00ffffff
+%define BOX             0x00080808      ; near black, never black, which a keyed blit would drop
+%define SRCCOPY         0x00cc0020
 %define PAD_X           28              ; the box around the wider line
 %define PAD_Y           14
 %define GAP             6               ; between the lines
@@ -46,7 +48,7 @@ bits 32
 %define S_TARGET        0x34            ; SetTarget(this, surface or 0 for the back buffer)
 %define D_PRESENT       0x80            ; MGameD3D: the present and what the gate calls after it
 %define D_AFTER         0x88
-%define NFUNCS          6
+%define NFUNCS          11
 
 ; the frame, esi = its base
 %define f_hdc           0
@@ -56,7 +58,10 @@ bits 32
 %define f_cy2           16
 %define f_outer         20              ; left, top, right, bottom
 %define f_inner         36
-%define FRAME           52
+%define f_mem           52              ; the memory DC holding the rectangle as it was, its bitmap, the one it had
+%define f_bmp           56
+%define f_old           60
+%define FRAME           64
 
         push    ebx
         push    esi
@@ -156,7 +161,36 @@ bits 32
         sub     eax, EDGE
         mov     [esi + f_inner + 12], eax
 
-        push    OPAQUE
+        mov     dword [esi + f_mem], 0  ; the rectangle as it was, kept for after the present
+        push    ebx
+        call    [ebp + funcs + F_CREATEDC * 4]
+        test    eax, eax
+        jz      .draw
+        mov     [esi + f_mem], eax
+        mov     ecx, [esi + f_outer + 12]
+        sub     ecx, [esi + f_outer + 4]
+        push    ecx
+        mov     ecx, [esi + f_outer + 8]
+        sub     ecx, [esi + f_outer]
+        push    ecx
+        push    ebx
+        call    [ebp + funcs + F_CREATEBITMAP * 4]
+        mov     [esi + f_bmp], eax
+        test    eax, eax
+        jnz     .keep
+        push    dword [esi + f_mem]
+        call    [ebp + funcs + F_DELETEDC * 4]
+        mov     dword [esi + f_mem], 0
+        jmp     .draw
+.keep:  push    eax
+        push    dword [esi + f_mem]
+        call    [ebp + funcs + F_SELECTOBJECT * 4]
+        mov     [esi + f_old], eax
+        mov     edx, [esi + f_mem]
+        xor     ecx, ecx
+        call    copy                    ; the memory bitmap from the surface
+
+.draw:  push    OPAQUE
         push    ebx
         call    [ebp + funcs + F_SETBKMODE * 4]
         push    BORDER                  ; the border: the outer rect filled
@@ -209,7 +243,7 @@ bits 32
         call    [edx + S_BLIT]
         mov     eax, [GAMED3D]
         test    eax, eax
-        jz      .setup
+        jz      .restore
         mov     edx, [eax]
         push    eax
         call    [edx + D_PRESENT]       ; presented, as the gate would
@@ -218,6 +252,34 @@ bits 32
         push    eax
         call    [edx + D_AFTER]
 
+.restore:
+        cmp     dword [esi + f_mem], 0
+        je      .setup
+        mov     eax, [ROOMBG]           ; the rectangle back as it was
+        mov     edx, [eax]
+        lea     ecx, [esi + f_hdc]
+        push    ecx
+        push    eax
+        call    [edx + S_GETDC]
+        mov     ebx, [esi + f_hdc]
+        test    ebx, ebx
+        jz      .free
+        mov     edx, [esi + f_mem]
+        mov     ecx, 1
+        call    copy                    ; the surface from the memory bitmap
+        mov     eax, [ROOMBG]
+        mov     edx, [eax]
+        push    ebx
+        push    eax
+        call    [edx + S_RELEASEDC]
+.free:  push    dword [esi + f_old]
+        push    dword [esi + f_mem]
+        call    [ebp + funcs + F_SELECTOBJECT * 4]
+        push    dword [esi + f_bmp]
+        call    [ebp + funcs + F_DELETEOBJECT * 4]
+        push    dword [esi + f_mem]
+        call    [ebp + funcs + F_DELETEDC * 4]
+
 .setup: add     esp, FRAME
         pop     ebp
         pop     edi
@@ -225,6 +287,37 @@ bits 32
         pop     ebx
         mov     eax, RACESETUP
         jmp     eax                     ; the setup returns to the site
+
+; edx = the memory DC, ecx = 0 to copy the box's rectangle from the surface's DC
+; (ebx) into it at 0,0, 1 back: BitBlt(dst, x, y, w, h, src, x', y', SRCCOPY).
+copy:   push    SRCCOPY
+        test    ecx, ecx
+        jnz     .back
+        push    dword [esi + f_outer + 4]       ; from the surface at the corner
+        push    dword [esi + f_outer]
+        push    ebx
+        call    .size
+        push    0                               ; into the memory at 0,0
+        push    0
+        push    edx
+        jmp     .go
+.back:  push    0                               ; from the memory at 0,0
+        push    0
+        push    edx
+        call    .size
+        push    dword [esi + f_outer + 4]       ; onto the surface at the corner
+        push    dword [esi + f_outer]
+        push    ebx
+.go:    call    [ebp + funcs + F_BITBLT * 4]
+        ret
+.size:  pop     eax                             ; h then w pushed under this call's return
+        mov     ecx, [esi + f_outer + 12]
+        sub     ecx, [esi + f_outer + 4]
+        push    ecx
+        mov     ecx, [esi + f_outer + 8]
+        sub     ecx, [esi + f_outer]
+        push    ecx
+        jmp     eax
 
 ; eax = a rect: filled with the background colour (ExtTextOut of nothing, opaque).
 fill:   push    0
@@ -260,11 +353,22 @@ F_SETBKCOLOR    equ 2
 F_SETBKMODE     equ 3
 F_GETTEXTEXTENT equ 4
 F_EXTTEXTOUT    equ 5
+F_CREATEDC      equ 6
+F_CREATEBITMAP  equ 7
+F_BITBLT        equ 8
+F_DELETEOBJECT  equ 9
+F_DELETEDC      equ 10
 
 align 4
 funcs:  times NFUNCS dd 0
 names:  dd n_selectobject, n_settextcolor, n_setbkcolor, n_setbkmode, n_gettextextent, n_exttextout
+        dd n_createdc, n_createbitmap, n_bitblt, n_deleteobject, n_deletedc
 gdi32:          db 'gdi32.dll', 0
+n_createdc:     db 'CreateCompatibleDC', 0
+n_createbitmap: db 'CreateCompatibleBitmap', 0
+n_bitblt:       db 'BitBlt', 0
+n_deleteobject: db 'DeleteObject', 0
+n_deletedc:     db 'DeleteDC', 0
 n_selectobject: db 'SelectObject', 0
 n_settextcolor: db 'SetTextColor', 0
 n_setbkcolor:   db 'SetBkColor', 0

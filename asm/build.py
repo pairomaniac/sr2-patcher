@@ -116,7 +116,7 @@ EXE_BLOB_MAGICS = {
     'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
     'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF', 'IPLEN'),
     'STATUS_BLOB': ('NETOBJ', 'DRAW'),
-    'STARTING_BLOB': ('LOADLIB', 'GETPROC') + ('ROOMBG',) * 4 + ('ROOMFONT',) + ('ROOMSIZE',) * 2 + ('GAMED3D',) * 2 + ('RACESETUP',),
+    'STARTING_BLOB': ('LOADLIB', 'GETPROC') + ('ROOMBG',) * 6 + ('ROOMFONT',) + ('ROOMSIZE',) * 2 + ('GAMED3D',) * 2 + ('RACESETUP',),
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,

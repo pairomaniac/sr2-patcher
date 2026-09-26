@@ -5,11 +5,14 @@
 
 STARTING_BLOB is called in place of the race setup, with gdi32, the
 room's background surface and MGameD3D replaced by recording stubs. It
-must resolve gdi32 once, draw the box centred on the surface - border,
-fill, the two lines each centred - give the DC back, blit the box alone
-onto the back buffer and present, and reach the setup with the stack
-and the callee-saved registers as the site left them; without gdi32, a
-surface or a DC it must reach the setup having drawn nothing.
+must resolve gdi32 once, keep the box's rectangle in a memory bitmap,
+draw the box centred on the surface - border, fill, the two lines each
+centred - give the DC back, blit the box alone onto the back buffer and
+present, put the rectangle back and free the bitmap, and reach the setup
+with the stack and the callee-saved registers as the site left them;
+without gdi32, a surface or a DC it must reach the setup having drawn
+nothing, and without a memory DC or bitmap draw the box and free what
+it made.
 Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -28,9 +31,11 @@ HDC, FONT, WIDTH, HEIGHT = 0x7777, 0x8888, 640, 480
 LINES = ('STARTING THE RACE', 'WAITING FOR THE OTHER PLAYERS')
 EXTENT = {LINES[0]: (200, 18), LINES[1]: (330, 18)}
 PAD_X, PAD_Y, GAP, EDGE = 28, 14, 6, 2
-TEXT, BORDER, BOX = 0xffffff, 0xc8c8c8, 0x462814
+TEXT, BORDER, BOX, SRCCOPY = 0xffffff, 0xffffff, 0x080808, 0xcc0020
+MEM, BMP, OLD = 0x5555, 0x6666, 0x4444
 STUBS = {'LoadLibraryA': 4, 'GetProcAddress': 8, 'SelectObject': 8, 'SetTextColor': 8,
          'SetBkColor': 8, 'SetBkMode': 8, 'GetTextExtentPoint32A': 16, 'ExtTextOutA': 32,
+         'CreateCompatibleDC': 4, 'CreateCompatibleBitmap': 12, 'BitBlt': 36, 'DeleteObject': 4, 'DeleteDC': 4,
          'GetDC': 8, 'ReleaseDC': 8, 'SetTarget': 8, 'Blit': 16, 'Present': 4, 'After': 4, 'RaceSetup': 0}
 
 
@@ -39,7 +44,7 @@ class Machine:
         self.build = build
         self.row = row = patcher.BUILDS[build]
         self.calls, self.loads = [], 0
-        self.have = {'gdi32': True, 'surface': True, 'dc': True}
+        self.have = {'gdi32': True, 'surface': True, 'dc': True, 'memdc': True, 'bitmap': True}
         mu = self.mu = Uc(UC_ARCH_X86, UC_MODE_32)
         mu.mem_map(0x400000, 0x300000)
         mu.mem_map(FAKE, 0x1000)
@@ -96,7 +101,20 @@ class Machine:
         elif name == 'Blit':
             rect = struct.unpack('<4i', mu.mem_read(self.arg(3), 16))
             self.calls.append(('Blit', self.arg(0), self.arg(1), self.arg(2), rect))
-        elif name in ('SelectObject', 'SetTextColor', 'SetBkColor', 'SetBkMode', 'ReleaseDC', 'SetTarget'):
+        elif name == 'CreateCompatibleDC':
+            self.calls.append((name, self.arg(0)))
+            result = MEM if self.have['memdc'] else 0
+        elif name == 'CreateCompatibleBitmap':
+            self.calls.append((name, self.arg(0), self.arg(1), self.arg(2)))
+            result = BMP if self.have['bitmap'] else 0
+        elif name == 'BitBlt':
+            self.calls.append((name,) + tuple(self.arg(i) for i in range(9)))
+        elif name in ('DeleteObject', 'DeleteDC'):
+            self.calls.append((name, self.arg(0)))
+        elif name == 'SelectObject':
+            self.calls.append((name, self.arg(0), self.arg(1)))
+            result = OLD if self.arg(0) == MEM else 1
+        elif name in ('SetTextColor', 'SetBkColor', 'SetBkMode', 'ReleaseDC', 'SetTarget'):
             self.calls.append((name, self.arg(0), self.arg(1)))
         elif name in ('Present', 'After'):
             self.calls.append((name, self.arg(0)))
@@ -135,20 +153,33 @@ def main():
         left, top = (WIDTH - w) // 2, (HEIGHT - h) // 2
         outer = (left, top, left + w, top + h)
         inner = (left + EDGE, top + EDGE, left + w - EDGE, top + h - EDGE)
-        want = [('GetDC', m.surface), ('SelectObject', HDC, FONT),
-                ('GetTextExtentPoint32A', HDC, LINES[0]), ('GetTextExtentPoint32A', HDC, LINES[1]),
-                ('SetBkMode', HDC, 2), ('SetBkColor', HDC, BORDER), ('ExtTextOutA', HDC, 0, 0, 2, outer, '', 0),
-                ('SetBkColor', HDC, BOX), ('ExtTextOutA', HDC, 0, 0, 2, inner, '', 0),
-                ('SetBkMode', HDC, 1), ('SetTextColor', HDC, TEXT),
-                ('ExtTextOutA', HDC, (WIDTH - cx1) // 2, top + PAD_Y, 0, None, LINES[0], 0),
-                ('ExtTextOutA', HDC, (WIDTH - cx2) // 2, top + PAD_Y + cy1 + GAP, 0, None, LINES[1], 0),
-                ('ReleaseDC', m.surface, HDC), ('SetTarget', m.surface, 0), ('Blit', m.surface, left, top, outer),
-                ('Present', m.d3d), ('After', m.d3d)]
+        head = [('GetDC', m.surface), ('SelectObject', HDC, FONT),
+                ('GetTextExtentPoint32A', HDC, LINES[0]), ('GetTextExtentPoint32A', HDC, LINES[1])]
+        keep = [('CreateCompatibleDC', HDC), ('CreateCompatibleBitmap', HDC, w, h), ('SelectObject', MEM, BMP),
+                ('BitBlt', MEM, 0, 0, w, h, HDC, left, top, SRCCOPY)]
+        box = [('SetBkMode', HDC, 2), ('SetBkColor', HDC, BORDER), ('ExtTextOutA', HDC, 0, 0, 2, outer, '', 0),
+               ('SetBkColor', HDC, BOX), ('ExtTextOutA', HDC, 0, 0, 2, inner, '', 0),
+               ('SetBkMode', HDC, 1), ('SetTextColor', HDC, TEXT),
+               ('ExtTextOutA', HDC, (WIDTH - cx1) // 2, top + PAD_Y, 0, None, LINES[0], 0),
+               ('ExtTextOutA', HDC, (WIDTH - cx2) // 2, top + PAD_Y + cy1 + GAP, 0, None, LINES[1], 0),
+               ('ReleaseDC', m.surface, HDC), ('SetTarget', m.surface, 0), ('Blit', m.surface, left, top, outer),
+               ('Present', m.d3d), ('After', m.d3d)]
+        back = [('GetDC', m.surface), ('BitBlt', HDC, left, top, w, h, MEM, 0, 0, SRCCOPY), ('ReleaseDC', m.surface, HDC),
+                ('SelectObject', MEM, OLD), ('DeleteObject', BMP), ('DeleteDC', MEM)]
+        want = head + keep + box + back
         got = m.start()
         if got != want:
-            raise SystemExit('startingtest: %s: the line: %r' % (build, got))
+            raise SystemExit('startingtest: %s: the box: %r' % (build, got))
         if m.start() != want or m.loads != 1:
             raise SystemExit('startingtest: %s: the second call, gdi32 loaded %d times' % (build, m.loads))
+        m.have['memdc'] = False
+        if m.start() != head + [('CreateCompatibleDC', HDC)] + box:
+            raise SystemExit('startingtest: %s: without a memory DC: %r' % (build, m.calls))
+        m.have['memdc'] = True
+        m.have['bitmap'] = False
+        if m.start() != head + keep[:2] + [('DeleteDC', MEM)] + box:
+            raise SystemExit('startingtest: %s: without a bitmap: %r' % (build, m.calls))
+        m.have['bitmap'] = True
         for what in ('surface', 'dc'):
             m.have[what] = False
             got = m.start()
@@ -163,7 +194,7 @@ def main():
         m2.have['gdi32'] = True
         if m2.start() != want or m2.loads != 2:
             raise SystemExit('startingtest: %s: gdi32 not tried again' % build)
-    print('starting: the box centred on the room, its two lines centred in it, blitted alone and presented, then the setup; nothing without gdi32, a surface or a DC; every build')
+    print('starting: the box centred on the room, its two lines centred in it, blitted alone and presented, the room put back, then the setup; nothing without gdi32, a surface or a DC; every build')
     return 0
 
 

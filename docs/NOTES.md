@@ -1229,24 +1229,30 @@ receive loop (`0x438720`) between looks, so no frame is drawn and the
 screen holds the room's last one. asm/starting.asm stands in for the
 call: it takes a DC on the room's background (`[0x4eade0]`, the surface
 the strip's `IP Address :` went on; MGameD3D's wrapper, `GetDC` `+0x28`,
-`ReleaseDC` `+0x2c`) and draws a box in the middle of it - a light
-border, a dark blue fill (never black: the wrapper's blit keys black
-out when a surface has a key), `STARTING THE RACE` over `WAITING FOR
-THE OTHER PLAYERS` centred in the lobby's font (`[0x4e84c4]`), the box
-sized from the lines' extents and centred on `[0x4eaea0]`'s width and
-height - then blits that rectangle alone from the background to the
-back buffer through the wrapper (`+0x34` the target, `+0x1c` the blit;
-under `widescreen2d` the Blt hook lands it on the lobby surface, over
-the room's last frame with its names and chat, and the present stretches
-it), and calls MGameD3D's present and the call the gate makes after it
-(`+0x80`, `+0x88` on `[0x50b118]`), then jumps to the setup, which
-returns to the site. The room's draw is not called: it blits the chrome
-alone, and a frame of it shows an empty room. The background is loaded
-afresh on every entry to the room (`0x406fa0` from its init), so the box
-left in it is never seen again. gdi32 is resolved once through the
-import slots. Without gdi32, a surface or a DC it goes straight to the
-setup. `tools/startingtest.py` runs it under Unicorn on every build
-with the surface, the present and gdi32 stubbed.
+`ReleaseDC` `+0x2c`), keeps a copy of the box's rectangle in a memory
+bitmap (`CreateCompatibleDC`, `CreateCompatibleBitmap`, `BitBlt`), and
+draws the box in the middle of it as the game's own popups look - a
+white border, a fill of near black (never black: the wrapper's blit
+keys black out when a surface has a key), `STARTING THE RACE` over
+`WAITING FOR THE OTHER PLAYERS` in white, centred in the lobby's font
+(`[0x4e84c4]`), the box sized from the lines' extents and centred on
+`[0x4eaea0]`'s width and height - then blits that rectangle alone from
+the background to the back buffer through the wrapper (`+0x34` the
+target, `+0x1c` the blit; under `widescreen2d` the Blt hook lands it on
+the lobby surface, over the room's last frame with its names and chat,
+and the present stretches it), calls MGameD3D's present and the call the
+gate makes after it (`+0x80`, `+0x88` on `[0x50b118]`), puts the
+rectangle back from the bitmap and frees it, then jumps to the setup,
+which returns to the site. The room's draw is not called: it blits the
+chrome alone, and a frame of it shows an empty room. The background is
+put back because the host's room draws on after the setup returns (the
+fade to the race), and the box in the background showed between the
+panels. gdi32 is resolved once through the import slots. Without gdi32,
+a surface or a DC it goes straight to the setup; without a memory DC or
+bitmap the box goes up and stays in the background, which is loaded
+afresh on every entry to the room (`0x406fa0` from its init).
+`tools/startingtest.py` runs it under Unicorn on every build with the
+surface, the present and gdi32 stubbed.
 
 ### The clear's height
 
