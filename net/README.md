@@ -88,8 +88,9 @@ reason in `logs\sr2-net.log` on both sides.
 
 `Log = 1` under `[Network]` in `SR2.CFG` turns on `logs\sr2-net.log` beside
 the exe, a log of what the core did: the patcher's `netlog` diagnostic
-(the **Network log** box, or `--patch DIR netlog`; `logs` includes it),
-and a plain Apply sets it back to 0. The patcher writes the section
+(the **Network log** box, or `--patch DIR netlog`; `logs` includes it).
+It stays as set: the box shows the file's value and unticking it, or
+`-netlog`, sets it back to 0. The patcher writes the section
 with both keys at 0 when netplay is applied, the DLL writes it at the
 game's start when the file has none, and a controls save carries it.
 

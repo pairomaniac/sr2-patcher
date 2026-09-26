@@ -322,7 +322,8 @@ top of `sr2-patcher.py`); a leading minus leaves one out, as in
 `--patch ~/games/sr2 -music`, along with whatever needs it. The
 `dgvoodoo` add-on follows the same rule and is on by default on Windows.
 `--patch ~/games/sr2 logs` turns on every diagnostic for a bug report;
-a plain `--patch` turns them off again.
+a plain `--patch` turns them off again, all but the network log, which
+stays until `-netlog`.
 
 On Linux the terminal commands need nothing extra; the window needs Tk:
 
@@ -347,7 +348,8 @@ and press **Apply patches**; or turn them all on from a terminal with
 `--patch <game folder> logs`. Reproduce the bug, then attach the `logs`
 folder from beside `SEGA RALLY 2.exe`. For anything online, tick
 **Network log** on every machine and send each one's folder. A plain
-**Apply patches** turns the logging off again.
+**Apply patches** turns the logging off again; the network log stays
+until its box is unticked.
 
 For a disc image of a release the patcher does not know, or anything
 that does not fit an issue: pairo@segaonline.net.

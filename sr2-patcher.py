@@ -906,7 +906,8 @@ DIAGNOSTIC_INFO = {
                 '80004005".'),
     'netlog': ('Network log', 'Logs the connections, joins, refusals and '
                'drops of online play to logs\\sr2-net.log. For anything '
-               'online, from each machine.'),
+               'online, from each machine. Unlike the others this stays as '
+               'set: the box shows what SR2.CFG says.'),
 }
 
 
@@ -6844,11 +6845,22 @@ def write_settings(dest, keys, log):
     log('patch: SR2.CFG completed: %s' % ', '.join(['[%s]' % n for n in missing] + (['the display block dropped'] if dropped else [])))
 
 
+def network_log_state(dest):
+    """Whether Log = 1 under [Network] in SR2.CFG; None without a file."""
+    cfg = os.path.join(dest, 'SR2.CFG')
+    if not os.path.isfile(cfg):
+        return None
+    with open(cfg, 'rb') as fh:
+        m = re.search(rb'(?m)^Log\s*=\s*(\S+)', fh.read())
+    return bool(m and m.group(1) == b'1')
+
+
 def network_log(dest, on, log):
-    """Log under [Network] in SR2.CFG 1 or 0: the netlog diagnostic, on
-    when named or ticked and off by a plain Apply like the others. The
-    section is written when the file lacks it; a file that is not there
-    is left that way when the log is off."""
+    """Log under [Network] in SR2.CFG 1 or 0: the netlog diagnostic, which
+    unlike the others sticks - netlog or the box ticked turns it on,
+    -netlog or the box unticked off, and a patch that names neither
+    leaves it. The section is written when the file lacks it; a file that
+    is not there is left that way when the log is off."""
     cfg = os.path.join(dest, 'SR2.CFG')
     text = b''
     if os.path.isfile(cfg):
@@ -7124,7 +7136,8 @@ def patch(dest, log=print, keys=None):
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
     write_settings(dest, keys, log)
-    network_log(dest, 'netlog' in keys, log)
+    if 'netlog' in keys or '-netlog' in keys:
+        network_log(dest, 'netlog' in keys, log)
     lobby_art(dest, 'lobby' in keys, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
@@ -7901,8 +7914,9 @@ DGVOODOO_WINE = ('Wine and Proton have wined3d, which has no such limit, so '
                  'this is off and not needed there.')
 DGVOODOO_CAPPED = ('Without it the resolution list stops at 2048 a side.')
 
-DIAGNOSTICS_HINT = ('Off unless asked for. Each logs something for a bug '
-                    'report; the name in brackets is what --patch takes.')
+DIAGNOSTICS_HINT = ('Off unless asked for, and off again on a plain Apply '
+                    '(the network log stays as set). Each logs something for '
+                    'a bug report; the name in brackets is what --patch takes.')
 
 MUSIC_HINT = ('Rips the play disc to music\\ beside the game, where the '
               'Music from files patch reads it. About 550 MB.')
@@ -9011,6 +9025,7 @@ def run_tk():
             else:
                 self.build, patched = found
                 self.game_ok = True
+                self.diagnostics['netlog'].set(bool(network_log_state(path)))
                 if patched:
                     self._set_status(GAME_PATCHED % build_name(self.build), 'warn')
                 else:
@@ -9047,6 +9062,8 @@ def run_tk():
 
         def _extras(self):
             keys = tuple(k for k in BYNAME if self.diagnostics[k].get())
+            if 'netlog' not in keys and self.game_ok:
+                keys += ('-netlog',)                # the box shows the file's setting: unticked is off
             if self.dgvoodoo.get():
                 keys += ADDONS
             return keys
@@ -9670,7 +9687,8 @@ def parse_keys(words):
     add-on where it is the default unless named with a minus. Words may be
     separated by commas or spaces (PowerShell hands a,b over as two). A
     list that names a patch without what it needs is refused by patch().
-    The word logs is every diagnostic and the network log."""
+    The word logs is every diagnostic and the network log; -netlog comes
+    through as itself, since the log is turned off only by name."""
     keys = [('-' if k.startswith('-') else '') + k.lstrip('-') for w in words for k in w.split(',') if k]
     keys = [k for key in keys for k in ([key[:1] * key.startswith('-') + k for k in LOGS] if key.lstrip('-') == 'logs' else (key,))]
     unknown = [k for k in keys if k.lstrip('-') not in PATCH_KEYS + BYNAME + ADDONS]
@@ -9686,9 +9704,10 @@ def parse_keys(words):
     if dropped & set(FIXED):
         raise ValueError('%s is the game\'s mode, not an option' % ' and '.join(sorted(dropped & set(FIXED))))
     wanted = [k for k in PATCH_KEYS if k in wanted or k in FIXED] + [k for k in wanted if k in extra]
+    off = ('-netlog',) if 'netlog' in dropped else ()      # named with a minus: the log off, not merely not on
     for _ in range(len(NEEDS)):             # a dropped need drops what needs it, and so on
         dropped |= set(key for key, needs in NEEDS if needs in dropped)
-    return tuple(k for k in wanted if k not in dropped)
+    return tuple(k for k in wanted if k not in dropped) + off
 
 
 def main(argv):
