@@ -57,7 +57,7 @@ parentheses is what `--patch` takes.
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) → `call` asm/padmenu.asm, which puts the annex's buttons into the level and its directions, Back as TAB and any press as a key into the keyboard's menu word, then makes the edge and the three stores |
 | **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture at its create (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) → `call` asm/loadhold.asm |
 | **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3c2`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP`, nine button files, three `showteam_*` files and `Ip_entry_US.bmp` | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL → three, INTERNET / DIRECT IP / LAN, centred: the drawer's row y's, its fourth blit skipped, the cursor wrapping in 0..2, the confirm never picking the modem screen, the latency read for every type, SHOW TEAMS on row 2 searching at once, relettered SEARCH; the IP entry's OK through asm/ipcheck.asm (`0x3bf4e`, the annex), the entries capped by field and CTRL+V bounded through asm/entrycap.asm (`0x20310`, `0x1f2f1`, `0x1fc49`, `0x1f7ba`, `0x200d5`, the annex), the team room's status line from the DLL through asm/status.asm (`0x3544b`, the annex), the chat line's block 64 bytes larger (`0x344e4`), the popup's lower lines redrawn; the labels rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
-| **Starting box** (`starting`) | `SEGA RALLY 2.exe` | `0x367c8`, `0x359bf`, the annex | the two calls into the race setup (`0x438dc0`) → asm/starting.asm, which draws a box saying the race is starting on the team room's background, blits it onto the room's last frame and presents, then runs the setup; needs `lobby`. See *The starting box* |
+| **Starting box** (`starting`) | `SEGA RALLY 2.exe` | `0x367c8`, `0x359bf`, `0x35358`, `0x35002`, the annex | the two calls into the race setup (`0x438dc0`) → asm/starting.asm, which draws a box saying the race is starting on the team room's background, blits it onto the room's last frame and presents, then runs the setup; the room's draw registered as the stub's second entry, which keeps the box up; the init's surface load through its third, which takes it down; needs `lobby`. See *The starting box* |
 | **Network DLL** (`netplay`) | `MUSASHI\MGNetWk.dll`, `SR2.CFG` | the whole file | replaced by the build of `net/`: the stock DLL's CLSID and three vtables over plain UDP - a LAN search, an address typed, and the internet through a directory server; `SR2.CFG`'s `[Network]` section (Staging, Log, both 0) is read, and written when the file has none; see [NETWORK.md](NETWORK.md) and [net/README.md](../net/README.md) |
 | **The clear's height** (`clearsize`, Australian only) | `SEGA RALLY 2.exe` | `0x40b83` (12 bytes), the annex | the mode setter's `mov eax, [WIDTH]` and its two pushes → `call` a thunk that pushes `[HEIGHT]` and `[WIDTH]` and jumps into the clear |
 | **XInput** (`xinput`) | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`), the annex | the registry helper's load and save, the config's update and the device's poll → `jmp` asm/padinput.asm; the Australian build's keyboard-poll address pointed at it instead |
@@ -1229,30 +1229,32 @@ receive loop (`0x438720`) between looks, so no frame is drawn and the
 screen holds the room's last one. asm/starting.asm stands in for the
 call: it takes a DC on the room's background (`[0x4eade0]`, the surface
 the strip's `IP Address :` went on; MGameD3D's wrapper, `GetDC` `+0x28`,
-`ReleaseDC` `+0x2c`), keeps a copy of the box's rectangle in a memory
-bitmap (`CreateCompatibleDC`, `CreateCompatibleBitmap`, `BitBlt`), and
-draws the box in the middle of it as the game's own popups look - a
-white border, a fill of near black (never black: the wrapper's blit
-keys black out when a surface has a key), `STARTING THE RACE` over
-`WAITING FOR THE OTHER PLAYERS` in white, centred in the lobby's font
-(`[0x4e84c4]`), the box sized from the lines' extents and centred on
-`[0x4eaea0]`'s width and height - then blits that rectangle alone from
-the background to the back buffer through the wrapper (`+0x34` the
-target, `+0x1c` the blit; under `widescreen2d` the Blt hook lands it on
-the lobby surface, over the room's last frame with its names and chat,
-and the present stretches it), calls MGameD3D's present and the call the
-gate makes after it (`+0x80`, `+0x88` on `[0x50b118]`), puts the
-rectangle back from the bitmap and frees it, then jumps to the setup,
-which returns to the site. The room's draw is not called: it blits the
-chrome alone, and a frame of it shows an empty room. The background is
-put back because the host's room draws on after the setup returns (the
-fade to the race), and the box in the background showed between the
-panels. gdi32 is resolved once through the import slots. Without gdi32,
-a surface or a DC it goes straight to the setup; without a memory DC or
-bitmap the box goes up and stays in the background, which is loaded
-afresh on every entry to the room (`0x406fa0` from its init).
-`tools/startingtest.py` runs it under Unicorn on every build with the
-surface, the present and gdi32 stubbed.
+`ReleaseDC` `+0x2c`) and draws the box in the middle of it as the
+game's own popups look - a white border, a fill of near black (never
+black: the wrapper's blit keys black out when a surface has a key),
+`STARTING THE RACE` over `WAITING FOR THE OTHER PLAYERS` in white,
+centred in the lobby's font (`[0x4e84c4]`), the box sized from the
+lines' extents and centred on `[0x4eaea0]`'s width and height - notes
+the rectangle and raises a flag, blits that rectangle alone from the
+background to the back buffer through the wrapper (`+0x34` the target,
+`+0x1c` the blit; under `widescreen2d` the Blt hook lands it on the
+lobby surface, over the room's last frame with its names and chat, and
+the present stretches it), calls MGameD3D's present and the call the
+gate makes after it (`+0x80`, `+0x88` on `[0x50b118]`), then jumps to
+the setup, which returns to the site. A guest's setup blocks until the
+race, so that frame is what it sees; the host's returns while the
+guests load, to a room that draws on (the fade to the race), and the
+background's draw blits the chrome and the panels over the box. So the
+room's draw, which the init registers by pushing its address
+(`0x435f57`), is the stub's second entry: the exe's draw (`0x436310`),
+then, while the flag is up, the box's rectangle blitted again over the
+panels. The third entry stands in for the init's surface load
+(`0x435c02`, `0x406fa0`): the flag down, since the background comes
+back fresh without the box, then the load. gdi32 is resolved once
+through the import slots. Without gdi32, a surface or a DC the first
+entry goes straight to the setup. `tools/startingtest.py` runs the
+three under Unicorn on every build with the surface, the present, the
+draw, the load and gdi32 stubbed.
 
 ### The clear's height
 

@@ -422,21 +422,24 @@ object, an error or an empty line it redoes the `lea` and returns.
 
 ## starting.asm
 
-In the exe's annex, in place of the two calls into the race setup
-(`0x438dc0`), which spins for the other players without drawing. It
-draws a box - a white border, a near-black fill, `STARTING THE RACE`
-and `WAITING FOR THE OTHER PLAYERS` centred in white, as the game's own
-popups - in the middle of the room's background surface with gdi32
-(resolved once through the import slots: `SelectObject` the lobby's
-font, `GetTextExtentPoint32A`, `SetBkMode`, `SetBkColor`,
-`SetTextColor`, `ExtTextOutA` for the fills and the lines;
-`CreateCompatibleDC`, `CreateCompatibleBitmap`, `BitBlt`,
-`DeleteObject`, `DeleteDC` to keep the rectangle and put it back), blits
-the box's rectangle alone onto the back buffer through the surface's
-wrapper, calls MGameD3D's present, restores the rectangle, and jumps to
-the setup, which returns to the site. Placeholders: the surface and size tables,
-the font, the setup, MGameD3D's object, LoadLibraryA and GetProcAddress.
-`tools/startingtest.py` runs it under Unicorn on every build.
+In the exe's annex. Three entries: the first in place of the two calls
+into the race setup (`0x438dc0`), which spins for the other players
+without drawing - it draws a box (a white border, a near-black fill,
+`STARTING THE RACE` and `WAITING FOR THE OTHER PLAYERS` centred in
+white, as the game's own popups) in the middle of the room's background
+surface with gdi32 (resolved once through the import slots:
+`SelectObject` the lobby's font, `GetTextExtentPoint32A`, `SetBkMode`,
+`SetBkColor`, `SetTextColor`, `ExtTextOutA` for the fills and the
+lines), raises a flag, blits the box's rectangle alone onto the back
+buffer through the surface's wrapper, calls MGameD3D's present, and
+jumps to the setup, which returns to the site; the second is the room's
+draw, registered in place of the exe's own (`0x435f57`), which it calls
+and then, while the flag is up, blits the box over the panels; the
+third, in place of the init's surface load (`0x435c02`), takes the flag
+down and jumps to the load. Placeholders: the surface and size tables,
+the font, the draw, the load, the setup, MGameD3D's object, LoadLibraryA
+and GetProcAddress. `tools/startingtest.py` runs the three under Unicorn
+on every build.
 
 ## hudlast.asm
 

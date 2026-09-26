@@ -96,7 +96,9 @@ EXE_MAGICS = {
     'ROOMBG': 0xBBBBBBBB,
     'ROOMSIZE': 0xBCBCBCBC,
     'ROOMFONT': 0xBDBDBDBD,
+    'ROOMDRAW': 0xBEBEBEBE,
     'RACESETUP': 0xBFBFBFBF,
+    'ROOMLOAD': 0xA1A1A1A1,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
@@ -116,7 +118,7 @@ EXE_BLOB_MAGICS = {
     'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
     'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF', 'IPLEN'),
     'STATUS_BLOB': ('NETOBJ', 'DRAW'),
-    'STARTING_BLOB': ('LOADLIB', 'GETPROC') + ('ROOMBG',) * 6 + ('ROOMFONT',) + ('ROOMSIZE',) * 2 + ('GAMED3D',) * 2 + ('RACESETUP',),
+    'STARTING_BLOB': ('LOADLIB', 'GETPROC') + ('ROOMBG',) * 4 + ('ROOMFONT',) + ('ROOMSIZE',) * 2 + ('GAMED3D',) * 2 + ('RACESETUP', 'ROOMDRAW', 'ROOMLOAD'),
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,
