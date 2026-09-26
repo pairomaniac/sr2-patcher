@@ -263,10 +263,19 @@ int sr2_pop_event(sr2_net *n, sr2_event *ev)
     return SR2_OK;
 }
 
-/* The game's messages (types 0x1b to 0x31) carry the sender's index in
-   their second byte, and the game indexes its tables by it unchecked -
-   an entry (0x2a) lands 0x44 bytes at the row that index names. One that
-   names another index than the one it came by is dropped. */
+/* The game indexes a table by every message's second byte before it
+   dispatches on the first (0x438902), unchecked, so one past the player
+   table is dropped. Six types read that byte as the sender's index into
+   their own tables - the chat line 0x1b, the car state 0x23, the finish
+   0x24, the state 0x28, the entry 0x2a (0x44 bytes at that row), the
+   leave 0x2e - and one of those naming another index than it came by is
+   dropped too. The rest do not: the clock request 0x20 carries a 0 there
+   from every guest (0x438f64), so the check must not reach it. */
+static int names_sender(int type)
+{
+    return type == 0x1b || type == 0x23 || type == 0x24 || type == 0x28 || type == 0x2a || type == 0x2e;
+}
+
 static void queue_game(sr2_net *n, int from, const uint8_t *data, int len)
 {
     qmsg *m;
@@ -274,7 +283,7 @@ static void queue_game(sr2_net *n, int from, const uint8_t *data, int len)
         nlog(n, "a message from index %d dropped", from);
         return;
     }
-    if (len >= 2 && data[0] >= 0x1b && data[0] <= 0x31 && data[1] != from) {
+    if (len >= 2 && data[0] >= 0x1b && data[0] <= 0x31 && (data[1] >= SR2_MAX_PLAYERS || (names_sender(data[0]) && data[1] != from))) {
         nlog(n, "a message %02x from %d naming index %d dropped", data[0], from, data[1]);
         return;
     }

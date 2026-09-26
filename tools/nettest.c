@@ -210,13 +210,15 @@ static void oversized(void)
  * second byte, then one naming its own: the host gets only the second. */
 static void forged_index(void)
 {
-    static const char bad[] = "\x2a\x03z", good[] = "\x2a\x01z";
+    static const char bad[] = "\x2a\x03z", good[] = "\x2a\x01z", clock[] = "\x20\x00", past[] = "\x20\x09";
     sr2_send(nets[1], 0, bad, sizeof bad, 1, now);
     sr2_send(nets[1], 0, good, sizeof good, 1, now);
+    sr2_send(nets[1], 0, past, 2, 1, now);
+    sr2_send(nets[1], 0, clock, 2, 1, now);                /* the clock request: a 0 in its second byte from every guest */
     run(300);
-    if (!got(0, 1, good) || !empty(0))
-        fail("a game message naming another index got through");
-    ok("a game message naming another index is dropped, one naming its own delivered");
+    if (!got(0, 1, good) || !got(0, 1, "\x20") || !empty(0))
+        fail("a game message naming another index got through, or the clock request did not");
+    ok("an entry naming another index is dropped, one naming its own and the clock request delivered, an index past the table dropped");
 }
 
 /* A network opened DIRECT with text that is no address hosts at once -
