@@ -4,15 +4,16 @@
     python3 tools/startingtest.py
 
 STARTING_BLOB's first entry is called in place of the race setup, with
-gdi32, the room's background surface, MGameD3D, the room's draw and its
-surface load replaced by recording stubs. It must resolve gdi32 once,
+gdi32, the room's background surface, MGameD3D and the room's surface
+load replaced by recording stubs. It must resolve gdi32 once,
 draw the box centred on the surface - border, fill, the two lines each
 centred - give the DC back, blit the box alone onto the back buffer and
 present, and reach the setup with the stack and the callee-saved
 registers as the site left them; without gdi32, a surface or a DC it
-must reach the setup having drawn nothing. The second entry, the room's
-draw, must draw the room and then blit the box while the flag is up;
-the third, the surface load, must take the flag down and load.
+must reach the setup having drawn nothing. The second entry, the gate's
+present, must blit the box while the flag is up and then present as the
+displaced code did; the third, the surface load, must take the flag
+down and load.
 Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
@@ -35,7 +36,7 @@ TEXT, BORDER, BOX = 0xffffff, 0xffffff, 0x080808
 STUBS = {'LoadLibraryA': 4, 'GetProcAddress': 8, 'SelectObject': 8, 'SetTextColor': 8,
          'SetBkColor': 8, 'SetBkMode': 8, 'GetTextExtentPoint32A': 16, 'ExtTextOutA': 32,
          'GetDC': 8, 'ReleaseDC': 8, 'SetTarget': 8, 'Blit': 16, 'Present': 4, 'After': 4,
-         'RaceSetup': 0, 'RoomDraw': 0, 'RoomLoad': 0}
+         'RaceSetup': 0, 'RoomLoad': 0}
 
 
 class Machine:
@@ -68,7 +69,6 @@ class Machine:
         mu.mem_write(a['ROOMFONT'], struct.pack('<I', FONT))
         mu.mem_write(a['GAMED3D'], struct.pack('<I', self.d3d))
         mu.mem_write(a['RACESETUP'], b'\xe9' + struct.pack('<i', self.addr['RaceSetup'] - a['RACESETUP'] - 5))
-        mu.mem_write(a['ROOMDRAW'], b'\xe9' + struct.pack('<i', self.addr['RoomDraw'] - a['ROOMDRAW'] - 5))
         mu.mem_write(a['ROOMLOAD'], b'\xe9' + struct.pack('<i', self.addr['RoomLoad'] - a['ROOMLOAD'] - 5))
         self.byaddr = {v: k for k, v in self.addr.items()}
         mu.hook_add(UC_HOOK_CODE, self.hook)
@@ -104,10 +104,6 @@ class Machine:
             self.calls.append(('Blit', self.arg(0), self.arg(1), self.arg(2), rect))
         elif name in ('SelectObject', 'SetTextColor', 'SetBkColor', 'SetBkMode', 'ReleaseDC', 'SetTarget'):
             self.calls.append((name, self.arg(0), self.arg(1)))
-        elif name == 'RoomDraw':
-            self.calls.append((name,))
-            mu.reg_write(UC_X86_REG_EAX, 0x11111111)          # scratch, as the real one leaves it
-            return
         elif name in ('Present', 'After'):
             self.calls.append((name, self.arg(0)))
         elif name == 'RaceSetup':
@@ -163,18 +159,18 @@ def main():
                 ('ExtTextOutA', HDC, (WIDTH - cx1) // 2, top + PAD_Y, 0, None, LINES[0], 0),
                 ('ExtTextOutA', HDC, (WIDTH - cx2) // 2, top + PAD_Y + cy1 + GAP, 0, None, LINES[1], 0),
                 ('ReleaseDC', m.surface, HDC)] + blit + [('Present', m.d3d), ('After', m.d3d)]
-        # the draw before any start: the room alone; after one: the room, then the box; after the load: the room alone
-        if m.run(5, None) != [('RoomDraw',)]:
-            raise SystemExit('startingtest: %s: the draw before a start: %r' % (build, m.calls))
+        # the present before any start: the present alone; after one: the box, then the present; after the load: alone
+        if m.run(5, None) != [('Present', m.d3d)]:
+            raise SystemExit('startingtest: %s: the present before a start: %r' % (build, m.calls))
         got = m.start()
         if got != want:
             raise SystemExit('startingtest: %s: the box: %r' % (build, got))
-        if m.run(5, None) != [('RoomDraw',)] + blit:
-            raise SystemExit('startingtest: %s: the draw after a start: %r' % (build, m.calls))
+        if m.run(5, None) != blit + [('Present', m.d3d)]:
+            raise SystemExit('startingtest: %s: the present after a start: %r' % (build, m.calls))
         if m.run(10, 'RoomLoad') != []:
             raise SystemExit('startingtest: %s: the load: %r' % (build, m.calls))
-        if m.run(5, None) != [('RoomDraw',)]:
-            raise SystemExit('startingtest: %s: the draw after the load: %r' % (build, m.calls))
+        if m.run(5, None) != [('Present', m.d3d)]:
+            raise SystemExit('startingtest: %s: the present after the load: %r' % (build, m.calls))
         if m.start() != want or m.loads != 1:
             raise SystemExit('startingtest: %s: the second call, gdi32 loaded %d times' % (build, m.loads))
         for what in ('surface', 'dc'):
@@ -191,7 +187,7 @@ def main():
         m2.have['gdi32'] = True
         if m2.start() != want or m2.loads != 2:
             raise SystemExit('startingtest: %s: gdi32 not tried again' % build)
-    print('starting: the box centred on the room, its two lines centred in it, blitted alone and presented, then the setup; the room\'s draw keeps it up until the room is loaded again; nothing without gdi32, a surface or a DC; every build')
+    print('starting: the box centred on the room, its two lines centred in it, blitted alone and presented, then the setup; every present keeps it up until the room is loaded again; nothing without gdi32, a surface or a DC; every build')
     return 0
 
 

@@ -432,13 +432,12 @@ surface with gdi32 (resolved once through the import slots:
 `SetBkColor`, `SetTextColor`, `ExtTextOutA` for the fills and the
 lines), raises a flag, blits the box's rectangle alone onto the back
 buffer through the surface's wrapper, calls MGameD3D's present, and
-jumps to the setup, which returns to the site; the second is the room's
-draw, registered in place of the exe's own (`0x435f57`), which it calls
-and then, while the flag is up, blits the box over the panels; the
-third, in place of the init's surface load (`0x435c02`), takes the flag
-down and jumps to the load. Placeholders: the surface and size tables,
-the font, the draw, the load, the setup, MGameD3D's object, LoadLibraryA
-and GetProcAddress. `tools/startingtest.py` runs the three under Unicorn
+jumps to the setup, which returns to the site; the second, in place of
+the frame gate's present call (`0x428835`), blits the box over what the
+frame drew while the flag is up, then presents; the third, in place of
+the room init's surface load (`0x435c02`), takes the flag down and jumps
+to the load. Placeholders: the surface and size tables, the font, the
+load, the setup, MGameD3D's object, LoadLibraryA and GetProcAddress. `tools/startingtest.py` runs the three under Unicorn
 on every build.
 
 ## hudlast.asm

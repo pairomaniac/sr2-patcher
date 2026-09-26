@@ -18,10 +18,11 @@
 ; gate would, and goes on to the setup, which returns to the site.
 ; Without gdi32, a surface or a DC it goes straight to the setup.
 ;
-; +5, the room's draw, in place of the address the room's init registers
-; (0x435f57 `push 0x436310`): the draw, then, while the flag is up, the
-; box's rectangle blitted from the background over the panels, so the
-; frames the host's room goes on drawing keep it.
+; +5, in place of the frame gate's present call (0x428835 `push eax;
+; call [ecx+0x80]`): while the flag is up, the box's rectangle blitted
+; from the background over everything the frame drew, then the present;
+; so the frames the host's room goes on drawing keep the box, whatever
+; the room's six draw layers put under it.
 ;
 ; +10, in place of the init's call that loads the room's surfaces
 ; (0x435c02): the flag down, since the background comes back fresh and
@@ -30,16 +31,15 @@
 ; Placeholders the patcher fills from the build's row: the room's
 ; surface table (ROOMBG, entry 0 the background) and its size table
 ; (ROOMSIZE, entry 0 width and height), the lobby's font (ROOMFONT),
-; the room's draw (ROOMDRAW) and surface load (ROOMLOAD), the setup
-; (RACESETUP), MGameD3D's object (GAMED3D), and LoadLibraryA's and
-; GetProcAddress's import slots.
+; the room's surface load (ROOMLOAD), the setup (RACESETUP), MGameD3D's
+; object (GAMED3D), and LoadLibraryA's and GetProcAddress's import
+; slots.
 
 bits 32
 
 %define ROOMBG          0xBBBBBBBB      ; placeholders, EXE_MAGICS
 %define ROOMSIZE        0xBCBCBCBC
 %define ROOMFONT        0xBDBDBDBD
-%define ROOMDRAW        0xBEBEBEBE
 %define RACESETUP       0xBFBFBFBF
 %define ROOMLOAD        0xA1A1A1A1
 %define GAMED3D         0xEAEAEAEA
@@ -73,7 +73,7 @@ bits 32
 %define FRAME           36
 
         jmp     near start              ; +0, the setup's sites
-        jmp     near draw               ; +5, the room's draw
+        jmp     near present            ; +5, the gate's present
         jmp     near fresh              ; +10, the room's surface load
 
 start:  push    ebx
@@ -212,7 +212,7 @@ start:  push    ebx
         push    eax
         call    [edx + S_RELEASEDC]
 
-        mov     dword [ebp + flag], 1   ; the draw keeps the box up from here
+        mov     dword [ebp + flag], 1   ; the present keeps the box up from here
         call    blit                    ; and once now, for a guest, whose setup blocks
         mov     eax, [GAMED3D]
         test    eax, eax
@@ -233,17 +233,21 @@ start:  push    ebx
         mov     eax, RACESETUP
         jmp     eax                     ; the setup returns to the site
 
-; The room's draw: the exe's own, then the box over the panels while the flag is up.
-draw:   push    ebp
+; The gate's present: the box over what the frame drew while the flag is up, then
+; the displaced `push eax; call [ecx + 0x80]`, its registers loaded again.
+present:
+        push    ebp
         call    .here
 .here:  pop     ebp
         sub     ebp, .here
-        mov     eax, ROOMDRAW
-        call    eax
         cmp     dword [ebp + flag], 0
-        je      .done
+        je      .go
         call    blit
-.done:  pop     ebp
+.go:    pop     ebp
+        mov     eax, [GAMED3D]
+        mov     ecx, [eax]
+        push    eax
+        call    [ecx + D_PRESENT]
         ret
 
 ; The room's surface load, at its init: the background comes back fresh, so the flag goes down.
