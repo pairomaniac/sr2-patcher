@@ -54,9 +54,8 @@ page:
 3. **Run it.** Double-click `sr2-patcher.py`, or `py sr2-patcher.py` from
    a terminal in its folder.
 
-If the script on Windows fails to fetch dgVoodoo 2 with
-`CERTIFICATE_VERIFY_FAILED`, run `py -m pip install certifi` once. The
-exe does not need it.
+If the script on Windows cannot download dgVoodoo 2
+(`CERTIFICATE_VERIFY_FAILED`), run `py -m pip install certifi` once.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e84056b7-3ed2-41a9-bc3a-c1d67da97f11" alt="The patcher window, showing its numbered sections" height="700" />
@@ -81,25 +80,17 @@ the game back.
 
 ## Virus warnings
 
-The exe is a small launcher that runs the patcher's script,
-`_internal\sr2-patcher.py`, with the copy of Python from python.org in
-`_internal`. The exe is signed with a Certum open-source code signing
-certificate (Properties → Digital Signatures, issued by *Certum Code
-Signing 2021 CA*); Python's own files are signed by the Python Software
-Foundation. SmartScreen can still warn until the exe has built up a
-reputation: **More info** → **Run anyway**.
+The exe is signed with a Certum open-source code signing certificate
+(Properties → Digital Signatures). SmartScreen can still warn until it
+has built up a reputation: **More info** → **Run anyway**.
 
 Scanners can still flag it, since a program that edits other programs is
 what they look for. A detection ending in `!ml`, such as Defender's
 `Trojan:Win32/Wacatac.B!ml`, is a machine-learning guess, not a match
-for anything known. To allow the patcher in Defender: Windows Security →
-Virus & threat protection → Protection history → the entry for the file
-→ Allow, then run it again.
+for anything known. To allow it in Defender: Windows Security → Virus &
+threat protection → Protection history → the entry → **Allow**.
 
-Every release is built on GitHub from this repository. The one binary
-the patcher installs is `MGNetWk.dll` for [Internet play](#internet-play),
-compiled from the C in `net/` and checked against a known hash before it
-is written.
+Every release is built on GitHub from this repository.
 
 ## Disc images
 
@@ -174,10 +165,9 @@ downloaded when you press **Apply patches**.
 
 **dgVoodoo 2** is [dege's](https://github.com/dege-diosg/dgVoodoo2)
 DirectDraw on Direct3D 11. Windows' own DirectDraw stops at 2048 a side
-and is slow and erratic with this game on some machines; dgVoodoo has
-neither problem and syncs to the display's refresh. Ticked by default
-on Windows, off under Wine and Proton, which have neither problem
-either. Untick it and Apply, or **Restore original**, to take it out.
+and is slow and erratic with this game on some machines. On by default
+on Windows, off under Wine and Proton, which do not need it. Untick it
+and Apply to take it out.
 
 ### Diagnostics
 
@@ -231,11 +221,10 @@ In 2 PLAYER BATTLE each player's pad drives their own half. Pause is
 each player's Start as bound in Device Settings; the other replay
 controls are fixed.
 
-In the menus LB and RB stand in for Page Up and Page Down: they turn
-the pages of the Records screen, and on the car select LB held from
-pressing A until the car is taken picks the Stratos', Corolla's,
-Impreza's, Lancer Evo VI's or ST185's other colour. In the Replay
-Gallery they step the sort between MODE, CAR and DATE, as F6-F8 do.
+In the menus LB and RB act as Page Up and Page Down: they turn the
+Records pages and step the Replay Gallery's sort, as F6-F8 do. On the
+car select, hold LB from pressing A until the car is taken for the other
+colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185.
 
 **Options → Device Settings** is a new page showing both players'
 controls, keyboard and pad side by side; press a key or a button to
@@ -343,8 +332,7 @@ sudo dnf install python3-tkinter   # Fedora
 sudo pacman -S tk                  # Arch
 ```
 
-Under Wine or Proton the patched folder runs as it is: the manifests
-beside the exe replace the installer's COM registration.
+Under Wine or Proton the patched folder runs as it is.
 
 ## Reporting a bug
 
