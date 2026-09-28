@@ -248,7 +248,7 @@ jobs:
           CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
           CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
         run: |
-          ssign --verbose -n "SR2 Patcher" -u "https://github.com/$GITHUB_REPOSITORY" \
+          ssign -n "SR2 Patcher" -u "https://github.com/$GITHUB_REPOSITORY" \
             dist/sr2-patcher/sr2-patcher-*.exe
 
       # ssign does not verify its own output. A signature whose digest does
