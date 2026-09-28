@@ -360,9 +360,9 @@ every file it touches. Apply them with `git am` on a clean tree.
 ## Releasing
 
 The tag does the work. Pushing one runs the checks, builds the exe,
-signs it, and creates the release with both zips attached. Releases before v0.4.0 were
-marked pre-releases; from v0.4.0 on they are not. On a clean `main` with
-the checks passing:
+signs it, and creates the release with both zips attached. Releases
+before v0.4.0 were marked pre-releases; from v0.4.0 on they are not. On
+a clean `main` with the checks passing:
 
 ```
 git tag -a v0.4.0 -m "v0.4.0"
@@ -375,30 +375,6 @@ and `--version` all say the tag's number; the zips carry the `v`. A push
 that is not a tag builds the same two zips, unsigned, as an artifact named
 with the short SHA.
 
-### Signing
-
-A tag build runs three jobs after `verify`. `windows` builds the exe and
-hands it over unzipped. `sign` signs it on Linux with
-[ssign](https://github.com/Le-Syl21/ssign) and the Certum cloud
-certificate, checks the signature and its timestamp with `osslsigncode
-verify`, prints the signed exe's checksum and zips both packages
-(`tools/package.py`). `release` uploads the zips. Only `release` can write
-to the repository, and only `sign` can read the signing secrets.
-
-The secrets belong to the `signing` environment (Settings → Environments):
-
-- `CERTUM_EMAIL`: the SimplySign account's e-mail.
-- `CERTUM_OTP`: the whole `otpauth://` URI from the SimplySign QR code.
-
-Its deployment rule allows `v*` tags only. A required reviewer on the
-environment makes each tag's `sign` job wait for approval on the run's
-page. The URI signs as its owner until the QR code is re-issued, so
-re-issue it if it leaks. ssign is built from a pinned commit; moving the
-pin is a change to review like any other.
-
-The netplay DLL is not signed: the patcher checks it against
-`MGNETWK_SHA` before installing it.
-
 Then write the notes over the generated ones. The sections are
 *Changes*, *Requirements* and *Known issues*, in plain words, and they
 say only what has been seen.
@@ -408,11 +384,84 @@ gh release edit v0.4.0 --notes-file notes.md
 ```
 
 Moving the tag (`git tag -f`, then `git push --force origin
-refs/tags/v0.4.0`) re-runs the build and re-uploads the zips, but leaves
-the notes as they are. `gh release view` shows the notes and both zips.
+refs/tags/v0.4.0`) re-runs the build, signs again and re-uploads the
+zips, but leaves the notes as they are. `gh release view` shows the notes
+and both zips.
 
-Before a release, put the exe through VirusTotal by hand and read the
-verdicts. The build log prints the exe's checksum and a lookup link.
+After a release, put the exe through VirusTotal by hand and read the
+verdicts. The `sign` job's log prints the signed exe's checksum and a
+lookup link.
+
+### Signing
+
+A tag build runs three jobs after `verify`:
+
+1. `windows` builds the exe and hands it over unzipped, as an artifact
+   named `unsigned` that expires after a day.
+2. `sign` signs the exe on Linux with
+   [ssign](https://github.com/Le-Syl21/ssign) and a Certum open-source
+   code signing certificate. It checks the signature and its timestamp
+   with `osslsigncode verify`, prints the signed exe's checksum, and zips
+   both packages with `tools/package.py`.
+3. `release` uploads the zips to the release page.
+
+Only `release` can write to the repository, and only `sign` can read the
+signing secrets. The netplay DLL is not signed: the patcher checks it
+against `MGNETWK_SHA` before installing it, so signing it would mean
+signing before the commit and updating the pins.
+
+The certificate is Certum's "Code Signing in the cloud": the private key
+stays on Certum's servers and signing is a request to them, logged in
+with the account's e-mail and a one-time code from the SimplySign phone
+app. ssign does that login and request itself; it is built from a pinned
+commit, and moving the pin is a change to review like any other. The
+timestamp keeps a signature valid after the one-year certificate
+expires.
+
+### Setting up signing
+
+Once, and again whenever the certificate or its QR code is renewed:
+
+1. **Get the `otpauth://` URI.** The QR code the SimplySign app scanned
+   holds it. Decode the image locally, never with an online reader, since
+   the URI can sign as the certificate's owner:
+
+   ```
+   zbarimg --raw qr.png
+   ```
+
+   The output is one line starting `otpauth://totp/`. Delete the image
+   afterwards.
+
+2. **Create the `signing` environment** in the repository's Settings →
+   Environments:
+   - *Deployment branches and tags*: selected branches and tags, one rule
+     of type Tag with the pattern `v*`.
+   - *Environment secrets* (not repository secrets): `CERTUM_EMAIL`, the
+     SimplySign account's e-mail, and `CERTUM_OTP`, the whole
+     `otpauth://` URI.
+   - *Required reviewers*, optional: with one set, each tag's `sign` job
+     waits on the run's page until it is approved under **Review
+     deployments**. Without, tags sign unattended.
+
+3. **Tag a release** as above and check the `sign` job: its *Verify* step
+   ends with `Signature verification: ok`.
+
+4. **Check the exe on Windows**: Properties → Digital Signatures lists
+   the signer, issued by *Certum Code Signing 2021 CA*, with a Certum
+   timestamp.
+
+If the URI leaks, re-issue the QR code in Certum's SimplySign account,
+scan it into the app again and replace `CERTUM_OTP`. A renewed
+certificate needs nothing else changed: ssign fetches the certificate
+from the account at every signing.
+
+To sign a file by hand, without the workflow, run ssign with the current
+code from the phone app instead of the URI:
+
+```
+ssign -e <account e-mail> -T <code> sr2-patcher-X.Y.Z.exe
+```
 
 ## The window
 

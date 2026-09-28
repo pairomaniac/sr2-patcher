@@ -39,8 +39,9 @@ things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
 **Download** `sr2-patcher-*-win.zip` from the
 [latest release](https://github.com/pairomaniac/sr2-patcher/releases/latest),
 unzip it anywhere and run `sr2-patcher-*.exe`; the `_internal` folder
-beside it has to stay. It is unsigned, so SmartScreen warns the first
-time. If a virus scanner objects, see [Virus warnings](#virus-warnings).
+beside it has to stay. The exe is signed, but SmartScreen can still warn
+about a new release for a while. If a virus scanner objects, see
+[Virus warnings](#virus-warnings).
 
 On Linux, or on Windows without the exe, take `-python.zip` from the same
 page:
@@ -81,13 +82,19 @@ the game back.
 
 ## Virus warnings
 
-Defender and other scanners sometimes flag the patcher: an unsigned
-program that edits another program is what they warn about. To allow it
-in Defender: Windows Security → Virus & threat protection → Protection
-history → the entry for the file → Allow, then run it again.
+The exe is signed from 0.8.1 on with a Certum open-source code signing
+certificate. To check it, open the exe's Properties → Digital Signatures:
+the signature is issued by *Certum Code Signing 2021 CA*.
 
-Every release is built on GitHub from this repository and the build log
-lists the exe's checksum. The `-python.zip` on the same page is the
+Scanners can still flag it, since a program that edits other programs is
+what they look for. A detection ending in `!ml`, such as Defender's
+`Trojan:Win32/Wacatac.B!ml`, is a machine-learning guess, not a match
+for anything known. To allow the patcher in Defender: Windows Security →
+Virus & threat protection → Protection history → the entry for the file
+→ Allow, then run it again.
+
+Every release is built and signed on GitHub from this repository, and
+the build log lists the signed exe's checksum. The `-python.zip` on the same page is the
 script itself. The one binary the patcher installs is `MGNetWk.dll` for
 [Internet play](#internet-play), compiled from the C in `net/` and
 checked against a known hash before it is written.
