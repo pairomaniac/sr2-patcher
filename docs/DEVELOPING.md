@@ -361,9 +361,9 @@ every file it touches. Apply them with `git am` on a clean tree.
 
 The tag does the work. Pushing one runs the checks, builds the Windows
 release, signs its exe if it is not signed already, and creates the
-release with both zips attached. Releases
-before v0.4.0 were marked pre-releases; from v0.4.0 on they are not. On
-a clean `main` with the checks passing:
+release with both zips attached. Releases before v0.4.0 were marked
+pre-releases; from v0.4.0 on they are not. On a clean `main` with the
+checks passing:
 
 ```
 git tag -a v0.4.0 -m "v0.4.0"
@@ -372,9 +372,9 @@ git push origin v0.4.0
 
 `VERSION` stays `dev` in the repository. The workflow stamps it with the
 tag name less its `v`, so the window title and `--version` say the tag's
-number; the zips carry the `v`. A push
-that is not a tag builds the same two zips, unsigned, as an artifact named
-with the short SHA.
+number; the zips carry the `v`. A push that is not a tag builds the same
+two zips as an artifact named with the short SHA. Its exe is the
+committed launcher, or an unsigned fresh one when none is committed.
 
 Then write the notes over the generated ones. The sections are
 *Changes*, *Requirements* and *Known issues*, in plain words, and they
@@ -385,13 +385,12 @@ gh release edit v0.4.0 --notes-file notes.md
 ```
 
 Moving the tag (`git tag -f`, then `git push --force origin
-refs/tags/v0.4.0`) re-runs the build, signs again and re-uploads the
-zips, but leaves the notes as they are. `gh release view` shows the notes
-and both zips.
+refs/tags/v0.4.0`) re-runs the build and re-uploads the zips, but leaves
+the notes as they are. `gh release view` shows the notes and both zips.
 
-After a release, put the exe through VirusTotal by hand and read the
-verdicts. The `sign` job's log prints the signed exe's checksum and a
-lookup link.
+The exe is the same file in every release until the launcher changes, so
+it needs a VirusTotal check and a Microsoft submission only then. The
+`sign` job's log prints its checksum and a lookup link.
 
 ### Signing
 
@@ -406,6 +405,9 @@ A tag build runs three jobs after `verify`:
    timestamp with `osslsigncode verify`, prints the signed exe's
    checksum, and zips both packages with `tools/package.py`.
 3. `release` uploads the zips to the release page.
+
+With a launcher committed, a tag signs nothing: the secrets are used only
+for a release that changes the launcher.
 
 Only `release` can write to the repository, and only `sign` can read the
 signing secrets. The Python files in `_internal` carry the Python
@@ -447,8 +449,9 @@ Once, and again whenever the certificate or its QR code is renewed:
      waits on the run's page until it is approved under **Review
      deployments**. Without, tags sign unattended.
 
-3. **Tag a release** as above and check the `sign` job: its *Verify* step
-   ends with `Signature verification: ok`.
+3. **Check the next signing.** A tag signs only when no launcher is
+   committed (*The committed launcher*, below). In that tag's `sign`
+   job, the *Verify* step ends with `Signature verification: ok`.
 
 4. **Check the exe on Windows**: Properties → Digital Signatures lists
    the signer, issued by *Certum Code Signing 2021 CA*, with a Certum
