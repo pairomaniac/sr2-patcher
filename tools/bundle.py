@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the Windows release without PyInstaller.
+"""Assemble the Windows release.
 
     python tools/bundle.py OUT
 
@@ -7,7 +7,7 @@ Run with the Python the release should carry, on Windows. OUT gets
 _internal/: that Python's own files, unpacked and as it ships them -
 python.exe, pythonw.exe, the DLLs, Tcl/Tk - with the standard library
 compiled into one zip, certifi, the script and net/MGNetWk.dll. The
-launcher exe (launcher/) goes beside _internal/ and starts
+launcher (launcher/) goes beside _internal/ as sr2-patcher.exe and starts
 _internal\\pythonw.exe _internal\\sr2-patcher.py.
 
 python3XY._pth makes that Python use only what is listed in it: no

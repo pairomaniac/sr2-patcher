@@ -4583,7 +4583,8 @@ MGNETWK_NAME = 'MGNetWk.dll'
 
 def netplay_dll():
     """The DLL's bytes, read from the file that ships with the patcher:
-    a checkout's net/, or beside the script, where the release puts it.
+    net/ beside the script, in a checkout and in both releases, or
+    beside the script itself.
 
     A whole DLL written out as a blob in the middle of the script is
     what a scanner calls a dropper, and it cost the patcher a string of
@@ -4591,9 +4592,6 @@ def netplay_dll():
     here = os.path.dirname(os.path.abspath(__file__))
     paths = [os.path.join(here, 'net', MGNETWK_NAME),
              os.path.join(here, MGNETWK_NAME)]
-    if getattr(sys, 'frozen', False):
-        paths.insert(0, os.path.join(getattr(sys, '_MEIPASS', here),
-                                     MGNETWK_NAME))
     for path in paths:
         try:
             with open(path, 'rb') as fh:
@@ -9803,7 +9801,7 @@ def main(argv):
         hide_console()
         problem = run_tk()
         if problem:
-            print(problem)
+            print(problem, file=sys.stderr)     # where the Windows launcher shows it from
             return 1
         return 0
     try:

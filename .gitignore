@@ -1,4 +1,4 @@
-# PyInstaller writes both of these next to the spec.
+# The workflow writes these: the compiled launcher, and the release.
 build/
 dist/
 
@@ -23,8 +23,3 @@ data1.head
 # to distribute.
 tools/sr2-kit.tar.gz
 tools/sr2-updates.tar.gz
-
-# The unpacked trial build (tools/bundle.py, launcher/): its output and
-# the version header the workflow writes for the launcher.
-unpacked/
-launcher/version.h

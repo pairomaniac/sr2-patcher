@@ -38,9 +38,9 @@ DLL as `.bak`. `lobby` and `netplay` need each other.
 
 The DLL is committed rather than carried inside the script, because a
 DLL written out as a blob in a Python file is what a scanner calls a
-dropper. The patcher reads it from `net/` or from beside itself (the
-Windows build reads it from `_internal`), and checks it against
-`MGNETWK_SHA` before installing it.
+dropper. The patcher reads it from `net/` beside the script (in the
+Windows build, `_internal\net`) or from beside the script itself, and
+checks it against `MGNETWK_SHA` before installing it.
 
 ## The wire
 

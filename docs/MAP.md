@@ -38,9 +38,10 @@ diagnostics' sites are with their sections in asm/README.md and NOTES.md.
 | `tools/labels.py` | renders the connection screen's labels in the stock face and bakes them into `sr2-patcher.py` (needs Pillow and `fonts-urw-base35`); `--check` in the checks, `--show DIR` writes the BMPs |
 | `tools/kit.py` | bundles every build's installed files and `data1.head` into the gitignored `tools/sr2-kit.tar.gz` |
 | `tools/package.py` | zips a finished build into the `-win` and `-python` release zips; run by the `windows` job for an unsigned build and by the `sign` job after signing |
+| `tools/bundle.py` | assembles the Windows release's `_internal/` from the Python it runs under: the interpreter, Tcl/Tk, the standard library as one zip, certifi, the script and the netplay DLL |
 | `docs/` | this and the other documents; `docs/README.md` is the index |
-| `sr2-patcher.spec` | the PyInstaller build: version from the script's `VERSION` line, `net/MGNetWk.dll` as data, a one-dir bundle |
-| `.github/workflows/build.yml` | CI: the checks, and the Windows exe built and released from a tag |
+| `launcher/` | the Windows release's `sr2-patcher.exe`: `launcher.c` runs `_internal\pythonw.exe _internal\sr2-patcher.py` and reports a crash, `build.bat` compiles it with MSVC, and `sr2-patcher.exe`, when present, is the signed copy every release ships |
+| `.github/workflows/build.yml` | CI: the checks, and the Windows release built, signed and released from a tag |
 
 ## 2. `sr2-patcher.py`
 

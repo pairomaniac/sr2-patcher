@@ -1,6 +1,7 @@
 @echo off
 rem Builds the launcher with MSVC: launcher\build.bat OUT.exe
-rem Needs version.h beside launcher.rc (the workflow writes it).
+rem The workflow runs it on every build. Releases ship the signed copy
+rem committed beside it as sr2-patcher.exe, once there is one.
 setlocal
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find VC\Auxiliary\Build\vcvars64.bat`) do set "VCVARS=%%i"

@@ -38,10 +38,12 @@ things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
 
 **Download** `sr2-patcher-*-win.zip` from the
 [latest release](https://github.com/pairomaniac/sr2-patcher/releases/latest),
-unzip it anywhere and run `sr2-patcher-*.exe`; the `_internal` folder
+unzip it anywhere and run `sr2-patcher.exe`; the `_internal` folder
 beside it has to stay. The exe is signed, but SmartScreen can still warn
-about a new release for a while. If a virus scanner objects, see
-[Virus warnings](#virus-warnings).
+about it for a while. If a virus scanner objects, see
+[Virus warnings](#virus-warnings). To pin the patcher to the taskbar, pin
+`sr2-patcher.exe` itself: the open window belongs to the Python inside
+`_internal`.
 
 On Linux, or on Windows without the exe, take `-python.zip` from the same
 page:
@@ -81,6 +83,11 @@ Then run `SEGA RALLY 2.exe` from that folder. **Restore original** puts
 the game back.
 
 ## Virus warnings
+
+The exe is a small launcher: it starts the Python in `_internal`, as
+python.org ships it, with the patcher's script, `_internal\sr2-patcher.py`.
+The launcher stays the same file from release to release, and Python's
+own files carry the Python Software Foundation's signatures.
 
 The exe is signed from 0.8.1 on with a Certum open-source code signing
 certificate. To check it, open the exe's Properties → Digital Signatures:
@@ -391,7 +398,7 @@ In no particular order:
 
 [docs/](docs/README.md) covers how the game works and how the patches
 are made; `tools/check.py` runs every check. The Windows build is
-`sr2-patcher.spec`, run on a tag by
+`tools/bundle.py` and `launcher/`, run by
 [.github/workflows/build.yml](.github/workflows/build.yml).
 
 ## AI disclaimer

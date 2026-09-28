@@ -359,8 +359,9 @@ every file it touches. Apply them with `git am` on a clean tree.
 
 ## Releasing
 
-The tag does the work. Pushing one runs the checks, builds the exe,
-signs it, and creates the release with both zips attached. Releases
+The tag does the work. Pushing one runs the checks, builds the Windows
+release, signs its exe if it is not signed already, and creates the
+release with both zips attached. Releases
 before v0.4.0 were marked pre-releases; from v0.4.0 on they are not. On
 a clean `main` with the checks passing:
 
@@ -370,8 +371,8 @@ git push origin v0.4.0
 ```
 
 `VERSION` stays `dev` in the repository. The workflow stamps it with the
-tag name less its `v`, so the exe's filename, its Windows file properties
-and `--version` all say the tag's number; the zips carry the `v`. A push
+tag name less its `v`, so the window title and `--version` say the tag's
+number; the zips carry the `v`. A push
 that is not a tag builds the same two zips, unsigned, as an artifact named
 with the short SHA.
 
@@ -396,19 +397,21 @@ lookup link.
 
 A tag build runs three jobs after `verify`:
 
-1. `windows` builds the exe and hands it over unzipped, as an artifact
-   named `unsigned` that expires after a day.
-2. `sign` signs the exe on Linux with
+1. `windows` builds the release and hands it over unzipped, as an
+   artifact named `unsigned` that expires after a day.
+2. `sign` signs the exe, the launcher, on Linux with
    [ssign](https://github.com/Le-Syl21/ssign) and a Certum open-source
-   code signing certificate. It checks the signature and its timestamp
-   with `osslsigncode verify`, prints the signed exe's checksum, and zips
-   both packages with `tools/package.py`.
+   code signing certificate. A launcher committed signed is left as it
+   is (*The committed launcher*, below). It checks the signature and its
+   timestamp with `osslsigncode verify`, prints the signed exe's
+   checksum, and zips both packages with `tools/package.py`.
 3. `release` uploads the zips to the release page.
 
 Only `release` can write to the repository, and only `sign` can read the
-signing secrets. The netplay DLL is not signed: the patcher checks it
-against `MGNETWK_SHA` before installing it, so signing it would mean
-signing before the commit and updating the pins.
+signing secrets. The Python files in `_internal` carry the Python
+Software Foundation's signatures. The netplay DLL is not signed: the
+patcher checks it against `MGNETWK_SHA` before installing it, so signing
+it would mean signing before the commit and updating the pins.
 
 The certificate is Certum's "Code Signing in the cloud": the private key
 stays on Certum's servers and signing is a request to them, logged in
@@ -460,7 +463,7 @@ To sign a file by hand, without the workflow, run ssign with the current
 code from the phone app instead of the URI:
 
 ```
-ssign -e <account e-mail> -T <code> sr2-patcher-X.Y.Z.exe
+ssign -e <account e-mail> -T <code> sr2-patcher.exe
 ```
 
 ## The window
@@ -500,22 +503,59 @@ it stops, so the window can be dragged.
 
 ## The Windows build
 
-`sr2-patcher.spec` is the whole build. The version comes out of the
-script's `VERSION` line, `net/MGNetWk.dll` goes in as data, and the
-result is a one-dir bundle: the exe beside an `_internal` folder. Fewer
-scanners object to that than to a one-file exe.
+The Windows release is Python as python.org ships it, unpacked, with a
+small exe to start it:
 
-    pip install pyinstaller
-    pyinstaller sr2-patcher.spec
+- `_internal/` holds `pythonw.exe` and `python.exe`, their DLLs and
+  Tcl/Tk, the standard library compiled into `python312.zip`, certifi,
+  the stamped script as `sr2-patcher.py`, and `net/MGNetWk.dll`.
+  `tools/bundle.py` copies it out of the Python it runs under.
+  `python312._pth` limits that Python to what it lists, so nothing from
+  an installed Python or `PYTHONPATH` gets in.
+- `sr2-patcher.exe` beside it is the launcher, `launcher/launcher.c`. It
+  runs `_internal\pythonw.exe _internal\sr2-patcher.py` with its own
+  arguments and returns the exit code. Python's stderr goes to a
+  temporary file. If Python exits with an error and wrote to it, the
+  launcher shows the text in a message box, or copies it to its own
+  stderr when that is a file or a pipe.
+
+Releases up to 0.8.1 were PyInstaller builds. Scanners match on its
+bootloader and packed archive, and every release was a new exe to them.
+
+To build it by hand on Windows, with certifi installed and a Visual
+Studio C++ toolset:
+
+    python tools/bundle.py dist\sr2-patcher
+    launcher\build.bat %CD%\dist\sr2-patcher\sr2-patcher.exe
 
 The `windows` job in
-[.github/workflows/build.yml](../.github/workflows/build.yml) runs it on
-every push to main and on a tag, after `verify` passes. The job does four
-things beyond the build. It builds PyInstaller's bootloader from source
-rather than taking the wheel's, because every PyInstaller exe shares the
-wheel's bootloader and scanners know it. It stamps the version from the
-tag, or from the short SHA. It checks that tkinter, the certifi CA list
-and the netplay DLL are in the bundle. And it runs the exe's
-`--selfcheck`, which catches an over-eager entry in the spec's
-`EXCLUDES` among the modules the tables import. On a tag it hands the
+[.github/workflows/build.yml](../.github/workflows/build.yml) does the
+same on every push to main and on a tag, after `verify`. It uses Python
+3.12.10, pinned so each release ships the same files. It stamps the
+version from the tag, or from the short SHA, and checks that the bundle
+has what the patcher needs. Then it runs `--selfcheck` through the
+launcher, opens Tk with the bundled Python, and checks that a script that
+raises comes back as a failure with its traceback. On a tag it hands the
 build to the `sign` job instead of zipping it (*Signing*, above).
+
+### The committed launcher
+
+A release ships `launcher/sr2-patcher.exe`, a signed launcher committed
+to the repository, not the one the job compiles. Scanners and SmartScreen
+judge a file by its hash, so the same bytes in every release keep the
+reputation the exe has earned, and one allow-listing request to
+Microsoft covers every release. The job still compiles the launcher on
+every build, so the source stays buildable.
+
+To change the launcher:
+
+1. Change `launcher/`, raise the version in `launcher.rc`, and delete
+   `launcher/sr2-patcher.exe`, in one commit.
+2. Tag a release. With no committed launcher, the job ships the one it
+   compiled and `sign` signs it.
+3. Take `sr2-patcher.exe` out of that release's `-win.zip` and commit it
+   as `launcher/sr2-patcher.exe`.
+
+The `verify` job fails if the committed launcher is not validly signed,
+or was committed before the last change to `launcher/launcher.c`,
+`launcher.rc`, `build.bat` or `assets/icon.ico`.
