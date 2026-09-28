@@ -396,18 +396,19 @@ are made; `tools/check.py` runs every check. The Windows build is
 
 ## AI disclaimer
 
-Much of the assembly and the documentation was written with an LLM.
-The reverse engineering was not: the addresses and behaviour each
-patch relies on come from tracing and debugging the running game with
-pefile, capstone, unshield, Unicorn, Wine's channels and WinDbg, and
-the LLM writes to that brief. This edits a few hundred bytes of an
-existing binary, not a reimplementation of it.
+LLMs are part of the toolchain here: much of the assembly and the
+documentation was written with one. The reverse engineering was not. The
+addresses and the behaviour each patch relies on come from tracing and
+debugging the running game with pefile, capstone, unshield, Unicorn,
+Wine's debug channels and WinDbg, and the LLM writes to that brief. The
+scope, the disc dumps, the testing and the debugging are human. The
+patcher edits the game's own files and adds its code beside them; it is
+not a reimplementation of the game.
 
-Everything it writes is read line by line before it goes in, and every
-patch is play-tested on every supported build before it ships. Offsets
-are verified against the originals before anything is written, and the
-patcher refuses any file that is not an unmodified build it has tables
-for.
+Every change is read line by line before it goes in, and every patch is
+played on all four builds before it ships. Offsets and bytes are verified
+against the originals before anything is written, and the patcher refuses
+any file that is not an unmodified build it has tables for.
 
 ## Credits and licence
 
