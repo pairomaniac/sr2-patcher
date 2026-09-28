@@ -39,11 +39,8 @@ things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
 **Download** `sr2-patcher-*-win.zip` from the
 [latest release](https://github.com/pairomaniac/sr2-patcher/releases/latest),
 unzip it anywhere and run `sr2-patcher.exe`; the `_internal` folder
-beside it has to stay. The exe is signed, but SmartScreen can still warn
-about it for a while. If a virus scanner objects, see
-[Virus warnings](#virus-warnings). To pin the patcher to the taskbar, pin
-`sr2-patcher.exe` itself: the open window belongs to the Python inside
-`_internal`.
+beside it has to stay. If SmartScreen or a virus scanner objects, see
+[Virus warnings](#virus-warnings).
 
 On Linux, or on Windows without the exe, take `-python.zip` from the same
 page:
@@ -84,14 +81,13 @@ the game back.
 
 ## Virus warnings
 
-The exe is a small launcher: it starts the Python in `_internal`, as
-python.org ships it, with the patcher's script, `_internal\sr2-patcher.py`.
-The launcher stays the same file from release to release, and Python's
-own files carry the Python Software Foundation's signatures.
-
-The exe is signed from 0.8.1 on with a Certum open-source code signing
-certificate. To check it, open the exe's Properties → Digital Signatures:
-the signature is issued by *Certum Code Signing 2021 CA*.
+The exe is a small launcher that runs the patcher's script,
+`_internal\sr2-patcher.py`, with the copy of Python from python.org in
+`_internal`. The exe is signed with a Certum open-source code signing
+certificate (Properties → Digital Signatures, issued by *Certum Code
+Signing 2021 CA*); Python's own files are signed by the Python Software
+Foundation. SmartScreen can still warn until the exe has built up a
+reputation: **More info** → **Run anyway**.
 
 Scanners can still flag it, since a program that edits other programs is
 what they look for. A detection ending in `!ml`, such as Defender's
@@ -100,11 +96,10 @@ for anything known. To allow the patcher in Defender: Windows Security →
 Virus & threat protection → Protection history → the entry for the file
 → Allow, then run it again.
 
-Every release is built and signed on GitHub from this repository, and
-the build log lists the signed exe's checksum. The `-python.zip` on the same page is the
-script itself. The one binary the patcher installs is `MGNetWk.dll` for
-[Internet play](#internet-play), compiled from the C in `net/` and
-checked against a known hash before it is written.
+Every release is built on GitHub from this repository. The one binary
+the patcher installs is `MGNetWk.dll` for [Internet play](#internet-play),
+compiled from the C in `net/` and checked against a known hash before it
+is written.
 
 ## Disc images
 

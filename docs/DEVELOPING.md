@@ -361,9 +361,8 @@ every file it touches. Apply them with `git am` on a clean tree.
 
 The tag does the work. Pushing one runs the checks, builds the Windows
 release, signs its exe if it is not signed already, and creates the
-release with both zips attached. Releases before v0.4.0 were marked
-pre-releases; from v0.4.0 on they are not. On a clean `main` with the
-checks passing:
+release with both zips attached. On a clean `main` with the checks
+passing:
 
 ```
 git tag -a v0.4.0 -m "v0.4.0"
@@ -522,8 +521,8 @@ small exe to start it:
   launcher shows the text in a message box, or copies it to its own
   stderr when that is a file or a pipe.
 
-Releases up to 0.8.1 were PyInstaller builds. Scanners match on its
-bootloader and packed archive, and every release was a new exe to them.
+It is not PyInstaller because scanners match on PyInstaller's
+bootloader and packed archive.
 
 To build it by hand on Windows, with certifi installed and a Visual
 Studio C++ toolset:
@@ -545,10 +544,9 @@ build to the `sign` job instead of zipping it (*Signing*, above).
 
 A release ships `launcher/sr2-patcher.exe`, a signed launcher committed
 to the repository, not the one the job compiles. Scanners and SmartScreen
-judge a file by its hash, so the same bytes in every release keep the
-reputation the exe has earned, and one allow-listing request to
-Microsoft covers every release. The job still compiles the launcher on
-every build, so the source stays buildable.
+judge a file by its hash, so an unchanged exe keeps its reputation and
+one Microsoft submission covers every release. The job still compiles
+the launcher so the source stays buildable.
 
 To change the launcher:
 
