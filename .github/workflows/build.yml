@@ -202,6 +202,68 @@ jobs:
           name: ${{ env.artifact }}
           path: dist/*.zip
 
+      # A trial of the release without PyInstaller, built beside it on
+      # pushes (not tags) as an artifact of its own, to compare the two on
+      # VirusTotal: the runner's official Python unpacked into _internal
+      # with the script (tools/bundle.py), and a small launcher beside it
+      # (launcher/). continue-on-error: a failure here costs the trial,
+      # never the build above.
+      - name: Unpacked build (trial)
+        if: github.ref_type != 'tag'
+        continue-on-error: true
+        shell: bash
+        run: |
+          python tools/bundle.py unpacked
+          version=$(sed -n "s/^VERSION = '\(.*\)'$/\1/p" sr2-patcher.py)
+          echo "version=$version" >> "$GITHUB_ENV"
+          python - "$version" <<'EOF'
+          import sys
+          v = sys.argv[1]
+          parts = v.split('.')
+          nums = [int(p) for p in parts] if len(parts) <= 4 and all(p.isdigit() for p in parts) else []
+          nums = (nums + [0] * 4)[:4]
+          with open('launcher/version.h', 'w') as fh:
+              fh.write('#define VER_PARTS %s\n#define VER_STRING "%s"\n#define VER_FILENAME "sr2-patcher-%s.exe"\n'
+                       % (','.join(map(str, nums)), v, v))
+          EOF
+
+      - name: Launcher (trial)
+        if: github.ref_type != 'tag'
+        continue-on-error: true
+        shell: cmd
+        run: call launcher\build.bat "%GITHUB_WORKSPACE%\unpacked\sr2-patcher-%version%.exe"
+
+      # The launcher finds the script and passes the arguments through, the
+      # bundled Python imports what the window and the download need, and
+      # the Python files are the PSF-signed ones.
+      - name: The unpacked build starts (trial)
+        if: github.ref_type != 'tag'
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd unpacked
+          timeout 60 ./sr2-patcher-*.exe --selfcheck
+          echo 'the launcher runs the script and its tables check out'
+          timeout 60 _internal/python.exe -c "import sys, tkinter, ssl, certifi, ctypes, urllib.request; r = tkinter.Tk(); r.destroy(); print('Tk', tkinter.TkVersion, '|', ssl.OPENSSL_VERSION); print(sys.path)"
+          powershell -NoProfile -Command "Get-AuthenticodeSignature _internal\python*.dll, _internal\pythonw.exe, _internal\DLLs\_tkinter.pyd | Format-Table Status, @{n='Signer';e={\$_.SignerCertificate.Subject}}, Path -AutoSize -Wrap"
+          sha256sum sr2-patcher-*.exe
+          python -c "
+          import os, zipfile
+          with zipfile.ZipFile('../$artifact-unpacked-win.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+              for root, _d, files in os.walk('.'):
+                  for f in sorted(files):
+                      p = os.path.join(root, f)
+                      z.write(p, os.path.relpath(p, '.'))
+          "
+          ls -l "../$artifact-unpacked-win.zip"
+
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        continue-on-error: true
+        with:
+          name: ${{ env.artifact }}-unpacked
+          path: ${{ env.artifact }}-unpacked-win.zip
+
       # A tag's build goes to the sign job unzipped: the exe is signed
       # before anything is packed.
       - uses: actions/upload-artifact@v4

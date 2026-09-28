@@ -1,0 +1,35 @@
+// The launcher's icon and version information. version.h is written by the
+// workflow from the stamped VERSION line: VER_PARTS (four numbers),
+// VER_STRING and VER_FILENAME.
+#include <winver.h>
+#include "version.h"
+
+1 ICON "..\\assets\\icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION VER_PARTS
+ PRODUCTVERSION VER_PARTS
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "pairomaniac"
+            VALUE "FileDescription", "SR2 Patcher - SEGA RALLY 2 (PC, 1999)"
+            VALUE "FileVersion", VER_STRING
+            VALUE "InternalName", "sr2-patcher"
+            VALUE "OriginalFilename", VER_FILENAME
+            VALUE "ProductName", "SR2 Patcher"
+            VALUE "ProductVersion", VER_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

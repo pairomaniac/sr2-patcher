@@ -23,3 +23,8 @@ data1.head
 # to distribute.
 tools/sr2-kit.tar.gz
 tools/sr2-updates.tar.gz
+
+# The unpacked trial build (tools/bundle.py, launcher/): its output and
+# the version header the workflow writes for the launcher.
+unpacked/
+launcher/version.h
