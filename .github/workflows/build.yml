@@ -7,7 +7,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Read-only by default; the windows job takes write for the release upload.
+# Read-only by default; the release job takes write for the upload.
 permissions:
   contents: read
 
@@ -56,15 +56,14 @@ jobs:
   # the Actions tab. Pull requests are left out: the push that follows the
   # merge builds the same tree, and PyInstaller takes minutes.
   #
-  # A push build is an artifact and nothing else - only a tag reaches the
-  # release page. Artifacts keep for 90 days, so the last few commits are
-  # always downloadable without tagging anything.
+  # A push build is an unsigned artifact and nothing else. Artifacts keep
+  # for 90 days, so the last few commits are always downloadable without
+  # tagging anything. A tag build hands its unzipped build to the sign job,
+  # and only the release job after it reaches the release page.
   windows:
     needs: verify
     if: github.event_name != 'pull_request'
     runs-on: windows-latest
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -149,7 +148,8 @@ jobs:
       # To the log, not an asset: a checksum beside its own binary proves
       # nothing. The VirusTotal line is a lookup, not an upload: it says
       # whether anyone has already scanned this exact file, and where.
-      # Upload it there by hand before a release and read the verdicts.
+      # On a tag this is the unsigned exe; the sign job prints the one that
+      # ships.
       - name: Checksum
         shell: bash
         run: |
@@ -188,41 +188,114 @@ jobs:
           fi
 
       # Two zips: -win with the exe and _internal/ at its top, -python with
-      # the script and the netplay DLL beside it. Not -src: GitHub adds its
-      # own "Source code" zip to every release, and two of those confuse.
+      # the script and the netplay DLL beside it (tools/package.py). Not
+      # -src: GitHub adds its own "Source code" zip to every release, and
+      # two of those confuse.
       - name: Zip
+        if: github.ref_type != 'tag'
         shell: bash
-        run: |
-          cd dist && python -c "
-          import os, zipfile
-          with zipfile.ZipFile('$artifact-win.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-              for root, _dirs, files in os.walk('sr2-patcher'):
-                  for f in files:
-                      p = os.path.join(root, f)
-                      z.write(p, os.path.relpath(p, 'sr2-patcher'))
-          with zipfile.ZipFile('$artifact-python.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-              for f in os.listdir('.'):
-                  if f.endswith('.py'):
-                      z.write(f)
-              z.write('MGNetWk.dll', 'net/MGNetWk.dll')
-          "
-          ls -l *.zip
-          for z in *.zip; do unzip -l "$z" | sed -n '1,5p'; done
+        run: python tools/package.py dist "$artifact"
 
       - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
         with:
           name: ${{ env.artifact }}
           path: dist/*.zip
 
+      # A tag's build goes to the sign job unzipped: the exe is signed
+      # before anything is packed.
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type == 'tag'
+        with:
+          name: unsigned
+          path: dist/
+          retention-days: 1
+
+  # Signs the tag's exe with the Certum cloud certificate through ssign, on
+  # Linux, and zips the result. The credentials are secrets of the
+  # `signing` environment, which only v* tags can use (Settings ->
+  # Environments -> signing -> Deployment branches and tags); no other job
+  # and no other ref can read them. With a required reviewer set there, the
+  # job waits for approval on the run's page before it starts.
+  #
+  # CERTUM_EMAIL is the SimplySign account's e-mail; CERTUM_OTP is the whole
+  # otpauth:// URI from the SimplySign QR code, not the bare seed, so the
+  # TOTP algorithm is read from it rather than assumed. The URI signs as its
+  # owner for as long as it is valid: if it leaks, re-issue the QR code.
+  sign:
+    needs: windows
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment: signing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned
+          path: dist
+
+      # Built from a pinned commit with its own lockfile, not the latest
+      # crate: this binary is handed the signing credentials.
+      - name: ssign, pinned
+        run: |
+          cargo install --locked --git https://github.com/Le-Syl21/ssign \
+            --rev 2cc2b1a6f5b5abe4695b184cb806621b3b355ad2 ssign
+          ssign --version
+
+      - name: Sign
+        env:
+          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
+          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
+        run: |
+          ssign --verbose -n "SR2 Patcher" -u "https://github.com/$GITHUB_REPOSITORY" \
+            dist/sr2-patcher/sr2-patcher-*.exe
+
+      # ssign does not verify its own output. A signature whose digest does
+      # not match, or one without a timestamp - invalid once the certificate
+      # expires - fails the job here instead of reaching the release.
+      - name: Verify
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq osslsigncode
+          out=$(osslsigncode verify -in dist/sr2-patcher/sr2-patcher-*.exe 2>&1) || true
+          echo "$out"
+          if echo "$out" | grep -q MISMATCH; then echo '::error::the Authenticode digest does not match'; exit 1; fi
+          if echo "$out" | grep -q 'Timestamp is not available'; then echo '::error::the signature has no timestamp'; exit 1; fi
+          echo "$out" | grep -q 'Signature verification: ok' || { echo '::error::the signature did not verify'; exit 1; }
+
+      - name: Checksum
+        run: |
+          cd dist/sr2-patcher && sha256sum *.exe
+          echo "VirusTotal: https://www.virustotal.com/gui/file/$(sha256sum *.exe | cut -c1-64)"
+
+      - name: Zip
+        run: python3 tools/package.py dist "sr2-patcher-$GITHUB_REF_NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sr2-patcher-${{ github.ref_name }}
+          path: dist/*.zip
+
+  # The only job with write access, and it holds no signing secrets.
+  release:
+    needs: sign
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sr2-patcher-${{ github.ref_name }}
+          path: dist
+
       # gh is preinstalled on the runner, so no third party action is needed
       - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" \
                  --title "$GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" \
-            dist/*.zip --clobber
+          gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber

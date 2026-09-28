@@ -359,8 +359,8 @@ every file it touches. Apply them with `git am` on a clean tree.
 
 ## Releasing
 
-The tag does the work. Pushing one runs the checks, builds the exe, and
-creates the release with both zips attached. Releases before v0.4.0 were
+The tag does the work. Pushing one runs the checks, builds the exe,
+signs it, and creates the release with both zips attached. Releases before v0.4.0 were
 marked pre-releases; from v0.4.0 on they are not. On a clean `main` with
 the checks passing:
 
@@ -372,8 +372,32 @@ git push origin v0.4.0
 `VERSION` stays `dev` in the repository. The workflow stamps it with the
 tag name less its `v`, so the exe's filename, its Windows file properties
 and `--version` all say the tag's number; the zips carry the `v`. A push
-that is not a tag builds the same two zips as an artifact named with the
-short SHA.
+that is not a tag builds the same two zips, unsigned, as an artifact named
+with the short SHA.
+
+### Signing
+
+A tag build runs three jobs after `verify`. `windows` builds the exe and
+hands it over unzipped. `sign` signs it on Linux with
+[ssign](https://github.com/Le-Syl21/ssign) and the Certum cloud
+certificate, checks the signature and its timestamp with `osslsigncode
+verify`, prints the signed exe's checksum and zips both packages
+(`tools/package.py`). `release` uploads the zips. Only `release` can write
+to the repository, and only `sign` can read the signing secrets.
+
+The secrets belong to the `signing` environment (Settings → Environments):
+
+- `CERTUM_EMAIL`: the SimplySign account's e-mail.
+- `CERTUM_OTP`: the whole `otpauth://` URI from the SimplySign QR code.
+
+Its deployment rule allows `v*` tags only. A required reviewer on the
+environment makes each tag's `sign` job wait for approval on the run's
+page. The URI signs as its owner until the QR code is re-issued, so
+re-issue it if it leaks. ssign is built from a pinned commit; moving the
+pin is a change to review like any other.
+
+The netplay DLL is not signed: the patcher checks it against
+`MGNETWK_SHA` before installing it.
 
 Then write the notes over the generated ones. The sections are
 *Changes*, *Requirements* and *Known issues*, in plain words, and they
@@ -444,5 +468,5 @@ wheel's bootloader and scanners know it. It stamps the version from the
 tag, or from the short SHA. It checks that tkinter, the certifi CA list
 and the netplay DLL are in the bundle. And it runs the exe's
 `--selfcheck`, which catches an over-eager entry in the spec's
-`EXCLUDES` among the modules the tables import. On a tag the job also
-uploads both zips to the release page.
+`EXCLUDES` among the modules the tables import. On a tag it hands the
+build to the `sign` job instead of zipping it (*Signing*, above).
