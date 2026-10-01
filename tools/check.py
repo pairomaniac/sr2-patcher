@@ -41,7 +41,7 @@ CHECKS = [
     ('lint', 'pyflakes',
      [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py', 'tools/cabtest.py',
       'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py', 'tools/bgrowtest.py',
-      'tools/fullwintest.py', 'tools/texrangetest.py', 'tools/replayfreetest.py', 'tools/altentertest.py', 'tools/clearsizetest.py', 'tools/lobbytest.py', 'tools/ipchecktest.py', 'tools/buttonstest.py', 'tools/startingtest.py', 'tools/loadholdtest.py', 'tools/padmenutest.py', 'tools/replaypadtest.py', 'tools/pagepadtest.py', 'tools/sortpadtest.py', 'tools/discsurvey.py', 'tools/kit.py',
+      'tools/fullwintest.py', 'tools/texrangetest.py', 'tools/replayfreetest.py', 'tools/altentertest.py', 'tools/clearsizetest.py', 'tools/lobbytest.py', 'tools/ipchecktest.py', 'tools/buttonstest.py', 'tools/startingtest.py', 'tools/loadholdtest.py', 'tools/padmenutest.py', 'tools/replaypadtest.py', 'tools/pagepadtest.py', 'tools/sortpadtest.py', 'tools/discsurvey.py',
       'tools/frametracetest.py', 'tools/frames.py', 'tools/d3dinittest.py', 'tools/dgvoodootest.py',
       'tools/selftest.py', 'tools/guitest.py', 'tools/assets.py', 'tools/padinputtest.py', 'tools/devicestest.py', 'tools/widetest.py',
       'tools/resolutiontest.py', 'tools/dinput8test.py', 'tools/nogenerictest.py', 'tools/hudlasttest.py', 'tools/loudness.py', 'tools/txrdump.py', 'tools/uctest.py', 'tools/labels.py', 'tools/nettest.py', 'tools/directorytest.py', 'net/build.py', 'net/directory.py', 'tools/padbits.py'], ''),

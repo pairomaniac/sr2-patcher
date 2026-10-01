@@ -5,7 +5,7 @@
 # MediaKite reissue). Leave out a build you do not have; a variable left
 # empty shows as N/A.
 
-# The install disc dumps, for tools/sr2.sh install, the cabinet check and tools/kit.py.
+# The install disc dumps, for tools/sr2.sh install and the cabinet check.
 SR2_DISC_EU=$HOME/dumps/Sega_Rally_2-Europe-Disc_1-Install_Disc.cue
 SR2_DISC_US=$HOME/dumps/Sega_Rally_2-USA-Disc_1-Install_Disc.cue
 SR2_DISC_AU=$HOME/dumps/Sega_Rally_2-Australia-Disc_1-Install_Disc.cue

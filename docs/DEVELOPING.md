@@ -88,17 +88,11 @@ patch without what it needs:
 
 `windowed` and `borderless` are always in the set.
 
-Two more tools serve the daily work:
-
-- `tools/loudness.py GAMEDIR` measures the CD rips against the streamed
-  music and says what value of `CD_DB - STREAM_DB` makes them equally
-  loud at equal slider settings. The mix's numbers - the effects' range
-  and the two music offsets - live in `asm/mix.inc`, which `mix.asm` and
-  `music.asm` include.
-- `python3 tools/kit.py` bundles every build's installed files into the
-  gitignored `tools/sr2-kit.tar.gz`. It leaves out the assets, except
-  `BINDATA\connect\button` and `IP_ENTRY`, and adds the first 16 MB of
-  each `data1.cab`. The notes are written against this bundle.
+`tools/loudness.py GAMEDIR` measures the CD rips against the streamed
+music and says what value of `CD_DB - STREAM_DB` makes them equally loud
+at equal slider settings. The mix's numbers - the effects' range and the
+two music offsets - live in `asm/mix.inc`, which `mix.asm` and
+`music.asm` include.
 
 ## The checks
 
