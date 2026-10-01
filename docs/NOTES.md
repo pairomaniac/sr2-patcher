@@ -53,7 +53,8 @@ lists. The key in parentheses is what `--patch` takes.
 | **Resolution list** (`resolution`) | `Options.dll` | `0x2815`, `0x2826`, `0x2528`, `0x2b01`, `0x2a5b`, six bytes, the annex | five sites on the Graphic Settings page go into asm/resolution.asm: the row load, the count check, the draw loop head, the row store and DEFAULT's row store. The page's six "7"s become "8". Three relocation entries are dropped |
 | **HUD after the water** (`hudlast`) | `SEGA RALLY 2.exe` | `0x17eb1`, `0x274f2`, `0x25d30` (11 bytes) (`0x18161`, `0x277b2`, `0x25fe0` American; `0x2de01`, `0x4c119`, `0x4a940` Australian), the annex | the race state's HUD call, the frame's root-tree draw and the fade node's draw thunk become branches into asm/hudlast.asm |
 | **Gallery sort on LB/RB** (`sortpad`) | `ReplayGallery.dll` | `0x1b64` (9 bytes), the annex | the list's `mov ecx, [esi+0x50]; and edi, 0xff` after its row update (`0x10002764`) becomes a `call` into asm/sortpad.asm. The stub steps the sort mode on a press of the annex's LB or RB |
-| **Bumpers as Page Up/Down** (`pagepad`) | `SEGA RALLY 2.exe` | `0x7e906` (6 bytes) (`0x7ed26` American, `0xbdef8` Australian), the annex | the load and test after the input wrapper's action table loop (`0x47f506`) become a `call` into asm/pagepad.asm. The stub ORs the annex's LB and RB into the player's level word as 0x80 and 0x100, then does the load and test itself |
+| **Bumpers as Page Up/Down** (`pagepad`) | `SEGA RALLY 2.exe` | `0x7e906` (6 bytes) (`0x7ed26` American, `0xbdef8` Australian), the annex | the load and test after the input wrapper's action table loop (`0x47f506`) become a `call` into asm/pagepad.asm. The stub ORs the annex's LB, RB and X into the player's level word as 0x80, 0x100 and 0x08, then does the load and test itself |
+| **Backspace erases** (`erasekey`) | `SEGA RALLY 2.exe` | `0xce89c` (4 bytes) (`0xceb7c` American, `0x1140d4` Australian) | the input wrapper's key for bit 3 (`0x4cfe9c`) goes from -1 to `0x0e`, Backspace, which the name entries take as erase |
 | **Pad in a replay** (`replaypad`) | `SEGA RALLY 2.exe` | `0x400ea` (5 bytes) (`0x4047a` American, `0x6e99a` Australian), the annex | the two loads where the replay controls' keyboard and joystick paths join (`0x440cea`) become a `call` into asm/replaypad.asm. The stub ORs the annex's bumpers, left stick, triggers, Y and X into the player's level word, then does the two loads itself |
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) becomes a `call` into asm/padmenu.asm. The stub puts the annex's buttons into the level word. It puts the annex's directions, Back as TAB and any press as a key into the keyboard's menu word. Then it makes the edge word and does the three stores |
 | **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture when it is created (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) become `call`s into asm/loadhold.asm |
@@ -1379,7 +1380,7 @@ returned would leave the width where the return address belongs.
 A pad binding goes in where the key it stands for enters the game, and
 the keyboard is left as it was. A key the input wrapper reads as a bit
 gets the pad in the wrapper, where every screen that reads the bit sees
-it (`pagepad`: Page Up and Page Down). A key that a screen takes from a
+it (`pagepad`: Page Up and Page Down, and the name entry's erase). A key that a screen takes from a
 word of its own gets the pad in that word (`padmenu`: the multiplayer
 screens' menu word; `replaypad`: the replay controls' word). A key the
 game never reads as input gets the pad read where the key's effect is
@@ -1689,11 +1690,41 @@ The `pagepad` patch (asm/pagepad.asm) gives those two bits the bumpers.
 The load and test after the table loop (`0x47f506`, `mov eax, [esp+0x10];
 test eax, eax`; the Australian `0x4beaf8` compares with ebp, which is 0
 there) become a call into the stub. The stub asks the annex's page poll
-for the player's LB and RB, the player being side `[esp+0x18]` of the
-caller. It ORs them into the level at `[esi-0xa0]` as 0x80 and 0x100.
-Then it does the load and test, so the site's branch sees the right
-flags. `tools/pagepadtest.py` runs the entry under Unicorn with each
-build's addresses.
+for the player's LB, RB and X, the player being side `[esp+0x18]` of the
+caller. It ORs them into the level at `[esi-0xa0]` as 0x80, 0x100 and
+0x08 (X is the next section's). Then it does the load and test, so the
+site's branch sees the right flags. `tools/pagepadtest.py` runs the
+entry under Unicorn with each build's addresses.
+
+#### The name entry's erase
+
+The name entry after a time attack (the exe's task at `0x433389`) and
+its copy in `MSelect.dll` erase the last letter on bit 3 or 4 of the
+wrapper's edge (`test al, 0x18`: exe `0x43368a` and `0x43393c`,
+`MSelect.dll` `0x1001c630` and `0x1001c980`). The erase plays sound
+`0x21`, takes one from the length at `+0x3c`, frees that letter's model
+and clears its byte. Nothing sets either bit. The action table has none
+for bits 2-5, and the wrapper's scancode table (`0x4cfe90`, one dword
+per bit for bits 0-12: Return, Escape, seven -1s, then the arrows) has
+-1 for both. The same entries take Start (bit 6): on END it confirms, and
+anywhere else it sets state 7 (`0x433667`, `0x433919`), which spins the
+carousel to END (`0x1c`) over 28 frames. Keypad Enter sets bits 0 and 6
+together, and bit 0 (confirm) is tested first.
+
+Bit 4 is not free. `MSelect.dll` sets `+0x2b0` of an object on its edge
+(`0x10001c4f`, `0x100048cc`, `0x1001af8a`, `0x1001dc06`). Bit 3 is read
+by the two name entries alone, in the exe and every DLL. A scan for a
+test of 0x08 or 0x10 after a call to the wrapper's edge, level or
+second-edge query (`+0x14`, `+0x1c`, `+0x18`) found nothing else. The
+multiplayer poll packs bit 3 into bit 7 of its menu word; no read of
+`0x4edcb4` or `0x4d5e08` is followed by a test of 0x80 in its low byte.
+
+So erase is bit 3. `erasekey` writes Backspace's scancode (`0x0e`) into
+bit 3's cell of the scancode table (`0x4cfe9c`). That table is read only
+for player 1, while bit 0 of `+0x14c` is set (`0x47f5f8`). The keyboard's
+word is ORed into player 1's by the query (`0x47f750`). `pagepad` gives
+bit 3 the pad's X. The edge is made from the level at `0x47f540` (the
+level against the previous one), so a held X erases once. Neither has been tried in the game yet.
 
 The Replay Gallery's sort is not input the game reads at all. F6, F7 and
 F8 are accelerators in the exe's resources (VK_F6-F8, commands

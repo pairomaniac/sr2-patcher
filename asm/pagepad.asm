@@ -1,5 +1,5 @@
-; pagepad.asm - the pad's bumpers as Page Up and Page Down, from MGInput's
-; annex.
+; pagepad.asm - the pad's bumpers as Page Up and Page Down, and X as the
+; name entry's erase, from MGInput's annex.
 ;
 ; The input wrapper's update (0x47f2d0) builds each player's level word
 ; from a fixed table of actions, bit by bit; bits 7 and 8 have none, so
@@ -7,13 +7,15 @@
 ; table, 0x47f5c0) set them. Two screens read them: the Records page
 ; turns on them (Record.dll, the level through the wrapper's +0x1c) and
 ; the car select takes a held Page Up as the alternative colour
-; (MSelect.dll).
+; (MSelect.dll). Bit 3 has neither an action nor a key; the two name
+; entries (exe 0x43368a and 0x43393c, MSelect.dll 0x1001c630 and
+; 0x1001c980) take it, or bit 4, as erase.
 ;
 ; The six bytes after the table loop (0x47f506, `mov eax, [esp+0x10]` and
 ; a test of it; the Australian build's cmp against ebp, which is 0 there)
 ; become a call here. It asks the annex's poll (PADPOLL, null without
-; the xinput patch) for the player's LB and RB, ORs them into the level
-; as 0x80 and 0x100, then does the load and the test; the flags go back
+; the xinput patch) for the player's LB, RB and X, ORs them into the level
+; as 0x80, 0x100 and 0x08, then does the load and the test; the flags go back
 ; to the site's branch.
 ;
 ; esi = the player's slot in the wrapper (+0xd4 + player * 4), its level
@@ -29,6 +31,7 @@ bits 32
 %define CONFIG      4 + 0x10            ; the caller's config, past the return
 %define LB          8
 %define RB          9
+%define X           14
 
 entry:  pushad
         cmp     dword [PADPOLL], 0
@@ -43,8 +46,12 @@ entry:  pushad
         or      ebx, 0x80
 .rb:    lea     eax, [edi + RB]
         call    paddown
-        jnc     .or
+        jnc     .x
         or      ebx, 0x100
+.x:     lea     eax, [edi + X]
+        call    paddown
+        jnc     .or
+        or      ebx, 0x08
 .or:    or      [esi + LEVEL], ebx
 .done:  popad
         mov     eax, [esp + CONFIG]     ; the site's load and test

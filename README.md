@@ -226,6 +226,9 @@ Records pages and step the Replay Gallery's sort, as F6-F8 do. On the
 car select, hold LB from pressing A until the car is taken for the other
 colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185.
 
+In the name entry after a record, X or Backspace erases the last letter,
+and Start jumps to END.
+
 **Options → Device Settings** is a new page showing both players'
 controls, keyboard and pad side by side; press a key or a button to
 rebind one. They are saved as plain text in `SR2.CFG` beside the game,

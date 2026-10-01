@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The pad's bumpers as Page Up and Page Down under Unicorn.
+"""The pad's bumpers as Page Up and Page Down, and X as erase, under Unicorn.
 
     python3 tools/pagepadtest.py
 
@@ -9,7 +9,8 @@ input wrapper's update calls it: esi the player's slot, its level word
 and RB past half set 0x80 and 0x100 on the player's own side's sources
 and nothing else; the level's other bits kept; eax the config and the
 zero flag its test, as the site's branch needs; nothing asked with the
-poll's slot empty; the registers but eax as they were.
+poll's slot empty; the registers but eax as they were. X past half sets
+0x08, the name entry's erase.
 
 Needs python3-unicorn; exits 77 with a note when it is missing.
 """
@@ -24,7 +25,7 @@ from unicorn.x86_const import (UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, U
                                UC_X86_REG_EBP, UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EFLAGS)
 
 CODE, STUBS, STACK, WRAP = 0x900000, 0xa00000, 0xb00000, 0xc00000
-LB, RB, BTN_A = patcher.PAD_LB, patcher.PAD_RB, patcher.PAD_A
+LB, RB, BTN_X, BTN_A = patcher.PAD_LB, patcher.PAD_RB, patcher.PAD_X, patcher.PAD_A
 ZF = 0x40
 
 
@@ -71,16 +72,17 @@ def run(build):
 
     side = lambda player, i: 0x300 + player * 0x40 + i
     assert call(0) == 0, 'bits with nothing pressed'
-    assert sorted(state['calls']) == [side(0, LB), side(0, RB)], 'the wrong sources asked for'
+    assert sorted(state['calls']) == [side(0, LB), side(0, RB), side(0, BTN_X)], 'the wrong sources asked for'
     assert call(0, {side(0, LB): 0x80}) == 0x80, 'LB as Page Up'
     assert call(0, {side(0, RB): 0x80}) == 0x100, 'RB as Page Down'
+    assert call(0, {side(0, BTN_X): 0x80}) == 0x08, 'X as erase'
     assert call(0, {side(0, LB): 0x80, side(0, RB): 0x80}, level=0x1041) == 0x11c1, 'the level\'s own bits lost'
     assert call(0, {side(0, LB): 0x40, side(0, BTN_A): 0x80}) == 0, 'LB at half, or another input, taken'
     assert call(1, {side(0, LB): 0x80, side(1, RB): 0x80}) == 0x100, 'player 2 not on side 1'
     assert call(0, {side(0, LB): 0x80}, config=0) == 0x80, 'the config 0'
     n = len(state['calls'])
     assert call(0, {side(0, LB): 0x80}, level=4, polled=False) == 4 and len(state['calls']) == n, 'asked with the slot empty'
-    print('pagepad: LB and RB as Page Up and Page Down, %s' % build.lower())
+    print('pagepad: LB and RB as Page Up and Page Down, X as erase, %s' % build.lower())
 
 
 def main():

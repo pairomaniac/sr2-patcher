@@ -67,7 +67,7 @@ CHECKS = [
      [PY, 'tools/loadholdtest.py'], ''),
     ('padmenu', 'the pad\'s Back as TAB under Unicorn',
      [PY, 'tools/padmenutest.py'], ''),
-    ('pagepad', 'the pad\'s bumpers as Page Up and Page Down under Unicorn',
+    ('pagepad', 'the pad\'s bumpers as Page Up and Page Down, X as erase, under Unicorn',
      [PY, 'tools/pagepadtest.py'], ''),
     ('hudlast', 'the HUD drawn after the tree under Unicorn',
      [PY, 'tools/hudlasttest.py'], ''),
