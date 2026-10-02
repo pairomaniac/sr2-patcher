@@ -222,7 +222,14 @@ each player's Start as bound in Device Settings; the other replay
 controls are fixed.
 
 In the menus LB and RB act as Page Up and Page Down: they turn the
-Records pages and step the Replay Gallery's sort, as F6-F8 do. On the
+Records pages and step the Replay Gallery's sort, as F6-F8 do.
+
+With a pad connected the prompts name its buttons: START BUTTON on the
+title and attract screens, A BUTTON for a replay, LB BUTTON and RB
+BUTTON on the Records pages, LB/RB on the gallery's sort box, the B
+button and the D-pad in the hint bars, all in lettering set to match
+the game's, in Japanese on a Japanese install. Unplug the pad and they
+name the keys again. The team room's TAB MENU button still says TAB. On the
 car select, hold LB from pressing A until the car is taken for the other
 colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185.
 
@@ -375,7 +382,6 @@ to one helps.
 
 In no particular order:
 
-- **Proper controller prompts** - right now it's the usual keyboard labels.
 - **Controller rumble** - which the Dreamcast version does have.
 - **Fleshing out the online functionality** - this one's a long term goal,
   but something I am interested in.

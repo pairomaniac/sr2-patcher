@@ -35,6 +35,7 @@ diagnostics' sites are with their sections in asm/README.md and NOTES.md.
 | `tools/nettest.c`, `tools/nettest.py` | the network core over loopback, a host and guests with packet loss; the `nettest` check |
 | `tools/directorytest.py` | `net/directory.py`'s list limit, no network; the `directorytest` check |
 | `tools/padbits.py` | prints which menu flag each action lands on, by running the exe's input wrapper update and pad poll under Unicorn |
+| `tools/prompts.py` | renders the pad's prompts and the Device Settings page's hint lines and bakes the texels into `sr2-patcher.py` (needs Pillow, `fonts-urw-base35`, Liberation Sans Narrow and Open Sans); `--check` in the checks, `--show DIR GAMEDIR` writes PNGs; with an installed game it prints each model's fit to the stock lettering |
 | `tools/labels.py` | renders the connection screen's labels in the stock face and bakes them into `sr2-patcher.py` (needs Pillow and `fonts-urw-base35`); `--check` in the checks, `--show DIR` writes the BMPs |
 | `tools/package.py` | zips a finished build into the `-win` and `-python` release zips; run by the `windows` job for an unsigned build and by the `sign` job after signing |
 | `tools/bundle.py` | assembles the Windows release's `_internal/` from the Python it runs under: the interpreter, Tcl/Tk, the standard library as one zip, certifi, the script and the netplay DLL |
@@ -50,7 +51,7 @@ the names each one starts with:
 | Region | Starts with |
 | --- | --- |
 | Constants | `VERSION`. Then `BUILDS`, which holds the four builds' fingerprints, sites, slots and addresses, and `build_of`. Then the comment that lists the patch keys; `VOLTRACE_HEADS`; the DirectInput ids; `WIDEGL_SITES`, `WIDE2D_SITES`, `RESOLUTION_TABLES`, `RESOLUTIONS` and `resolution_table`; `TITLEROW_SITE`, `PRESENT_SITE`, `SIZE_SITE`, `D3DINIT_SITES` and `FULLWIN_RELOCS`; `wide_sites`; `LOBBY_ROWS` and `lobby_sites`; `patches`, the patch table; `DIAGNOSTIC` and `BYNAME`; and `MUSASHI`, the CLSID table |
-| Generated | the `*_BLOB`s and `*_MAGICS` written by `asm/build.py`; `LOBBY_LABELS` by `tools/labels.py`; `MGNETWK_SRC` and `MGNETWK_SHA` by `net/build.py` |
+| Generated | the `*_BLOB`s and `*_MAGICS` written by `asm/build.py`; `LOBBY_LABELS` by `tools/labels.py`; `PROMPT_ART` and `HINT_ART` by `tools/prompts.py`; `MGNETWK_SRC` and `MGNETWK_SHA` by `net/build.py` |
 | Disc image | `parse_cue`, `data_track`, the ripper (`WavWriter`, `audio_spans`, `rip`), `class DataTrack`, `iso_entries`, `iso_root`, `class DiscFile`, `open_source` |
 | InstallShield 5 cabinet | `class Cabinet` |
 | Install | `install_groups`, `write_manifests`, `install` |
@@ -63,7 +64,7 @@ the names each one starts with:
 | Device Settings | `apply_devices`, `patch_txr` and the page's tables |
 | Connection rows | `lobby_sites`, `apply_entries`; `LOBBY_DIR`, `LOBBY_BACKDROP_MD5`, `lobby_mask`, `bmp24`, `lobby_backdrop`, `lobby_buttons`, `lobby_popup`, `lobby_art`, `clamp_mpdata` |
 | Diagnostics and the rest of the exe | `apply_voltrace`, `apply_frametrace`, `apply_titlebg`, `apply_widescreen`, `apply_gltrace`, `apply_d3dtrace`, `apply_d3dtrace2d` |
-| The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`, `apply_fullwin` |
+| The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`; the pad's prompts (`_export_slot`, `prompt_art`, `_sprite_quads`, `_spares`, `_bar`, `prompt_switches`, `_apply_prompts`, the five `apply_pad*`, `txr_sheets`, `prompt_txr`, `installed`, `TXR_WRITERS`); `apply_fullwin` |
 | Patch | `md5`, `check_build`, `carry_display_block`, `write_settings`, `network_log`, `patch`, `restore` |
 | Window | `run_tk` and the classes under the `# Window` comment |
 | CLI | `selfcheck`, `NEEDS`, `parse_keys`, `main` |
@@ -192,6 +193,8 @@ offset `0x400`, so inside it the file offset of an address is VA −
 | `0x100010e0` | loads `TITLE640.BG` (`0x100040a0`), locks the back buffer, converts 565→555 in place if the mask says so (`0x100011d0`) |
 | `0x10001450` | copies the picture into the locked back buffer each frame; row copy at `0x100014ba`. Patched by titlebg |
 | `0x1012892c` | the MGameD3D interface, from the exe |
+| `0x100012c0` | `_TitleExec@4`: bit 0 or bit 6 of the wrapper's edge (Enter, Start) leaves the title. Its export is pointed at the annex by padtitle |
+| `0x100973a0` | the prompt's sprite, 356 by 34 at (320, 330): two quads at `0x10097338` and `0x1009736c` over UV entries 8 and 9 of the page at `0x10097110` (`0x100971b0`, `0x100971c4`). Switched by padtitle |
 
 ## 6. `MUSASHI\MGAudio.dll`
 
@@ -306,6 +309,11 @@ offsets are the VA minus the base unless a cell gives one.
 | loadhold | 2 + section | in `SEGA RALLY 2.exe`, `0x41a7bb` and `0x4195be` (6 bytes each), and the annex |
 | padmenu | 1 + section | in `SEGA RALLY 2.exe`, 6 bytes at `0x43f94f` (file `0x3ed4f`; American `0x3f07f`, Australian `0x6d63f`, DigiCube/MediaKite `0x3ed4f`), and the annex |
 | sortpad | 1 + section | in `ReplayGallery.dll`, 9 bytes at `0x10002764` (file `0x1b64`, the same in every build), and the annex |
+| padprompts | export + 2 + section + TXR | in `Record.dll`, 4 bytes at `0x1009e7b0` (file `0x9dbb0`, the same in every build): the export table's entry for `_RecordModeExec@4`, `0x3e00`; and two spare UV entries of the Records page (`0x100c40c8`) filled in as boxes of the appended sheet 15. The annex's stub writes `.data` at run time: v0 and v1 of the UV entries at `0x100c46f4`, `0x100cfadc`, `0x100d4ebc`, `0x100da1e4` and `0x100df5c4` and of the entry after each; v0 and v1 of the six entries over the replay prompt; and the page's two bar quads. `BINDATA\\MISC\\Record.txr` gets LB BUTTON and RB BUTTON on sheet 13, texels (31, 53) to (111, 85), the pad's replay prompt on sheet 9, rows 213 to 236, and a sixteenth sheet; the three `Rank*.txr` get the replay prompt |
+| padtitle | export + section + TXR | in `Title.dll`, 4 bytes at `0x10096430` (file `0x95430`; Australian `0x10096440`, file `0x95440`): the export table's entry for `_TitleExec@4`, `0x12c0`. The annex's stub writes `.data` at run time: the sprite's width and height at `0x100973ac`, the quads' rectangles at `0x1009733c` and `0x10097370`, and the UV boxes at `0x100971b4` and `0x100971c8`. `BINDATA\MISC\TITLE.TXR` gets PRESS START BUTTON on sheet 5, rows 77-108 and 110-141 from column 2 |
+| padattract | export + 1 + section + TXR | in `AdvTelop.dll`, 4 bytes at `0x10094650` (file `0x93250`; Australian `0x10094640`, file `0x93240`): the export table's entry for `_AdvTelopExec@4`, `0x11c0`; and 20 bytes at `0x10095a8c` (file `0x93e8c`), UV entry 111 of the page at `0x100951e0`, which goes from no texture to the pad lettering's box on sheet 3. The annex's stub writes `.data` at run time: the sprite's width at `0x10096364`, and the quad's UV entry index and rectangle at `0x10096320`. `BINDATA\\MISC\\ADV_TXT.TXR` gets PRESS START BUTTON on sheet 3, texels (2, 176) to (239, 194) |
+| padgallery | export + 48 + section + TXR | in `ReplayGallery.dll` (the same in both builds), the export table's entry for `_GalleryModeExec@4`, `0x4660`, and 48 spare UV entries of ten pages filled in as boxes of the appended sheet 9; the annex's stub writes `.data` at run time: 54 quads' entry indices, six with their rectangles. The four `BINDATA\\MISC\\RG_*.txr` get a tenth sheet |
+| padoptions | export + 8 + section + TXR | in `Options.dll`, the export table's entry for `_OptionsModeExec@4` (`0x39c0`; Australian `0x6130`), and two spare UV entries of each of the four pages that draw the frame's bar, filled in as boxes of the appended sheet 13; the stub writes those pages' bar quads and the Device Settings page's four bar quads in the annex. `BINDATA\\MISC\\OPTIONS.TXR` gets a fourteenth sheet |
 | pagepad | 1 + section | in `SEGA RALLY 2.exe`, 6 bytes at `0x47f506` (file `0x7e906`; American `0x7ed26`, Australian `0xbdef8`, DigiCube/MediaKite `0x7e8f6`), and the annex |
 | erasekey | 1 | in `SEGA RALLY 2.exe`, 4 bytes at `0x4cfe9c` (file `0xce89c`); American `0x4cff7c` (file `0xceb7c`), Australian `0x5150d4` (file `0x1140d4`), DigiCube/MediaKite file `0xce89c` |
 | replaypad | 1 + section | in `SEGA RALLY 2.exe`, 5 bytes at `0x440cea` (file `0x400ea`; American `0x4047a`, Australian `0x6e99a`, DigiCube/MediaKite `0x400ea`), and the annex |

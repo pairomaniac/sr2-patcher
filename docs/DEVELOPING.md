@@ -98,10 +98,11 @@ two music offsets - live in `asm/mix.inc`, which `mix.asm` and
 ## The checks
 
 `tools/check.py` runs every check. `--list` names them and `--only a,b`
-picks some. There are 37. The first 22, down to `gui`, need only nasm,
-pyflakes, Unicorn, Pillow and the URW fonts, tkinter, xvfb and a C
-compiler, and CI runs them. Every test that maps a PE image does so
-through `tools/uctest.py`. The last fifteen need the discs and the
+picks some. There are 39. The first 23, down to `gui`, need only nasm,
+pyflakes, Unicorn, Pillow and the fonts, tkinter, xvfb and a C
+compiler, and CI runs them; `prompts` skips there until CI has its
+four fonts. Every test that maps a PE image does so
+through `tools/uctest.py`. The last sixteen need the discs and the
 installed games, and they skip without them. `devices` also needs nasm,
 because it reads nasm's listing. A tool that cannot run exits 77 and is
 reported SKIP, never OK. `clearsize` applies to the Australian build only
@@ -132,6 +133,7 @@ and skips on the others.
 | `ipcheck` | the lobby entries on the real exe under Unicorn: the IP entry's address check, the caps by field, CTRL+V kept within the cap, and the status line's stub |
 | `clearsize` | the Australian clear's two arguments under Unicorn, on the real exe |
 | `sortpad` | the gallery's sort site on the real `ReplayGallery.dll`, relocated, with the annex's poll stubbed |
+| `padprompts` | each key of `PROMPTS`: the Exec export of the real DLL (`Record.dll`, `Title.dll`, `AdvTelop.dll`, `ReplayGallery.dll`, `Options.dll`), relocated, with the annex's poll stubbed, its fields with and without a pad; and the key's sheet files as the patcher writes them, in the install's language, every filled box on the art |
 | `replaypad` | the replay controls' update under Unicorn, on the real exe patched with `replaypad` alone, with the input objects and the annex's poll stubbed |
 
 A truncated `data1.cab` (`head -c 16M`) is enough for `cab`, as long as
@@ -170,6 +172,7 @@ shapes a transform takes:
 | --- | --- |
 | a blob in the file's annex, with the sites pointed at it by `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `starting`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
 | a blob in a relocated DLL's annex, which finds its own base | `music`, `borderless`, `xinput` |
+| a blob in a DLL's annex that an export is pointed at | `padprompts`, `padtitle`, `padattract`, `padgallery`, `padoptions` |
 | a routine rewritten in place | `restoreall` |
 | plain sites, plus a transform that drops relocation entries | `borderless`, `texrange` |
 | a whole file replaced from a baked build | `netplay`; `lobby` also writes art and `MPDATA.DAT` beside the exe |
