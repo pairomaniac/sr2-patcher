@@ -688,7 +688,8 @@ except from a race's setup to its teardown.
 
 The registry helper's load and save become the `SR2.CFG` text store. A
 save whose name starts `DZ` takes the digits after it as that player's
-deadzone, and source 0x3f reads the deadzone back.
+deadzone, and source 0x3f reads the deadzone back. Source 0x3e reads as
+down while the player's side holds a pad.
 
 The European, American and Japanese builds have their device poll hooked
 at the same site. The Australian build's older DLL has no such method;

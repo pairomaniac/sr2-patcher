@@ -1589,6 +1589,8 @@ the keyboard device's array at `+0x308` (the device whose type byte at
 answer only while the exe's car table (`CARS`, `0x4d64bc`) has no car in
 slot 0. The cars exist from a race's setup (`0x412aac`) to its teardown
 (`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone.
+Input `0x3e` reads `0x80` of `0x80` while the player's side holds a pad
+and 0 while it holds none, in a race as well.
 
 #### The menus' directions
 

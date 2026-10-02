@@ -21,6 +21,7 @@
 ; with (this, slot "0"/"1", name, buf, count[, &got]), are replaced by
 ; the store below. A save whose name starts "DZ" takes the digits after
 ; it as that player's stick deadzone, 0-9000; input 0x3f reads it back.
+; Input 0x3e reads as down while the side holds a pad.
 ;
 ; The entries sit at fixed offsets. Load, save and update are reached by
 ; a jmp from the site; update's displaced bytes, and the poll's, the
@@ -68,6 +69,7 @@ bits 32
 %define STICK_MAX       32767
 %define KEY_DOWN        0x80            ; what the keyboard poll reports, value and range
 %define IN_DEADZONE     0x3f            ; the virtual input that reads the deadzone
+%define IN_HELD         0x3e            ; and the one that is down while the side holds a pad
 %define MENU_ONLY       0x20            ; on a pad input: answered only outside a race
 %define MENUKEY_BASE    0x400           ; + a scancode: a key answered only outside a race
 
@@ -1132,6 +1134,8 @@ answer:
         and     ecx, 0x3f               ; the input
         cmp     ecx, IN_DEADZONE
         je      .value
+        cmp     ecx, IN_HELD
+        je      .value
         test    ecx, MENU_ONLY
         jz      .value
         and     ecx, ~MENU_ONLY
@@ -1151,12 +1155,15 @@ answer:
 ;   16, 17  LT, RT
 ;   18-21   left stick left, right, up, down
 ;   22-25   right stick likewise
+;   0x3e    down while the side holds a pad
 ;   0x3f    the side's deadzone
 padvalue:
         imul    edi, esi, STATE_SIZE
         lea     edi, [ebx + state - $$ + edi]
         cmp     ecx, IN_DEADZONE
         je      .deadzone
+        cmp     ecx, IN_HELD
+        je      .held
         cmp     ecx, 16
         jae     .analog
         movzx   eax, word [edi + 4]     ; wButtons
@@ -1221,6 +1228,11 @@ padvalue:
         mov     eax, [ebx + tables - $$ + W_DZ + esi * 4]
         mov     edx, FULL
         ret
+.held:  xor     eax, eax
+        cmp     byte [ebx + padidx - $$ + esi], 0
+        je      .digital
+        mov     eax, KEY_DOWN
+        jmp     .digital
 .nothing:
         xor     eax, eax
         mov     edx, FULL

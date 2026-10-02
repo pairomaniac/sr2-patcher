@@ -8,10 +8,10 @@ and drives the four entries: loads with no text, after a save, from a
 fresh session, from an old file with the game's block ahead of the text
 and from a hand-written text; the save's text and deadzone; the update
 taking the first free pad and reading the race gate; the poll's
-buttons, triggers, stick halves through the deadzone, menu-only sources
-in and out of a race, and keyboard sources left to the DLL. Needs
-python3-unicorn; exits 77 with a note when it is missing so tools/check.py
-can skip it.
+buttons, triggers, stick halves through the deadzone, the held input,
+menu-only sources in and out of a race, and keyboard sources left to the
+DLL. Needs python3-unicorn; exits 77 with a note when it is missing so
+tools/check.py can skip it.
 """
 import os
 import struct
@@ -305,6 +305,7 @@ def main(argv):
     assert poll(0x300 + 24)[1] == (30000 - dz) * 10000 // (32767 - dz)   # right stick up
     assert poll(0x300 + 0x3f) == (0, 3000, 10000)
     assert poll(0x340 + 0x3f) == (0, 500, 10000)
+    assert poll(0x300 + 0x3e) == (0, 0x80, 0x80)                       # 1P holds a pad
     # menu-only inputs and keys answer outside a race and not in one; 1P's update reads the exe's car table
     mu.mem_write(keys + 0xcb, b'\x80')
     assert poll(0x300 + patcher.PAD_UP + patcher.MENU_ONLY) == (0, 0x80, 0x80)
@@ -318,6 +319,7 @@ def main(argv):
     assert poll(0x300 + patcher.PAD_UP) == (0, 0x80, 0x80)              # the bindable one still does
     assert poll(patcher.MENUKEY_BASE + 0xcb) == (0, 0, 0x80)
     assert poll(0x300 + 0x3f) == (0, 3000, 10000)                      # the deadzone read is not menu-only
+    assert poll(0x300 + 0x3e) == (0, 0x80, 0x80)                       # nor the held one
     mu.mem_write(flag, struct.pack('<I', 0))
     call(site(update_off), cfg0)                        # no car: a menu again
     assert poll(0x300 + patcher.PAD_UP + patcher.MENU_ONLY) == (0, 0x80, 0x80)
@@ -326,6 +328,7 @@ def main(argv):
     assert poll(patcher.MENUKEY_BASE + 0xcb) == (0, 0, 0x80)
     mu.mem_write(kind, b'\x03')
     assert poll(0x340 + patcher.PAD_A) == (0, 0, 0x80)     # 2P holds no pad
+    assert poll(0x340 + 0x3e) == (0, 0, 0x80)
     # 2P's update looks for a pad and must not take 1P's
     ret, _p = call(site(update_off), cfg1)
     assert poll(0x340 + patcher.PAD_A) == (0, 0, 0x80)
@@ -333,12 +336,14 @@ def main(argv):
     for _ in range(61):
         call(site(update_off), cfg1)
     assert poll(0x340 + patcher.PAD_B) == (0, 0x80, 0x80)
+    assert poll(0x340 + 0x3e) == (0, 0x80, 0x80)
     assert poll(0x300 + patcher.PAD_B) == (0, 0, 0x80)
     # 1P's pad unplugged: its state clears, and the deadzone stays readable
     del pads[1]
     call(site(update_off), cfg0)
     assert poll(0x300 + patcher.PAD_A) == (0, 0, 0x80)
     assert poll(0x300 + patcher.PAD_RT) == (0, 0, 255)
+    assert poll(0x300 + 0x3e) == (0, 0, 0x80)
     # 2P keeps its pad meanwhile, and the replugged pad is 1P's again
     assert poll(0x340 + patcher.PAD_B) == (0, 0x80, 0x80)
     pads[1] = (0x1000, 0, 0, 0, 0, 0, 0)
@@ -373,6 +378,8 @@ def main(argv):
     assert popped == 4 + 0xc and struct.unpack('<I', mu.mem_read(value, 4))[0] == 0x80
     call(BASE + annex + 25, 0x300 + 0x3f, value, rng)
     assert struct.unpack('<I', mu.mem_read(value, 4))[0] == 3000
+    call(BASE + annex + 25, 0x340 + 0x3e, value, rng)
+    assert struct.unpack('<II', mu.mem_read(value, 4) + mu.mem_read(rng, 4)) == (0x80, 0x80)
     call(BASE + annex + 25, patcher.MENUKEY_BASE + 0x2d, value, rng)
     assert struct.unpack('<I', mu.mem_read(value, 4))[0] == 0
     assert 'xinput1_4.dll' in disk['loaded'] and 'xinput1_3.dll' in disk['loaded']
