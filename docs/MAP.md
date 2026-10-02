@@ -9,8 +9,8 @@ those builds (NOTES.md, *Builds*). The DLLs are the same file in every
 build unless a section says otherwise.
 
 Six DLLs have a section here. `MGameGL.dll`'s addresses are in
-WIDESCREEN.md. `ReplayGallery.dll` has three sites and no section of its
-own. `MGNetWk.dll` is replaced whole rather than patched (NETWORK.md).
+WIDESCREEN.md. `ReplayGallery.dll` has three sites, and `Record.dll` and
+`AdvTelop.dll` one each; none of the three has a section of its own. `MGNetWk.dll` is replaced whole rather than patched (NETWORK.md).
 Section 10 lists every patch's sites, whatever file they are in. The
 diagnostics' sites are with their sections in asm/README.md and NOTES.md.
 

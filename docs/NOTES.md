@@ -134,8 +134,8 @@ play disc*).
 
 #### The rows
 
-A row of `BUILDS` holds four things: the fingerprints of fourteen files
-(the six the P3 build replaces and the eight more the patches touch),
+A row of `BUILDS` holds four things: the fingerprints of fifteen files
+(the six the P3 build replaces and the nine more the patches touch),
 the exe's sites, the import slots those sites name, and the addresses
 the exe stubs read. Every patched instruction is the same bytes in all
 four exes apart from its operands. Each site was found by its masked
@@ -176,11 +176,13 @@ itself, and one different branch in Init (*No mixer needed*).
 
 #### The patched files
 
-Ten files are patched in every build: `SEGA RALLY 2.exe`,
+Twelve files are patched in every build: `SEGA RALLY 2.exe`,
 `MUSASHI\MGameD3D.dll`, `MUSASHI\MGameGL.dll`, `MUSASHI\MGAudio.dll`,
 `MUSASHI\MGSound.dll`, `MUSASHI\MGInput.dll`, `MUSASHI\MGNetWk.dll`,
-`Title.dll`, `Options.dll` and `ReplayGallery.dll`. So are
-`BINDATA\MISC\OPTIONS.TXR`, the lobby's art and `MPDATA.DAT`. Each
+`Title.dll`, `Options.dll`, `ReplayGallery.dll`, `Record.dll` and
+`AdvTelop.dll`. So are eleven sheet files under `BINDATA\MISC`
+(`OPTIONS.TXR`, `Record.txr`, `TITLE.TXR`, `ADV_TXT.TXR`, the three
+`Rank*.txr` and the four `RG_*.txr`), the lobby's art and `MPDATA.DAT`. Each
 patched file gets a `.bak` beside it, which is the untouched original.
 The patcher always starts from the `.bak`, so patching twice is the same
 as patching once, and restoring is a rename. A file that a run with
