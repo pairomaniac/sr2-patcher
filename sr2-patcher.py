@@ -304,6 +304,11 @@ RESTORE_RELOCS = 10
 #   pagepad     LB and RB as Page Up and Page Down: the Records pages, the car select's alternative colour; X as the name entry's erase
 #   erasekey    Backspace erases a letter in the name entry: the wrapper's key for bit 3, which had none
 #   sortpad     the pad's LB and RB step the Replay Gallery's sort (MODE, CAR, DATE), which F6-F8 set as accelerators
+#   padprompts  the Records pages' PAGE UP KEY and PAGE DOWN KEY labels as LB BUTTON and RB BUTTON while player 1 holds a pad; also writes the lettering on Record.txr
+#   padtitle    the title's PRESS ENTER KEY as PRESS START BUTTON while player 1 holds a pad; also writes the lettering on TITLE.TXR
+#   padattract  the attract screen's PRESS ENTER KEY likewise; also writes the lettering on ADV_TXT.TXR
+#   padgallery  the Replay Gallery's ESC lines and its sort box's F6-F8 as the pad's B, LB and RB; appends a sheet to the four RG files
+#   padoptions  the Options frame's Cursor keys line and the Device Settings page's hint lines as the pad's; appends a sheet to OPTIONS.TXR
 #   replaypad   the pad on the replay's camera controls, from MGInput's annex: RB/LB the camera, left stick turns, RT/LT zoom, Y the meter, X the 2P screen or watched car
 #   titlebg     Title.dll's own .bg row copy, the same stub
 #   texrange    the texture release checks its index; VendorLogo releases -128
@@ -678,6 +683,10 @@ def patches(build):
         'replayfree': ('ReplayGallery.dll', ((REPLAYFREE_SITES[0], bytes.fromhex('e881820000'), None),
                                              (REPLAYFREE_SITES[1], bytes.fromhex('50e8bb760000'), None)), 'apply_replayfree'),
         'sortpad': ('ReplayGallery.dll', ((SORTPAD_SITE, bytes.fromhex('8b4e5081e7ff000000'), None),), 'apply_sortpad'),
+        'padprompts': ('Record.dll', (), 'apply_padprompts'),
+        'padtitle': ('Title.dll', (), 'apply_padtitle'),
+        'padattract': ('AdvTelop.dll', (), 'apply_padattract'),
+        'padgallery': ('ReplayGallery.dll', (), 'apply_padgallery'),
         'borderless': ('MUSASHI\\MGameD3D.dll', (
             (PRESENT_SITE, bytes.fromhex('8b0df8230110'), None),
             (SIZE_SITE, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
@@ -711,6 +720,7 @@ def patches(build):
         'd3dtrace': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace'),
         'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'resolution': ('Options.dll', resolution_sites(row['addresses']['OPTSETTINGS']), 'apply_resolution'),
+        'padoptions': ('Options.dll', (), 'apply_padoptions'),          # after devices, whose page's bar it switches
         'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN'])
                  + ((site['ipcheck'], bytes.fromhex('3935') + struct.pack('<I', row['addresses']['IPLEN']), None),
                     (site['entries'][0], bytes.fromhex('8b4424048b4c2408'), None),
@@ -929,7 +939,13 @@ FEATURES = (
      'LB and RB\tThe Records pages and the Replay Gallery\'s sort; LB\n'
      '\theld through choosing a car picks its other colour.\n'
      'Name entry\tX erases the last letter, as Backspace does on the\n'
-     '\tkeyboard.', ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'erasekey', 'sortpad')),
+     '\tkeyboard.\n'
+     'Prompts\tWith a pad connected every prompt names a button: START\n'
+     '\tBUTTON on the title and attract screens, A BUTTON for a\n'
+     '\treplay, LB and RB on the Records pages and the gallery\'s\n'
+     '\tsort, B button and D-pad in the hint bars, in lettering set\n'
+     '\tto match the game\'s.',
+     ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'erasekey', 'sortpad', 'padprompts', 'padtitle', 'padattract', 'padgallery', 'padoptions')),
 
     ('internet', 'Internet play',
      'Play over the internet, in place of the DirectPlay the game shipped\n'
@@ -8871,18 +8887,21 @@ def patch(dest, log=print, keys=None):
     if 'netplay' in keys and 'netplay' in table:
         netplay_dll()           # say so now, not half way through
     dgvoodoo = fetch_dgvoodoo(dest, log) if 'dgvoodoo' in keys else None
-    txr = None
-    txr_path = os.path.join(dest, *TXR.split('\\'))
-    if 'devices' in keys:
-        source = txr_path + '.bak' if os.path.isfile(txr_path + '.bak') else txr_path
-        with open(source, 'rb') as fh:
-            txr = fh.read()
-        why = txr_check(txr)
-        if why:
-            raise ValueError('%s: %s' % (TXR, why))
-    elif os.path.isfile(txr_path + '.bak'):
-        os.replace(txr_path + '.bak', txr_path)
-        log('patch: %s back to stock' % TXR)
+    sheets = []                 # the sheet files to write: (path, name, keys, contents), made before anything is written
+    PROMPT_VARIANT.clear()
+    for name in TXR_FILES:
+        wanted = [(key, writer) for key in keys if key in table and key in TXR_WRITERS for wname, writer in TXR_WRITERS[key] if wname == name]
+        path = installed(dest, name)
+        if not wanted:
+            if os.path.isfile(path + '.bak'):
+                os.replace(path + '.bak', path)
+                log('patch: %s back to stock' % name)
+            continue
+        with open(path + '.bak' if os.path.isfile(path + '.bak') else path, 'rb') as fh:
+            data = fh.read()
+        for _key, writer in wanted:
+            data = writer(data)
+        sheets.append((path, name, [key for key, _writer in wanted], data))
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
     write_settings(dest, keys, log)
@@ -8918,12 +8937,12 @@ def patch(dest, log=print, keys=None):
             buf = transform(buf, build)
         write_whole(path, bytes(buf))
         log('patch: %s written, %s' % (name, ', '.join(k for k in keys if k in table and table[k][0] == name)))
-    if txr is not None:
-        if not os.path.isfile(txr_path + '.bak'):
-            os.replace(txr_path, txr_path + '.bak')
-            log('patch: backup written to %s.bak' % TXR)
-        write_whole(txr_path, patch_txr(txr))
-        log('patch: %s written, devices' % TXR)
+    for path, name, wanted, data in sheets:
+        if not os.path.isfile(path + '.bak'):
+            os.replace(path, path + '.bak')
+            log('patch: backup written to %s.bak' % name)
+        write_whole(path, data)
+        log('patch: %s written, %s' % (name, ', '.join(wanted)))
     write_manifests(dest)
     log('patch: manifests written')
     if 'dgvoodoo' in keys:
@@ -8936,9 +8955,9 @@ def restore(dest, log=print):
     """The backups back in place, and dgVoodoo 2 out, config and all."""
     found = False
     popup = lobby_popup_path(dest)
-    for name in PATCHED + (TXR, MPDATA) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES) \
+    for name in PATCHED + TXR_FILES + (MPDATA,) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES) \
             + tuple(LOBBY_BUTTON_DIR + '\\' + f for f in LOBBY_BUTTON_FILES) + (LOBBY_POPUP_DIR + '\\' + popup[1],):
-        path = os.path.join(dest, *name.split('\\'))
+        path = installed(dest, name)
         if os.path.isfile(path + '.bak'):
             os.replace(path + '.bak', path)
             log('restore: original %s back in place' % name)
@@ -11423,7 +11442,7 @@ def selfcheck():
 
 
 # What a key needs: dropping the second drops the first with it.
-NEEDS = (('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
+NEEDS = (('padoptions', 'devices'), ('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
          ('widescreen2d', 'widescreen'), ('widescreen3d', 'widescreen'), ('resolution', 'widescreen'),
          ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'))
 # The game's mode, not options: borderless full screen, framed with ALT+ENTER.

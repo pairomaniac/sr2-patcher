@@ -314,7 +314,7 @@ def main():
           patcher.group_keys(()) == patcher.PATCH_KEYS)
     check('and a minus on the command line leaves one out with what needs it',
           set(patcher.parse_keys(['-widescreen', '-xinput'])) == set(patcher.PATCH_KEYS)
-          - {'widescreen', 'widescreen2d', 'widescreen3d', 'resolution', 'xinput', 'devices'})
+          - {'widescreen', 'widescreen2d', 'widescreen3d', 'resolution', 'xinput', 'devices', 'padoptions'})
 
     # ---- every description can be shown ------------------------------
     bubbles = []
