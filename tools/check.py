@@ -41,12 +41,14 @@ CHECKS = [
     ('lint', 'pyflakes',
      [PY, '-m', 'pyflakes', 'sr2-patcher.py', 'asm/build.py', 'tools/check.py', 'tools/cabtest.py',
       'tools/iso2bin.py', 'tools/musictest.py', 'tools/activatetest.py', 'tools/bgrowtest.py',
-      'tools/fullwintest.py', 'tools/texrangetest.py', 'tools/replayfreetest.py', 'tools/altentertest.py', 'tools/clearsizetest.py', 'tools/lobbytest.py', 'tools/ipchecktest.py', 'tools/buttonstest.py', 'tools/startingtest.py', 'tools/loadholdtest.py', 'tools/padmenutest.py', 'tools/replaypadtest.py', 'tools/pagepadtest.py', 'tools/sortpadtest.py', 'tools/discsurvey.py',
+      'tools/fullwintest.py', 'tools/texrangetest.py', 'tools/replayfreetest.py', 'tools/altentertest.py', 'tools/clearsizetest.py', 'tools/lobbytest.py', 'tools/ipchecktest.py', 'tools/buttonstest.py', 'tools/startingtest.py', 'tools/loadholdtest.py', 'tools/padmenutest.py', 'tools/replaypadtest.py', 'tools/pagepadtest.py', 'tools/sortpadtest.py', 'tools/padpromptstest.py', 'tools/prompts.py', 'tools/discsurvey.py',
       'tools/frametracetest.py', 'tools/frames.py', 'tools/d3dinittest.py', 'tools/dgvoodootest.py',
       'tools/selftest.py', 'tools/guitest.py', 'tools/assets.py', 'tools/padinputtest.py', 'tools/devicestest.py', 'tools/widetest.py',
       'tools/resolutiontest.py', 'tools/dinput8test.py', 'tools/nogenerictest.py', 'tools/hudlasttest.py', 'tools/loudness.py', 'tools/txrdump.py', 'tools/uctest.py', 'tools/labels.py', 'tools/nettest.py', 'tools/directorytest.py', 'net/build.py', 'net/directory.py', 'tools/padbits.py'], ''),
     ('labels', 'the baked labels against a render (skips without Pillow or the font)',
      [PY, 'tools/labels.py', '--check'], ''),
+    ('prompts', 'the baked pad prompts and hint lines against a render (skips without Pillow or the fonts)',
+     [PY, 'tools/prompts.py', '--check'], ''),
     ('net', 'net/ matches the MGNetWk.dll build the script carries',
      [PY, 'net/build.py', '--check'], ''),
     ('nettest', 'the network core over loopback, with loss (skips without cc)',
@@ -113,6 +115,8 @@ CHECKS = [
      [PY, 'tools/replaypadtest.py', '{game}'], 'game'),
     ('sortpad', "the pad's LB and RB on the gallery's sort, ReplayGallery.dll",
      [PY, 'tools/sortpadtest.py', '{game}'], 'game'),
+    ('padprompts', "the prompts by device, the real screen DLLs and their sheets",
+     [PY, 'tools/padpromptstest.py', '{game}'], 'game'),
 ]
 
 
