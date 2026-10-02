@@ -33,6 +33,7 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('WIDE2D_BLOB', 'wide2d.asm', ()), ('WIDEGL_BLOB', 'widegl.asm', ()), ('RESOLUTION_BLOB', 'resolution.asm', ()),
          ('LOADHOLD_BLOB', 'loadhold.asm', ()), ('HUDLAST_BLOB', 'hudlast.asm', ()), ('D3DINIT_BLOB', 'd3dinit.asm', ()),
          ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
+         ('PADPROMPTS_BLOB', 'padprompts.asm', ()),
          ('IPCHECK_BLOB', 'ipcheck.asm', ()), ('ENTRYCAP_BLOB', 'entrycap.asm', ()),
          ('STATUS_BLOB', 'status.asm', ()), ('STARTING_BLOB', 'starting.asm', ())]
 
@@ -173,6 +174,13 @@ SORTPAD_MAGICS = {
     'PADPOLL': 0xDFDFDFDF,
 }
 
+# padprompts.asm's placeholders: the same slot, and the RVA of the
+# routine the DLL's Exec export named, filled by the patcher.
+PADPROMPTS_MAGICS = {
+    'PADPOLL': 0xDFDFDFDF,
+    'EXEC': 0xE6E6E6E6,
+}
+
 # voltrace.asm's and frametrace.asm's placeholders: one per site, each
 # filled by the patcher with the address of a dword after the blob;
 # frametrace's third with the borderless present's stamp offset.
@@ -256,8 +264,8 @@ def hexblob(name, raw):
 # exactly once (dinput8, nogeneric) or at least once.
 DLL_MAGICS = {'MUSIC_BLOB': (MAGICS, False), 'DEVICES_BLOB': (DEVICES_MAGICS, False), 'PADINPUT_BLOB': (PADINPUT_MAGICS, False),
               'DINPUT8_BLOB': (DINPUT8_MAGICS, True), 'NOGENERIC_BLOB': (NOGENERIC_MAGICS, True), 'RESOLUTION_BLOB': (RESOLUTION_MAGICS, False),
-              'SORTPAD_BLOB': (SORTPAD_MAGICS, False)}
-SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1}
+              'SORTPAD_BLOB': (SORTPAD_MAGICS, False), 'PADPROMPTS_BLOB': (PADPROMPTS_MAGICS, False)}
+SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'PADPROMPTS_BLOB': 1}
 
 
 def generated():
@@ -306,6 +314,7 @@ def generated():
     out.append('DINPUT8_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DINPUT8_MAGICS.items()))
     out.append('NOGENERIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in NOGENERIC_MAGICS.items()))
     out.append('SORTPAD_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in SORTPAD_MAGICS.items()))
+    out.append('PADPROMPTS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in PADPROMPTS_MAGICS.items()))
     out.append('SITE_MAGICS = (%s)\n' % ', '.join('0x%08X' % m for m in SITE_MAGICS))
     out.append('BLOB_LABELS = {\n%s}\n' % ''.join("    '%s': {%s},\n" % (name, ', '.join("'%s': 0x%x" % kv for kv in offs.items()))
                                                   for name, offs in offsets.items()))

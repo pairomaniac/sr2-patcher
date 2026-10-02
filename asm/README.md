@@ -67,6 +67,7 @@ the loader would add the relocation delta into the new code.
 | `padmenu.asm` | exe | the pad on the multiplayer screens, read straight from MGInput's annex; Back acts as TAB, which is how the team room's MENU row opens |
 | `sortpad.asm` | `ReplayGallery.dll` | LB and RB step the gallery's sort, which the exe's F6-F8 accelerators set |
 | `pagepad.asm` | exe | LB and RB act as Page Up and Page Down in the input wrapper's level word: the Records pages, the car select's alternative colour |
+| `padprompts.asm` | `Record.dll`, `Title.dll`, `AdvTelop.dll`, `ReplayGallery.dll`, `Options.dll` | a screen's key prompts drawn as the pad's while player 1 holds a pad: the Records pages' page keys and replay prompt, PRESS ENTER KEY on the title and the attract screen, the gallery's sort keys, the hint bars |
 | `replaypad.asm` | exe | the pad on the replay's camera controls, ORed into the level word the keyboard fills |
 | `texrange.asm` | `MGameD3D.dll` | the texture release with its index checked against the count |
 | `replayfree.asm` | `ReplayGallery.dll` | the gallery remembers the block its own `new` returned and frees only that |
@@ -80,7 +81,7 @@ the loader would add the relocation delta into the new code.
 | `nogeneric.asm` | `MGInput.dll` | the device loop skipping DirectInput 8 devices of no usable kind (types 0x11, 0x19-0x1c) |
 | `mix.asm` | `MGSound.dll` | every buffer's dB range remapped to −43..−8 in `SetRange`, and the streamed music put on that curve plus `STREAM_DB` |
 | `mix.inc` | - | the mix's numbers: the effects' range and the two music offsets; included by `mix.asm` and `music.asm` |
-| `padpoll.inc` | - | one pad input read through the page poll MGInput's annex publishes, and the "past half its range" test; included by `padmenu.asm`, `replaypad.asm`, `pagepad.asm` and `sortpad.asm` |
+| `padpoll.inc` | - | one pad input read through the page poll MGInput's annex publishes, and the "past half its range" test; included by `padmenu.asm`, `replaypad.asm`, `pagepad.asm`, `sortpad.asm` and `padprompts.asm` |
 | `frametrace.asm` | exe | a diagnostic: every drawn frame's counter and step count appended to `logs\frames.log` |
 | `voltrace.asm` | exe | a diagnostic: five volume entry points report their arguments through `OutputDebugStringA` |
 | `d3dinit.asm` | `MGameD3D.dll` | a diagnostic: every step of the renderer's bring-up appended to `logs\d3dinit.log` with its HRESULT |
@@ -652,6 +653,24 @@ poll, ORs them into the player's level word as the Page Up and Page Down
 bits, then does the load and test so the site's branch sees the right
 flags. [docs/NOTES.md](../docs/NOTES.md), *Page Up and Page Down*, has
 the account. `tools/pagepadtest.py` runs it.
+
+## padprompts.asm
+
+The game's prompts name keys. Each one this covers has a twin that
+names the pad's button, which the patcher writes on a sheet of the
+prompt's file. One entry in the screen DLL's annex takes the place of
+its Exec export (`_RecordModeExec@4`, `_TitleExec@4`, `_AdvTelopExec@4`,
+`_GalleryModeExec@4`, `_OptionsModeExec@4`). Each frame it asks MGInput's annex whether side 0
+holds a pad, through the published poll. It then writes a list of dwords
+in the DLL's `.data` from the table the patcher appends after the code:
+the stock's values, or the pad's when a pad is held. Those are the UV
+boxes the prompt's quads draw or the entry a quad names, and the quads'
+rectangles and the sprite's size where the pad's lettering is another
+size. A row whose RVA has bit 31 set holds, for each device, the RVA of
+the dword to copy: an entry's texture handle, which the DLL's init
+writes and the patcher cannot know. Then it jumps to the export's own
+routine. It finds the image base from its own RVA. [docs/NOTES.md](../docs/NOTES.md), *The pad's
+prompts*, has the account. `tools/padpromptstest.py` runs it.
 
 ## replaypad.asm
 
