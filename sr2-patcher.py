@@ -462,6 +462,74 @@ D3DINIT_SITES = (0x1a34, 0x1a8c, 0x1ac1, 0x1ada, 0x1af6, 0x1b12, 0x1b2e, 0x1b4f,
 D3DINIT_STORE = bytes.fromhex('a3c41f0110')   # `mov [0x10011fc4], eax`
 REPLAYFREE_SITES = (0x2f65, 0x3b1f)     # ReplayGallery, the gallery's new and its End's free
 SORTPAD_SITE = 0x1b64                   # ReplayGallery, after the list's row update in its browse state; every build
+# The pad's prompts, a key per screen DLL: the file, its Exec export and
+# the routine that names (an RVA, or None for the build's row's
+# `options` EXEC), and the sheet files the key's art goes on, under
+# BINDATA\\MISC: each stock sheet touched, by the MD5 of the stock sheet
+# or, where a release has it in another language, {MD5: language}. The
+# art's own sheets are appended. asm/padprompts.asm takes the export's
+# place.
+RECORD_SHEET9, RECORD_SHEET13 = '5a43c6275ef0e1e7f34498c5b4fd8824', 'dc0f26b213c47b8e75de246eed73dbe4'
+LINES_EN, LINES_JP = '3d4c6a2876c9622166387d2e9f615812', 'af23d8f91ffe30662edac35a56266ae3'     # the six hint lines, OPTIONS.TXR's sheet 4 and its copies
+GALLERY_SHEET3 = {'9585717f78407152791f14fcd05e8917': 'en', 'd3df886d2b4167d7693551aad5f9a9f1': 'jp'}
+GALLERY_SHEET7 = 'de1ba8875dcab0c3c693f6f845496d02'
+PROMPTS = {
+    'padprompts': ('Record.dll', b'_RecordModeExec@4', 0x3e00,
+                   {'Record.txr': {9: RECORD_SHEET9, 13: RECORD_SHEET13, 14: {LINES_EN: 'en', LINES_JP: 'jp'}},
+                    'Rank10.txr': {9: RECORD_SHEET9}, 'RankAC.txr': {9: RECORD_SHEET9}, 'RankTA.txr': {9: RECORD_SHEET9}}),
+    'padtitle': ('Title.dll', b'_TitleExec@4', 0x12c0, {'TITLE.TXR': {5: '9b6a5a7fba97c8c74046c69499385b33'}}),
+    'padattract': ('AdvTelop.dll', b'_AdvTelopExec@4', 0x11c0, {'ADV_TXT.TXR': {3: '7b13691ff7800403d380766c68602add'}}),
+    'padgallery': ('ReplayGallery.dll', b'_GalleryModeExec@4', 0x4660,
+                   {name: {3: GALLERY_SHEET3, 7: GALLERY_SHEET7, 8: {LINES_EN: 'en', LINES_JP: 'jp'}} for name in ('RG_10.txr', 'RG_AC.txr', 'RG_RG.txr', 'RG_TA.txr')}),
+    'padoptions': ('Options.dll', b'_OptionsModeExec@4', None, {'OPTIONS.TXR': {4: LINES_EN}}),
+}
+PROMPT_DIR = 'BINDATA\\MISC'
+PROMPT_VARIANT = {}                     # key -> the language of the key's sheet files, as the last patch() read them
+# A bar line's two halves, as the stock bars' sprites hold them: two
+# quads about the sprite's centre, each a strip with HINT_MARGIN white
+# texels at each end; the stock's are 207 wide and overlap at the centre.
+BAR_STOCK_RECTS = ((-207.0, -20.0, 0.0, -3.0), (0.0, -20.0, 207.0, -3.0))
+BAR_STOCK_RECTS_RECORD = ((-206.0, -20.0, 1.0, -3.0), (-1.0, -20.0, 206.0, -3.0))
+# What the gallery's sort box draws from sheet 7 of its files, boxes in
+# texels of 128: the SORT header and the three plates with their keys.
+GALLERY_PLATES = ((2.0, 2.0, 73.1, 15.1), (2.0, 22.0, 73.1, 35.1), (2.0, 41.1, 73.1, 54.0), (2.0, 60.0, 73.1, 73.1))
+GALLERY_PLATE_ART = ((2, 236), (2, 220), (76, 220), (150, 220))               # where the pad's header and plates are on the appended sheet
+GALLERY_PLATE_SHEET, GALLERY_PAD_SHEET = 7, 9                                  # the stock plates' sheet, 128 a side, and the appended one
+GALLERY_HANDLES = 0xbe208                 # ReplayGallery.dll: the RG file's texture handles, a dword a sheet, that init writes over the pages' sheet numbers
+PROMPT_INDIRECT = 0x80000000              # a table row whose RVA has this bit: the values are RVAs of the dwords to copy
+GALLERY_BACK_BOXES = ((1.0, 20.2, 208.1, 37.1), (48.1, 58.1, 255.2, 75.0))      # sheet 3: the foot's line, halves
+GALLERY_POPUP_BOXES = (((1.0, 58.1, 208.1, 75.0), (48.1, 191.2, 255.2, 208.1)),  # sheet 8: the popups' two lines, halves: the ESC lines
+                       ((1.0, 77.1, 208.1, 94.2), (48.1, 210.2, 255.2, 227.1)))
+RECORD_BAR_BOXES = ((1.0, 1.0, 208.1, 18.2), (48.1, 134.1, 255.2, 151.0))       # Record.txr sheet 14: the Records page's line, halves
+OPTIONS_BAR_BOXES = ((1.0, 20.2, 208.1, 37.1), (48.1, 153.1, 255.2, 170.2))     # OPTIONS.TXR sheet 4: the frame's line, halves; two pages have them a fifth of a texel off
+REPLAY_BOX = (2.0, 190.2, 168.2, 213.2)                                        # sheet 9 of the Rank files and Record.txr: PRESS ENTER KEY for REPLAY
+PADPROMPTS_LABELS = (0xc46f4, 0xcfadc, 0xd4ebc, 0xda1e4, 0xdf5c4)
+PADPROMPTS_SHEET = 13
+PADPROMPTS_U = (0.075, 0.465)
+PADPROMPTS_KEYS = ((0.075, 0.137), (0.141, 0.204))     # v0 and v1: PAGE UP KEY, PAGE DOWN KEY
+PADPROMPTS_PAD = ((0.208, 0.270), (0.274, 0.337))      # LB BUTTON, RB BUTTON
+# Title.dll, RVAs: the prompt's sprite (its width and height at +0xc),
+# its two quads (a rectangle about the sprite's centre at +4) and their
+# UV entries (the box at +4), with what each holds: PRESS ENTER KEY,
+# 356 by 34 from two strips of sheet 5.
+PADTITLE_SPRITE = (0x973a0, (356.0, 34.0))
+PADTITLE_QUADS = ((0x97338, (-178.0, -17.0, 37.0, 17.0)), (0x9736c, (37.0, -17.0, 178.0, 17.0)))
+PADTITLE_UVS = ((0x971b0, (0.016, 0.012, 0.856, 0.145)), (0x971c4, (0.438, 0.165, 0.989, 0.297)))
+PADTITLE_ROW = 1                        # the art's first row, in the stock sprite's 34
+# AdvTelop.dll, RVAs: the attract screen's prompt, PRESS ENTER KEY: its
+# sprite (249 by 17 at +0xc), its one quad (a UV entry's index, then a
+# rectangle from the sprite's corner) and entry 18 of its page, which
+# the quad names, a box of sheet 0. The pad's lettering is on sheet 3,
+# so the quad is switched to entry 111, one of the page's three with no
+# texture and no quad, which the patcher fills in.
+PADATTRACT_SPRITE = (0x96358, (249.0, 17.0))
+PADATTRACT_QUAD = (0x96320, 18, (0.0, 0.0, 249.0, 17.0))
+PADATTRACT_SPARE = (0x95a8c, 111)
+ATTRACT_ON = 3                          # the sheet of ADV_TXT.TXR the pad's lettering goes on
+PADATTRACT_RELEASE = (0x112d, bytes.fromhex('6a5d50ff512c'))     # AdvTelopInit's release of sheet 3 (push 0x5d; push eax; call [ecx+0x2c]) for the telop types that do not draw it
+PADATTRACT_CENTRE = 124.5               # the stock lettering's middle, from the quad's left edge
+PADATTRACT_BOX = (1.1, 18.0)            # the art's rows the box takes, as the stock box takes rows 218.1 to 235.0 of the 217 to 235 its image has
+UV_INSET = 0.1                          # texels: a box starts this far into its first texel, as the stock ones do
 # HIGHLOW entries inside the replaced present (absolute addresses, now dead
 # code) and the one under the MoveWindow call.
 FULLWIN_RELOCS = {0x4d7d, 0x4d8a, 0x4d8f, 0x4d95, 0x4da3, 0x4db1, 0x4db6, 0x4dc4, 0x4dd3, 0x26c0}
@@ -8046,6 +8114,373 @@ def apply_sortpad(buf, build):
     out, rva = _self_section(buf, blob)
     _branch(out, SORTPAD_SITE, rva, 9)
     return out
+
+
+def _export_slot(buf, name):
+    """The file offset of the export address table's entry for a name."""
+    pe = struct.unpack_from('<I', buf, 0x3c)[0]
+    exports = _rva_to_off(buf, struct.unpack_from('<I', buf, pe + 24 + 96)[0])
+    count = struct.unpack_from('<I', buf, exports + 24)[0]
+    functions, names, ordinals = (_rva_to_off(buf, rva) for rva in struct.unpack_from('<3I', buf, exports + 28))
+    for i in range(count):
+        at = _rva_to_off(buf, struct.unpack_from('<I', buf, names + 4 * i)[0])
+        if bytes(buf[at:at + len(name) + 1]) == name + b'\0':
+            return functions + 4 * struct.unpack_from('<H', buf, ordinals + 2 * i)[0]
+    raise ValueError('no export %s' % name.decode())
+
+
+def prompt_art(key, variant=None):
+    """A key's art for a language: ((file, sheet, x, y, width, height,
+    the texels' bytes), ...); every language's when variant is None."""
+    return tuple(blit[:6] + (zlib.decompress(base64.b64decode(blit[7])),) for blit in PROMPT_ART[key]
+                 if variant is None or blit[6] in ('', variant))
+
+
+def _uv_box(x, y, width, height, size=256):
+    """The UV box of a rectangle of a sheet, inset as the stock boxes are."""
+    return tuple(struct.unpack('<f', struct.pack('<f', (v + UV_INSET) / size))[0] for v in (x, y, x + width, y + height))
+
+
+def _f32(*values):
+    return tuple(struct.unpack('<f', struct.pack('<f', v))[0] for v in values)
+
+
+def _data_section(buf):
+    """(VA, file offset, raw size) of .data."""
+    pe = struct.unpack_from('<I', buf, 0x3c)[0]
+    base = _image_base(buf)
+    table = pe + 24 + struct.unpack_from('<H', buf, pe + 20)[0]
+    for i in range(struct.unpack_from('<H', buf, pe + 6)[0]):
+        name, _vs, va, rs, ro = struct.unpack_from('<8sIIII', buf, table + i * 40)
+        if name.rstrip(b'\0') == b'.data':
+            return base + va, ro, rs
+    raise ValueError('no .data')
+
+
+def _sprite_quads(buf, texture, box, size=256):
+    """Every quad in .data over a UV entry (texture, box): (page VA,
+    quad RVA, entry index, rectangle), by scanning the sprites, 32 bytes
+    (page, quads, count, w, h, x, y, 0) with 52-byte quads."""
+    dva, dro, drs = _data_section(buf)
+    base = _image_base(buf)
+    inside = lambda va: dva <= va < dva + drs
+    out = []
+    for o in range(dro, dro + drs - 32, 4):
+        page, quads, count = struct.unpack_from('<III', buf, o)
+        if not (inside(page) and inside(quads) and 0 < count < 400):
+            continue
+        for q in range(count):
+            qo = dro + quads - dva + 52 * q
+            if qo + 52 > dro + drs:
+                break
+            uv = struct.unpack_from('<i', buf, qo)[0]
+            if not 0 <= uv < 400:
+                continue
+            eo = dro + page - dva + 20 * uv
+            if eo + 20 > dro + drs:
+                continue
+            tex, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, eo)
+            if tex == texture and all(abs(c * size - b) <= 0.3 for c, b in zip((u0, v0, u1, v1), box)):     # a page or two round a box's edge differently
+                out.append((page, quads + 52 * q - base, uv, struct.unpack_from('<4f', buf, qo + 4)))
+    return out
+
+
+def _page_count(buf, page):
+    """How many UV entries a page (a VA) has: the count beside the page's
+    VA in the record its DLL binds the page by, (entries, count). Init
+    maps each entry's sheet number to a texture handle through that
+    count, so an entry past it is never bound."""
+    dva, dro, drs = _data_section(buf)
+    found = set()
+    at = buf.find(struct.pack('<I', page), dro)
+    while 0 <= at < dro + drs:
+        count = struct.unpack_from('<I', buf, at + 4)[0]
+        if 0 < count <= 0x400 and at % 4 == 0:
+            found.add(count)
+        at = buf.find(struct.pack('<I', page), at + 4)
+    if len(found) != 1:
+        raise ValueError('page 0x%x: %d records give its entry count' % (page, len(found)))
+    return found.pop()
+
+
+def _spares(buf, page, n, taken):
+    """The first n UV entries of a page (a VA) with no texture that
+    `taken` does not hold yet, within the page's count, as (index, RVA,
+    the entry's bytes); taken grows."""
+    dva, dro, _drs = _data_section(buf)
+    base = _image_base(buf)
+    out = []
+    for i in range(_page_count(buf, page)):
+        eo = dro + page - dva + 20 * i
+        if struct.unpack_from('<i', buf, eo)[0] == -1 and (page, i) not in taken:
+            taken.add((page, i))
+            out.append((i, page + 20 * i - base, bytes(buf[eo:eo + 20])))
+            if len(out) == n:
+                return out
+    raise ValueError('page 0x%x has fewer than %d spare entries' % (page, n))
+
+
+def _halves_rects(stock, strips):
+    """Two halves' quads about the sprite's centre, for strips (width,
+    height) each with HINT_MARGIN of margin, as tall and as low as the
+    stock's."""
+    (wa, h), (wb, _h) = strips
+    width = wa + wb - 4 * HINT_MARGIN
+    y0, y1 = stock[0][1], stock[0][3]
+    left = -width / 2.0
+    return (_f32(left - HINT_MARGIN, y0, left - HINT_MARGIN + wa, y1), _f32(left + width + HINT_MARGIN - wb, y0, left + width + HINT_MARGIN, y1))
+
+
+def _bar(buf, texture, boxes, stock_rects, strips, sheet, taken, size=256):
+    """A bar line's switch: for every sprite drawing the two stock boxes
+    as two quads, the quads' entry indices and rectangles switched to
+    two spare entries of the page, which the fills make the strips'
+    boxes on the appended sheet. Returns (fields, fills)."""
+    fields, fills = [], []
+    left = _sprite_quads(buf, texture, boxes[0], size)
+    right = {(page, uv): (quad, rect) for page, quad, uv, rect in _sprite_quads(buf, texture, boxes[1], size)}
+    if not left:
+        raise ValueError('no sprite draws the bar at %s' % (boxes[0],))
+    for page, quad, uv, rect in left:
+        mate = next(((q, r) for (pg, u), (q, r) in right.items() if pg == page and abs(q - quad) == 52), None)
+        if mate is None or tuple(round(v) for v in rect) != tuple(round(v) for v in stock_rects[0]) or tuple(round(v) for v in mate[1]) != tuple(round(v) for v in stock_rects[1]):
+            raise ValueError('the bar\'s quads at 0x%x are not the pair expected' % quad)
+        spares = _spares(buf, page, 2, taken)
+        rects = _halves_rects((rect, mate[1]), [(w, h) for _x, _y, w, h in strips])
+        for (q, r), (index, entry, was), (x, y, w, h), new in zip(((quad, rect), mate), spares, strips, rects):
+            fields.append((q, '<i4f', (uv if q == quad else next(u for (pg, u), (qq, _r) in right.items() if qq == q),) + tuple(r), (index,) + new))
+            fills.append((entry, was, struct.pack('<i4f', sheet, *_uv_box(x, y, w, h))))
+    return fields, fills
+
+
+def _strips(art, file, sheet, tops):
+    """The art's strips on a file's sheet at the given rows: (x, y, w, h) each."""
+    out = []
+    for top in tops:
+        blit = next((b for b in art if b[0] == file and b[1] == sheet and b[3] == top), None)
+        if blit is None:
+            raise ValueError('no art for %s sheet %d at row %d' % (file, sheet, top))
+        out.append(blit[2:6])
+    return out
+
+
+def prompt_switches(buf, build, key, variant):
+    """What the stub switches for a key and what the patcher fills in for
+    good, from the DLL's own sprites: (fields, fills). A field is (RVA,
+    struct format, the values the stock file holds there, the pad's), a
+    run of dwords; a fill is (RVA, the stock bytes, the new ones)."""
+    art = prompt_art(key, variant)
+    taken = set()
+    if key == 'padprompts':
+        fields = [(label + 20 * i + 4, '<4f', (PADPROMPTS_U[0], keys[0], PADPROMPTS_U[1], keys[1]), (PADPROMPTS_U[0], pad[0], PADPROMPTS_U[1], pad[1]))
+                  for label in PADPROMPTS_LABELS for i, (keys, pad) in enumerate(zip(PADPROMPTS_KEYS, PADPROMPTS_PAD))]
+        (_f, _s, _x, y, _w, h, _t), = [b for b in art if b[0] == 'Record.txr' and b[1] == 9]
+        quads = _sprite_quads(buf, 9, REPLAY_BOX)
+        if len(quads) != 6:
+            raise ValueError('%d sprites draw the replay prompt, not 6' % len(quads))
+        base = _image_base(buf)
+        down = (y - REPLAY_BOX[1] + 0.2) / 256.0            # the pad's box is the stock's, this far down the sheet
+        for page, _quad, uv, _rect in quads:
+            entry = page + 20 * uv - base
+            for at in (8, 16):
+                v = struct.unpack_from('<f', buf, _rva_to_off(buf, entry + at))[0]
+                fields.append((entry + at, '<f', (v,), _f32(v + down)))
+        tops = (2, 22) if variant == 'en' else (42, 62)
+        bar, fills = _bar(buf, 14, RECORD_BAR_BOXES, BAR_STOCK_RECTS_RECORD, _strips(art, 'Record.txr', 15, tops), 15, taken)
+        return fields + bar, fills
+    if key == 'padgallery':
+        file = 'RG_10.txr'
+        fields, fills = [], []
+        for texture, boxes, tops in ((3, GALLERY_BACK_BOXES, (2, 20) if variant == 'en' else (38, 56)),
+                                     (8, GALLERY_POPUP_BOXES[0], (74, 92) if variant == 'en' else (110, 128)),
+                                     (8, GALLERY_POPUP_BOXES[1], (146, 164) if variant == 'en' else (182, 200))):
+            f, g = _bar(buf, texture, boxes, BAR_STOCK_RECTS, _strips(art, file, 9, tops), 9, taken)
+            fields += f
+            fills += g
+        base = _image_base(buf)
+        for box, at in zip(GALLERY_PLATES, GALLERY_PLATE_ART):          # the header, then MODE, CAR and DATE
+            x, y, w, h = next(b for b in art if b[0] == file and b[1] == GALLERY_PAD_SHEET and (b[2], b[3]) == at)[2:6]
+            for page, _quad, uv, _rect in _sprite_quads(buf, GALLERY_PLATE_SHEET, box, 128):
+                entry = page + 20 * uv - base          # each plate quad's own entry: its sheet and box switched in place
+                stock = struct.unpack_from('<4f', buf, _rva_to_off(buf, entry + 4))
+                fields.append((entry, 'handle', (GALLERY_PLATE_SHEET,), (GALLERY_PAD_SHEET,)))
+                fields.append((entry + 4, '<4f', stock, _uv_box(x, y, w, h)))
+        return fields, fills
+    if key == 'padoptions':
+        fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', 13, (2, 22)), 13, taken)
+        for line, tops in enumerate(((42, 62), (82, 102))):
+            strips = _strips(art, 'OPTIONS.TXR', 13, tops)
+            stock = devices_bar_rects(line)
+            found = [buf.find(struct.pack('<4f', *r)) for r in stock]
+            if any(f < 0 for f in found):
+                raise ValueError('Options.dll: the Device Settings page\'s bar quads not found; the devices patch goes first')
+            new = _halves_rects(stock, [(w, h) for _x, _y, w, h in strips])
+            for off, r, n in zip(found, stock, new):
+                uv = struct.unpack_from('<i', buf, off - 4)[0]
+                fields.append((_off_to_rva(buf, off - 4), '<i4f', (uv,) + tuple(r), (uv + 1,) + tuple(n)))
+        return fields, fills
+    if key == 'padattract':
+        (_f, _s, x, y, width, _h, _t), = art           # one quad, the lettering's middle where the stock's is
+        left = float(int(PADATTRACT_CENTRE - width / 2.0 + 0.5))
+        height = PADATTRACT_SPRITE[1][1]
+        box = _f32(*[v / 256.0 for v in (x + UV_INSET, y + PADATTRACT_BOX[0], x + width + UV_INSET, y + PADATTRACT_BOX[1])])
+        return ([(PADATTRACT_SPRITE[0] + 0xc, '<2f', PADATTRACT_SPRITE[1], (float(width), height)),
+                 (PADATTRACT_QUAD[0], '<i', (PADATTRACT_QUAD[1],), (PADATTRACT_SPARE[1],)),
+                 (PADATTRACT_QUAD[0] + 4, '<4f', PADATTRACT_QUAD[2], (left, 0.0, left + width, height))],
+                [(PADATTRACT_SPARE[0], struct.pack('<i4f', -1, 0, 0, 0, 0), struct.pack('<i4f', ATTRACT_ON, *box)),
+                 (PADATTRACT_RELEASE[0], PADATTRACT_RELEASE[1], b'\x90' * len(PADATTRACT_RELEASE[1]))])     # sheet 3 stays loaded for every telop type
+    (_f, _s, lx, ly, lw, height, _t), (_f2, _s2, rx, ry, rw, _h, _t2) = art      # padtitle: the art's two halves, side by side about the centre
+    top = PADTITLE_ROW - PADTITLE_SPRITE[1][1] / 2
+    half = (lw + rw) / 2.0
+    return ([(PADTITLE_SPRITE[0] + 0xc, '<2f', PADTITLE_SPRITE[1], (float(lw + rw), float(height))),
+             (PADTITLE_QUADS[0][0] + 4, '<4f', PADTITLE_QUADS[0][1], (-half, top, lw - half, top + height)),
+             (PADTITLE_QUADS[1][0] + 4, '<4f', PADTITLE_QUADS[1][1], (lw - half, top, half, top + height)),
+             (PADTITLE_UVS[0][0] + 4, '<4f', PADTITLE_UVS[0][1], _uv_box(lx, ly, lw, height)),
+             (PADTITLE_UVS[1][0] + 4, '<4f', PADTITLE_UVS[1][1], _uv_box(rx, ry, rw, height))], [])
+
+
+def _apply_prompts(buf, build, key, variant=None):
+    """padprompts.asm in a screen DLL, its table after the code: the Exec
+    export is pointed at the blob, which writes each of the key's fields
+    as the stock's value or the pad's every frame and goes on to the
+    export's own routine. The exe's poll slot is the build's. The art's
+    language is the one patch() read off the key's sheet files, English
+    when none has been read."""
+    name, export, routine, _sheets = PROMPTS[key]
+    if routine is None:
+        routine = BUILDS[build]['options']['EXEC']
+    variant = variant or PROMPT_VARIANT.get(key, 'en')
+    slot = _export_slot(buf, export)
+    if struct.unpack_from('<I', buf, slot)[0] != routine:
+        raise ValueError('%s: %s is not at 0x%x' % (name, export.decode(), routine))
+    fields, fills = prompt_switches(buf, build, key, variant)
+    out = bytearray(buf)
+    for rva, old, new in fills:
+        off = _rva_to_off(buf, rva)
+        if buf[off:off + len(old)] != old:
+            raise ValueError('%s: unexpected bytes at 0x%x' % (name, off))
+        out[off:off + len(new)] = new
+    rows = b''
+    for rva, fmt, stock, pad in fields:
+        off = _rva_to_off(buf, rva)
+        if fmt == 'handle':                 # an entry's sheet number: the stub copies the handle init wrote for the sheet
+            if struct.unpack_from('<i', buf, off)[0] != stock[0]:
+                raise ValueError('%s: entry at 0x%x is not on sheet %d' % (name, off, stock[0]))
+            rows += struct.pack('<3I', rva | PROMPT_INDIRECT, GALLERY_HANDLES + 4 * stock[0], GALLERY_HANDLES + 4 * pad[0])
+            continue
+        was, now = struct.pack(fmt, *stock), struct.pack(fmt, *pad)
+        if buf[off:off + len(was)] != was:
+            raise ValueError('%s: unexpected values at 0x%x' % (name, off))
+        for i in range(0, len(was), 4):
+            if was[i:i + 4] != now[i:i + 4]:
+                rows += struct.pack('<I', rva + i) + was[i:i + 4] + now[i:i + 4]
+    blob = PADPROMPTS_BLOB.replace(struct.pack('<I', PADPROMPTS_MAGICS['PADPOLL']), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
+    blob = blob.replace(struct.pack('<I', PADPROMPTS_MAGICS['EXEC']), struct.pack('<I', routine))
+    out, rva = _self_section(out, blob + rows + bytes(4))
+    struct.pack_into('<I', out, slot, rva)
+    return out
+
+
+def apply_padprompts(buf, build):
+    return _apply_prompts(buf, build, 'padprompts')
+
+
+def apply_padtitle(buf, build):
+    return _apply_prompts(buf, build, 'padtitle')
+
+
+def apply_padattract(buf, build):
+    return _apply_prompts(buf, build, 'padattract')
+
+
+def apply_padgallery(buf, build):
+    return _apply_prompts(buf, build, 'padgallery')
+
+
+def apply_padoptions(buf, build):
+    return _apply_prompts(buf, build, 'padoptions')
+
+
+def txr_sheets(data):
+    """A .TXR's sheets: (format, width, file offset, bytes) each."""
+    if data[:4] != b'RTEX':
+        raise ValueError('not a TXR')
+    out, off = [], 0x1000
+    for i in range(struct.unpack_from('<I', data, 4)[0]):
+        fmt, width, nbytes, _ = struct.unpack_from('<4I', data, 16 + 16 * i)
+        out.append((fmt, width, off, nbytes))
+        off += nbytes
+    return out
+
+
+def prompt_txr(data, key, name):
+    """A key's sheet file with its art written on. Every stock sheet the
+    key touches must be the stock one, by its MD5, which also tells the
+    file's language; the art's own sheets are appended, 256x256 4444,
+    clear white like the stock gutters. A file with a sheet in a release's
+    language records the language in PROMPT_VARIANT, and a file without
+    one takes the key's. Returns the new file."""
+    spec = PROMPTS[key][3][name]
+    try:
+        sheets = txr_sheets(data)
+    except (ValueError, struct.error):
+        raise ValueError('%s is not the file the patcher knows' % name)
+    variant = ''
+    for index, known in spec.items():
+        if index >= len(sheets):
+            raise ValueError('%s has no sheet %d' % (name, index))
+        _fmt, _width, start, nbytes = sheets[index]
+        digest = hashlib.md5(data[start:start + nbytes]).hexdigest()
+        if isinstance(known, dict):
+            if digest not in known:
+                raise ValueError('%s: sheet %d is not one the patcher knows' % (name, index))
+            if variant and known[digest] != variant:
+                raise ValueError('%s: sheets of two languages' % name)
+            variant = known[digest]
+        elif digest != known:
+            raise ValueError('%s: sheet %d is not the stock one' % (name, index))
+    if variant:
+        if PROMPT_VARIANT.get(key, variant) != variant:
+            raise ValueError('%s: %s is not in the language of the key\'s other files' % (key, name))
+        PROMPT_VARIANT[key] = variant
+    out = bytearray(data)
+    for _file, index, x, y, w, h, texels in [b for b in prompt_art(key, variant or PROMPT_VARIANT.get(key, '')) if b[0] == name]:
+        sheets = txr_sheets(out)
+        if index == len(sheets):
+            struct.pack_into('<I', out, 4, index + 1)
+            struct.pack_into('<4I', out, 16 + 16 * index, 8, 256, 256 * 256 * 2, 0)
+            out += struct.pack('<H', 0x0fff) * (256 * 256)
+            sheets = txr_sheets(out)
+        if index > len(sheets):
+            raise ValueError('%s: the art is for sheet %d of %d' % (name, index, len(sheets)))
+        _fmt, width, start, nbytes = sheets[index]
+        if len(texels) != w * h * 2 or x + w > width or (y + h) * width * 2 > nbytes:
+            raise ValueError('%s: the art does not fit sheet %d' % (name, index))
+        for row in range(h):
+            at = start + ((y + row) * width + x) * 2
+            out[at:at + w * 2] = texels[row * w * 2:(row + 1) * w * 2]
+    return bytes(out)
+
+
+def installed(dest, name):
+    """The path of a game file by the installer's own casing of its last
+    part, where one is there, so a case-sensitive Wine finds one file,
+    not two."""
+    parts = name.split('\\')
+    folder = os.path.join(dest, *parts[:-1])
+    if os.path.isdir(folder):
+        for found in os.listdir(folder):
+            if found.lower() == parts[-1].lower():
+                return os.path.join(folder, found)
+    return os.path.join(folder, parts[-1])
+
+
+# The sheet files the patches write: key -> (file, what makes the new
+# contents of the stock ones). Each has a .bak beside it once written.
+TXR_WRITERS = {'devices': ((TXR, patch_txr),)}
+TXR_WRITERS.update((key, tuple((PROMPT_DIR + '\\' + name, lambda data, key=key, name=name: prompt_txr(data, key, name)) for name in PROMPTS[key][3]))
+                   for key in PROMPTS)
+TXR_FILES = tuple(dict.fromkeys(name for writers in TXR_WRITERS.values() for name, _writer in writers))
 
 
 def apply_fullwin(buf, _build=None):
