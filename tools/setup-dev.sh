@@ -6,8 +6,10 @@
 # Everything comes from the distribution, no venv: python3-pyflakes lints,
 # nasm rebuilds asm/ (and the devices check reads its listing),
 # python3-unicorn runs the stubs, tkinter is the window, PIL and the URW
-# fonts tools/labels.py,
-# tools/assets.py and tools/txrdump.py, a C compiler the nettest check,
+# fonts tools/labels.py, tools/assets.py and tools/txrdump.py, those and
+# Liberation Sans Narrow, Open Sans and Noto Sans CJK tools/prompts.py,
+# a C compiler the
+# nettest check,
 # mingw net/build.py, xvfb the gui check. None is needed to run the
 # patcher from the command line.
 set -e
@@ -21,12 +23,15 @@ for mod in pyflakes unicorn tkinter PIL; do
 done
 if command -v fc-list >/dev/null 2>&1; then
     fc-list | grep -qi "URWGothic-Demi\|URW Gothic" || missing="$missing fonts-urw-base35"
+    fc-list | grep -qi "LiberationSansNarrow-Bold" || missing="$missing liberation-sans-narrow"
+    fc-list | grep -qi "OpenSans-BoldItalic" || missing="$missing open-sans"
+    fc-list | grep -qi "NotoSansCJK" || missing="$missing noto-cjk"
 fi
 
 if [ -z "$missing" ]; then
     echo "toolchain complete"
 else
     echo "not found:$missing"
-    echo "  apt: sudo apt install nasm gcc gcc-mingw-w64-i686 xvfb fonts-urw-base35 python3-tk python3-pyflakes python3-unicorn python3-pil"
-    echo "  dnf: sudo dnf install nasm gcc mingw32-gcc xorg-x11-server-Xvfb urw-base35-fonts python3-tkinter python3-pyflakes python3-unicorn python3-pillow"
+    echo "  apt: sudo apt install nasm gcc gcc-mingw-w64-i686 xvfb fonts-urw-base35 fonts-liberation-sans-narrow fonts-open-sans fonts-noto-cjk python3-tk python3-pyflakes python3-unicorn python3-pil"
+    echo "  dnf: sudo dnf install nasm gcc mingw32-gcc xorg-x11-server-Xvfb urw-base35-fonts liberation-narrow-fonts open-sans-fonts google-noto-sans-cjk-vf-fonts python3-tkinter python3-pyflakes python3-unicorn python3-pillow"
 fi

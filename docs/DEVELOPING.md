@@ -32,7 +32,8 @@ None of them is needed to run the patcher, only to work on it.
 | `nasm` | rebuilding `asm/` |
 | `python3-pyflakes` | the `lint` check |
 | `python3-unicorn` | the checks that run the stubs |
-| `python3-pil`, `fonts-urw-base35` | `tools/txrdump.py`, `tools/assets.py`; `tools/labels.py` and its check |
+| `python3-pil`, `fonts-urw-base35` | `tools/txrdump.py`, `tools/assets.py`; `tools/labels.py`, `tools/prompts.py` and their checks |
+| Liberation Sans Narrow, Open Sans, Noto Sans CJK (Fedora: `liberation-narrow-fonts`, `open-sans-fonts`, `google-noto-sans-cjk-vf-fonts`) | `tools/prompts.py` and its check |
 | `gcc-mingw-w64-i686` | `net/build.py`, the network DLL |
 | a C compiler (`cc`) | the `nettest` check |
 | `tkinter` | the window |
@@ -111,6 +112,7 @@ and skips on the others.
 | `tables` | a site outside the file, two patches on one byte, a replacement longer than the original, or a placeholder left unfilled |
 | `asm` | `asm/` edited without `asm/build.py` being run |
 | `labels` | `tools/labels.py` edited without being run. The labels are rendered here and compared with the baked ones; a rasteriser's few pixels of difference are allowed. Skips without Pillow and the font |
+| `prompts` | `tools/prompts.py` edited without being run. The pad's prompts and the hint lines are rendered here and compared with the baked texels; a rasteriser's level of difference is allowed. Skips without Pillow and the three fonts |
 | `net` | `net/` edited without `net/build.py` being run |
 | `nettest` | the network core. A host and five guests run over loopback with a third of the datagrams dropped, and the test covers joins, names, the reliable and unreliable classes, ordering, closed sessions and slots, leaving, silence, the host going away, an oversized reliable datagram, and a welcome with a seat past the table. It also checks the name lookup on its own thread. Then a directory server is started for the run (a failure to start fails the check), a session is found through it, and one guest joins directly and one through the relay. Skips without a C compiler |
 | `directorytest` | the directory server's list limit per address, the token, the registration cookie, and N and X, with a hand-set clock |
