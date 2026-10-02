@@ -3,7 +3,7 @@
 
     python3 tools/buttonstest.py GAMEDIR [--show DIR]
 
-Reads BINDATA\\connect\\button\\showteam_* and create_* and
+Reads BINDATA\\connect\\button\\showteam_* and
 BINDATA\\connect\\IP_ENTRY\\Ip_entry_US.bmp from the game (their .bak when
 patched), composes the button's three states and the popup the way the
 patcher does and checks them against the pinned digests; --show writes
@@ -15,7 +15,7 @@ import sys
 
 from uctest import patcher
 
-PINNED = {'off': 'e656ede44349f4212336591ac0ddb61e', 'on': '397d748a90948215471c736df7127c48', 'on2': 'ecd7fcf191f9c0c04ef96750dcbef430'}
+PINNED = {'off': '1469cd02cf133e9b47c823ebb18fb5e0', 'on': '00c7ad978bc72ad13dbeee9845d7d5a9', 'on2': '7b1543349e635302770caf8aa288aef4'}
 PINNED_POPUP = '89b4564852536c16a5e6ef37f1c0595e'
 
 
@@ -53,7 +53,7 @@ def main(argv):
     if os.path.isfile(path + '.bak'):
         path += '.bak'
     if not os.path.isfile(path):
-        print('buttonstest: SEARCH composed from the stock lettering, three states as pinned')
+        print('buttonstest: SEARCH as pinned in three states, from the mask')
         print('note: no %s in this install; the popup was not tested' % name)
         return 0
     with open(path, 'rb') as fh:
@@ -66,7 +66,7 @@ def main(argv):
             fh.write(popup)
     if hashlib.md5(popup).hexdigest() != PINNED_POPUP:
         raise SystemExit('buttonstest: %s came out %s, pinned %s' % (name, hashlib.md5(popup).hexdigest(), PINNED_POPUP))
-    print('buttonstest: SEARCH composed from the stock lettering, three states as pinned; the popup as pinned')
+    print('buttonstest: SEARCH as pinned in three states, from the mask; the popup as pinned')
     return 0
 
 

@@ -1234,9 +1234,10 @@ SHOW TEAMS table's third entry becomes a copy of its first.
 `tools/lobbytest.py` runs the confirm under Unicorn. The SHOW TEAMS
 button itself is relettered SEARCH. Its three files in
 `BINDATA\connect\button` (105x19, 24-bit, a 102x16 face and a bevel)
-are rewritten with E, A, R and C cut from `create_*` and S and H cut from
-`showteam_*`, centred at the stock letter gap (`lobby_buttons`). The
-stock files are checked by digest first and kept as `.bak`.
+are rewritten with the face cleared and SEARCH laid over it from a mask
+`tools/prompts.py` renders in Noto Sans Mono, the open face closest to
+the buttons' own (`lobby_buttons`; *The pad's prompts*). The stock
+files are checked by digest first and kept as `.bak`.
 `tools/buttonstest.py` pins the result. `MPDATA.DAT` keeps the type from
 last time; a stock 3 there is reset to 0 at patch time.
 
@@ -1821,9 +1822,9 @@ sheet has PRESS START BUTTON or a button's name in English. So the pad's
 prompts are new lettering, and the Dreamcast's is not used. Each is one
 line of one font, the open one that comes closest to the stock prompt it
 stands in for, set and finished as that prompt is. No letter is cut from
-the game's sheets or drawn by hand, so a prompt can say anything. (The
-lobby's SEARCH button, from the `lobby` patch, is still six letters cut
-whole from the stock buttons' own face.)
+the game's sheets or drawn by hand, so a prompt can say anything. The
+lobby's SEARCH button (the `lobby` patch) is set the same way, in the
+face closest to the buttons' own.
 
 **The stub.** A screen DLL draws a prompt as a sprite of quads. A quad
 is a rectangle about the sprite's centre over a UV entry, and the draws
@@ -1918,6 +1919,11 @@ one page of the ten (`0x1009cf10`, 18 entries, the plates drawn over
 the list) has no spare entry, so the entries are switched in place: the
 box, and the sheet number through a bit-31 row, from the array's handle
 for sheet 7 to its handle for the appended sheet 9. 90 rows in all.
+
+**The lobby's SEARCH button.** The SHOW TEAMS button files are
+relettered SEARCH from Noto Sans Mono: the face cleared and the mask
+laid over it in the stock lettering's colour, read off the file
+(`lettered`). Not tried in the game yet.
 
 **The replay prompt.** PRESS ENTER KEY for REPLAY is one 166 by 24 box
 of sheet 9 (rows 190 to 213), the same sheet in the three `Rank` files

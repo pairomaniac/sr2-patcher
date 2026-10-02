@@ -7563,24 +7563,18 @@ LOBBY_STATES = ('OFF', 'ON', 'ON2')
 LOBBY_CLEAR = (54, 246)                 # the stock rows' span in the backdrop, cleared
 LOBBY_FILES = tuple('CONNECT_%s_%s.BMP' % (slot, state) for slot in LOBBY_LABELS for state in LOBBY_STATES)
 
-# The team list's SHOW TEAMS button becomes SEARCH, set from the stock
-# buttons' own lettering: the three states of showteam and create in
-# BINDATA\connect\button are 105x19 24-bit BMPs, a 102x16 face with a
-# three-pixel bevel (ON2 the face three pixels down and right), the
-# letters on rows 1-14. E, A, R and C are cut from create, S and H from
-# showteam; the word is centred on the face at the stock two-pixel
-# letter gap.
+# The team list's SHOW TEAMS button becomes SEARCH: the three states of
+# showteam in BINDATA\connect\button, 105x19 24-bit, a 102x16 face with
+# a three-pixel bevel (ON2 the face three pixels down and right), the
+# letters on rows 1-14. The face is cleared and SEARCH laid over it from
+# the mask tools/prompts.py renders in Noto Sans Mono, the closest open
+# face to the buttons' own, in the stock lettering's colour.
 LOBBY_BUTTON_DIR = 'BINDATA\\connect\\button'
 LOBBY_BUTTON_STATES = ('off', 'on', 'on2')
-LOBBY_BUTTON_MD5 = {'showteam': ('eb63942470f1fd42f686179f1f1f1413', '0aa7e865dc9419c971e60af559dd628f', '3adbb7020b7b6e1fdf3622f517de34c8'),
-                    'create': ('4d94191960a75e92b9ecaa890861234b', 'dc5b89b42d87518521db3d969be3d96a', 'a9b28ea66aa92e3918574d650036f522')}
+LOBBY_BUTTON_MD5 = {'showteam': ('eb63942470f1fd42f686179f1f1f1413', '0aa7e865dc9419c971e60af559dd628f', '3adbb7020b7b6e1fdf3622f517de34c8')}
 LOBBY_BUTTON_FILES = tuple('showteam_%s.BMP' % state for state in LOBBY_BUTTON_STATES)
-LOBBY_GLYPHS = {'C': ('create', 26, 32), 'R': ('create', 35, 41), 'E': ('create', 44, 49), 'A': ('create', 51, 58),
-                'S': ('showteam', 9, 15), 'H': ('showteam', 18, 23)}     # the columns in the OFF and ON files, rows 1-14
-LOBBY_SEARCH = 'SEARCH'
 LOBBY_FACE = (102, 16)
 LOBBY_GLYPH_ROWS = (1, 14)
-LOBBY_GLYPH_GAP = 2
 # The IP entry popup, Ip_entry_US.bmp in BINDATA\connect\IP_ENTRY, a
 # 385x184 24-bit BMP: its two lines under the box said a blank entry
 # searches, which the LAN row does now. They are painted over and
@@ -7693,26 +7687,45 @@ def bmp24(mask, size=LOBBY_LABEL_SIZE):
     return head + info + bytes(rows)
 
 
+def lettered(data, mask, at, rows_cleared):
+    """A 24-bit BMP with a mask's lettering over its face: the face's
+    colour and the stock lettering's are read off the rows cleared, the
+    face being the colour most of them hold and the ink the one furthest
+    from it, and each masked pixel goes from face to ink by the mask's
+    level. mask is (width, height, texels), at (x, y)."""
+    rows = [bytearray(r) for r in bmp24_rows(data)]
+    x0, y0 = at
+    width, height, texels = mask
+    top, bottom, left, right = rows_cleared
+    seen = {}
+    for y in range(top, bottom + 1):
+        for x in range(left, right + 1):
+            px = bytes(rows[y][x * 3:x * 3 + 3])
+            seen[px] = seen.get(px, 0) + 1
+    face = max(seen, key=seen.get)
+    ink = max(seen, key=lambda px: sum(abs(a - b) for a, b in zip(px, face)))
+    for y in range(top, bottom + 1):
+        rows[y][left * 3:(right + 1) * 3] = face * (right + 1 - left)
+    for y in range(height):
+        for x in range(width):
+            level = texels[y * width + x] >> 12
+            if level:
+                rows[y0 + y][(x0 + x) * 3:(x0 + x) * 3 + 3] = bytes(f + (i - f) * level // 15 for f, i in zip(face, ink))
+    return bmp24_pack(rows, data)
+
+
 def lobby_buttons(stock):
-    """The three SEARCH button files from the stock showteam and create
-    ones: {state: bytes}."""
+    """The three SEARCH button files from the stock showteam ones: the
+    face cleared and SEARCH laid over it from the mask tools/prompts.py
+    renders, on the OFF and ON files' rows, and three pixels down and
+    right on ON2 as its face is. {state: bytes}."""
+    (_f, _s, _x, _y, w, h, texels), = prompt_art('lobby')
+    texels = struct.unpack('<%dH' % (w * h), texels)
     out = {}
     for i, state in enumerate(LOBBY_BUTTON_STATES):
         shift = 3 if state == 'on2' else 0
-        rows = [bytearray(r) for r in bmp24_rows(stock['showteam'][i])]
-        pool = {name: bmp24_rows(stock[name][i]) for name in stock}
         top, bottom = LOBBY_GLYPH_ROWS
-        face = bytes(rows[top + shift][(LOBBY_FACE[0] - 1 + shift) * 3:(LOBBY_FACE[0] + shift) * 3])   # a face pixel, no letter reaches it
-        for y in range(top + shift, bottom + shift + 1):
-            rows[y][shift * 3:(LOBBY_FACE[0] + shift) * 3] = face * LOBBY_FACE[0]
-        widths = [LOBBY_GLYPHS[c][2] - LOBBY_GLYPHS[c][1] + 1 for c in LOBBY_SEARCH]
-        x = (LOBBY_FACE[0] - sum(widths) - LOBBY_GLYPH_GAP * (len(widths) - 1)) // 2 + shift
-        for c, width in zip(LOBBY_SEARCH, widths):
-            name, x0, _x1 = LOBBY_GLYPHS[c]
-            for y in range(top + shift, bottom + shift + 1):
-                rows[y][x * 3:(x + width) * 3] = pool[name][y][(x0 + shift) * 3:(x0 + shift + width) * 3]
-            x += width + LOBBY_GLYPH_GAP
-        out[state] = bmp24_pack(rows, stock['showteam'][i])
+        out[state] = lettered(stock['showteam'][i], (w, h, texels), (shift, shift), (top + shift, bottom + shift, shift, LOBBY_FACE[0] - 1 + shift))
     return out
 
 
