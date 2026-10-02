@@ -26,12 +26,13 @@ if command -v fc-list >/dev/null 2>&1; then
     fc-list | grep -qi "LiberationSansNarrow-Bold" || missing="$missing liberation-sans-narrow"
     fc-list | grep -qi "OpenSans-BoldItalic" || missing="$missing open-sans"
     fc-list | grep -qi "NotoSansCJK" || missing="$missing noto-cjk"
+    fc-list | grep -qi "NotoSansMono-Regular" || missing="$missing noto-mono"
 fi
 
 if [ -z "$missing" ]; then
     echo "toolchain complete"
 else
     echo "not found:$missing"
-    echo "  apt: sudo apt install nasm gcc gcc-mingw-w64-i686 xvfb fonts-urw-base35 fonts-liberation-sans-narrow fonts-open-sans fonts-noto-cjk python3-tk python3-pyflakes python3-unicorn python3-pil"
-    echo "  dnf: sudo dnf install nasm gcc mingw32-gcc xorg-x11-server-Xvfb urw-base35-fonts liberation-narrow-fonts open-sans-fonts google-noto-sans-cjk-vf-fonts python3-tkinter python3-pyflakes python3-unicorn python3-pillow"
+    echo "  apt: sudo apt install nasm gcc gcc-mingw-w64-i686 xvfb fonts-urw-base35 fonts-liberation-sans-narrow fonts-open-sans fonts-noto-cjk fonts-noto-mono python3-tk python3-pyflakes python3-unicorn python3-pil"
+    echo "  dnf: sudo dnf install nasm gcc mingw32-gcc xorg-x11-server-Xvfb urw-base35-fonts liberation-narrow-fonts open-sans-fonts google-noto-sans-cjk-vf-fonts google-noto-sans-mono-fonts python3-tkinter python3-pyflakes python3-unicorn python3-pillow"
 fi

@@ -1891,6 +1891,7 @@ chosen by fitting about 45 open fonts to each stock prompt that way:
 | the Records labels, 9 px caps | Liberation Sans Narrow Bold, 90% wide | about 28%: no face tried does better than about 15% a word, the stock's rasteriser being sharper than any render |
 | the gallery's plates | URW Gothic Demi, 105% wide | 12% a word |
 | the Japanese lines | Noto Sans CJK JP Bold, 14 px, 105% wide | 39%, mostly the letters' places; the shapes match |
+| the lobby buttons, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
 
 **The bars.** A bar line is a sprite of two quads about the bar's
 centre, each a strip of 17 rows with two white texels beyond each end,

@@ -33,7 +33,7 @@ None of them is needed to run the patcher, only to work on it.
 | `python3-pyflakes` | the `lint` check |
 | `python3-unicorn` | the checks that run the stubs |
 | `python3-pil`, `fonts-urw-base35` | `tools/txrdump.py`, `tools/assets.py`; `tools/labels.py`, `tools/prompts.py` and their checks |
-| Liberation Sans Narrow, Open Sans, Noto Sans CJK (Fedora: `liberation-narrow-fonts`, `open-sans-fonts`, `google-noto-sans-cjk-vf-fonts`) | `tools/prompts.py` and its check |
+| Liberation Sans Narrow, Open Sans, Noto Sans CJK, Noto Sans Mono (Fedora: `liberation-narrow-fonts`, `open-sans-fonts`, `google-noto-sans-cjk-vf-fonts`, `google-noto-sans-mono-fonts`) | `tools/prompts.py` and its check |
 | `gcc-mingw-w64-i686` | `net/build.py`, the network DLL |
 | a C compiler (`cc`) | the `nettest` check |
 | `tkinter` | the window |
@@ -101,7 +101,7 @@ two music offsets - live in `asm/mix.inc`, which `mix.asm` and
 picks some. There are 39. The first 23, down to `gui`, need only nasm,
 pyflakes, Unicorn, Pillow and the fonts, tkinter, xvfb and a C
 compiler, and CI runs them; `prompts` skips there until CI has its
-four fonts. Every test that maps a PE image does so
+five fonts. Every test that maps a PE image does so
 through `tools/uctest.py`. The last sixteen need the discs and the
 installed games, and they skip without them. `devices` also needs nasm,
 because it reads nasm's listing. A tool that cannot run exits 77 and is

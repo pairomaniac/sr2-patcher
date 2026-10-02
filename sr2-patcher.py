@@ -5874,6 +5874,14 @@ PROMPT_ART = {
          'xhQ399mxaDi50zfywGB+gqq/obU48yYiuzBetnSV1dXPwQP2xAh5YSVuKFdvmtIk92XL20gY0TwijXfS+kYuZO9K0r8EqUj9'
          'QZURjxm2QpFkbVazI15SBqaiuWl178/4bfNN6M3wzfD/+vwBZgqOCQ=='),
     ),
+    'lobby': (
+        ('showteam', 0, 0, 0, 102, 16, '',
+         'eNrtVW3ZhSAMJQIRFsEIRDCCEYhABCMQgQhEMAIRjHAHjgPqvX/lfd7H7YcTNjjHfajUK/9MJlYttlYEbULYrx76cgYpgwiN'
+         'XXqYx6YS685WlpmtQ1OHflcWb9kjx0SJyLKWtZ2fx5uT9f1RNl7ur5mZGeNVFsYZOy5REAdZsbxPkrGRXCIj7eUbF88+CXVT'
+         'PQwyl9juZRQXx8joxGWTbmkdlHl4cK5cFnkSI9YXLqucsT/cMbnWPe5s/VIryBTMC/tUj8RVtSIbU9dZ7cSq9PAcI8aZ0Pvx'
+         'hixy9lZUWeaSs2kxPe5cxtRY6wn3g8tW5kPLw+FhwE3fEI/nYr9yaV/dycSrHgGIg+yM5hKYw8J3J7k1V9AqejDw6JvtxGVC'
+         'TLZC4ToP5TIXDA53EtuH1jy1P6ItVUWYaAtmMZVp4PA9zCnilVf+nHwAe2qDMQ=='),
+    ),
 }
 # The Device Settings page's hint lines, the same way: each line's two
 # halves, strips for the sheet the patcher appends to OPTIONS.TXR.
