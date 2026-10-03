@@ -12,7 +12,7 @@ You also get the picture at your monitor's size and shape, the soundtrack
 from files, an XInput pad you can rebind in-game, and online play with no
 port forwarding. Windows 10 and 11, Wine and Proton.
 
-<img src="https://github.com/user-attachments/assets/6b1f92c1-9f66-407a-a0a5-181b7f205aae" alt="Lancia Stratos on a coastal stage at 32:9" width="100%" />
+<img src="assets/readme/stratos-32x9.png" alt="Lancia Stratos on a coastal stage at 32:9" width="100%" />
 
 **Work in progress.** The game plays start to finish on all four
 releases, but this is a hobby project poking at a 27-year-old binary and
@@ -58,7 +58,7 @@ If the script on Windows cannot download dgVoodoo 2
 (`CERTIFICATE_VERIFY_FAILED`), run `py -m pip install certifi` once.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e84056b7-3ed2-41a9-bc3a-c1d67da97f11" alt="The patcher window, showing its numbered sections" height="700" />
+  <img src="assets/readme/patcher-window.png" alt="The patcher window, showing its numbered sections" height="700" />
 </p>
 
 Work through the numbered sections in order:
@@ -176,11 +176,11 @@ off by default; see [Reporting a bug](#reporting-a-bug).
 
 ## Widescreen
 
-<img src="https://github.com/user-attachments/assets/08f9bc67-2735-4285-ae23-1da9a218304a" alt="Desert stage in a Celica ST-205 at 32:9" width="100%" />
+<img src="assets/readme/desert-32x9.png" alt="Desert stage in a Celica ST-205 at 32:9" width="100%" />
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/8b1fdec0-f93a-4075-8fb5-f5a26d0c4daf" alt="Time Attack name entry at 16:9, its tiled background carried out to the edges" width="49.5%" />
-  <img src="https://github.com/user-attachments/assets/55294acc-cc60-45c6-b8c9-b32a762380e9" alt="Jungle stage in a Peugeot 306 Maxi at 16:9" width="49.5%" />
+  <img src="assets/readme/name-entry-16x9.png" alt="Time Attack name entry at 16:9, its tiled background carried out to the edges" width="49.5%" />
+  <img src="assets/readme/jungle-16x9.png" alt="Jungle stage in a Peugeot 306 Maxi at 16:9" width="49.5%" />
 </p>
 
 **Options → Graphic Settings** gains an **Aspect Ratio** row - 4:3,
@@ -194,7 +194,7 @@ select stay 4:3, with the picture blurred behind them to fill the sides.
 
 Two-player split screen follows the same size:
 
-<img src="https://github.com/user-attachments/assets/68e2c826-8400-49fa-8045-b57aa1c7e766" alt="Two-player split screen at 16:9" width="100%" />
+<img src="assets/readme/split-screen-16x9.png" alt="Two-player split screen at 16:9" width="100%" />
 
 On Windows the list stops at 2048 a side without the
 [dgVoodoo 2](#add-ons) add-on.
@@ -227,14 +227,18 @@ The settings are saved as plain text in `SR2.CFG` beside the game;
 delete the file for the defaults.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/0d95eeed-3834-4f0a-8291-4cc210de0abb" alt="Options menu with Device Settings selected" width="49.5%" />
-  <img src="https://github.com/user-attachments/assets/ff647971-3dde-47d4-b933-1600a1744af4" alt="Device Settings page listing each control's key and pad binding" width="49.5%" />
+  <img src="assets/readme/options-menu.png" alt="Options menu with Device Settings selected" width="100%" />
+</p>
+
+<p align="center">
+  <img src="assets/readme/device-settings.png" alt="Device Settings page listing each control's key and pad binding" width="49.5%" />
+  <img src="assets/readme/controller-prompts.png" alt="The game's prompts for the keyboard and for the pad, side by side" width="49.5%" />
 </p>
 
 ## Internet play
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/4eeb4842-b05f-47c0-8f26-d7516f391eba" alt="Multiplayer connection screen offering INTERNET, DIRECT IP and LAN" width="480" />
+  <img src="assets/readme/connection-screen.png" alt="Multiplayer connection screen offering INTERNET, DIRECT IP and LAN" width="480" />
 </p>
 
 > [!IMPORTANT]
