@@ -202,43 +202,29 @@ On Windows the list stops at 2048 a side without the
 ## Controls
 
 An XInput pad works as it is: stick to steer, triggers for the pedals,
-Start to pause. In the menus the D-pad or stick moves, A and Start
-choose, and B goes back; in the multiplayer team room Back switches
-between the slot list and the MENU row, as TAB does.
+Start to pause, and in the menus A to choose and B to go back. The
+driving and menu controls can be rebound for both players, keyboard and
+pad, under **Options → Device Settings**.
 
-In a replay:
+The less obvious ones:
 
-| | Pad | Keyboard 1P | Keyboard 2P |
+| Where | What | Pad | Keyboard (2P) |
 | --- | --- | --- | --- |
-| Next / previous camera | RB / LB | Up / Down | S / X |
-| Turn the revolving camera; driver's or rear view; the side camera's side | Left stick | Left / Right | Z / C |
-| Zoom the revolving camera | RT / LT | Page Up / Page Down | - |
-| Meter on / off | Y | Insert / Delete | T / G |
-| Switch the screen (2 PLAYER BATTLE, the winner) or the car watched (multiplayer) | X | TAB | TAB |
-| Pause | Start | Enter | Space |
+| Car select | The other colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185 | Hold LB while choosing | Hold Page Up while choosing |
+| Records | Turn the page | LB / RB | Page Up / Page Down |
+| Replay Gallery | Step the sort | LB / RB | F6-F8 |
+| Name entry | Erase the last letter | X | Backspace |
+| Name entry | Jump to END | Start | - |
+| Team room | Switch between the slot list and the MENU row | Back | TAB |
+| Replay | Next / previous camera | RB / LB | Up / Down (S / X) |
+| Replay | Turn the revolving camera; driver's or rear view; the side camera's side | Left stick | Left / Right (Z / C) |
+| Replay | Zoom the revolving camera | RT / LT | Page Up / Page Down |
+| Replay | Meter on / off | Y | Insert / Delete (T / G) |
+| Replay | Switch the screen (2 PLAYER BATTLE, the winner) or the car watched (multiplayer) | X | TAB |
+| Replay | Pause | Start | Enter (Space) |
 
-In 2 PLAYER BATTLE each player's pad drives their own half. Pause is
-each player's Start as bound in Device Settings; the other replay
-controls are fixed.
-
-In the menus LB and RB act as Page Up and Page Down: they turn the
-Records pages and step the Replay Gallery's sort, as F6-F8 do. On the
-car select, hold LB from pressing A until the car is taken for the other
-colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185.
-
-While a pad is connected, the on-screen prompts show its buttons instead
-of keys: the title screen says PRESS START BUTTON, for example. Unplug
-the pad and the keyboard prompts come back. On a Japanese install the
-hint bars stay in Japanese.
-
-In the name entry after a record, X or Backspace erases the last letter,
-and Start jumps to END.
-
-**Options → Device Settings** is a new page showing both players'
-controls, keyboard and pad side by side; press a key or a button to
-rebind one. They are saved as plain text in `SR2.CFG` beside the game,
-with the resolution and the network settings; delete the file for the
-defaults, and the game writes it again as you change things.
+The settings are saved as plain text in `SR2.CFG` beside the game;
+delete the file for the defaults.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/0d95eeed-3834-4f0a-8291-4cc210de0abb" alt="Options menu with Device Settings selected" width="49.5%" />
