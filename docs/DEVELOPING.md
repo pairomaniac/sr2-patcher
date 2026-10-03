@@ -374,9 +374,10 @@ number; the zips carry the `v`. A push that is not a tag builds the same
 two zips as an artifact named with the short SHA. Its exe is the
 committed launcher, or an unsigned fresh one when none is committed.
 
-Then write the notes over the generated ones. The sections are
-*Changes*, *Requirements* and *Known issues*, in plain words, and they
-say only what has been seen.
+Then write the notes over the generated ones: the logo, then sections
+named for what their bullets are (*Added* first, *Changed* and *Fixed*
+when there is something for them), in plain words, saying only what has
+been seen. Requirements and known issues stay in the README.
 
 ```
 gh release edit v0.4.0 --notes-file notes.md

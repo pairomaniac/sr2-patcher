@@ -142,8 +142,7 @@ the force is a steering pull, not a shake. That account of the exe's
 force feedback is read from the code, not tried.
 
 `tools/padinputtest.py` runs the rumble under Unicorn on every build's
-`MGInput.dll`. Whether the attract demo sets the replay bit has not been
-checked.
+`MGInput.dll`. The attract demo does not shake the pad.
 
 ## DirectInput 8
 
@@ -588,7 +587,7 @@ chosen by fitting about 45 open fonts to each stock prompt that way:
 | the frame's hint lines, 12 px caps | Liberation Sans Narrow Bold, 84% wide, 0.3125 px bolder, tracked 0.75 px, word gaps 0.25 px closer | 7.6% a word over 29 stock words, each word placed on its own; the three stock lines come out 0, 1 and 2 texels wider. The stock's caps fill rows 1 to 12 of a strip and its stems are two texels. An earlier fit at 11 px caps and 90% wide scored 9.9% on half a line and 14.1% a word: its letters were a row short and half a texel fatter, which showed in the game |
 | the Records labels, 9 px caps | Liberation Sans Narrow Bold, 90% wide | about 28%: no face tried does better than about 15% a word, the stock's rasteriser being sharper than any render |
 | the gallery's plates | URW Gothic Demi, 105% wide | 12% a word |
-| the Japanese lines | Noto Sans CJK JP Bold, 14 px, 100% wide, 0.125 px bolder, tracked -0.25 px | the stock's own three lines come out within 4 texels of the stock's width; at 105% wide and untracked they were 11 to 32 texels wider. The letters' places still differ, the stock face setting its kana closer. The bubble behind a bar is a sprite of its own, the stock line's width, so a pad line wider than the stock's hangs out of it: the Records bar's pad line says Bボタンで戻ります, not 前画面に戻ります (372 texels against the stock's 406; the longer form is 427, and at the earlier setting's 456 was seen hanging out in the Japanese build). The popups' lines are 364 and 367 against the stock's 381 and 386, the gallery foot's 179 against 181; `tools/prompts.py` refuses a bar line past 410. The lines at this setting have not been seen in the game |
+| the Japanese lines | Noto Sans CJK JP Bold, 14 px, 100% wide, 0.125 px bolder, tracked -0.25 px | the stock's own three lines come out within 4 texels of the stock's width; at 105% wide and untracked they were 11 to 32 texels wider. The letters' places still differ, the stock face setting its kana closer. The bubble behind a bar is a sprite of its own, the stock line's width, so a pad line wider than the stock's hangs out of it: the Records bar's pad line says Bボタンで戻ります, not 前画面に戻ります (372 texels against the stock's 406; the longer form is 427, and at the earlier setting's 456 was seen hanging out in the Japanese build). The popups' lines are 364 and 367 against the stock's 381 and 386, the gallery foot's 179 against 181; `tools/prompts.py` refuses a bar line past 410 |
 | the lobby buttons and the team room's TAB button, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
 
 **The bars.** A bar line is a sprite of two quads about the bar's

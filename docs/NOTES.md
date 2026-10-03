@@ -422,8 +422,8 @@ and `ReleaseDC` on both. The six entry points this needs are resolved on
 the first present, together with `QueryPerformanceCounter`. If any is
 missing, the DirectDraw blit is kept. On the primary monitor nothing
 changes. GDI costs a readback of the back buffer and a software stretch
-per frame, which is fine for 640x480 into 1440p. Whether dgVoodoo's
-window takes GDI drawing over its swap chain is untested.
+per frame, which is fine for 640x480 into 1440p. It works with dgVoodoo
+as well.
 
 After its blit the present stores the counter value in the annex, for
 `frametrace`. The annex is writable for that store.
