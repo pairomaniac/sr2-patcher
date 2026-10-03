@@ -340,6 +340,11 @@ In no particular order:
 
 - **Fleshing out the online functionality** - this one's a long term goal,
   but something I am interested in.
+- **A faster update rate with more players online** - the game sends each
+  car's position less often the more players there are: ten times a
+  second with two, about half that with four.
+- **Full detail in split screen** - the game draws the scenery less far
+  and the cars at a lower level of detail there.
 
 ## Working on the patcher
 
