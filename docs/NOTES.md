@@ -1976,10 +1976,9 @@ the stock pair or `CHAT.BMP` is not the one it knows. A placeholder in a
 bytes; `asm/build.py` refuses that, and the stub loads `[ROOMBG]`
 indirectly. The lobby's SHOW TEAMS button files are relettered SEARCH
 from the same face: the face cleared and the mask laid over it in the
-stock lettering's colour, read off the file (`lettered`). In the
-European build under Proton, the open menu's SEL button and the
-backdrop's SEL after a menu had been opened have been seen; the room
-entries and the lobby's button have not been tried in the game yet.
+stock lettering's colour, read off the file (`lettered`). SEL in the
+open and the closed menu, and the lobby's SEARCH, have been seen in the
+European build under Proton.
 
 **The replay prompt.** PRESS ENTER KEY for REPLAY is one 166 by 24 box
 of sheet 9 (rows 190 to 213), the same sheet in the three `Rank` files
@@ -2086,12 +2085,11 @@ the same places.
 `tools/padpromptstest.py` runs each export on the real DLL, relocated,
 under Unicorn, and checks each sheet as the patcher writes it. The
 `prompts` check renders the art again and compares it with the baked
-texels. The live switch has been seen in the game on the Records pages
-and the title, with earlier lettering. The attract screen's prompt, the
-font-set Records and hint lettering, the bars, the gallery's plates and
-the replay prompt have not been tried in the game yet; of the Japanese
-lines, the Records bar's has been seen in the Japanese build, the others
-have not.
+texels. Every prompt here has been seen switching in the game under
+Proton: the title's and the attract screen's, the Records pages' labels
+and bars, the gallery's plates and lines, the replay prompt and the
+Device Settings lines in the European build, the Japanese lines in the
+Japanese build.
 
 #### The replay's controls
 
