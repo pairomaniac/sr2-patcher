@@ -27,7 +27,7 @@ numbers below were fitted.
 
 The Device Settings page's two hint lines are made here as well, in the
 face of the Options frame's own messages (OPTIONS.TXR sheet 4), which
-is that narrow bold grotesque with 11 px caps. So are the masks for two
+is that narrow bold grotesque with 12 px caps. So are the masks for two
 bitmaps the exe blits: the connection screen's SEARCH button (the lobby
 patch) and SEL for TAB on the team room's button (the tabmenu patch),
 in Noto Sans Mono, the closest open face to their monospaced 10 px
@@ -388,7 +388,7 @@ def record(_game, log):
 # ---- the Device Settings page's hint bar ------------------------------
 
 # The page's two lines, in the face the frame's own messages are in
-# (OPTIONS.TXR sheet 4, a narrow bold grotesque with 11 px caps), dark
+# (OPTIONS.TXR sheet 4, a narrow bold grotesque with 12 px caps), dark
 # on white. Each is cut in two at the word gap nearest its middle,
 # because a line is wider than the sheet, and each half is a strip with
 # a margin of white each side, so its edges filter to white. They go on
@@ -399,14 +399,24 @@ HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to 
 HINT_SHEET = 12                           # the appended sheet
 HINT_TOPS = (130, 150, 170, 190)          # the strips' rows on it, from column 1
 HINT_ROWS, HINT_MARGIN = 17, 2            # a strip starts a row above the ascenders, as the stock's do
-HINT_CAPS = 11
-HINT_WIDE, HINT_BOLD, HINT_TRACK = 0.9, 0.5625, 0.75
-HINT_X, HINT_BASE = 3.3125, 12.625        # the first letter's origin past the column, and the baseline, in a strip
+HINT_CAPS = 12                            # whole, the stock's: rows 1 to 12 of a strip, the stems two texels
+HINT_WIDE, HINT_BOLD, HINT_TRACK, HINT_SPACE = 0.84, 0.3125, 0.75, -0.25
+HINT_X, HINT_BASE = 2.625, 13.0           # the first letter's origin past the column, and the baseline, in a strip
 HINT_GAP = 3                              # clear columns that make a word gap
 
 
-def hint_line(text, width):
-    return lettering('narrow', text, width, HINT_ROWS, HINT_X, HINT_BASE, HINT_CAPS / RECORD_CAP_RATIO, HINT_WIDE, HINT_BOLD, HINT_TRACK)
+def hint_line(text, width, spare=0):
+    """A line's coverage over a strip's rows, and `spare` more above and below."""
+    return lettering('narrow', text, width, HINT_ROWS + 2 * spare, HINT_X, HINT_BASE + spare, HINT_CAPS / RECORD_CAP_RATIO, HINT_WIDE, HINT_BOLD, HINT_TRACK, HINT_SPACE)
+
+
+def cut_off(line, text, width):
+    """Whether a line's lettering runs past its strip's first or last row.
+    The stock face's ascenders stop at its caps and its descenders are
+    three rows; the render's reach the strip's edge rows, which is as far
+    as they may."""
+    tall = line(text, width, 1)
+    return any(int(round(c * 15)) for c in tall[0] + tall[-1])
 
 
 def halves(cov):
@@ -468,8 +478,8 @@ def hints(game, log):
     blits = []
     for text, tops in zip(HINT_LINES, (HINT_TOPS[:2], HINT_TOPS[2:])):
         cov = hint_line(text, 520)
-        if any(int(round(c * 15)) for c in cov[0] + cov[-1]):
-            raise SystemExit('the hint lettering reaches the edge of its strip')
+        if cut_off(hint_line, text, 520):
+            raise SystemExit('the hint lettering runs past its strip')
         blits += line_strips(cov, HINT_TXR, HINT_SHEET, tops)
         first, cut, end = halves(cov)
         log('hints: "%s", %d wide, cut at %d' % (text, end - first, cut - first))
@@ -495,7 +505,7 @@ BACK_PAD_JP = 'Bボタンで前画面に戻ります。'                        
 BACK2_PAD_JP = '↑↓で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ↑↓で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, the popups' first line
 BACK3_PAD_JP = '←→で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ←→で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, their second
 JP_SIZE, JP_WIDE, JP_X, JP_BASE = 14.0, 1.0, 3.5, 14.0             # Noto Sans CJK JP Bold against the stock Japanese lines
-JP_BOLD, JP_TRACK = 0.25, -0.25                                    # the stock face is a little heavier and its kana sit closer
+JP_BOLD, JP_TRACK = 0.125, -0.25                                   # the stock face's kana sit closer
 BAR_WIDEST = 410                          # the bubbles behind the bars are sprites of their own, the stock lines' width: 406 the Records bar's, 381 and 386 the popups'
 # The Device Settings page's lines with a pad; HINT_LINES are the keyboard's.
 DEVICES_PAD = ('Select an action and hit the button to bind it', 'Hit the button to bind it, or hold START to keep it')
@@ -507,8 +517,8 @@ OPTIONS_STRIPS = 13                       # the sheet appended to OPTIONS.TXR af
 OPTIONS_TOPS = {'bar': (2, 22), 'devices1': (42, 62), 'devices2': (82, 102)}
 
 
-def jp_line(text, width):
-    return lettering('japanese', text, width, HINT_ROWS, JP_X, JP_BASE, JP_SIZE, JP_WIDE, JP_BOLD, JP_TRACK)
+def jp_line(text, width, spare=0):
+    return lettering('japanese', text, width, HINT_ROWS + 2 * spare, JP_X, JP_BASE + spare, JP_SIZE, JP_WIDE, JP_BOLD, JP_TRACK)
 
 
 BAR_LINES = (('bar', hint_line, BAR_PAD, 520), ('back', hint_line, BACK_PAD, 560), ('back2', hint_line, BACK2_PAD, 600),
@@ -523,8 +533,8 @@ def bars(_game, log):
     lines = {}
     for name, line, text, width in BAR_LINES:
         cov = lines[name] = line(text, width)
-        if any(int(round(c * 15)) for c in cov[0] + cov[-1]):
-            raise SystemExit('"%s" reaches the edge of its strip' % text)
+        if cut_off(line, text, width):
+            raise SystemExit('"%s" runs past its strip' % text)
         first, cut, end = halves(cov)
         log('bars: "%s", %d wide, cut at %d' % (text, end - first, cut - first))
         if end - first > BAR_WIDEST:
@@ -609,7 +619,7 @@ REPLAY_SHEET, REPLAY_AT, REPLAY_W, REPLAY_H = 9, (2, 213), 166, 24
 REPLAY_PLATE, REPLAY_WHITE, REPLAY_YELLOW, REPLAY_INK = 0xf887, 0xffff, 0xffb0, 0xf000
 REPLAY_BASE = 16                          # the baseline's row in the plate
 REPLAY_SMALL, REPLAY_LARGE = (11.0, 0.85, 1.0), (14.0, 0.85, 1.0)   # the white and the yellow words' size, width and boldness, for the stock's 8 and 10 px caps
-REPLAY_GAPS = (1, 1)                      # before and after the yellow words, outlines included
+REPLAY_GAPS = (0, 0)                      # before and after the yellow words, outlines included: the stock's outlines touch
 REPLAY_OUTLINE = 1.125                   # the black outline's reach around a letter, texels
 REPLAY_OUTLINE_GAIN = 2.0                # the outline's coverage times this, capped at 1: harder edges
 REPLAY_WORDS = (('PRESS', REPLAY_SMALL, REPLAY_WHITE), ('A BUTTON', REPLAY_LARGE, REPLAY_YELLOW), ('for REPLAY', REPLAY_SMALL, REPLAY_WHITE))

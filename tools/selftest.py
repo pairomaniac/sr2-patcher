@@ -33,19 +33,19 @@ from uctest import patcher
 EXPECTED_CAPPED = {
     'European': {
         'SEGA RALLY 2.exe': '3d3d0065bdd6bfbb865889c61f28b3b7',
-        'Options.dll': '64de22b3ec728c8373659a7578d780e8',
+        'Options.dll': 'ad62de16889c0f9b1b5a9d599ed3e1eb',
     },
     'American': {
         'SEGA RALLY 2.exe': '54c258bb2cc11333ac130383f0a9d817',
-        'Options.dll': '64de22b3ec728c8373659a7578d780e8',
+        'Options.dll': 'ad62de16889c0f9b1b5a9d599ed3e1eb',
     },
     'Australian': {
         'SEGA RALLY 2.exe': '53a911ddd53252f82e50a98f760f4b34',
-        'Options.dll': '18a3dcabac729e80f31153053da0be13',
+        'Options.dll': 'ba6cc9d1e78b1504335c20ab7c9f69ae',
     },
     'Japanese (DigiCube, MediaKite)': {
         'SEGA RALLY 2.exe': 'fde1fb31acc8cb5c4c96df225d32959b',
-        'Options.dll': '64de22b3ec728c8373659a7578d780e8',
+        'Options.dll': 'ad62de16889c0f9b1b5a9d599ed3e1eb',
     },
 }
 EXPECTED = {
@@ -58,9 +58,9 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
         'MUSASHI\\MGInput.dll': 'abe98034301aafdaf92554f0a8c7d7f5',
         'Title.dll': '432a6d65e596f4c909d9c07af64e8a4b',
-        'Options.dll': 'a2404043d58f73537312795c714e730e',
-        'ReplayGallery.dll': '2ba9a104b6937becb2e0e2a65e889da7',
-        'Record.dll': '9f2afe5bcc1c7f2c5f9adf829e487aa3',
+        'Options.dll': 'd62061969e33c11263a0962c8f00fd4e',
+        'ReplayGallery.dll': 'deeb2d95e91f780b35988cd3912029a5',
+        'Record.dll': '4bd22e63738427d385aeb9d98a752f5f',
         'AdvTelop.dll': '6d8e54fdddcbde12b627fa522fdc913e',
     },
     'American': {
@@ -72,9 +72,9 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
         'MUSASHI\\MGInput.dll': '4f15e627caf77adc2ac0b48e059261a8',
         'Title.dll': 'c3615cdc3c6a60f876ca66010d572fdd',
-        'Options.dll': 'a2404043d58f73537312795c714e730e',
-        'ReplayGallery.dll': '2ba9a104b6937becb2e0e2a65e889da7',
-        'Record.dll': '9f2afe5bcc1c7f2c5f9adf829e487aa3',
+        'Options.dll': 'd62061969e33c11263a0962c8f00fd4e',
+        'ReplayGallery.dll': 'deeb2d95e91f780b35988cd3912029a5',
+        'Record.dll': '4bd22e63738427d385aeb9d98a752f5f',
         'AdvTelop.dll': '6d8e54fdddcbde12b627fa522fdc913e',
     },
     'Australian': {
@@ -86,9 +86,9 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
         'MUSASHI\\MGInput.dll': '0e39f9b494c56476905ef688173899b2',
         'Title.dll': 'cc9285aee0c5dc00a8f55ccfa9d6d090',
-        'Options.dll': '0aadf9270a4a069129520c4c5867b65e',
-        'ReplayGallery.dll': '1b93ce6a681adcfda55d1aef77d1f8f0',
-        'Record.dll': '47ff9d8b4ba17181341ab79aa3adfdc8',
+        'Options.dll': '7bae5048e1bfbcf266a1e4e7b28f3c22',
+        'ReplayGallery.dll': 'c9c32aa0def968c977492060a8a25887',
+        'Record.dll': '21110e6d79b75aa99a85692b4998e988',
         'AdvTelop.dll': 'eea793ceff7b2d7b297903dd324f0396',
     },
     'Japanese (DigiCube, MediaKite)': {
@@ -100,9 +100,9 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '9665e26a5396926b0db8d505954a2203',
         'MUSASHI\\MGInput.dll': 'abe98034301aafdaf92554f0a8c7d7f5',
         'Title.dll': '432a6d65e596f4c909d9c07af64e8a4b',
-        'Options.dll': 'a2404043d58f73537312795c714e730e',
-        'ReplayGallery.dll': '2ba9a104b6937becb2e0e2a65e889da7',
-        'Record.dll': '9f2afe5bcc1c7f2c5f9adf829e487aa3',
+        'Options.dll': 'd62061969e33c11263a0962c8f00fd4e',
+        'ReplayGallery.dll': 'deeb2d95e91f780b35988cd3912029a5',
+        'Record.dll': '4bd22e63738427d385aeb9d98a752f5f',
         'AdvTelop.dll': '6d8e54fdddcbde12b627fa522fdc913e',
     },
 }
