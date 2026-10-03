@@ -185,7 +185,7 @@ left out.
 When a patch changes what it writes, update `EXPECTED` in
 `tools/selftest.py`. For the exe or `Options.dll` also update
 `EXPECTED_CAPPED`, which is pinned under the capped resolution table.
-Then document the change in NOTES.md's table and in MAP.md.
+Then document the change in NOTES.md's tables and in MAP.md.
 
 ## Adding a build
 

@@ -20,8 +20,8 @@ Where something lives, by question:
 
 - *What is at this address, or where does patch X write?* MAP.md has
   both.
-- *What does patch X change?* Start with NOTES.md's table, then read the
-  patch's section under *How each patch works*. The four widescreen
+- *What does patch X change?* Start with NOTES.md's tables, then read the
+  patch's section under its group. The four widescreen
   patches are in WIDESCREEN.md and the gamepad patches in GAMEPAD.md.
 - *Which builds are there, and how do their offsets map?* GAME.md,
   *Builds*, lists them.

@@ -22,7 +22,9 @@ Australian release has an older build with the same interfaces at other
 addresses. Four patches touch it: `xinput`, `dinput8`, `nogeneric` and,
 in the exe, `noregistry`.
 
-## The model
+## MGInput
+
+### The model
 
 The exe's init (`0x47eff0`) makes a config per player, named `"0"` or
 `"1"` at `+0xc`, attaches the keyboard device and loads the config
@@ -63,7 +65,7 @@ device, then finalises. `GetActionState` (`0x100078b0`) takes the largest
 magnitude among an id's records, so a key record and a pad record for
 one action coexist.
 
-## XInput
+### XInput
 
 asm/padinput.asm is hooked at the load, the save, the update and the
 device's poll. The Australian build has no poll method. Its record update
@@ -87,7 +89,7 @@ Before that rule, a pad unplugged and replugged in the menu came back as
 player 2's. A `+xinput` log showed why: side 1's look, a frame ahead,
 took slot 0, and side 0 then skipped that slot as held.
 
-## Rumble
+### Rumble
 
 The pad shakes when the player's car hits something and when it lands
 after a jump. The update hook does this after the side's pad is
@@ -144,7 +146,58 @@ force feedback is read from the code, not tried.
 `tools/padinputtest.py` runs the rumble under Unicorn on every build's
 `MGInput.dll`. The attract demo does not shake the pad.
 
-## DirectInput 8
+### The store
+
+The registry helper's load and save (`0x10008130`, `0x10008210`) become
+the annex's own. The annex keeps a table of the key and pad input for
+each action of each player, and the two deadzones, as text in `SR2.CFG`.
+There is a section for each player and device (`[1P Controller]`,
+`[1P Keyboard]`), holding `Name = value` lines for the eight driving actions
+`Deadzone = 10` in percent and, in a controller section, `Vibration = 70`
+(the rumble's strength in percent, 0 for none). The names are the page's names with
+spaces as underscores; `-` means none. The `=` is optional. An unreadable
+section header closes the section. Unreadable lines keep the defaults.
+The deadzone clamps to 0-90%. A file with the game's 100-byte block ahead
+of the text (from before the `noregistry` patch moved the block to `SR2.DSP`) is
+read past the block.
+
+A load generates the player's records. First come each action's key
+record and pad record. Then come the menus' fixed records: the arrows
+(WASD for player 2) on actions 2-5, and the D-pad and stick halves twice
+over, once on actions 2-5 and once on the four actions the exe's screens
+read (below). The bindable records come first, because the page takes
+the first record as a row's. Only unnamed loads get records; otherwise
+player 1's would double. A save takes the table back out of the exported
+records (the first key source and the first pad source per action). A
+name beginning `DZ` gives the digits after it as the deadzone, and one
+beginning `VB` the vibration strength. The save
+then rewrites the text. The `[Display]` Resolution line and the
+`[Network]` section (the netplay DLL's Staging and Log, 0 or 1) are
+carried over as the file had them, and only when the file had them.
+
+The menus' left and right are the steering's actions, so their fixed
+sources are *menu-only*. A menu-only key is `0x400` + scancode, read from
+the keyboard device's array at `+0x308` (the device whose type byte at
+`+0x260` is 3). A menu-only pad input has bit 5 set. Menu-only sources
+answer only while the exe's car table (`CARS`, `0x4d64bc`) has no car in
+slot 0. The cars exist from a race's setup (`0x412aac`) to its teardown
+(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone, and `0x3d` the vibration strength, a percentage.
+Input `0x3e` reads `0x80` of `0x80` while the player's side holds a pad
+and a pad was the device last used, and 0 otherwise, in a race as well.
+Every screen that shows the pad's prompts reads it, so the prompts are
+the pad's after a pad input and the keyboard's after a key. The pad is
+the device last used at the start. The update makes it so again on any
+button, a trigger past 30 or a stick past half way, on either side's
+pad. A key going down or up makes it the keyboard: once a frame the
+update takes Windows' key state (`GetKeyboardState`, from `user32.dll`),
+sums the down bits of all but the first eight, the mouse's buttons, and
+compares the sum with the last. Keys that stand as they were change
+nothing. DirectInput's key array is not used for this: read from it, a
+key in the team room, which takes its keys from `WM_KEYDOWN`, did not
+switch the button. `tools/padinputtest.py`
+runs this.
+
+### DirectInput 8
 
 The DLL made its DirectInput object with `DirectInputCreateA(hinst,
 0x500, &out, NULL)` (`0x1000294d`, through the thunk at `0x10008a30`,
@@ -208,7 +261,7 @@ DLL's own create routine under Unicorn against a stubbed `dinput8.dll`,
 both with and without the DLL present, and drives the kind entry across
 the type codes.
 
-## Devices of no kind
+### Devices of no kind
 
 With the list enumerated, the loop at `0x100026ab` makes a device of
 every instance whose GUID is not null: it calls `CreateDevice`, runs the
@@ -238,58 +291,9 @@ them) go through as before. The patch needs `dinput8`, whose type codes
 these are. `tools/nogenerictest.py` enters the site as the DLL would, for
 a null GUID, for each skipped type and for each kept type.
 
-## The store
+## The pad in the game
 
-The registry helper's load and save (`0x10008130`, `0x10008210`) become
-the annex's own. The annex keeps a table of the key and pad input for
-each action of each player, and the two deadzones, as text in `SR2.CFG`.
-There is a section for each player and device (`[1P Controller]`,
-`[1P Keyboard]`), holding `Name = value` lines for the eight driving actions
-`Deadzone = 10` in percent and, in a controller section, `Vibration = 70`
-(the rumble's strength in percent, 0 for none). The names are the page's names with
-spaces as underscores; `-` means none. The `=` is optional. An unreadable
-section header closes the section. Unreadable lines keep the defaults.
-The deadzone clamps to 0-90%. A file with the game's 100-byte block ahead
-of the text (from before the `noregistry` patch moved the block to `SR2.DSP`) is
-read past the block.
-
-A load generates the player's records. First come each action's key
-record and pad record. Then come the menus' fixed records: the arrows
-(WASD for player 2) on actions 2-5, and the D-pad and stick halves twice
-over, once on actions 2-5 and once on the four actions the exe's screens
-read (below). The bindable records come first, because the page takes
-the first record as a row's. Only unnamed loads get records; otherwise
-player 1's would double. A save takes the table back out of the exported
-records (the first key source and the first pad source per action). A
-name beginning `DZ` gives the digits after it as the deadzone, and one
-beginning `VB` the vibration strength. The save
-then rewrites the text. The `[Display]` Resolution line and the
-`[Network]` section (the netplay DLL's Staging and Log, 0 or 1) are
-carried over as the file had them, and only when the file had them.
-
-The menus' left and right are the steering's actions, so their fixed
-sources are *menu-only*. A menu-only key is `0x400` + scancode, read from
-the keyboard device's array at `+0x308` (the device whose type byte at
-`+0x260` is 3). A menu-only pad input has bit 5 set. Menu-only sources
-answer only while the exe's car table (`CARS`, `0x4d64bc`) has no car in
-slot 0. The cars exist from a race's setup (`0x412aac`) to its teardown
-(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone, and `0x3d` the vibration strength, a percentage.
-Input `0x3e` reads `0x80` of `0x80` while the player's side holds a pad
-and a pad was the device last used, and 0 otherwise, in a race as well.
-Every screen that shows the pad's prompts reads it, so the prompts are
-the pad's after a pad input and the keyboard's after a key. The pad is
-the device last used at the start. The update makes it so again on any
-button, a trigger past 30 or a stick past half way, on either side's
-pad. A key going down or up makes it the keyboard: once a frame the
-update takes Windows' key state (`GetKeyboardState`, from `user32.dll`),
-sums the down bits of all but the first eight, the mouse's buttons, and
-compares the sum with the last. Keys that stand as they were change
-nothing. DirectInput's key array is not used for this: read from it, a
-key in the team room, which takes its keys from `WM_KEYDOWN`, did not
-switch the button. `tools/padinputtest.py`
-runs this.
-
-## The menus' directions
+### The menus' directions
 
 The exe's multiplayer screens (the driver select, the connection screens
 and the team room) test a word of menu flags. Bits 0-3 are up, down,
@@ -367,7 +371,7 @@ The name tables and defaults are data the patcher appends after the code
 `tools/padinputtest.py` runs the four entries under Unicorn against the
 real DLL.
 
-## Page Up and Page Down
+### Page Up and Page Down
 
 The wrapper's update (`0x47f2d0`) builds each player's level word from a
 fixed table, one action per bit: 10, 11, -, -, -, -, 12, -, -, 2, 3, 4, 5
@@ -395,7 +399,7 @@ caller. It ORs them into the level at `[esi-0xa0]` as 0x80, 0x100 and
 site's branch sees the right flags. `tools/pagepadtest.py` runs the
 entry under Unicorn with each build's addresses.
 
-## The name entry's erase
+### The name entry's erase
 
 The name entry after a time attack (the exe's task at `0x433389`) and
 its copy in `MSelect.dll` erase the last letter on bit 3 or 4 of the
@@ -460,6 +464,63 @@ the stub's second entry, which steps the mode the same way and then does
 the three instructions. `tools/sortpadtest.py` runs both sites on the
 real DLL, relocated, under Unicorn.
 
+### The replay's controls
+
+A replay's cameras do not read `MGInput`'s actions. The camera manager
+(`0x411335`) keeps an input object of its own (vtable `0x49b868`, made at
+`0x440b40`, `0x38` bytes) and updates it every frame (`0x440c30`, from
+`0x411811`). Per player the object holds the device kind at `+8`, the
+device's index at `+0x10`, the edge at `+0x18`, the level at `+0x20`, the
+previous level at `+0x28` and the analog x at `+0x30`, in -127..127. `+4`
+is the player count: two in 2 PLAYER BATTLE, otherwise one. The level's
+bits are: 0-3 up, down, left, right; 0x10 and 0x20 the meter on and off;
+0x40 the screen switch (in 2 PLAYER BATTLE, to the winner) or the watched
+car (in MULTIPLAYER); 0x80 and 0x100 the revolving camera's zoom, which
+is the manual's smooth in and out. Each frame the zoom is held adds or
+takes 1.75/120 from `+0xd8` of the camera, clamped to ±1.75. That value
+is added to the depth of the camera's offset from the car (`+0x18`, which
+is copied fresh from the camera table each frame, `0x44137e`), so the
+distance stays where it was left.
+
+The keyboard fills the object from fixed scancodes (`0x440d20`). Player 1
+has the arrows, Insert, Delete, TAB, Page Up and Page Down. Player 2 has
+S, X, Z, C, T, G and TAB. That is the manual's table. The analog is ±127
+from left and right. A joystick adds to the object only when the player's
+config had one at start. The wrapper's setup (`0x47f0e9`) looks at the
+first source of the config's steering record. If that source is past
+`0x100`, the setup attaches joystick 0 and marks the player's kind at
+`+0x14` of the player's block in the exe's input holder. The update then
+reads that device's `DIJOYSTATE` directly (`0x440e20`): the axes go to
+the directions and the analog, the POV is read on a kind-2 stick, and
+buttons 1, 2 and 3 go to 0x30, 0xc0 and 0x100. The annex's records put a
+key first on every action, so the kind is always the keyboard. An XInput
+pad only answers source ids, so it never reaches this object.
+
+The camera switch (`0x411cf0`) runs while bit 2 of the game's `+0x44`
+flags is set. The replay's starts set that bit (`0x451540`, `0x4516b2`,
+and the ten-year credits' `0x419b14`). The switch takes up and down from
+the edge, 0x10 and 0x20 for the meter and 0x40 for the switch, and hands
+the object to the camera's own input (`0x441860`). On the automatic and
+side cameras, left or right on the edge turns the driver's view to the
+rear, or turns the side camera to the other side. On the revolving camera
+the analog turns it, or left and right from the level when the analog is
+near 0, and 0x80 and 0x100 from the level zoom. The pause is the
+wrapper's Start edge, as in a race.
+
+The `replaypad` patch (asm/replaypad.asm) makes the pad a player's
+whatever the kind. The two loads at the join of both paths (`0x440cea`,
+`mov edx, [esi+8]; mov eax, [esi]`, where the edge is made) become a call
+into the stub. The stub asks the annex's page poll (`PADPOLL`) for the
+player's side (`0x300 + player * 0x40`): the bumpers, the left stick, the
+triggers, Y and X. It ORs the ones past half their range into the level:
+RB as up and LB as down, the next and previous camera; the left stick's
+halves as left and right; RT as 0x80 and LT as 0x100, the zoom; Y as
+0x30, the meter; X as 0x40, the switch. It sets the analog from the left
+stick's x when the keyboard left the analog at 0. Then it does the two
+loads. The D-pad, right stick, A and B are left out. The routine is the
+same in every build. `tools/replaypadtest.py` runs the real update on the
+patched exe under Unicorn with the input objects stubbed.
+
 ## The pad's prompts
 
 The game's prompts are lettering in its texture files, not strings. A
@@ -522,7 +583,9 @@ the game's sheets or drawn by hand, so a prompt can say anything. The
 lobby's SEARCH button (the `lobby` patch) and the team room's SEL are
 set the same way, in the face closest to the buttons' own.
 
-**The stub.** A screen DLL draws a prompt as a sprite of quads. A quad
+### The stub
+
+A screen DLL draws a prompt as a sprite of quads. A quad
 is a rectangle about the sprite's centre over a UV entry, and the draws
 read the sprite, the quad and the entry each time they draw (in
 `Record.dll`, `lea eax, [eax+eax*4]; mov edx, [ecx+eax*4]` at
@@ -559,7 +622,9 @@ It was never released.)
 export's entry by name (`_export_slot`), because it is at another file
 offset in the Australian `Title.dll`.
 
-**The art.** The pad's lettering is written on a sheet of the prompt's
+### The art
+
+The pad's lettering is written on a sheet of the prompt's
 file at patch time: on a stock sheet where one has room, otherwise on a
 sheet the patcher appends (`Record.txr` a sixteenth, each `RG_` file a
 tenth, `OPTIONS.TXR` a fourteenth after the devices patch's thirteenth),
@@ -590,7 +655,9 @@ chosen by fitting about 45 open fonts to each stock prompt that way:
 | the Japanese lines | Noto Sans CJK JP Bold, 14 px, 100% wide, 0.125 px bolder, tracked -0.25 px | the stock's own three lines come out within 4 texels of the stock's width; at 105% wide and untracked they were 11 to 32 texels wider. The letters' places still differ, the stock face setting its kana closer. The bubble behind a bar is a sprite of its own, the stock line's width, so a pad line wider than the stock's hangs out of it: the Records bar's pad line says Bボタンで戻ります, not 前画面に戻ります (372 texels against the stock's 406; the longer form is 427, and at the earlier setting's 456 was seen hanging out in the Japanese build). The popups' lines are 364 and 367 against the stock's 381 and 386, the gallery foot's 179 against 181; `tools/prompts.py` refuses a bar line past 410 |
 | the lobby buttons and the team room's TAB button, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
 
-**The bars.** A bar line is a sprite of two quads about the bar's
+### The bars
+
+A bar line is a sprite of two quads about the bar's
 centre, each a strip of 17 rows with two white texels beyond each end,
 the stock's 207 wide and overlapping at the centre. The pad's line is
 set the same way and cut at the word gap nearest its middle. For each
@@ -614,7 +681,9 @@ its keyboard strip's, and `padoptions` finds the four quads by their
 rectangles and steps each entry index on by one. So `padoptions` needs
 `devices`, and the patch table applies it after.
 
-**The gallery's sort box.** Four boxes of sheet 7, 71 by 13: SORT, white
+### The gallery's sort box
+
+Four boxes of sheet 7, 71 by 13: SORT, white
 on clear, and MODE : F6, CAR : F7 and DATE : F8, black on white. Ten
 pages draw them, 42 quads in all. LB and RB step the sort, so the pad's
 plates read MODE, CAR and DATE and the header SORT LB/RB, in URW Gothic
@@ -624,7 +693,9 @@ the list) has no spare entry, so the entries are switched in place: the
 box, and the sheet number through a bit-31 row, from the array's handle
 for sheet 7 to its handle for the appended sheet 9. 90 rows in all.
 
-**The team room's TAB button.** `tab_menu_on.BMP` is TAB and then MENU
+### The team room's TAB button
+
+`tab_menu_on.BMP` is TAB and then MENU
 on black, `tab_menu_on2.BMP` TAB on black and then CHAT, 98 by 18, the
 same files in every build. Two things show TAB MENU. With the menu
 closed it is painted into the room's backdrop: `CHAT.BMP` (8-bit, 640 by
@@ -680,7 +751,9 @@ stock lettering's colour, read off the file (`lettered`). SEL in the
 open and the closed menu, and the lobby's SEARCH, have been seen in the
 European build under Proton.
 
-**The replay prompt.** PRESS ENTER KEY for REPLAY is one 166 by 24 box
+### The replay prompt
+
+PRESS ENTER KEY for REPLAY is one 166 by 24 box
 of sheet 9 (rows 190 to 213), the same sheet in the three `Rank` files
 and `Record.txr`, drawn by six pages through six entries. Rows 214 to
 236 under it hold the Dreamcast's memory-card text, which no entry
@@ -694,7 +767,9 @@ under the outline's coverage, doubled and capped at 1 for the stock's
 hard black ring, with the word's colour over it by the lettering's
 coverage.
 
-**The Records pages.** Each of the five pages has a sprite of one 100
+### The Records pages
+
+Each of the five pages has a sprite of one 100
 by 16 quad for PAGE UP KEY and one for PAGE DOWN KEY. The sprites' own
 positions put them at (50, 225) and (50, 364). Each page has its own two
 UV entries for them, `(13, 0.075, 0.075, 0.465, 0.137)` and `(13, 0.075,
@@ -720,7 +795,9 @@ stem on the stock P's: a full texel at column 34, then half of one.
 the older one). The export, the routine and the entries are at the same
 places in both.
 
-**The title.** PRESS ENTER KEY is one sprite (`0x100973a0`), 356 by 34
+### The title
+
+PRESS ENTER KEY is one sprite (`0x100973a0`), 356 by 34
 at (320, 330), of two quads (`0x10097338`, `0x1009736c`) over UV
 entries 8 and 9 (`0x100971b0`, `0x100971c4`): the boxes (4.1, 3.1)-
 (219.1, 37.1) and (112.1, 42.2)-(253.2, 76.0) on sheet 5. The image is
@@ -746,7 +823,9 @@ stock ones are, and show a texel a pixel.
 `Title.dll` has two builds too, with the sprite, quads and entries at
 the same places and the export table 16 bytes on in the Australian one.
 
-**The attract screen.** PRESS ENTER KEY is one sprite (`0x10096358`),
+### The attract screen
+
+PRESS ENTER KEY is one sprite (`0x10096358`),
 249 by 17 at (22, 142), of one quad (`0x10096320`) over UV entry 18 of
 the page at `0x100951e0`: the box (2.0, 218.1)-(251.1, 235.0) on sheet 0
 of `ADV_TXT.TXR`. Sheet 0 is full. Sheet 3 is free from row 172, and the
@@ -782,6 +861,8 @@ quad is placed so that the lettering's middle is where the stock's is.
 Both builds of `AdvTelop.dll` have the sprite, the quad and the page at
 the same places.
 
+### The checks
+
 `tools/padpromptstest.py` runs each export on the real DLL, relocated,
 under Unicorn, and checks each sheet as the patcher writes it. The
 `prompts` check renders the art again and compares it with the baked
@@ -790,63 +871,6 @@ Proton: the title's and the attract screen's, the Records pages' labels
 and bars, the gallery's plates and lines, the replay prompt and the
 Device Settings lines in the European build, the Japanese lines in the
 Japanese build.
-
-## The replay's controls
-
-A replay's cameras do not read `MGInput`'s actions. The camera manager
-(`0x411335`) keeps an input object of its own (vtable `0x49b868`, made at
-`0x440b40`, `0x38` bytes) and updates it every frame (`0x440c30`, from
-`0x411811`). Per player the object holds the device kind at `+8`, the
-device's index at `+0x10`, the edge at `+0x18`, the level at `+0x20`, the
-previous level at `+0x28` and the analog x at `+0x30`, in -127..127. `+4`
-is the player count: two in 2 PLAYER BATTLE, otherwise one. The level's
-bits are: 0-3 up, down, left, right; 0x10 and 0x20 the meter on and off;
-0x40 the screen switch (in 2 PLAYER BATTLE, to the winner) or the watched
-car (in MULTIPLAYER); 0x80 and 0x100 the revolving camera's zoom, which
-is the manual's smooth in and out. Each frame the zoom is held adds or
-takes 1.75/120 from `+0xd8` of the camera, clamped to ±1.75. That value
-is added to the depth of the camera's offset from the car (`+0x18`, which
-is copied fresh from the camera table each frame, `0x44137e`), so the
-distance stays where it was left.
-
-The keyboard fills the object from fixed scancodes (`0x440d20`). Player 1
-has the arrows, Insert, Delete, TAB, Page Up and Page Down. Player 2 has
-S, X, Z, C, T, G and TAB. That is the manual's table. The analog is ±127
-from left and right. A joystick adds to the object only when the player's
-config had one at start. The wrapper's setup (`0x47f0e9`) looks at the
-first source of the config's steering record. If that source is past
-`0x100`, the setup attaches joystick 0 and marks the player's kind at
-`+0x14` of the player's block in the exe's input holder. The update then
-reads that device's `DIJOYSTATE` directly (`0x440e20`): the axes go to
-the directions and the analog, the POV is read on a kind-2 stick, and
-buttons 1, 2 and 3 go to 0x30, 0xc0 and 0x100. The annex's records put a
-key first on every action, so the kind is always the keyboard. An XInput
-pad only answers source ids, so it never reaches this object.
-
-The camera switch (`0x411cf0`) runs while bit 2 of the game's `+0x44`
-flags is set. The replay's starts set that bit (`0x451540`, `0x4516b2`,
-and the ten-year credits' `0x419b14`). The switch takes up and down from
-the edge, 0x10 and 0x20 for the meter and 0x40 for the switch, and hands
-the object to the camera's own input (`0x441860`). On the automatic and
-side cameras, left or right on the edge turns the driver's view to the
-rear, or turns the side camera to the other side. On the revolving camera
-the analog turns it, or left and right from the level when the analog is
-near 0, and 0x80 and 0x100 from the level zoom. The pause is the
-wrapper's Start edge, as in a race.
-
-The `replaypad` patch (asm/replaypad.asm) makes the pad a player's
-whatever the kind. The two loads at the join of both paths (`0x440cea`,
-`mov edx, [esi+8]; mov eax, [esi]`, where the edge is made) become a call
-into the stub. The stub asks the annex's page poll (`PADPOLL`) for the
-player's side (`0x300 + player * 0x40`): the bumpers, the left stick, the
-triggers, Y and X. It ORs the ones past half their range into the level:
-RB as up and LB as down, the next and previous camera; the left stick's
-halves as left and right; RT as 0x80 and LT as 0x100, the zoom; Y as
-0x30, the meter; X as 0x40, the switch. It sets the analog from the left
-stick's x when the keyboard left the analog at 0. Then it does the two
-loads. The D-pad, right stick, A and B are left out. The routine is the
-same in every build. `tools/replaypadtest.py` runs the real update on the
-patched exe under Unicorn with the input objects stubbed.
 
 ## The Options screen
 

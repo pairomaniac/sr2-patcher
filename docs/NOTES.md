@@ -19,9 +19,11 @@ how far.
 
 *The annex* is the one `.sr2` section the patcher appends to a file. Each
 patch that puts code or data in the file grows it. The offsets in the
-table are the European build's file offsets; the other builds' offsets
+tables are the European build's file offsets; the other builds' offsets
 are in `BUILDS` and in GAME.md, *Builds*. Bold names are the ones the README
 lists. The key in parentheses is what `--patch` takes.
+
+**Starting and crashes**
 
 | Patch | File | Offsets | Change |
 | --- | --- | --- | --- |
@@ -32,6 +34,12 @@ lists. The key in parentheses is what `--patch` takes.
 | **Texture release checked** (`texrange`) | `MUSASHI\MGameD3D.dll` | `0x4430`, the annex | the release's first ten bytes become a `jmp` into asm/texrange.asm; one relocation entry is dropped |
 | **Survive ALT+TAB** (`altab`, `restoreall`) | `SEGA RALLY 2.exe`, `MUSASHI\MGameD3D.dll` | exe `0x25ff7`, the annex; DLL `0x7710`–`0x778c`, ten relocation entries | in the exe, the `WM_ACTIVATEAPP` handler's `call 0x46e260` (resume the sound) becomes a call to a stub that calls MGameD3D's restore method first. In the DLL, that restore method is rewritten as `IDirectDraw4::RestoreAllSurfaces` |
 | **Z-buffer detach crash** (`zdetach`) | `MUSASHI\MGameD3D.dll` | `0x2930`, `0x2b31`, `0x2d11`, `0x37f4` | each `call [ecx+0x20]` becomes `add esp,0xc`, so the `DeleteAttachedSurface(0, NULL)` on the back buffer is skipped |
+| **No registry** (`noregistry`) | `SEGA RALLY 2.exe` | `0xd07c0`, `0x7e359` | the file name string `SR2.CFG` becomes `SR2.DSP`; `MGameReg`'s Open at `0x47ef59` (21 bytes) becomes `xor esi,esi` |
+
+**Picture and window**
+
+| Patch | File | Offsets | Change |
+| --- | --- | --- | --- |
 | **Missing lettering** (`texfmt`) | `MUSASHI\MGameD3D.dll` | `0xf79c` (12 bytes) | the 16-bit texture-format preference list `1, 2, 3` becomes `3, 1, 2` |
 | **Invisible lobby text** (`textcolor`) | `SEGA RALLY 2.exe` | `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96`, the annex | eight `call [__imp__SetTextColor]` become `call stub; nop`; two `mov esi, [__imp__SetTextColor]` become `mov esi, stub; nop` |
 | **Lobby panels** (`surfmem`) | `MUSASHI\MGameD3D.dll` | `0x7cb2` | the offscreen surface create's video-memory caps `0x4040` become `0x840`, system memory |
@@ -42,19 +50,33 @@ lists. The key in parentheses is what `--patch` takes.
 | **Frame log** (`frametrace`, by name only) | `SEGA RALLY 2.exe` | `0x27bf0`, `0x27d0b`, the annex | the frame gate's first five bytes, and its last five before `pop ebx; ret`, become `jmp`s into asm/frametrace.asm |
 | **Borderless** (`borderless`) | `MUSASHI\MGameD3D.dll` | `0x4d7b`, `0x26be`, the annex | the windowed present becomes a `jmp` to asm/fullwin.asm's present; the `call [__imp__MoveWindow]` in the windowed init becomes a `call` to its sizewindow; ten relocation entries are dropped |
 | **ALT+ENTER** (`altenter`) | `SEGA RALLY 2.exe` | `0x260bc`, the annex | the window procedure's `call 0x41fe20` at `0x426cbc` becomes a call into asm/altenter.asm |
+| **Widescreen** (`widescreen`) | `SEGA RALLY 2.exe` | `0x20dfe`, `0x20e18`, `0x5128a`, `0x4e5`, the annex | four sites become `call`s into asm/wide.asm: the mode setter's entry compare, the mode setter's size stores, the screen-change routine's settings load, and the element walker's callback call. The size table follows the code in the annex |
+| **Widescreen, the 3D** (`widescreen3d`) | `MUSASHI\MGameGL.dll` | `0x2bc0`, `0x2c70`, `0x2de0`, `0x27f0`, `0x2e80`, `0x2ee0`, the annex | the prologues of `SetViewport`, `SetPerspective`, `SetCentre` and the parameter getter become `jmp`s into asm/widegl.asm; the first eight bytes of the projection and of its inverse become jumps to entries of their own |
+| **Widescreen, the 2D** (`widescreen2d`) | `MUSASHI\MGameD3D.dll` | `0x5120`, `0x50d0`, `0x4fe0`, `0x5170`, `0x5030`, `0x5080`, `0x6040`, `0x4d50`, `0x411c`, the annex | the first bytes of the six 2D draws, the device viewport setter, the present and the texture create become `jmp`s into asm/wide2d.asm; seven relocation entries are dropped |
+| **Resolution list** (`resolution`) | `Options.dll` | `0x2815`, `0x2826`, `0x2528`, `0x2b01`, `0x2a5b`, six bytes, the annex | five sites on the Graphic Settings page go into asm/resolution.asm: the row load, the count check, the draw loop head, the row store and DEFAULT's row store. The page's six "7"s become "8". Three relocation entries are dropped |
+| **HUD after the water** (`hudlast`) | `SEGA RALLY 2.exe` | `0x17eb1`, `0x274f2`, `0x25d30` (11 bytes) (`0x18161`, `0x277b2`, `0x25fe0` American; `0x2de01`, `0x4c119`, `0x4a940` Australian), the annex | the race state's HUD call, the frame's root-tree draw and the fade node's draw thunk become branches into asm/hudlast.asm |
+| **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture when it is created (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) become `call`s into asm/loadhold.asm |
+| **The clear's height** (`clearsize`, Australian only) | `SEGA RALLY 2.exe` | `0x40b83` (12 bytes), the annex | the mode setter's `mov eax, [WIDTH]` and its two pushes become a `call` to a thunk that pushes `[HEIGHT]` and `[WIDTH]` and jumps into the clear |
+
+**Sound**
+
+| Patch | File | Offsets | Change |
+| --- | --- | --- | --- |
 | **No mixer needed** (`mixerless`, Australian only) | `MUSASHI\MGAudio.dll` | `0x2278`, the annex | Init's `jne fail` becomes a jump to a stub that zeroes the control count at `+0x84` and eax, then jumps back to the allocation |
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads its min and max through asm/mix.asm's first routine; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load becomes `mov eax, 9`; in the DLL the load's relocation entry is dropped with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` becomes `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` becomes `call hookaddr; nop`; the entry point is repointed at the setup thunk; the CD-volume methods' entries become `jmp setvolume` and `jmp getvolume` |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes | the defaults block's three sliders go from 9 to 6 |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags `0x40` instead of 0 |
+
+**Controls**
+
+| Patch | File | Offsets | Change |
+| --- | --- | --- | --- |
 | **Device Settings** (`devices`) | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x2f0c`, `0x3638`, the dispatch entry at `0x31c0` + 12 (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x567c`, `0x5da8`, `0x5930`), nine `x` fields and two UV entries in `.data`, the annex; the TXR grows a thirteenth sheet | the cursor's and the icon set's item counts go from 3 to 4; the item tables and the state table move to the annex, with a fourth item and two more states; the dispatch table's fourth slot becomes a stub that selects the page's state |
-| **No registry** (`noregistry`) | `SEGA RALLY 2.exe` | `0xd07c0`, `0x7e359` | the file name string `SR2.CFG` becomes `SR2.DSP`; `MGameReg`'s Open at `0x47ef59` (21 bytes) becomes `xor esi,esi` |
-| **Widescreen** (`widescreen`) | `SEGA RALLY 2.exe` | `0x20dfe`, `0x20e18`, `0x5128a`, `0x4e5`, the annex | four sites become `call`s into asm/wide.asm: the mode setter's entry compare, the mode setter's size stores, the screen-change routine's settings load, and the element walker's callback call. The size table follows the code in the annex |
-| **Widescreen, the 3D** (`widescreen3d`) | `MUSASHI\MGameGL.dll` | `0x2bc0`, `0x2c70`, `0x2de0`, `0x27f0`, `0x2e80`, `0x2ee0`, the annex | the prologues of `SetViewport`, `SetPerspective`, `SetCentre` and the parameter getter become `jmp`s into asm/widegl.asm; the first eight bytes of the projection and of its inverse become jumps to entries of their own |
-| **Widescreen, the 2D** (`widescreen2d`) | `MUSASHI\MGameD3D.dll` | `0x5120`, `0x50d0`, `0x4fe0`, `0x5170`, `0x5030`, `0x5080`, `0x6040`, `0x4d50`, `0x411c`, the annex | the first bytes of the six 2D draws, the device viewport setter, the present and the texture create become `jmp`s into asm/wide2d.asm; seven relocation entries are dropped |
-| **Resolution list** (`resolution`) | `Options.dll` | `0x2815`, `0x2826`, `0x2528`, `0x2b01`, `0x2a5b`, six bytes, the annex | five sites on the Graphic Settings page go into asm/resolution.asm: the row load, the count check, the draw loop head, the row store and DEFAULT's row store. The page's six "7"s become "8". Three relocation entries are dropped |
-| **HUD after the water** (`hudlast`) | `SEGA RALLY 2.exe` | `0x17eb1`, `0x274f2`, `0x25d30` (11 bytes) (`0x18161`, `0x277b2`, `0x25fe0` American; `0x2de01`, `0x4c119`, `0x4a940` Australian), the annex | the race state's HUD call, the frame's root-tree draw and the fade node's draw thunk become branches into asm/hudlast.asm |
+| **XInput** (`xinput`) | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`), the annex | the registry helper's load and save, the config's update and the device's poll become `jmp`s into asm/padinput.asm. The Australian build has no device poll, so there the keyboard-poll address is pointed at the annex instead |
+| **DirectInput 8** (`dinput8`) | `MUSASHI\MGInput.dll` | `0x2940` (18 bytes), `0x39ac` (7), the ids at `0x10680`, `0x106c0` (Australian `0x2870`, `0x39f9` (6), `0x10678`, `0x106b8`), the annex | the `DirectInputCreateA` call becomes a `jmp` into asm/dinput8.asm; the first read of the device's type byte becomes a `call` to the stub's translation entry; `IID_IDirectInput8A` and `IID_IDirectInputDevice8A` are written over the DirectInput 2 ids |
+| **Devices of no kind** (`nogeneric`) | `MUSASHI\MGInput.dll` | `0x26d2` (5 bytes; Australian `0x2694`), the annex | the device loop's null-GUID branch and the two instructions after it become a `jmp` into asm/nogeneric.asm. Needs `dinput8` |
 | **Gallery sort on LB/RB** (`sortpad`) | `ReplayGallery.dll` | `0x1b64` (9 bytes), `0x1c6a` (6 bytes), the annex | the list's `mov ecx, [esi+0x50]; and edi, 0xff` after its row update (`0x10002764`) becomes a `call` into asm/sortpad.asm. The stub steps the sort mode on a press of the annex's LB or RB. `push 0; mov edi, eax; mov edx, [ecx]` in the empty gallery's state (`0x1000286a`) calls its second entry, which does the same |
 | **Pad prompts on the Records pages** (`padprompts`) | `Record.dll`, `BINDATA\MISC\Record.txr` | the export table's entry for `_RecordModeExec@4`, the annex; sheet 13 | the export's entry (`0x3e00`) becomes asm/padprompts.asm's RVA. Each frame the stub writes the v0 and v1 of the five pages' two label entries, as PAGE UP KEY and PAGE DOWN KEY or, while a pad is the device last used, as LB BUTTON and RB BUTTON, then jumps to the export's own routine. The patcher writes that lettering over the sheet's unused L LEVER and R LEVER. It also moves the hint bar's two quads apart to meet at 0 (`0xc40e0`, `0xc4114`, 16 bytes each): stock they overlap by two pixels and cut the `a` in `change` |
 | **Pad prompt on the title** (`padtitle`) | `Title.dll`, `BINDATA\MISC\TITLE.TXR` | the export table's entry for `_TitleExec@4`, the annex; sheet 5 | the same stub over the export (`0x12c0`). It writes the prompt's sprite size, its two quads and their two UV boxes, as PRESS ENTER KEY or as PRESS START BUTTON, which the patcher writes on the sheet's free rows 77 to 141 |
@@ -66,14 +88,14 @@ lists. The key in parentheses is what `--patch` takes.
 | **Pad in a replay** (`replaypad`) | `SEGA RALLY 2.exe` | `0x400ea` (5 bytes) (`0x4047a` American, `0x6e99a` Australian), the annex | the two loads where the replay controls' keyboard and joystick paths join (`0x440cea`) become a `call` into asm/replaypad.asm. The stub ORs the annex's bumpers, left stick, triggers, Y and X into the player's level word, then does the two loads itself |
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) becomes a `call` into asm/padmenu.asm. The stub puts the annex's buttons into the level word. It puts the annex's directions, Back as TAB and any press as a key into the keyboard's menu word. Then it makes the edge word and does the three stores |
 | **SEL on the team room's TAB button** (`tabmenu`) | `SEGA RALLY 2.exe`, `BINDATA\chat\TAB_MENU_SEL.BMP`, `TAB_MENU_SEL2.BMP`, `TAB_MENU_BACK.BMP` and `TAB_MENU_BACK_SEL.BMP` | `0x35002`, `0x35629`, `0x37053` (6 bytes), `0x36eac`, `0x3ed13` (5 each), the annex; the four files, new | five `call`s into asm/tabmenu.asm. The room constructor's call that loads the backdrop (`0x435c02`) goes through the stub, which makes that call and then loads the two backdrop files; the room destructor's release loop (`0x436229`) frees them. After the menu layer's first draw has loaded its thirty bitmaps and called the TAB pair's `+0x34` (`0x437c53`), the stub loads the two button files beside them; the menu's release loop (`0x437aac`) puts the stock's back and frees them. In the multiplayer pad poll (`0x43f913`), every frame, it writes the array's two TAB entries as the pad's objects while a pad is the device last used, else the stock's, and when that changes blits the backdrop's TAB MENU box (`CHAT.BMP` at (18, 454), 98 by 18) as SEL or as stock through the surfaces' `SetTarget` (`+0x34`) and `Blit` (`+0x1c`). The button files are the stock pair with SEL over TAB, from a mask `tools/prompts.py` renders; the backdrop files are that box of `CHAT.BMP` as it is and with SEL over TAB |
-| **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture when it is created (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) become `call`s into asm/loadhold.asm |
+
+**Online**
+
+| Patch | File | Offsets | Change |
+| --- | --- | --- | --- |
 | **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3c2`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP`, nine button files, three `showteam_*` files and `Ip_entry_US.bmp` | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL become three, INTERNET / DIRECT IP / LAN, centred. In the exe: the drawer's row y's change, its fourth blit is skipped, the cursor wraps in 0..2, the confirm never picks the modem screen, the latency is read for every type, SHOW TEAMS on row 2 searches at once, and SHOW TEAMS is relettered SEARCH. The IP entry's OK goes through asm/ipcheck.asm (`0x3bf4e`, the annex). The entries are capped by field and CTRL+V is bounded through asm/entrycap.asm (`0x20310`, `0x1f2f1`, `0x1fc49`, `0x1f7ba`, `0x200d5`, the annex). The team room's status line comes from the DLL through asm/status.asm (`0x3544b`, the annex). The chat line's block is 64 bytes larger (`0x344e4`). The popup's lower lines are redrawn. The labels are rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
 | **Starting box** (`starting`) | `SEGA RALLY 2.exe` | `0x367c8`, `0x359bf`, `0x27c35` (7 bytes), `0x63a0` (8 bytes), the annex | the two calls into the race setup (`0x438dc0`) go into asm/starting.asm. The stub draws a box saying the race is starting on the team room's background, blits it onto the room's last frame, presents, then runs the setup. The frame gate's present call goes through the stub's second entry, which keeps the box up. The lobby's surface loader goes through the stub's third entry, which takes the box down. Needs `lobby`. See *The starting box* |
 | **Network DLL** (`netplay`) | `MUSASHI\MGNetWk.dll`, `SR2.CFG` | the whole file | the DLL is replaced by the build of `net/`: the stock DLL's CLSID and three vtables, over plain UDP. It offers a LAN search, an address typed in, and the internet through a directory server. It reads `SR2.CFG`'s `[Network]` section (Staging, Log, both 0), and writes the section when the file has none. See [NETWORK.md](NETWORK.md) and [net/README.md](../net/README.md) |
-| **The clear's height** (`clearsize`, Australian only) | `SEGA RALLY 2.exe` | `0x40b83` (12 bytes), the annex | the mode setter's `mov eax, [WIDTH]` and its two pushes become a `call` to a thunk that pushes `[HEIGHT]` and `[WIDTH]` and jumps into the clear |
-| **XInput** (`xinput`) | `MUSASHI\MGInput.dll` | `0x8130`, `0x8210`, `0x7100`, `0x56c0` (Australian `0x7940`, `0x7a20`, `0x6940`, `0x81a8`), the annex | the registry helper's load and save, the config's update and the device's poll become `jmp`s into asm/padinput.asm. The Australian build has no device poll, so there the keyboard-poll address is pointed at the annex instead |
-| **DirectInput 8** (`dinput8`) | `MUSASHI\MGInput.dll` | `0x2940` (18 bytes), `0x39ac` (7), the ids at `0x10680`, `0x106c0` (Australian `0x2870`, `0x39f9` (6), `0x10678`, `0x106b8`), the annex | the `DirectInputCreateA` call becomes a `jmp` into asm/dinput8.asm; the first read of the device's type byte becomes a `call` to the stub's translation entry; `IID_IDirectInput8A` and `IID_IDirectInputDevice8A` are written over the DirectInput 2 ids |
-| **Devices of no kind** (`nogeneric`) | `MUSASHI\MGInput.dll` | `0x26d2` (5 bytes; Australian `0x2694`), the annex | the device loop's null-GUID branch and the two instructions after it become a `jmp` into asm/nogeneric.asm. Needs `dinput8` |
 
 The exe is never relocated. Inside its `.text`, VA = offset − 0x400 +
 0x401000 (− 0x600 in the American build). In the Musashi DLLs the raw
@@ -84,21 +106,37 @@ offset + 0x10000c00. The DLLs are relocated at load. That is why every
 patch that lands in a DLL is position-independent and drops the
 relocation entries of the bytes it replaces.
 
-## How each patch works
+The sections below take the patches group by group, in the tables'
+order. Rows that are a single obvious byte edit are skipped. The
+widescreen patches have [WIDESCREEN.md](WIDESCREEN.md) to themselves, and
+the gamepad patches and the Device Settings page have
+[GAMEPAD.md](GAMEPAD.md). Most patches install assembled machine code
+rather than editing bytes; the sources, and a longer account of each, are
+in [asm/](../asm/).
 
-The patches follow in the order of the table above. Rows that are a
-single obvious byte edit are skipped. The widescreen patches have
-[WIDESCREEN.md](WIDESCREEN.md) to themselves, and the gamepad
-patches and the Device Settings page have [GAMEPAD.md](GAMEPAD.md).
-Most patches install
-assembled machine code rather than editing bytes; the sources, and a
-longer account of each, are in [asm/](../asm/).
+## Starting and crashes
 
 ### No disc required
 
 The patch has two sites, one for each place the game looks for the disc:
 the startup check and the loader's own scan. GAME.md, *The disc flag*, has
 the account.
+
+### No registry
+
+The game has one file name string `SR2.CFG`, used for the read at
+`0x427740` and the write at `0x427880`. It becomes `SR2.DSP`, so the
+game's 100-byte display block (GAME.md, *The install contract*) keeps a file of
+its own in the stock shape, and `SR2.CFG` is the controls text from byte
+0. `carry_display_block` copies a stock `SR2.CFG`'s block into `SR2.DSP`
+at patch time, once. `write_settings` then writes `SR2.CFG` with the
+sections the applied patches read: the controls for `xinput`, `[Display]`
+for `resolution` and `[Network]` for `netplay`, laid out as the pad annex
+expects them. It writes the whole file when there is none, or when the
+file holds only the block; otherwise it appends a missing section to the
+text. `MGameReg`'s Open at `0x47ef59` (21 bytes) becomes `xor esi,esi`,
+so `Software\SEGA` is never created. GAME.md, *The registry*, and
+GAMEPAD.md have the rest.
 
 ### Replay freed once
 
@@ -179,6 +217,8 @@ stdcall would have. Where the call returned an error, nothing changes. If
 DirectX treated the null as "detach everything", the difference is a
 Z-buffer that stays attached until the back buffer goes. That is a leak
 at exit, not a fault.
+
+## Picture and window
 
 ### Missing lettering
 
@@ -282,7 +322,9 @@ when the window is larger. The fullscreen path instead sets
 
 Three things stood in the way of the windowed path.
 
-**The mode check.** Before it sets the cooperative level, windowed or
+#### The mode check
+
+Before it sets the cooperative level, windowed or
 not, Init runs `EnumDisplayModes` (`0x10002eb0`). Its callback
 (`0x10002f10`) looks for the init struct's width, height and depth,
 640x480 at 16 bits, and Init fails the start with `E_FAIL` when no
@@ -295,7 +337,9 @@ the bring-up again. `anymode` makes the result `S_OK`:
 mode would then fail at `SetDisplayMode` with the same box, so nothing
 is lost.
 
-**The size of the target.** `IDirect3D3::CreateDevice` (`0x10003080`, on
+#### The size of the target
+
+`IDirect3D3::CreateDevice` (`0x10003080`, on
 the back buffer) returns `DDERR_INVALIDOBJECT` (`0x88760082`) on
 Windows' own DirectDraw for a back buffer wider or taller than 2048. The
 `d3dinit` log shows the surface and its Z-buffer created at 2560x1440
@@ -311,7 +355,9 @@ stops at 2048 a side (WIDESCREEN.md, *The setting*), and the present
 stretches the picture into the window. wined3d has no such line, and
 neither do the D3D7 wrappers; those get the full table.
 
-**dgVoodoo 2.** dgVoodoo 2 runs the game once its `ddraw.dll` is in
+#### dgVoodoo 2
+
+dgVoodoo 2 runs the game once its `ddraw.dll` is in
 `MUSASHI\` and its `D3DImm.dll` is beside the exe (above). The patcher's
 `dgvoodoo` add-on fetches the latest release from GitHub (the release
 API, then the `dgVoodoo2_*.zip` asset) and places those two files, with
@@ -341,13 +387,17 @@ machines until a reboot or `Win+Ctrl+Shift+B`. After it, every
 DirectDraw window presented at 3 fps, and `EnumDisplayModes` stopped
 listing 640x480x16, which is the case `anymode` covers.
 
-**The depth check.** The windowed path calls `GetDisplayMode` and refuses
+#### The depth check
+
+The windowed path calls `GetDisplayMode` and refuses
 a desktop whose depth is not the 16 bits it was asked for (`0x1000271e`;
 the `E_FAIL` becomes "Failed to initialize"). Nothing after the check
 depends on the depth, because every surface takes the primary's format.
 `anydepth` skips the check.
 
-**The `.bg` pictures.** The full-screen pictures (title, loading, game
+#### The `.bg` pictures
+
+The full-screen pictures (title, loading, game
 over, the course cards; all `.bg` files) are 16-bit 565. The game copies
 them straight into the locked back buffer row by row (`0x415271`,
 `rep movsd`). The loader at `0x415180` converts 565 to 555 in place when the
@@ -378,7 +428,9 @@ The windowed path sizes the window to the picture, with `MoveWindow` at
 buffer to the client rect, and DirectDraw stretches the blit.
 `fullwin.asm` replaces both ends: the window sizing and the present.
 
-**The window.** The `MoveWindow` call goes to a thunk that moves the
+#### The window
+
+The `MoveWindow` call goes to a thunk that moves the
 window to the monitor under the cursor. The thunk uses `GetCursorPos`,
 `MonitorFromPoint` and `GetMonitorInfoA`, resolved through the DLL's
 `LoadLibraryA` and `GetProcAddress`, because the DLL imports none of
@@ -397,14 +449,18 @@ A `WS_POPUP` window the size of its monitor is what Wine reports to the
 compositor as fullscreen, and there is no display mode behind it to
 restore on activation.
 
-**The present.** From `0x10004d7b` on, the present is replaced by one
+#### The present
+
+From `0x10004d7b` on, the present is replaced by one
 that fits the back buffer's aspect into the client rect, fills the bars
 with `DDBLT_COLORFILL` and blits the picture into the middle. The picture
 is still 640x480, point-sampled up, until a wide size is chosen. The 96
 bytes of the old present carry nine relocation entries, and the call
 carries one. All ten go, because the bytes are either dead or relative.
 
-**Another monitor.** The game creates DirectDraw on the default device
+#### Another monitor
+
+The game creates DirectDraw on the default device
 (`DirectDrawCreate` with the null GUID, `0x10002da0`). That device's
 primary surface is the primary monitor. On Windows the other monitors
 are separate devices. On Wine, `ddraw` sizes its front buffer to output
@@ -469,6 +525,104 @@ and `GetProcAddress` and kept in the section, which is therefore
 writable.
 
 `windowed` and `borderless` are the game's mode and cannot be left out.
+
+### HUD after the water
+
+The tachometer's plate is alpha-blended. It is drawn with the rest of the
+HUD (`0x429d70`, called from the race state's draw at `0x418ab1` while
+the state's `+0x3c` says so) after the scene pass, at z `0.0002` with the
+z-write on. The lake (WIDESCREEN.md, *The sea*) is not part of that pass.
+It is a node of the root tree, which the frame object draws afterwards.
+The frame (`0x4280a0`) runs the state's draw, then, when `[0x4d6a3c]` is
+set and `[0x4e68fc]` is clear, a `BeginScene` and the tree draw
+(`0x470ff0` at `0x4280f2`), then the present. The lake is a screen-space
+plane at z `0.96`–`1.0`, z-tested, meant to show through the hole in the
+ground mesh. Under the plate it fails the z-test, so the plate blends
+over what the scene pass left there: the backdrop's flat grey. A
+`d3dtrace2d` with the `sr2 p` present markers shows the order in each
+frame: the HUD's lists, the sea's four strips, the present. The stock
+game does the same. The Australian build has no `[0x4e68fc]`.
+
+`hudlast.asm` moves the HUD after the tree. It has three entries:
+
+- **state**, in place of the HUD call. When the tree is not going to run,
+  because the game is not running (a paused race) or the flag is set, it
+  draws the HUD there as before. Otherwise it draws nothing and notes the
+  HUD as pending.
+- **late**, in place of the tree draw. It draws the tree. Then, if a HUD
+  is pending, it sets the full viewport through the exe's own wrapper
+  (`0x46bfd0`, with the rect at `0x4b12f0`, as the state's draw did
+  before the HUD in split screen), draws the HUD, and makes the reset
+  that the state's draw made after the HUD (`0x46cec0`: colour key and
+  blending off, on the renderer at `0x50b110`). It goes by the pending
+  note, not by the state's own flag, so a state of another kind never
+  gets the race's HUD.
+- **fade**, in place of the fade node's draw thunk. The fade is a node of
+  the same tree (class vtable `0x49b644`). Its update (`0x426860`) takes
+  the colour and alpha from the node's bytes at `+0x18`. Its draw
+  (`0x426930`) is `mov ecx, [0x50b110]; jmp 0x46bd80`, the renderer's
+  fade quad over the rect at its `+0x5650`, with the alpha at `+0x5668`;
+  nothing is drawn at alpha 0. The quad is at z `0.00014` with the
+  z-write on, under the HUD's `0.00024`. So a HUD drawn after the tree
+  failed the z-test under the quad and appeared on the frame the fade-in
+  ended, seventeen frames into a race in a `d3dtrace`: a pop. This entry
+  draws a pending HUD first and then the fade, so the fade stays over the
+  HUD as it did. *late* then only draws a HUD the fade node did not.
+
+`tools/hudlasttest.py` runs the three entries under Unicorn with the
+exe's routines stubbed.
+
+### Loading screens
+
+The stage's card (`des_AC.bg` and the rest, or `loading.bg`) is an object
+the exe creates when the loading screen opens. `0x41a6f0` picks the file
+by course and mode and does a `new` of 12 bytes with the vtable at
+`0x49b138`; the object is kept at `0x4d6938`. The exe deletes the object
+the moment the course has loaded, in the state step at `0x4195b0`. That
+step does `call 0x418070`, the deleting destructor through the vtable's
+first entry, zeroes the object, and does `inc dword [ebx+0x14]` to move
+on to the next state. A load that took a while on the hardware of 1999
+takes well under a second now, so the card is gone before it is seen.
+
+`loadhold.asm` replaces two six-byte instructions with calls into its two
+entries: the store of the new object at the create (`0x41a7bb`,
+`mov [0x4d6938], ecx`) and the load of it at the step (`0x4195be`,
+`mov ecx, [0x4d6938]`). The first entry makes the store and notes `GetTickCount`,
+which all four builds import. The second entry waits, `Sleep(10)` at a
+time, until 3000 ms have passed since the note, then makes the load.
+`Sleep` is resolved once through `GetProcAddress`.
+
+The wait is a plain sleep. The game's loop does not run meanwhile, and
+the picture stays on screen as the last frame presented. The wait is
+skipped when no note was taken, so the other path that deletes the
+picture (`0x419d00`, an aborted load) is left alone.
+`tools/loadholdtest.py` runs both entries under Unicorn with the clock
+and `Sleep` stubbed.
+
+### The clear's height
+
+Australian only. This build's mode setter clears the back buffer with the
+width for both dimensions. At `0x441783` it loads `[WIDTH]` and pushes
+that same value twice into the clear at `0x441180`. Europe's caller
+(`0x421a75`) and America's push the height as the first argument. The
+Australian clear therefore zeroes width rows of a surface that has
+height rows. At 640x480 that is 160 rows past the end, which on a real
+card landed in whatever the driver had left there. At 5120x1440 it is
+some three thousand seven hundred rows past the end, and under wined3d
+the first frame takes a page fault: the `rep stosd` at `0x4411ce` writes
+off the end of the surface, with ebx the row's 0x2800 bytes and esi
+still counting down from the width.
+
+The `clearsize` patch puts a thunk in the annex that hands the clear the
+two globals the right way round, the height first, as Europe's caller
+does. The site becomes a call to the thunk. The thunk pops its return
+address, pushes the two values, puts the return address back on top and
+jumps into the clear rather than calling it. The clear is cdecl and this
+caller cleans up at `0x441794`, so a thunk that called the clear and
+returned would leave the width where the return address belongs.
+`tools/clearsizetest.py` walks it.
+
+## Sound
 
 ### No mixer needed
 
@@ -571,99 +725,14 @@ at `0x473c48` pushed flags 0, and now pushes `0x40`, a bit the DLL never
 read. The race's level and the mute already carry bit 31. The full
 account is in [asm/README.md](../asm/README.md), *music.asm*.
 
+## Controls
+
 ### Device Settings
 
 This patch adds a fourth item to the Options menu and the page behind
 it. GAMEPAD.md, *The Options screen*, describes it.
 
-### No registry
-
-The game has one file name string `SR2.CFG`, used for the read at
-`0x427740` and the write at `0x427880`. It becomes `SR2.DSP`, so the
-game's 100-byte display block (GAME.md, *The install contract*) keeps a file of
-its own in the stock shape, and `SR2.CFG` is the controls text from byte
-0. `carry_display_block` copies a stock `SR2.CFG`'s block into `SR2.DSP`
-at patch time, once. `write_settings` then writes `SR2.CFG` with the
-sections the applied patches read: the controls for `xinput`, `[Display]`
-for `resolution` and `[Network]` for `netplay`, laid out as the pad annex
-expects them. It writes the whole file when there is none, or when the
-file holds only the block; otherwise it appends a missing section to the
-text. `MGameReg`'s Open at `0x47ef59` (21 bytes) becomes `xor esi,esi`,
-so `Software\SEGA` is never created. GAME.md, *The registry*, and
-GAMEPAD.md have the rest.
-
-### HUD after the water
-
-The tachometer's plate is alpha-blended. It is drawn with the rest of the
-HUD (`0x429d70`, called from the race state's draw at `0x418ab1` while
-the state's `+0x3c` says so) after the scene pass, at z `0.0002` with the
-z-write on. The lake (WIDESCREEN.md, *The sea*) is not part of that pass.
-It is a node of the root tree, which the frame object draws afterwards.
-The frame (`0x4280a0`) runs the state's draw, then, when `[0x4d6a3c]` is
-set and `[0x4e68fc]` is clear, a `BeginScene` and the tree draw
-(`0x470ff0` at `0x4280f2`), then the present. The lake is a screen-space
-plane at z `0.96`–`1.0`, z-tested, meant to show through the hole in the
-ground mesh. Under the plate it fails the z-test, so the plate blends
-over what the scene pass left there: the backdrop's flat grey. A
-`d3dtrace2d` with the `sr2 p` present markers shows the order in each
-frame: the HUD's lists, the sea's four strips, the present. The stock
-game does the same. The Australian build has no `[0x4e68fc]`.
-
-`hudlast.asm` moves the HUD after the tree. It has three entries:
-
-- **state**, in place of the HUD call. When the tree is not going to run,
-  because the game is not running (a paused race) or the flag is set, it
-  draws the HUD there as before. Otherwise it draws nothing and notes the
-  HUD as pending.
-- **late**, in place of the tree draw. It draws the tree. Then, if a HUD
-  is pending, it sets the full viewport through the exe's own wrapper
-  (`0x46bfd0`, with the rect at `0x4b12f0`, as the state's draw did
-  before the HUD in split screen), draws the HUD, and makes the reset
-  that the state's draw made after the HUD (`0x46cec0`: colour key and
-  blending off, on the renderer at `0x50b110`). It goes by the pending
-  note, not by the state's own flag, so a state of another kind never
-  gets the race's HUD.
-- **fade**, in place of the fade node's draw thunk. The fade is a node of
-  the same tree (class vtable `0x49b644`). Its update (`0x426860`) takes
-  the colour and alpha from the node's bytes at `+0x18`. Its draw
-  (`0x426930`) is `mov ecx, [0x50b110]; jmp 0x46bd80`, the renderer's
-  fade quad over the rect at its `+0x5650`, with the alpha at `+0x5668`;
-  nothing is drawn at alpha 0. The quad is at z `0.00014` with the
-  z-write on, under the HUD's `0.00024`. So a HUD drawn after the tree
-  failed the z-test under the quad and appeared on the frame the fade-in
-  ended, seventeen frames into a race in a `d3dtrace`: a pop. This entry
-  draws a pending HUD first and then the fade, so the fade stays over the
-  HUD as it did. *late* then only draws a HUD the fade node did not.
-
-`tools/hudlasttest.py` runs the three entries under Unicorn with the
-exe's routines stubbed.
-
-### Loading screens
-
-The stage's card (`des_AC.bg` and the rest, or `loading.bg`) is an object
-the exe creates when the loading screen opens. `0x41a6f0` picks the file
-by course and mode and does a `new` of 12 bytes with the vtable at
-`0x49b138`; the object is kept at `0x4d6938`. The exe deletes the object
-the moment the course has loaded, in the state step at `0x4195b0`. That
-step does `call 0x418070`, the deleting destructor through the vtable's
-first entry, zeroes the object, and does `inc dword [ebx+0x14]` to move
-on to the next state. A load that took a while on the hardware of 1999
-takes well under a second now, so the card is gone before it is seen.
-
-`loadhold.asm` replaces two six-byte instructions with calls into its two
-entries: the store of the new object at the create (`0x41a7bb`,
-`mov [0x4d6938], ecx`) and the load of it at the step (`0x4195be`,
-`mov ecx, [0x4d6938]`). The first entry makes the store and notes `GetTickCount`,
-which all four builds import. The second entry waits, `Sleep(10)` at a
-time, until 3000 ms have passed since the note, then makes the load.
-`Sleep` is resolved once through `GetProcAddress`.
-
-The wait is a plain sleep. The game's loop does not run meanwhile, and
-the picture stays on screen as the last frame presented. The wait is
-skipped when no note was taken, so the other path that deletes the
-picture (`0x419d00`, an aborted load) is left alone.
-`tools/loadholdtest.py` runs both entries under Unicorn with the clock
-and `Sleep` stubbed.
+## Online
 
 ### The connection screen
 
@@ -682,6 +751,8 @@ the modem's latency as 10000 ms and the other types' latency from
 `GetCaps`. SHOW TEAMS dispatches on the type through `0x43efd8`: the IPX
 row searches at once, and TCP/IP goes through the IP entry.
 [NETWORK.md](NETWORK.md) has the rest.
+
+#### The three rows
 
 With `lobby` the rows are INTERNET, DIRECT IP and LAN. They occupy the
 IPX, TCP/IP and MODEM slots, types 0, 1 and 2, at y 82, 134 and 186:
@@ -706,6 +777,8 @@ files are checked by digest first and kept as `.bak`.
 `tools/buttonstest.py` pins the result. `MPDATA.DAT` keeps the type from
 last time; a stock 3 there is reset to 0 at patch time.
 
+#### The IP entry
+
 On DIRECT IP, SEARCH puts up the IP entry (`0x43cd30`). The text is
 edited at `0x4d3d1c`, with 18 characters shown of 2048. On OK it is
 `lstrcpyA`d to the settings at `0x4eacec`, a 16-byte slot with the modem
@@ -725,6 +798,8 @@ lines on the address form and the port are drawn from a mask
 The face is Liberation Sans Narrow Bold at 17.5 px, 90% wide, with half
 a pixel of tracking, fitted to the stock lines by overlap.
 
+#### The text fields
+
 The same entry widget serves every text field in the lobby. Its
 character handler took up to 0x800 characters (`0x41fef1`, `0x420849`)
 whatever the field. The OK then `lstrcpy`d the text into a slot of 16
@@ -743,6 +818,8 @@ after it become one call to the stub's third entry. That entry copies up
 to the room the cap leaves, drops characters below a space, and returns
 the count copied. `tools/ipchecktest.py` covers both.
 
+#### The team room's address line
+
 On DIRECT IP only, the team room's init prints `IP Address :` and up to
 three addresses from `gethostbyname` (`0x43604b`-`0x43611c`, `TextOutA`
 at (150, 456)). asm/status.asm is called in place of the `lea` that
@@ -751,12 +828,16 @@ starts that lookup. It asks the DLL's network object for the line (slot
 continues at the draw. When there is no object or no line, it redoes the
 `lea` and lets the exe print its own line.
 
+#### Chat lines
+
 A chat line is kept for the team room's list as `name>text` (`0x4350e0`,
 on sending and on receipt). It is `wsprintf`ed into a block of
 `(len + 0x13) & ~3` bytes, which is room for the text and a name of ten
 characters. A longer name ran the line over the next heap block, and the
 game died in the heap's checks a few lines later. `0x344e4` adds 64 to
 the allocation, which is the DLL's name length.
+
+#### The lettering
 
 The lettering is ITC Avant Garde Gothic Demi, 20 px capitals, spaced.
 OFF is the ON at 98/255; ON2 is the ON under a glow. `tools/labels.py`
@@ -824,29 +905,6 @@ gdi32 is resolved once through the import slots. Without gdi32, a
 surface or a DC, the first entry goes straight to the setup.
 `tools/startingtest.py` runs the three entries under Unicorn on every
 build, with the surface, the present, the load and gdi32 stubbed.
-
-### The clear's height
-
-Australian only. This build's mode setter clears the back buffer with the
-width for both dimensions. At `0x441783` it loads `[WIDTH]` and pushes
-that same value twice into the clear at `0x441180`. Europe's caller
-(`0x421a75`) and America's push the height as the first argument. The
-Australian clear therefore zeroes width rows of a surface that has
-height rows. At 640x480 that is 160 rows past the end, which on a real
-card landed in whatever the driver had left there. At 5120x1440 it is
-some three thousand seven hundred rows past the end, and under wined3d
-the first frame takes a page fault: the `rep stosd` at `0x4411ce` writes
-off the end of the surface, with ebx the row's 0x2800 bytes and esi
-still counting down from the width.
-
-The `clearsize` patch puts a thunk in the annex that hands the clear the
-two globals the right way round, the height first, as Europe's caller
-does. The site becomes a call to the thunk. The thunk pops its return
-address, pushes the two values, puts the return address back on top and
-jumps into the clear rather than calling it. The clear is cdecl and this
-caller cleans up at `0x441794`, so a thunk that called the clear and
-returned would leave the width where the return address belongs.
-`tools/clearsizetest.py` walks it.
 
 ## What is not done
 

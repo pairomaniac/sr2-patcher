@@ -73,7 +73,9 @@ viewport and perspective on the renderer itself, and Champagn sets its
 own perspective. So the two methods are taken at their prologues, which
 every caller goes through.
 
-**The rects.** Every rect the game sets is in 640x480 terms: the table
+### The rects
+
+Every rect the game sets is in 640x480 terms: the table
 at `0x4b12f0` (full, top 0-224, bottom 256-480), the DLLs' literals, and
 the countdown's zoom at `0x41905f`, which scales the 640 frame about its
 centre to more than 640x480. All of these are scaled to the whole
@@ -84,7 +86,9 @@ window goes into the picture's 4:3 box, as the 2D around it does: x by
 height, plus the bar. While a window is set the angle is left at 4:3
 (*The credits*).
 
-**The centre.** The projection centre is scaled by height and offset by
+### The centre
+
+The projection centre is scaled by height and offset by
 the bar, as the 2D is. For a centre in the middle this changes nothing,
 because the middle of the 640x480 is the middle of the picture either
 way. It matters for a centre the game sets off the middle. The
@@ -231,6 +235,8 @@ within 16 px of the run's right end so far. A strip or a fan moves as a
 whole. The speed's digits are single quads each, so the split falls
 where no element straddles it.
 
+#### What counts as HUD
+
 **What is HUD** is settled by who draws it. The race's HUD is a set of
 elements on the exe's element list (`0x4e6948`). An element is
 registered through `0x401260` with a callback at `+0xc`, and the walker
@@ -267,6 +273,8 @@ moved to the picture's edge and half stayed at the 4:3 box's. With the
 bounds it keeps its 640x480 place whole. Bounds of zero, from an exe
 patched before this, anchor as before.
 
+#### Refinements
+
 Two refinements came later:
 
 - A list from a HUD callback is anchored whatever edge it touches. The
@@ -289,6 +297,8 @@ Two refinements came later:
   piece whose vertices all lie between 224 and 256 down stays where it
   is. The lower half's own text starts at 252 and reaches below 256, so
   it still moves.
+
+#### What was tried first
 
 Three ways of telling a HUD frame were tried first and taken out. The
 first was the screen id at the screen-change routine, but 4-0xe turned
@@ -388,7 +398,9 @@ each bar is that background - the picture's corner pixel - throughout,
 and nothing more. The row's own edge would have carried the card's blur
 and its red rule out as streaks.
 
-**The composite.** Neither build stretches anything itself. Drawing the
+#### The composite
+
+Neither build stretches anything itself. Drawing the
 scaled picture and its bars into the locked back buffer was some seven
 million CPU pixel writes a frame at 5120x1440, the same cost that made
 the lobby drag. Instead `bgrow` composes the picture at source size into
