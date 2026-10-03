@@ -8,7 +8,8 @@
 ; annex does: 0-15 the buttons in XINPUT_GAMEPAD order (D-pad up, down,
 ; left, right, Start, Back, LS, RS, LB, RB, -, -, A, B, X, Y), 16 and 17
 ; LT and RT, 18-21 the left stick's left, right, up and down, 22-25 the
-; right stick's, 0x3e down while the side holds a pad. The callers take
+; right stick's, 0x3e down while the side holds a pad and a pad was the
+; device last used. The callers take
 ; an input as down when its value is past half its range.
 
 ; eax = a source: eax = its value, edx = its range. ebx, esi, edi and ebp

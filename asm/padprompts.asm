@@ -1,5 +1,5 @@
-; padprompts.asm - a screen's key prompts as the pad's while player 1
-; holds a pad.
+; padprompts.asm - a screen's key prompts as the pad's while a pad is the
+; device last used.
 ;
 ; A screen DLL draws a prompt as a sprite of quads, each a rectangle
 ; over a UV entry in its .data, (texture, u0, v0, u1, v1), and the draw
@@ -11,7 +11,7 @@
 ; The DLL's Exec export (_RecordModeExec@4, _TitleExec@4,
 ; _AdvTelopExec@4, _GalleryModeExec@4, _OptionsModeExec@4) is pointed
 ; here. Each frame this asks MGInput's annex (PADPOLL, null without the
-; xinput patch) whether side 0 holds a pad, writes each dword of the
+; xinput patch) whether a pad is the device last used, writes each dword of the
 ; table as the keyboard's value or the pad's, and goes on to the
 ; export's own routine. The table follows the code, from the patcher:
 ; (RVA, the keyboard's value, the pad's) a dword each, an RVA of 0 after
@@ -30,7 +30,7 @@ bits 32
 %define MAGIC_SELFRVA   0xE7E7E7E7      ; this blob's RVA, filled at apply time
 %define MAGIC_EXEC      0xE6E6E6E6      ; RVA: the export's own routine
 %define PADPOLL         0xDFDFDFDF      ; placeholder: the exe slot holding the annex's page poll
-%define HELD            0x300 + 0x3e    ; the annex's source id: side 0 holds a pad
+%define HELD            0x300 + 0x3e    ; the annex's source id: side 0 holds a pad and a pad was the device last used
 
 entry:  pushad
         call    .here

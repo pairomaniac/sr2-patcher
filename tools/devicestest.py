@@ -139,7 +139,7 @@ def main(argv):
         build_records(cfg, [(struct.unpack_from('<I', r, 0)[0], struct.unpack_from('<I', r, 0x14)[0]) for r in uctest.annex_records(player)])
     mu.mem_write(KEYS, b'\0' * 256)
 
-    pad = {0x33f: 1000, 0x37f: 1500, 0x33d: 5, 0x37d: 0}   # source: value; the deadzones and the vibration strengths
+    pad = {0x33f: 1000, 0x37f: 1500, 0x33d: 70, 0x37d: 0}   # source: value; the deadzones and the vibration strengths
     log = {'persist': [], 'bits': 0}
 
     def cstr(p):
@@ -232,7 +232,7 @@ def main(argv):
     assert (value(0, 0, 0), value(0, 0, 1)) == ('LEFT', 'LS LEFT'), (value(0, 0, 0), value(0, 0, 1))
     assert (value(0, 2, 0), value(0, 2, 1)) == ('X', 'RT')
     assert (value(1, 3, 0), value(1, 3, 1)) == ('S', 'LT')
-    assert (slider(0, 0), slider(1, 0)) == (2, 3) and (slider(0, 1), slider(1, 1)) == (5, 0)    # 10% and 15%; 5 and OFF
+    assert (slider(0, 0), slider(1, 0)) == (2, 3) and (slider(0, 1), slider(1, 1)) == (6, 0)    # 10% and 15%; 70% and OFF
     assert value(0, 6, 0) == 'SPACE' and value(1, 4, 1) == 'A'
 
     # 2. a wait on 1P's ACCEL (row 3): C, which BRAKE has, binds and swaps
@@ -332,7 +332,7 @@ def main(argv):
     call('defaults')
     assert sources(CFG0)[0][0] == 0x2d and sources(CFG0)[1][0] == 0x2e
     assert sources(CFG1)[9][1] == 0x340 + 15 and sources(CFG1)[6][1] == 0x340 + 12
-    assert log['persist'] == [(0, 'DZ1000', 1), (0, 'VB5', 1), (1, 'DZ1000', 1), (1, 'VB5', 1)], log['persist']
+    assert log['persist'] == [(0, 'DZ1000', 1), (0, 'VB0070', 1), (1, 'DZ1000', 1), (1, 'VB0070', 1)], log['persist']
     assert (value(0, 2, 0), value(1, 7, 1)) == ('X', 'Y')
 
     # 6. no input object yet: the bindings find nothing and touch nothing

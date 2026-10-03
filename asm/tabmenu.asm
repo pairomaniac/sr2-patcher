@@ -1,5 +1,5 @@
-; tabmenu.asm - the team room's TAB MENU button as SEL MENU while player 1
-; holds a pad.
+; tabmenu.asm - the team room's TAB MENU button as SEL MENU while a pad is
+; the device last used.
 ;
 ; The team room's buttons are bitmaps the exe blits through MGameD3D's
 ; surface wrapper, not sprites, so padprompts.asm cannot switch them. Two
@@ -30,8 +30,8 @@
 ;   the site's own load (ROOMFLAG).
 ;
 ;   frame (+10), in the multiplayer screens' pad poll, every frame: asks
-;   MGInput's annex (PADPOLL, null without the xinput patch) whether side
-;   0 holds a pad. While the menu's objects are loaded, writes the two
+;   MGInput's annex (PADPOLL, null without the xinput patch) whether a pad
+;   is the device last used. While the menu's objects are loaded, writes the two
 ;   array entries as the pad's objects or the stock's. While the
 ;   backdrop's are, and the answer has changed, blits the matching one
 ;   onto the backdrop (SetTarget +0x34, Blit +0x1c: x, y, &source rect),
@@ -61,7 +61,7 @@ bits 32
 %define POLLBASE    0xA8A8A8A8          ; the frame site's own load
 %define ROOMBG      0xBBBBBBBB          ; the room's surface table, entry 0 the backdrop
 %define PADPOLL     0xDFDFDFDF          ; the exe slot holding the annex's page poll
-%define HELD        0x300 + 0x3e        ; the annex's source id: side 0 holds a pad
+%define HELD        0x300 + 0x3e        ; the annex's source id: side 0 holds a pad and a pad was the device last used
 %define DIR         0xc                 ; BINDATA\chat
 %define S_TARGET    0x34                ; the wrapper: SetTarget(this, surface or 0 for the back buffer)
 %define S_BLIT      0x1c                ; Blit(this, x, y, &rect), the rect left, top, right, bottom

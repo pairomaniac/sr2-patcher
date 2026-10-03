@@ -83,16 +83,16 @@ bits 32
 %define ACT_DEADZONE    0xff
 %define ACT_VIBRATION   0xfd
 %define ACT_SELECTOR    0xfe            ; row 0: the player shown, left and right switch
-%define VALUE_LABEL     20              ; the value string the selector's label is
+%define VALUE_LABEL     16              ; the value string the selector's label is
 %define PAD_BASE        0x300           ; pad sources: PAD_BASE + player * 0x40 + input
 %define PAD_START       4
 %define MENU_ONLY       0x20            ; on a pad source: the menus' own, never a row's
 %define PAD_STICKS      18              ; inputs from here are stick halves, 0..10000
 %define PAD_INPUTS      26
 %define IN_DEADZONE     0x3f            ; reads the player's deadzone
-%define IN_VIBRATION    0x3d            ; reads the player's vibration strength
-%define VIBRATION_MAX   9
-%define VIBRATION_DEFAULT 5
+%define IN_VIBRATION    0x3d            ; reads the player's vibration strength, a percentage
+%define VIBRATION_STEPS 9               ; the slider's steps: OFF, then 20% to 100%, 10% a step
+%define VIBRATION_DEFAULT 70
 %define STICK_ON        5000
 %define KEY_ESC         1
 %define HOLD_FRAMES     60
@@ -500,32 +500,35 @@ exec:
         cmp     eax, DEADZONE_MAX
         jbe     .setdz
         mov     eax, DEADZONE_MAX
-.setdz: call    dzname                  ; edx = "DZnnnn"
+.setdz: mov     edx, 'DZ'
+        call    cfgname                 ; edx = "DZnnnn"
 .save:  pop     eax
         call    savecfg
         call    refresh
         mov     eax, MOVE_SOUND
         call    .sound
         jmp     .out
-.vibration:                             ; left and right, a step in 0..VIBRATION_MAX
+.vibration:                             ; left and right, a step
         test    edi, KEY_LEFT | KEY_RIGHT
         jz      .out
         push    eax
-        lea     eax, [eax * 8]
-        lea     eax, [eax * 8 + PAD_BASE + IN_VIBRATION]
-        call    padpoll
+        call    vibstep
         test    edi, KEY_LEFT
         jz      .up
         test    eax, eax
         jz      .setvb
         dec     eax
         jmp     .setvb
-.up:    cmp     eax, VIBRATION_MAX
+.up:    cmp     eax, VIBRATION_STEPS
         jae     .setvb
         inc     eax
-.setvb: call    vbname                  ; edx = "VBn"
+.setvb: test    eax, eax                ; the step's percentage: 0, or 10 a step from 20
+        jz      .vbset
+        inc     eax
+        imul    eax, eax, 10
+.vbset: mov     edx, 'VB'
+        call    cfgname                 ; edx = "VBnnnn"
         jmp     .save
-        jmp     .out
 .waiting:                               ; a wait for a key or a pad input
         call    waittick
         jmp     .out
@@ -1023,12 +1026,14 @@ defaults:
         jb      .row
         push    eax
         mov     eax, DEADZONE_DEFAULT
-        call    dzname
+        mov     edx, 'DZ'
+        call    cfgname
         pop     eax
         call    savecfg
         push    eax
         mov     eax, VIBRATION_DEFAULT
-        call    vbname
+        mov     edx, 'VB'
+        call    cfgname
         pop     eax
         call    savecfg
         inc     eax
@@ -1042,22 +1047,37 @@ defaults:
         pop     eax
         ret
 
-; eax = a vibration strength, 0..9: edx = "VBn" for Persist.
-vbname: lea     edx, [ebp + dzbuf - $$]
-        mov     word [edx], 'VB'
-        add     al, '0'
-        mov     [edx + 2], al
-        mov     byte [edx + 3], 0
+; eax = the player shown: eax = the vibration slider's step, 0 for none,
+; else a tenth of the percentage less one, 1 to VIBRATION_STEPS.
+vibstep:
+        push    ecx
+        push    edx
+        lea     eax, [eax * 8]
+        lea     eax, [eax * 8 + PAD_BASE + IN_VIBRATION]
+        call    padpoll
+        test    eax, eax
+        jz      .out
+        xor     edx, edx
+        mov     ecx, 10
+        div     ecx
+        dec     eax
+        jg      .most
+        mov     eax, 1
+.most:  cmp     eax, VIBRATION_STEPS
+        jbe     .out
+        mov     eax, VIBRATION_STEPS
+.out:   pop     edx
+        pop     ecx
         ret
 
-; eax = a deadzone, 0..9999 (DEADZONE_MAX is 9000): edx = "DZnnnn" for
-; Persist.
-dzname:
+; eax = a value, 0..9999, dx = two letters, DZ a deadzone or VB a
+; vibration strength: edx = "DZnnnn" or "VBnnnn" for Persist.
+cfgname:
         push    eax
         push    ecx
         push    esi
-        lea     esi, [ebp + dzbuf - $$]
-        mov     word [esi], 'DZ'
+        lea     esi, [ebp + namebuf - $$]
+        mov     [esi], dx
         add     esi, 2
         mov     ecx, 1000
 .next:  xor     edx, edx
@@ -1075,7 +1095,7 @@ dzname:
         test    ecx, ecx
         jnz     .next
         mov     byte [esi], 0
-        lea     edx, [ebp + dzbuf - $$]
+        lea     edx, [ebp + namebuf - $$]
         pop     esi
         pop     ecx
         pop     eax
@@ -1132,8 +1152,6 @@ refresh:
         cmp     ecx, DRIVING
         jb      .row
         ; the deadzone row, its step of 5%
-        lea     edi, [ebx + MAGIC_BINDDATA]
-        add     edi, D_VALUES + DRIVING * 2 * VALUE
         push    eax
         lea     eax, [eax * 8]
         lea     eax, [eax * 8 + PAD_BASE + IN_DEADZONE]
@@ -1147,9 +1165,7 @@ refresh:
         pop     eax
         ; the vibration row
         push    eax
-        lea     eax, [eax * 8]
-        lea     eax, [eax * 8 + PAD_BASE + IN_VIBRATION]
-        call    padpoll
+        call    vibstep
         mov     ecx, D_SLIDERS + 1
         mov     edx, DRIVING + 3
         call    slider
@@ -1234,6 +1250,6 @@ held:   dd      0                       ; frames Start has been held during a wa
 shown:  dd      0                       ; the player the page shows, 0 or 1
 label:  db      'PLAYER 1', 0, 0, 0, 0  ; the selector's, NAME bytes, its digit set by refresh
 oldsrc: dd      0                       ; the source the bound row had
-dzbuf:  times 8 db 0                    ; "DZnnnn" or "VBn" for Persist
+namebuf: times 8 db 0                   ; "DZnnnn" or "VBnnnn" for Persist
 snapkeys: times 256 db 0                ; the keys down as the wait began
 snappad: times 32 db 0                  ; the pad inputs down as it began

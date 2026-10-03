@@ -21,7 +21,8 @@
 ; with (this, slot "0"/"1", name, buf, count[, &got]), are replaced by
 ; the store below. A save whose name starts "DZ" takes the digits after
 ; it as that player's stick deadzone, 0-9000; input 0x3f reads it back.
-; Input 0x3e reads as down while the side holds a pad.
+; Input 0x3e reads as down while the side holds a pad and a pad, not the
+; keyboard, was the device last used.
 ;
 ; The entries sit at fixed offsets. Load, save and update are reached by
 ; a jmp from the site; update's displaced bytes, and the poll's, the
@@ -59,8 +60,8 @@ bits 32
 %define KICK_FRAMES     6               ; its first frames, the left motor doubled
 %define LAND_FRAMES     36              ; a landing's pulse
 %define FADE_FRAMES     20              ; its last frames, over which it fades out
-%define VIB_DEFAULT     5               ; the strength setting, 0 off, 1..VIB_MAX: (setting + 3) twelfths of a motor's full 0xffff
-%define VIB_MAX         9
+%define VIB_DEFAULT     70              ; the strength setting, a percentage of a motor's full 0xffff; 0 off
+%define VIB_MAX         100
 %define IN_VIBRATION    0x3d            ; the virtual input that reads the strength setting
 %define SHAKE_SIZE      16              ; a side's: its car, the two counts as last seen, its frames in the air
 %define SHAKE_CAR       0
@@ -90,7 +91,8 @@ bits 32
 %define STICK_MAX       32767
 %define KEY_DOWN        0x80            ; what the keyboard poll reports, value and range
 %define IN_DEADZONE     0x3f            ; the virtual input that reads the deadzone
-%define IN_HELD         0x3e            ; and the one that is down while the side holds a pad
+%define IN_HELD         0x3e            ; and the one that is down while the side holds a pad and a pad was the device last used
+%define PAD_USED        30              ; a trigger past this is the pad used
 %define MENU_ONLY       0x20            ; on a pad input: answered only outside a race
 %define MENUKEY_BASE    0x400           ; + a scancode: a key answered only outside a race
 
@@ -596,7 +598,7 @@ value:
         call    token
 .done:  ret
 
-; eax = a strength setting: eax = it in 0..VIB_MAX.
+; eax = a strength setting, a percentage: eax = it, at most VIB_MAX.
 strength:
         cmp     eax, VIB_MAX
         jbe     .ok
@@ -729,11 +731,8 @@ write_text:
         stosb
         lea     esi, [ebx + vibration_name - $$]
         call    puts
-        mov     al, ' '
-        stosb
-        mov     eax, [ebx + vib - $$ + ebp * 4]
-        add     al, '0'
-        stosb
+        imul    eax, [ebx + vib - $$ + ebp * 4], 100
+        call    putpercent
         mov     al, 10
         stosb
 .actions:
@@ -904,7 +903,14 @@ putpercent:
         mov     ecx, 10
         xor     edx, edx
         div     ecx
-        test    eax, eax
+        cmp     eax, 10
+        jb      .tens
+        mov     al, '1'                 ; 100
+        stosb
+        mov     al, '0'
+        stosb
+        jmp     .units
+.tens:  test    eax, eax
         jz      .units
         add     al, '0'
         stosb
@@ -995,7 +1001,9 @@ update:
         jnz     .pad
         mov     eax, [MAGIC_CARS]       ; the first car, if a race is set up; read once a frame
         mov     [ebx + inrace - $$], eax
+        call    keyused
 .pad:   call    refresh
+        call    padused
         call    rumble
 .skip:  popad
 replay_update:                          ; the site's six displaced bytes, from the patcher
@@ -1051,6 +1059,61 @@ refresh:
         mov     [edi + 4], eax
         mov     [edi + 8], eax
 .done:  ret
+
+; Once a frame: a key gone down or up makes the keyboard the device last
+; used. The keys are Windows' own (GetKeyboardState), which every screen
+; feeds, where the multiplayer screens leave DirectInput's array alone;
+; the first eight, the mouse's buttons, are left out. Their down bits are
+; summed and the sum compared with the last, so keys that stand as they
+; were change nothing.
+keyused:
+        call    resolve
+        mov     eax, [ebx + fn_keystate - $$]
+        test    eax, eax
+        jz      .out
+        sub     esp, 256
+        push    esp
+        call    eax
+        xor     edx, edx
+        test    eax, eax
+        jz      .sum
+        mov     ecx, 2
+.keys:  mov     edi, [esp + ecx * 4]
+        and     edi, 0x80808080
+        add     edx, edi
+        rol     edx, 3
+        inc     ecx
+        cmp     ecx, 64
+        jb      .keys
+.sum:   add     esp, 256
+        cmp     edx, [ebx + keysum - $$]
+        je      .out
+        mov     [ebx + keysum - $$], edx
+        mov     byte [ebx + lastdev - $$], 0
+.out:   ret
+
+; esi = player: a button, a trigger past PAD_USED or a stick past half
+; way on the side's pad makes the pad the device last used.
+padused:
+        imul    edi, esi, STATE_SIZE
+        lea     edi, [ebx + state - $$ + edi]
+        cmp     word [edi + 4], 0       ; wButtons
+        jne     .pad
+        cmp     byte [edi + 6], PAD_USED
+        ja      .pad
+        cmp     byte [edi + 7], PAD_USED
+        ja      .pad
+        mov     ecx, 4                  ; the four stick axes
+.axis:  movsx   eax, word [edi + 6 + ecx * 2]
+        cdq
+        xor     eax, edx
+        cmp     eax, 0x4000
+        ja      .pad
+        dec     ecx
+        jnz     .axis
+        ret
+.pad:   mov     byte [ebx + lastdev - $$], 1
+        ret
 
 ; esi = player: the side's pad shaken when its car hits something or
 ; lands. The game counts a car's frames since its last hit of a car or an
@@ -1149,11 +1212,9 @@ rumble:
         dec     ecx
         mov     [ebx + shakeleft - $$ + esi], cl
         jz      .set                    ; the pulse over: the motors off
-        mov     eax, [ebx + vib - $$ + esi * 4]
-        add     eax, 3
-        imul    eax, eax, 0xffff
+        imul    eax, [ebx + vib - $$ + esi * 4], 0xffff
         xor     edx, edx
-        mov     edi, 12
+        mov     edi, 100
         div     edi                     ; the strength
         cmp     byte [ebx + shakeleft - $$ + 2 + esi], 0
         jne     .land
@@ -1362,9 +1423,9 @@ answer:
 ;   16, 17  LT, RT
 ;   18-21   left stick left, right, up, down
 ;   22-25   right stick likewise
-;   0x3e    down while the side holds a pad
+;   0x3e    down while the side holds a pad and a pad was the device last used
 ;   0x3f    the side's deadzone
-;   0x3d    the side's vibration strength, 0..VIB_MAX
+;   0x3d    the side's vibration strength, a percentage
 padvalue:
         imul    edi, esi, STATE_SIZE
         lea     edi, [ebx + state - $$ + edi]
@@ -1445,6 +1506,8 @@ padvalue:
 .held:  xor     eax, eax
         cmp     byte [ebx + padidx - $$ + esi], 0
         je      .digital
+        cmp     byte [ebx + lastdev - $$], 0
+        je      .digital
         mov     eax, KEY_DOWN
         jmp     .digital
 .nothing:
@@ -1455,7 +1518,8 @@ padvalue:
 ; ---- imports ---------------------------------------------------------
 
 ; Once: kernel32's file routines by name, and XInputGetState and
-; XInputSetState from the first of three DLLs present. Registers kept.
+; XInputSetState from the first of three DLLs present, and user32's
+; GetKeyboardState. Registers kept.
 resolve:
         cmp     dword [ebx + resolved - $$], 0
         jne     .done
@@ -1494,7 +1558,7 @@ resolve:
         push    edi
         call    [ebx + MAGIC_GETPROC]
         mov     [ebx + fn_setstate - $$], eax
-        jmp     .out
+        jmp     .user
 .nextdll:
         inc     ebp
         cmp     byte [ebp - 1], 0
@@ -1502,6 +1566,16 @@ resolve:
         cmp     byte [ebp], 0
         jne     .dll
         mov     dword [ebx + fn_xinput - $$], 1        ; none: tried and failed
+.user:  lea     eax, [ebx + user32 - $$]
+        push    eax
+        call    [ebx + MAGIC_LOADLIB]
+        test    eax, eax
+        jz      .out
+        lea     ecx, [ebx + keystatename - $$]
+        push    ecx
+        push    eax
+        call    [ebx + MAGIC_GETPROC]
+        mov     [ebx + fn_keystate - $$], eax
 .out:   popad
 .done:  ret
 
@@ -1512,6 +1586,8 @@ names:      db 'CreateFileA', 0, 'ReadFile', 0, 'WriteFile', 0
 xinputdlls: db 'xinput1_4.dll', 0, 'xinput1_3.dll', 0, 'xinput9_1_0.dll', 0, 0
 procname:   db 'XInputGetState', 0
 setname:    db 'XInputSetState', 0
+user32:     db 'user32.dll', 0
+keystatename: db 'GetKeyboardState', 0
 
 ; stick directions: the axis's offset in XINPUT_STATE, and 1 for its
 ; positive half
@@ -1522,6 +1598,9 @@ shake:      times 2 * SHAKE_SIZE db 0
 fn_setstate: dd 0                       ; XInputSetState; 0 when missing
 vib:        dd VIB_DEFAULT, VIB_DEFAULT ; each side's strength setting
 shakeleft:  db 0, 0, 0, 0               ; each side's pulse: the frames left, then each side's kind
+keysum:     dd 0                        ; the keys that were down when last looked at, summed
+fn_keystate: dd 0                       ; user32's GetKeyboardState; 0 when missing
+lastdev:    db 1, 0, 0, 0               ; 1 while the pad is the device last used
 resolved:   dd 0
 fn_createfile:  dd 0                    ; in the order of names
 fn_readfile:    dd 0

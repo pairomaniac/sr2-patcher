@@ -9,7 +9,7 @@ screens' menu word; `replaypad`: the replay controls' word). A key the
 game never reads as input gets the pad read where the key's effect is
 used (`sortpad`: F6-F8 are accelerators, so the gallery reads LB and RB
 itself). A prompt that names a key is drawn as the pad's while a pad is
-held (`padprompts`: the Records pages' page keys and the ranking's
+the device last used (`padprompts`: the Records pages' page keys and the ranking's
 replay prompt; `padtitle`: the title; `padattract`: the attract screen;
 `padgallery`: the Replay Gallery; `padoptions`: Options). Each of these reads
 the pad through the page poll MGInput's annex publishes (`PADPOLL`,
@@ -121,13 +121,13 @@ sets the stub's copies of the counts. While the game is paused the
 counts and the flag stand still, so nothing fires.
 
 The pulse is sent every frame. Its strength comes from the player's
-vibration setting, 0 to 9, 5 as shipped: none at 0, and from 1 to 9
-`0xffff × (setting + 3) / 12`. A hit is 36 frames at a level strength,
+vibration setting, a percentage of a motor's full `0xffff`, 70 as
+shipped and none at 0. A hit is 36 frames at a level strength,
 the left motor at three quarters of it, doubled for the first 6 frames,
 and the right at a half. A landing is 36 frames, the left at three eighths
 and the right at a half, fading out over the last 20. A hit in the frame
 of a landing takes its place. The setting is the page's
-VIBRATION row, kept in `SR2.CFG` as `Vibration = 5` in the player's
+VIBRATION row, kept in `SR2.CFG` as `Vibration = 70` in the player's
 controller section; a save under a name beginning `VB` sets it and input
 `0x3d` reads it back, as `DZ` and `0x3f` do for the deadzone. The pulse goes through
 `XInputSetState`, found beside `XInputGetState`, and the motors are
@@ -142,9 +142,8 @@ the force is a steering pull, not a shake. That account of the exe's
 force feedback is read from the code, not tried.
 
 `tools/padinputtest.py` runs the rumble under Unicorn on every build's
-`MGInput.dll`. The rumble has been felt in the game. The vibration
-setting has not been tried in the game yet. Whether the attract demo
-sets the replay bit has not been checked.
+`MGInput.dll`. Whether the attract demo sets the replay bit has not been
+checked.
 
 ## DirectInput 8
 
@@ -247,8 +246,8 @@ the annex's own. The annex keeps a table of the key and pad input for
 each action of each player, and the two deadzones, as text in `SR2.CFG`.
 There is a section for each player and device (`[1P Controller]`,
 `[1P Keyboard]`), holding `Name = value` lines for the eight driving actions
-`Deadzone = 10` in percent and, in a controller section, `Vibration = 5`
-(0 to 9, the rumble's strength, 0 for none). The names are the page's names with
+`Deadzone = 10` in percent and, in a controller section, `Vibration = 70`
+(the rumble's strength in percent, 0 for none). The names are the page's names with
 spaces as underscores; `-` means none. The `=` is optional. An unreadable
 section header closes the section. Unreadable lines keep the defaults.
 The deadzone clamps to 0-90%. A file with the game's 100-byte block ahead
@@ -275,9 +274,21 @@ the keyboard device's array at `+0x308` (the device whose type byte at
 `+0x260` is 3). A menu-only pad input has bit 5 set. Menu-only sources
 answer only while the exe's car table (`CARS`, `0x4d64bc`) has no car in
 slot 0. The cars exist from a race's setup (`0x412aac`) to its teardown
-(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone, and `0x3d` the vibration strength of 9.
+(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone, and `0x3d` the vibration strength, a percentage.
 Input `0x3e` reads `0x80` of `0x80` while the player's side holds a pad
-and 0 while it holds none, in a race as well.
+and a pad was the device last used, and 0 otherwise, in a race as well.
+Every screen that shows the pad's prompts reads it, so the prompts are
+the pad's after a pad input and the keyboard's after a key. The pad is
+the device last used at the start. The update makes it so again on any
+button, a trigger past 30 or a stick past half way, on either side's
+pad. A key going down or up makes it the keyboard: once a frame the
+update takes Windows' key state (`GetKeyboardState`, from `user32.dll`),
+sums the down bits of all but the first eight, the mouse's buttons, and
+compares the sum with the last. Keys that stand as they were change
+nothing. DirectInput's key array is not used for this: read from it, a
+key in the team room, which takes its keys from `WM_KEYDOWN`, did not
+switch the button. `tools/padinputtest.py`
+runs this.
 
 ## The menus' directions
 
@@ -1005,8 +1016,8 @@ for a key that may be either player's row, for a pad input the same
 player's. Both configs are then saved. ESC pressed since the wait began,
 or Start held for 60 frames, gives up. Left and right on the deadzone row
 step it by 5% within 0 to 45%, and it is saved through a `DZnnnn` name.
-On the vibration row they step the strength within 0 to 9, saved through
-a `VBn` name.
+On the vibration row they step the strength, OFF and then 20% to 100%
+by 10%, saved through a `VBnnnn` name.
 
 Both rows are sliders drawn as the stock's volume sliders are. Sound
 Settings draws a slider's ten strings, OFF and 1 to 9 (the table at
@@ -1018,7 +1029,9 @@ ends them at the value plate's far margin. `refresh` makes the set
 step's entry white and gives it the row's value hold, and makes the
 others black with no hold (`slider`); the data block's bytes 12 and 13
 hold each slider's first entry in the list. The deadzone's step is its
-percentage over 5, so a file's deadzone past 45% lights no step. DEFAULT puts the
+percentage over 5, so a file's deadzone past 45% lights no step. The
+vibration's step is a tenth of its percentage less one, at least 1 when
+it is not 0. DEFAULT puts the
 shipped set back from the page's data block, which follows the strings
 (`bind_data`). The block holds the rows' action ids and a live flag, the
 defaults, the value strings the page fills, and a name per scancode and

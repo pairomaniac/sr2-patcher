@@ -69,10 +69,10 @@ def main(argv):
 
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'CreateFileA', 'ReadFile',
              'WriteFile', 'SetFilePointer', 'CloseHandle', 'SetEndOfFile', 'XInputGetState',
-             'GetPrivateProfileStringA', 'XInputSetState']
+             'GetPrivateProfileStringA', 'XInputSetState', 'GetKeyboardState']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'CreateFileA': 7, 'ReadFile': 5,
             'WriteFile': 5, 'SetFilePointer': 4, 'CloseHandle': 1, 'SetEndOfFile': 1, 'XInputGetState': 2,
-            'GetPrivateProfileStringA': 6, 'XInputSetState': 2}
+            'GetPrivateProfileStringA': 6, 'XInputSetState': 2, 'GetKeyboardState': 1}
     addr = {n: STUBS + 0x10 * k for k, n in enumerate(names)}
     for n in names:
         mu.mem_write(addr[n], b'\xc2' + struct.pack('<H', argc[n] * 4))
@@ -83,6 +83,7 @@ def main(argv):
     disk = {'text': None, 'pos': 0, 'opened': [], 'loaded': [], 'ended': 0}
     pads = {}                                   # slot: (buttons, lt, rt, lx, ly, rx, ry)
     shakes = []                                 # XInputSetState's calls: (slot, left motor, right motor)
+    vk = bytearray(256)                         # Windows' key state, as GetKeyboardState gives it
 
     def cstr(p):
         return bytes(mu.mem_read(p, 300)).split(b'\0')[0].decode('latin-1')
@@ -95,7 +96,7 @@ def main(argv):
         if name == 'LoadLibraryA':
             lib = cstr(args[0])
             disk['loaded'].append(lib)
-            ret = {'kernel32.dll': 2, 'xinput1_3.dll': 3}.get(lib, 0)
+            ret = {'kernel32.dll': 2, 'xinput1_3.dll': 3, 'user32.dll': 4}.get(lib, 0)
         elif name == 'GetProcAddress':
             ret = addr.get(cstr(args[1]), 0)
         elif name == 'GetModuleFileNameA':
@@ -153,6 +154,9 @@ def main(argv):
                 ret = 0
             else:
                 ret = 1167                      # ERROR_DEVICE_NOT_CONNECTED
+        elif name == 'GetKeyboardState':
+            mu.mem_write(args[0], bytes(vk))
+            ret = 1
         elif name == 'XInputSetState':
             shakes.append((args[0],) + struct.unpack('<HH', mu.mem_read(args[1], 4)))
         mu.reg_write(UC_X86_REG_EAX, ret)
@@ -245,7 +249,7 @@ def main(argv):
         t3[a] = (patcher.KEYS_2P[a], patcher.PAD_DEFAULT[a])
     assert recs == uctest.annex_records(1, t3), count
     ret, _p = call(site(save_off), this, slot0, 0, buf, 0)      # a save with no records: 1P's row emptied, no deadzone change
-    assert b'[1P Controller]\nDeadzone = 10\nVibration = 5\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
+    assert b'[1P Controller]\nDeadzone = 10\nVibration = 70\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
     assert b'MenuUp' not in disk['text'] and b'Enter' not in disk['text']
 
     # 3b. an old file, the game's 100 binary bytes before the text: skipped
@@ -327,7 +331,27 @@ def main(argv):
     assert poll(0x300 + patcher.PAD_UP) == (0, 0x80, 0x80)              # the bindable one still does
     assert poll(patcher.MENUKEY_BASE + 0xcb) == (0, 0, 0x80)
     assert poll(0x300 + 0x3f) == (0, 3000, 10000)                      # the deadzone read is not menu-only
-    assert poll(0x300 + 0x3e) == (0, 0x80, 0x80)                       # nor the held one
+    # the held one is not menu-only either, and follows the device last used: a key going down or up in
+    # Windows' key state, or a pad input; a trigger and a stick barely moved leave it, past their
+    # thresholds take it; the mouse's buttons and DirectInput's own array do not count
+    assert poll(0x300 + 0x3e) == (0, 0x80, 0x80)
+    held, idle = pads[1], (0, 0, 0, 0, 0, 0, 0)
+
+    def used(pad, key=0, at=0x41):
+        pads[1] = pad
+        vk[at] = key
+        call(site(update_off), cfg0)
+        return poll(0x300 + 0x3e)[1]
+    assert used(idle) == 0x80, 'the pad let go: still the pad'
+    assert used(idle, 0x80) == 0 and used(idle, 0x80) == 0 and used(idle) == 0, 'a key, held, let go'
+    assert used((0, 30, 0, 0x4000, -0x4000, 0, 0)) == 0, 'a trigger and a stick under their thresholds'
+    assert used((0, 31, 0, 0, 0, 0, 0)) == 0x80 and used(idle, 0x80) == 0 and used(idle) == 0
+    assert used((0, 0, 0, 0, 0, 0, -0x4002)) == 0x80 and used(idle, 0x81, at=1) == 0x80, 'a mouse button'
+    assert used(idle, 0, at=1) == 0x80 and used(idle, 1) == 0x80, 'a toggle bit'
+    assert used(held, 0x80) == 0x80, 'both at once: the pad'
+    assert used(idle, 0x80) == 0x80, 'the key held as it was: still the pad'
+    assert used(idle) == 0 and used(held) == 0x80, 'the key let go, then the pad'
+    mu.mem_write(keys + 0xcb, b'\0')
     mu.mem_write(flag, struct.pack('<I', 0))
     call(site(update_off), cfg0)                        # no car: a menu again
     assert poll(0x300 + patcher.PAD_UP + patcher.MENU_ONLY) == (0, 0x80, 0x80)
@@ -414,17 +438,17 @@ def main(argv):
     def strength(side):                         # the setting through the page's poll
         call(BASE + annex + 25, 0x300 + side * 0x40 + 0x3d, value, rng)
         n, most = struct.unpack('<II', mu.mem_read(value, 4) + mu.mem_read(rng, 4))
-        assert most == 9 and 0 <= n <= 9, (n, most)
+        assert most == 100 and 0 <= n <= 100, (n, most)
         return n
 
-    def motors(kind, left, level=5):
+    def motors(kind, left, level=70):
         """A pulse's (left, right) words with this many frames left."""
-        s = (level + 3) * 0xffff // 12
+        s = level * 0xffff // 100
         if kind == 'hit':                       # level, the left motor doubled over the first frames
             return (min(s * 3 // 4 * 2, 0xffff) if left >= FRAMES['hit'] - KICK else s * 3 // 4, s >> 1)
         s = s * min(left, FADE) // FADE         # a landing fades
         return (s * 3 >> 3, s >> 1)
-    assert strength(0) == 5 and motors('hit', 35) == (0xfffe, 0x5555) and motors('hit', 29) == (0x7fff, 0x5555) and motors('land', 35) == (0x3fff, 0x5555)
+    assert strength(0) == 70 and motors('hit', 35) == (0xffff, 0x5999) and motors('hit', 29) == (0x8665, 0x5999) and motors('land', 35) == (0x4332, 0x5999)
 
     def frame(c=car, hit=None, wall=None, air=0, cfg=cfg0):
         frame.n += 1
@@ -435,7 +459,7 @@ def main(argv):
         call(site(update_off), cfg)
         return list(shakes)
 
-    def rest(kind, slot, level=5, start=None, **kw):
+    def rest(kind, slot, level=70, start=None, **kw):
         """The pulse's frames after its first: one send a frame, fading, then the motors off."""
         for left in range(FRAMES[kind] - 2 if start is None else start, 0, -1):
             got = frame(**kw)
@@ -466,17 +490,17 @@ def main(argv):
     assert frame(cfg=cfg1) == [] and frame(hit=0, cfg=cfg1) == [], 'side 1 outside split screen'
     w(game + 0x38, 5)                           # split screen: side 1's car is slot 1
     w(flag + 4, car2)
-    mu.mem_write(buf, three)                    # side 1's strength saved past the most: 9, full
-    mu.mem_write(name, b'VB12\0')
+    mu.mem_write(buf, three)                    # side 1's strength saved past the most: 100, full
+    mu.mem_write(name, b'VB0120\0')
     ret, _p = call(site(save_off), this, slot1, name, buf, 3)
-    assert ret == 0 and [line for line in disk['text'].splitlines() if line.startswith(b'Vibration')] == [b'Vibration = 5', b'Vibration = 9'], disk['text'].decode()
-    assert strength(1) == 9 and motors('hit', 1, 9) == (0xbfff, 0x7fff)
-    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', FRAMES['hit'] - 1, 9)]
-    rest('hit', slots[1], 9, c=car2, cfg=cfg1)
-    disk['text'] = disk['text'].replace(b'Vibration = 9', b'Vibration = 0')     # read back at 0: no rumble
+    assert ret == 0 and [line for line in disk['text'].splitlines() if line.startswith(b'Vibration')] == [b'Vibration = 70', b'Vibration = 100'], disk['text'].decode()
+    assert strength(1) == 100 and motors('hit', 1, 100) == (0xbfff, 0x7fff)
+    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', FRAMES['hit'] - 1, 100)]
+    rest('hit', slots[1], 100, c=car2, cfg=cfg1)
+    disk['text'] = disk['text'].replace(b'Vibration = 100', b'Vibration = 0')     # read back at 0: no rumble
     fresh()
     load(slot0)
-    assert strength(1) == 0 and strength(0) == 5
+    assert strength(1) == 0 and strength(0) == 70
     assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [] and frame(car2, cfg=cfg1) == []
     w(game + 0x38, 6)                           # a network race: this machine's slot, side 0 alone
     w(netslot, 2)

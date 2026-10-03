@@ -65,10 +65,10 @@ the loader would add the relocation delta into the new code.
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake, but before the tree's fade quad, so the fade stays over the HUD |
 | `loadhold.asm` | exe | the stage loading screens held on screen for three seconds |
 | `padmenu.asm` | exe | the pad on the multiplayer screens, read straight from MGInput's annex; Back acts as TAB, which is how the team room's MENU row opens |
-| `tabmenu.asm` | exe | the team room's TAB MENU button shown as SEL MENU while player 1 holds a pad: the backdrop's box loaded with the room and blitted over the painted-in one when the pad comes or goes, the pad's button bitmaps loaded with the menu and switched into the array each frame, each freed with its owner |
+| `tabmenu.asm` | exe | the team room's TAB MENU button shown as SEL MENU while a pad is the device last used: the backdrop's box loaded with the room and blitted over the painted-in one when the pad comes or goes, the pad's button bitmaps loaded with the menu and switched into the array each frame, each freed with its owner |
 | `sortpad.asm` | `ReplayGallery.dll` | LB and RB step the gallery's sort, which the exe's F6-F8 accelerators set |
 | `pagepad.asm` | exe | LB and RB act as Page Up and Page Down in the input wrapper's level word: the Records pages, the car select's alternative colour |
-| `padprompts.asm` | `Record.dll`, `Title.dll`, `AdvTelop.dll`, `ReplayGallery.dll`, `Options.dll` | a screen's key prompts drawn as the pad's while player 1 holds a pad: the Records pages' page keys and replay prompt, PRESS ENTER KEY on the title and the attract screen, the gallery's sort keys, the hint bars |
+| `padprompts.asm` | `Record.dll`, `Title.dll`, `AdvTelop.dll`, `ReplayGallery.dll`, `Options.dll` | a screen's key prompts drawn as the pad's while a pad is the device last used: the Records pages' page keys and replay prompt, PRESS ENTER KEY on the title and the attract screen, the gallery's sort keys, the hint bars |
 | `replaypad.asm` | exe | the pad on the replay's camera controls, ORed into the level word the keyboard fills |
 | `texrange.asm` | `MGameD3D.dll` | the texture release with its index checked against the count |
 | `replayfree.asm` | `ReplayGallery.dll` | the gallery remembers the block its own `new` returned and frees only that |
@@ -673,7 +673,7 @@ backdrop load: that call, then the patcher's `TAB_MENU_BACK.BMP` and
 `TAB_MENU_BACK_SEL.BMP` the same way. After the menu's two `+0x34`
 calls: the patcher's `TAB_MENU_SEL.BMP` and `TAB_MENU_SEL2.BMP`, the
 stock pointers kept and the two calls done on the new objects. In the
-multiplayer screens' pad poll, every frame: whether side 0 holds a pad,
+multiplayer screens' pad poll, every frame: whether a pad is the device last used,
 from MGInput's annex; while the menu's objects are loaded, the two
 array entries written as the pad's objects or the stock's; while the
 backdrop's are, and the answer has changed, the backdrop file for it
@@ -691,10 +691,10 @@ The game's prompts name keys. Each one this covers has a twin that
 names the pad's button, which the patcher writes on a sheet of the
 prompt's file. One entry in the screen DLL's annex takes the place of
 its Exec export (`_RecordModeExec@4`, `_TitleExec@4`, `_AdvTelopExec@4`,
-`_GalleryModeExec@4`, `_OptionsModeExec@4`). Each frame it asks MGInput's annex whether side 0
-holds a pad, through the published poll. It then writes a list of dwords
+`_GalleryModeExec@4`, `_OptionsModeExec@4`). Each frame it asks MGInput's annex whether a pad
+is the device last used, through the published poll. It then writes a list of dwords
 in the DLL's `.data` from the table the patcher appends after the code:
-the stock's values, or the pad's when a pad is held. Those are the UV
+the stock's values, or the pad's when it is. Those are the UV
 boxes the prompt's quads draw or the entry a quad names, and the quads'
 rectangles and the sprite's size where the pad's lettering is another
 size. A row whose RVA has bit 31 set holds, for each device, the RVA of
@@ -739,8 +739,9 @@ except from a race's setup to its teardown.
 The registry helper's load and save become the `SR2.CFG` text store. A
 save whose name starts `DZ` takes the digits after it as that player's
 deadzone, and source 0x3f reads the deadzone back. A name starting `VB`
-and source 0x3d do the same for the vibration strength, 0-9. Source 0x3e reads as
-down while the player's side holds a pad.
+and source 0x3d do the same for the vibration strength, a percentage. Source 0x3e reads as
+down while the player's side holds a pad and a pad, not the keyboard,
+was the device last used; the prompts follow it.
 
 The update hook also shakes the side's pad through `XInputSetState` when
 its car hits something or lands. It reads the car's two hit counts and
