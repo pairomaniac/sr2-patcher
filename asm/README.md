@@ -738,8 +738,14 @@ except from a race's setup to its teardown.
 
 The registry helper's load and save become the `SR2.CFG` text store. A
 save whose name starts `DZ` takes the digits after it as that player's
-deadzone, and source 0x3f reads the deadzone back. Source 0x3e reads as
+deadzone, and source 0x3f reads the deadzone back. A name starting `VB`
+and source 0x3d do the same for the vibration strength, 0-9. Source 0x3e reads as
 down while the player's side holds a pad.
+
+The update hook also shakes the side's pad through `XInputSetState` when
+its car hits something or lands. It reads the car's two hit counts and
+its airborne flag from the exe's car table; [docs/GAMEPAD.md](../docs/GAMEPAD.md),
+*Rumble*, has the account.
 
 The European, American and Japanese builds have their device poll hooked
 at the same site. The Australian build's older DLL has no such method;
@@ -800,7 +806,7 @@ value strings from the input records, starts the slide-in and falls
 through into `exec`. `exec` draws the page's list, moves the cursor,
 switches between the two players, waits for a key or pad input on an
 action row and binds it (swapping with whichever row had that input
-before), steps the deadzone, restores the defaults, and slides the page
+before), steps the deadzone and the vibration strength, restores the defaults, and slides the page
 out to the left before handing the menu its state back.
 
 The page reaches the game's input objects through a holder the exe fills:

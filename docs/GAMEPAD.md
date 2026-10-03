@@ -87,6 +87,66 @@ Before that rule, a pad unplugged and replugged in the menu came back as
 player 2's. A `+xinput` log showed why: side 1's look, a frame ahead,
 took slot 0, and side 0 then skipped that slot as held.
 
+## Rumble
+
+The pad shakes when the player's car hits something and when it lands
+after a jump. The update hook does this after the side's pad is
+refreshed, by reading the car; nothing in the exe is hooked.
+
+The game keeps two counts in a driven car, each one up a physics step.
+The first is the frames since the car last hit another car or a roadside
+object (`car+0x6d8`, stepped at `0x443e0b`). The second is the frames
+since it last hit a wall (`car+0x6dc`, stepped at `0x402f1f` as `+0x490`
+of the physics block at `car+0x24c`). The game zeroes a count when the
+hit is hard enough for its crash sound and the count is past 60
+(`0x443ec1` for the first, with a push over 0.03; `0x4030ef` and the
+tiers before it for the second, with a push over 0.02). So a count lower
+than it was a frame ago is a hit the game itself sounded. In the
+Australian build the two counts are at `car+0x6d0` and `car+0x6d4`
+(`0x474d6a`, `0x407e5f`). The patcher fills in the offset (`CARHIT`).
+
+The car's airborne flag is `car+0x270` in every build (set at
+`0x402949` when all four wheel flags are set; `0x407889` in the
+Australian build). The stub counts the frames the flag is up. A landing
+is the flag gone after 10 frames or more, the count the game's own
+landing sound waits for (`0x404691`).
+
+The car is the side's slot of the car table (`CARS`). In a network race
+(mode 6 at `+0x38` of the race block, whose pointer is at `0x50b108`,
+`GAME`) it is this machine's slot, the dword `0x94c` past the car table
+(`0x4d6e08`), and only side 0 has one. Side 1 has a car only in split
+screen (mode 5). No side has one while bit 2 of the block's `+0x44`
+flags is set, which the replays set. A car seen for the first time only
+sets the stub's copies of the counts. While the game is paused the
+counts and the flag stand still, so nothing fires.
+
+A pulse is 36 frames, sent every frame, and fades to nothing over its
+last 20. Its strength comes from the player's vibration setting, 0 to 9,
+5 as shipped. At 0 no pulse starts, and the page shows OFF. From 1 to 9
+the strength is `0xffff × (setting + 3) / 12`, so a third at 1, `0xaaaa`
+at 5 and full at 9. A hit drives the left motor, the heavy low one, at
+the strength and the right at a quarter of it. A landing is lighter, the left
+at three eighths and the right, the small high one, at a half. A hit in the frame of a
+landing takes its place. The setting is the page's
+VIBRATION row, kept in `SR2.CFG` as `Vibration = 5` in the player's
+controller section; a save under a name beginning `VB` sets it and input
+`0x3d` reads it back, as `DZ` and `0x3f` do for the deadzone. The pulse goes through
+`XInputSetState`, found beside `XInputGetState`, and the motors are
+switched off when its frames run out, in or out of a race. A machine whose XInput has no
+`XInputSetState` gets no rumble.
+
+The exe has force feedback of its own for a DirectInput wheel: a constant
+force made at `0x444967` and set every frame from the steering force at
+`car+0x6b8` (`0x442b10`, `0x444ba0`). It is not used here. The annex's
+records put a key first, so the wrapper never attaches a joystick, and
+the force is a steering pull, not a shake. That account of the exe's
+force feedback is read from the code, not tried.
+
+`tools/padinputtest.py` runs the rumble under Unicorn on every build's
+`MGInput.dll`. The rumble has been felt in the game. The vibration
+setting has not been tried in the game yet. Whether the attract demo
+sets the replay bit has not been checked.
+
 ## DirectInput 8
 
 The DLL made its DirectInput object with `DirectInputCreateA(hinst,
@@ -188,7 +248,8 @@ the annex's own. The annex keeps a table of the key and pad input for
 each action of each player, and the two deadzones, as text in `SR2.CFG`.
 There is a section for each player and device (`[1P Controller]`,
 `[1P Keyboard]`), holding `Name = value` lines for the eight driving actions
-and `Deadzone = 10` in percent. The names are the page's names with
+`Deadzone = 10` in percent and, in a controller section, `Vibration = 5`
+(0 to 9, the rumble's strength, 0 for none). The names are the page's names with
 spaces as underscores; `-` means none. The `=` is optional. An unreadable
 section header closes the section. Unreadable lines keep the defaults.
 The deadzone clamps to 0-90%. A file with the game's 100-byte block ahead
@@ -203,7 +264,8 @@ read (below). The bindable records come first, because the page takes
 the first record as a row's. Only unnamed loads get records; otherwise
 player 1's would double. A save takes the table back out of the exported
 records (the first key source and the first pad source per action). A
-name beginning `DZ` gives the digits after it as the deadzone. The save
+name beginning `DZ` gives the digits after it as the deadzone, and one
+beginning `VB` the vibration strength. The save
 then rewrites the text. The `[Display]` Resolution line and the
 `[Network]` section (the netplay DLL's Staging and Log, 0 or 1) are
 carried over as the file had them, and only when the file had them.
@@ -214,7 +276,7 @@ the keyboard device's array at `+0x308` (the device whose type byte at
 `+0x260` is 3). A menu-only pad input has bit 5 set. Menu-only sources
 answer only while the exe's car table (`CARS`, `0x4d64bc`) has no car in
 slot 0. The cars exist from a race's setup (`0x412aac`) to its teardown
-(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone.
+(`0x412c67`), whatever the mode. Input `0x3f` reads a player's deadzone, and `0x3d` the vibration strength of 9.
 Input `0x3e` reads `0x80` of `0x80` while the player's side holds a pad
 and 0 while it holds none, in a race as well.
 
@@ -912,8 +974,9 @@ how.
 
 The page shows one player at a time. A selector row comes first: the
 group plate centred, with PLAYER 1 or 2 on it, and left, right or confirm
-switching between them. Then come the KEY and PAD headings and the nine
-rows, which are the eight driving actions and the deadzone. The rows use
+switching between them. Then come the KEY and PAD headings and the ten
+rows, which are the eight driving actions, the deadzone and the
+vibration strength. The rows use
 Graphic Settings' own row sprite (a 123-px label plate, a 30-px fade, a
 273-px value plate, three quads) at its x, and are spaced 24 px apart as
 that page spaces them.
@@ -942,7 +1005,21 @@ the row. The row that had that input before takes the row's old one;
 for a key that may be either player's row, for a pad input the same
 player's. Both configs are then saved. ESC pressed since the wait began,
 or Start held for 60 frames, gives up. Left and right on the deadzone row
-step it by 5%, and it is saved through a `DZnnnn` name. DEFAULT puts the
+step it by 5% within 0 to 45%, and it is saved through a `DZnnnn` name.
+On the vibration row they step the strength within 0 to 9, saved through
+a `VBn` name.
+
+Both rows are sliders drawn as the stock's volume sliders are. Sound
+Settings draws a slider's ten strings, OFF and 1 to 9 (the table at
+`0x1009c8c0`), with the text routine and flags 4, the set step in white
+and the others in black (`0x10004a83`), each `8 × its length + 20` px
+after the last. The page has ten string entries a slider in its draw
+list, OFF at the values' x (271) and 1 to 9 from 311, 26 px apart, which
+ends them at the value plate's far margin. `refresh` makes the set
+step's entry white and gives it the row's value hold, and makes the
+others black with no hold (`slider`); the data block's bytes 12 and 13
+hold each slider's first entry in the list. The deadzone's step is its
+percentage over 5, so a file's deadzone past 45% lights no step. DEFAULT puts the
 shipped set back from the page's data block, which follows the strings
 (`bind_data`). The block holds the rows' action ids and a live flag, the
 defaults, the value strings the page fills, and a name per scancode and

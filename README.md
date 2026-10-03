@@ -152,7 +152,8 @@ the byte, is in [docs/NOTES.md](docs/NOTES.md).
 - **Music from files** - the soundtrack plays from the folder instead of
   the disc. See [Music](#music).
 - **XInput gamepad support** - a modern pad works everywhere, the
-  driving and menu controls rebindable in-game. See [Controls](#controls).
+  driving and menu controls rebindable in-game, with rumble on crashes
+  and landings. See [Controls](#controls).
 - **Internet play** - online, direct IP and LAN in place of DirectPlay;
   no port forwarding needed. See [Internet play](#internet-play).
 - **Loading screens** - the stage card is held for three seconds;
@@ -192,9 +193,11 @@ On Windows the list stops at 2048 a side without the
 ## Controls
 
 An XInput pad works as it is: stick to steer, triggers for the pedals,
-Start to pause, and in the menus A to choose and B to go back. The
-driving and menu controls can be rebound for both players, keyboard and
-pad, under **Options → Device Settings**.
+Start to pause, and in the menus A to choose and B to go back. The pad
+rumbles when the car hits something or lands a jump. The driving and
+menu controls can be rebound for both players, keyboard and pad, under
+**Options → Device Settings**, which also sets the stick deadzone and
+the vibration strength, or turns the rumble off.
 
 <p align="center">
   <img src="assets/readme/options-menu.png" alt="Options menu with Device Settings selected" width="100%" />
@@ -335,7 +338,6 @@ one helps.
 
 In no particular order:
 
-- **Controller rumble** - which the Dreamcast version does have.
 - **Fleshing out the online functionality** - this one's a long term goal,
   but something I am interested in.
 

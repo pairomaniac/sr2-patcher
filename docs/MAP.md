@@ -150,7 +150,8 @@ addresses are not mapped here.
 | `0x50b118` | the MGameD3D interface; `0x50b12c` the sound object |
 | `.sr2` at `0x63b000` | the annex: every exe stub, one after the other |
 | `0x54d188` | the loader object |
-| `0x50b108` | pointer to the current-race block (`+0x38` mode, `+0x54`/`+0x58` course indices) |
+| `0x50b108` | pointer to the current-race block (`+0x38` mode: 5 split screen, 6 a network race; `+0x44` flags, bit 2 a replay; `+0x54`/`+0x58` course indices) |
+| `0x4d64bc` | the car table, a pointer a slot; `0x4d6e08` this machine's slot in a network race. A driven car: `+0x24c` the physics block, `+0x270` the airborne flag, `+0x6d8` and `+0x6dc` the frames since its last hit of a car or object and of a wall (Australian `+0x6d0`, `+0x6d4`); the rumble reads these |
 
 ## 4. `MUSASHI\MGameD3D.dll`
 
