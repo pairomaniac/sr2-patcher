@@ -14,7 +14,7 @@ port forwarding. Windows 10 and 11, Wine and Proton.
 
 <img src="assets/readme/stratos-32x9.png" alt="Lancia Stratos on a coastal stage at 32:9" width="100%" />
 
-**Work in progress.** The game plays start to finish on all four
+**Work in progress.** The game plays start to finish on all five
 releases, but this is a hobby project poking at a 27-year-old binary and
 things will turn up. [Reporting a bug](#reporting-a-bug) says what helps.
 
@@ -356,7 +356,7 @@ patcher edits the game's own files and adds its code beside them; it is
 not a reimplementation of the game.
 
 Every change is read line by line before it goes in, and every patch is
-played on all four builds before it ships. Offsets and bytes are verified
+played on all five releases before it ships. Offsets and bytes are verified
 against the originals before anything is written, and the patcher refuses
 any file that is not an unmodified build it has tables for.
 
