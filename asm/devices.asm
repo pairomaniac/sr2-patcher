@@ -14,7 +14,7 @@
 ;              on the PLAYER row shows the other player; confirm on an
 ;              action row waits for a key or a pad input and binds it,
 ;              swapping with the row that had it, ESC or Start held
-;              giving up; left and right on DEADZONE step it; DEFAULT
+;              giving up; left and right on DEADZONE and VIBRATION step them; DEFAULT
 ;              restores; BACK, or cancel, slides the page out to the
 ;              left and only then puts the menu's state back. Leaves
 ;              through the dispatcher's epilogue.
@@ -70,6 +70,8 @@ bits 32
                                         ; parts added in a second instruction, or the placeholder
                                         ; folds into the displacement and is never filled:
 %define D_ROWACTS       0               ;   the rows' action ids
+%define D_SLIDERS       12              ;   the draw list index of the deadzone slider's first entry, then the vibration's
+%define SLIDER_STEPS    10
 %define D_LIVE          15              ;   1 when the build's MGInput carries the annex; else the page only shows
 %define D_DEFAULTS      16              ;   the shipped (key, pad) per player-row
 %define D_VALUES        80              ;   the value strings, 2 a row
@@ -79,19 +81,23 @@ bits 32
 %define VALUE           16
 %define DRIVING         8
 %define ACT_DEADZONE    0xff
+%define ACT_VIBRATION   0xfd
 %define ACT_SELECTOR    0xfe            ; row 0: the player shown, left and right switch
-%define VALUE_LABEL     18              ; the value string the selector's label is
+%define VALUE_LABEL     20              ; the value string the selector's label is
 %define PAD_BASE        0x300           ; pad sources: PAD_BASE + player * 0x40 + input
 %define PAD_START       4
 %define MENU_ONLY       0x20            ; on a pad source: the menus' own, never a row's
 %define PAD_STICKS      18              ; inputs from here are stick halves, 0..10000
 %define PAD_INPUTS      26
 %define IN_DEADZONE     0x3f            ; reads the player's deadzone
+%define IN_VIBRATION    0x3d            ; reads the player's vibration strength
+%define VIBRATION_MAX   9
+%define VIBRATION_DEFAULT 5
 %define STICK_ON        5000
 %define KEY_ESC         1
 %define HOLD_FRAMES     60
 %define DEADZONE_STEP   500
-%define DEADZONE_MAX    9000
+%define DEADZONE_MAX    4500
 %define DEADZONE_DEFAULT 1000
 
 %define STATE           8               ; the Options object's state
@@ -459,6 +465,8 @@ exec:
         je      .selector
         cmp     edx, ACT_DEADZONE
         je      .deadzone
+        cmp     edx, ACT_VIBRATION
+        je      .vibration
         test    edi, KEY_CONFIRM
         jz      .out
         call    snapshot                ; what is held now is not a press
@@ -493,11 +501,30 @@ exec:
         jbe     .setdz
         mov     eax, DEADZONE_MAX
 .setdz: call    dzname                  ; edx = "DZnnnn"
-        pop     eax
+.save:  pop     eax
         call    savecfg
         call    refresh
         mov     eax, MOVE_SOUND
         call    .sound
+        jmp     .out
+.vibration:                             ; left and right, a step in 0..VIBRATION_MAX
+        test    edi, KEY_LEFT | KEY_RIGHT
+        jz      .out
+        push    eax
+        lea     eax, [eax * 8]
+        lea     eax, [eax * 8 + PAD_BASE + IN_VIBRATION]
+        call    padpoll
+        test    edi, KEY_LEFT
+        jz      .up
+        test    eax, eax
+        jz      .setvb
+        dec     eax
+        jmp     .setvb
+.up:    cmp     eax, VIBRATION_MAX
+        jae     .setvb
+        inc     eax
+.setvb: call    vbname                  ; edx = "VBn"
+        jmp     .save
         jmp     .out
 .waiting:                               ; a wait for a key or a pad input
         call    waittick
@@ -957,7 +984,8 @@ bindpad:
         pop     ecx
         ret
 
-; DEFAULT: both players' rows back to the shipped set, the deadzones too.
+; DEFAULT: both players' rows back to the shipped set, the deadzones and
+; the vibration strengths too.
 defaults:
         push    eax
         push    ecx
@@ -998,6 +1026,11 @@ defaults:
         call    dzname
         pop     eax
         call    savecfg
+        push    eax
+        mov     eax, VIBRATION_DEFAULT
+        call    vbname
+        pop     eax
+        call    savecfg
         inc     eax
         cmp     eax, 2
         jb      .player
@@ -1007,6 +1040,14 @@ defaults:
         pop     edx
         pop     ecx
         pop     eax
+        ret
+
+; eax = a vibration strength, 0..9: edx = "VBn" for Persist.
+vbname: lea     edx, [ebp + dzbuf - $$]
+        mov     word [edx], 'VB'
+        add     al, '0'
+        mov     [edx + 2], al
+        mov     byte [edx + 3], 0
         ret
 
 ; eax = a deadzone, 0..9999 (DEADZONE_MAX is 9000): edx = "DZnnnn" for
@@ -1040,8 +1081,8 @@ dzname:
         pop     eax
         ret
 
-; Every value string from the shown player's records and deadzone, and
-; the selector's label.
+; Every value string from the shown player's records, the two sliders
+; from the deadzone and the vibration strength, and the selector's label.
 refresh:
         push    eax
         push    ecx
@@ -1090,7 +1131,7 @@ refresh:
         inc     ecx
         cmp     ecx, DRIVING
         jb      .row
-        ; the deadzone row, as a percentage
+        ; the deadzone row, its step of 5%
         lea     edi, [ebx + MAGIC_BINDDATA]
         add     edi, D_VALUES + DRIVING * 2 * VALUE
         push    eax
@@ -1098,19 +1139,20 @@ refresh:
         lea     eax, [eax * 8 + PAD_BASE + IN_DEADZONE]
         call    padpoll
         xor     edx, edx
-        mov     ecx, 100
-        div     ecx                     ; the percent
-        mov     ecx, 10
-        xor     edx, edx
-        div     ecx                     ; eax tens, edx units
-        test    eax, eax
-        jz      .units
-        add     al, '0'
-        mov     [edi], al
-        inc     edi
-.units: add     dl, '0'
-        mov     [edi], dl
-        mov     byte [edi + 1], 0
+        mov     ecx, DEADZONE_STEP
+        div     ecx                     ; the step
+        mov     ecx, D_SLIDERS
+        mov     edx, DRIVING + 2        ; the row, plus one
+        call    slider
+        pop     eax
+        ; the vibration row
+        push    eax
+        lea     eax, [eax * 8]
+        lea     eax, [eax * 8 + PAD_BASE + IN_VIBRATION]
+        call    padpoll
+        mov     ecx, D_SLIDERS + 1
+        mov     edx, DRIVING + 3
+        call    slider
         pop     eax
         ; the label: PLAYER 1 or 2
         lea     edi, [ebx + MAGIC_BINDDATA]
@@ -1124,6 +1166,41 @@ refresh:
         pop     edx
         pop     ecx
         pop     eax
+        ret
+
+; eax = a step, ecx = the data block's byte that holds the draw list
+; index of a slider's first entry, edx = its row plus one: of the slider's
+; SLIDER_STEPS entries, OFF and 1 to 9, the step's made white, held by the
+; cursor on its row as a value is, and the others black, as the stock's
+; volume sliders are.
+slider:
+        push    esi
+        push    edi
+        lea     edi, [ebx + MAGIC_BINDDATA]
+        movzx   edi, byte [edi + ecx]
+        lea     edi, [edi + edi * 4]
+        lea     esi, [ebx + MAGIC_DRAWLIST]
+        lea     edi, [esi + edi * 8]    ; the first entry, 40 bytes each
+        mov     esi, edx
+        shl     esi, 8
+        or      esi, edx
+        or      esi, HOLD_VALUE << 16   ; the hold: first and last row plus one, and the kind
+        xor     ecx, ecx
+.step:  xor     edx, edx
+        mov     dword [edi + 36], 0
+        cmp     ecx, eax
+        jne     .set
+        mov     edx, FULL
+        mov     [edi + 36], esi
+.set:   mov     [edi + 24], edx         ; red, green, blue
+        mov     [edi + 28], edx
+        mov     [edi + 32], edx
+        add     edi, 40
+        inc     ecx
+        cmp     ecx, SLIDER_STEPS
+        jb      .step
+        pop     edi
+        pop     esi
         ret
 
 ; esi = a NAME-byte name, edi = a VALUE-byte value string: copied.
@@ -1157,6 +1234,6 @@ held:   dd      0                       ; frames Start has been held during a wa
 shown:  dd      0                       ; the player the page shows, 0 or 1
 label:  db      'PLAYER 1', 0, 0, 0, 0  ; the selector's, NAME bytes, its digit set by refresh
 oldsrc: dd      0                       ; the source the bound row had
-dzbuf:  times 8 db 0                    ; "DZnnnn" for Persist
+dzbuf:  times 8 db 0                    ; "DZnnnn" or "VBn" for Persist
 snapkeys: times 256 db 0                ; the keys down as the wait began
 snappad: times 32 db 0                  ; the pad inputs down as it began

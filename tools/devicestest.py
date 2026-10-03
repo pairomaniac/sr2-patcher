@@ -139,7 +139,7 @@ def main(argv):
         build_records(cfg, [(struct.unpack_from('<I', r, 0)[0], struct.unpack_from('<I', r, 0x14)[0]) for r in uctest.annex_records(player)])
     mu.mem_write(KEYS, b'\0' * 256)
 
-    pad = {0x33f: 1000, 0x37f: 1000}   # source: value
+    pad = {0x33f: 1000, 0x37f: 1500, 0x33d: 5, 0x37d: 0}   # source: value; the deadzones and the vibration strengths
     log = {'persist': [], 'bits': 0}
 
     def cstr(p):
@@ -198,6 +198,26 @@ def main(argv):
             call('refresh')
         return cstr(data + patcher.DATA_VALUES + (row * 2 + col) * 16)
 
+    def slider(player, which):
+        """The lit step of the shown player's deadzone (0) or vibration (1)
+        slider: the one entry of its ten in white, held by its row."""
+        if var('shown') != player:
+            var('shown', player)
+            call('refresh')
+        texts = [i for i in range(len(section) - 3) if section[i:i + 4] == b'OFF\0']
+        assert len(texts) == 2, texts
+        first = section.index(struct.pack('<II', 2, BASE + sec + texts[which]))
+        assert mu.mem_read(data + patcher.DATA_SLIDERS + which, 1)[0] * 40 == first - section.index(struct.pack('<II', 2, BASE + sec + texts[0])) + mu.mem_read(data + patcher.DATA_SLIDERS, 1)[0] * 40
+        lit = []
+        for step in range(10):
+            entry = struct.unpack('<10I', mu.mem_read(BASE + sec + first + step * 40, 40))
+            assert entry[6:9] in ((0, 0, 0), (0x100, 0x100, 0x100)), entry
+            row = 10 + which
+            assert entry[9] == (4 << 16 | row << 8 | row if entry[6] else 0), hex(entry[9])
+            lit += [step] * bool(entry[6])
+        assert len(lit) == 1, lit
+        return lit[0]
+
     def var(label, v=None):
         if v is None:
             return struct.unpack('<I', mu.mem_read(page + labels[label], 4))[0]
@@ -205,14 +225,14 @@ def main(argv):
 
     # 1. refresh: the values from the records, and the label
     call('refresh')
-    assert cstr(data + patcher.DATA_VALUES + 18 * 16) == 'PLAYER 1'
+    assert cstr(data + patcher.DATA_VALUES + patcher.PAGE_LABEL_VALUE * 16) == 'PLAYER 1'
     var('shown', 1)
     call('refresh')
-    assert cstr(data + patcher.DATA_VALUES + 18 * 16) == 'PLAYER 2'
+    assert cstr(data + patcher.DATA_VALUES + patcher.PAGE_LABEL_VALUE * 16) == 'PLAYER 2'
     assert (value(0, 0, 0), value(0, 0, 1)) == ('LEFT', 'LS LEFT'), (value(0, 0, 0), value(0, 0, 1))
     assert (value(0, 2, 0), value(0, 2, 1)) == ('X', 'RT')
     assert (value(1, 3, 0), value(1, 3, 1)) == ('S', 'LT')
-    assert (value(0, 8, 0), value(1, 8, 0)) == ('10', '10')
+    assert (slider(0, 0), slider(1, 0)) == (2, 3) and (slider(0, 1), slider(1, 1)) == (5, 0)    # 10% and 15%; 5 and OFF
     assert value(0, 6, 0) == 'SPACE' and value(1, 4, 1) == 'A'
 
     # 2. a wait on 1P's ACCEL (row 3): C, which BRAKE has, binds and swaps
@@ -307,12 +327,12 @@ def main(argv):
     assert src[4] == [0x3b, 0x300 + 8, 0x400 + 0xcb, 0x300 + patcher.PAD_LEFT + 0x20, 0x300 + patcher.PAD_LS_LEFT + 0x20], src[4]   # the bound pair, then the menus' own
     assert (value(0, 0, 0), value(0, 0, 1)) == ('F1', 'LB')
 
-    # 5. DEFAULT puts everything back and saves both with the deadzone
+    # 5. DEFAULT puts everything back and saves both with the deadzone and the vibration strength
     del log['persist'][:]
     call('defaults')
     assert sources(CFG0)[0][0] == 0x2d and sources(CFG0)[1][0] == 0x2e
     assert sources(CFG1)[9][1] == 0x340 + 15 and sources(CFG1)[6][1] == 0x340 + 12
-    assert log['persist'] == [(0, 'DZ1000', 1), (1, 'DZ1000', 1)], log['persist']
+    assert log['persist'] == [(0, 'DZ1000', 1), (0, 'VB5', 1), (1, 'DZ1000', 1), (1, 'VB5', 1)], log['persist']
     assert (value(0, 2, 0), value(1, 7, 1)) == ('X', 'Y')
 
     # 6. no input object yet: the bindings find nothing and touch nothing
