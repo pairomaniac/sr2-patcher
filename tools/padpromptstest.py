@@ -163,7 +163,6 @@ def sheets(game, key):
         art = [b for b in patcher.prompt_art(key, variant or '') if b[0] == name]
         was, now = patcher.txr_sheets(stock), patcher.txr_sheets(new)
         assert len(now) == len(was) + (1 if any(b[1] == len(was) for b in art) else 0), 'the sheet count'
-        assert new[0x1000:0x1000 + len(stock) - 0x1000] == stock[0x1000:] or True
         texels = {}
         for index, (fmt, width, start, nbytes) in enumerate(now):
             old = struct.unpack_from('<%dH' % (nbytes // 2), stock, was[index][2]) if index < len(was) else (0x0fff,) * (nbytes // 2)

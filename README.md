@@ -222,16 +222,14 @@ each player's Start as bound in Device Settings; the other replay
 controls are fixed.
 
 In the menus LB and RB act as Page Up and Page Down: they turn the
-Records pages and step the Replay Gallery's sort, as F6-F8 do.
-
-With a pad connected the prompts name its buttons: START BUTTON on the
-title and attract screens, A BUTTON for a replay, LB BUTTON and RB
-BUTTON on the Records pages, LB/RB on the gallery's sort box, the B
-button and the D-pad in the hint bars, all in lettering set to match
-the game's, in Japanese on a Japanese install. Unplug the pad and they
-name the keys again, and the team room's TAB button reads SEL. On the
+Records pages and step the Replay Gallery's sort, as F6-F8 do. On the
 car select, hold LB from pressing A until the car is taken for the other
 colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185.
+
+While a pad is connected, the on-screen prompts show its buttons instead
+of keys: the title screen says PRESS START BUTTON, for example. Unplug
+the pad and the keyboard prompts come back. On a Japanese install the
+hint bars stay in Japanese.
 
 In the name entry after a record, X or Backspace erases the last letter,
 and Start jumps to END.

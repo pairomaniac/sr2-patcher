@@ -199,7 +199,7 @@ BUILDS = {
     # functions at 0x442180 and 0x443de0 were recompiled, net 0x10 shorter,
     # so sites and code addresses past 0x444130 are the European ones less
     # 0x10 and everything else - data, import slots, the other thirteen
-    # files - is the European. docs/NOTES.md, *The DigiCube and MediaKite
+    # files - is the European. docs/GAME.md, *The DigiCube and MediaKite
     # build*.
     'Japanese (DigiCube, MediaKite)': {
         'files': {
@@ -929,28 +929,14 @@ FEATURES = (
      ('music', 'cdlevel')),
 
     ('gamepad', 'XInput gamepad support',
-     'A modern pad wherever the game takes input, with every control\n'
-     'rebindable from inside it.\n'
+     'A modern pad wherever the game takes input: driving, the menus,\n'
+     'multiplayer and replays.\n'
      '\n'
      'Driving\tStick to steer, triggers for the pedals, Start to pause.\n'
-     'Menus\tD-pad or stick to move, A and Start to choose, B to go\n'
-     '\tback.\n'
-     'Device Settings\tA page of its own under Options: both players\'\n'
-     '\tcontrols, keyboard and pad side by side. Press a key or\n'
-     '\ta button to rebind it.\n'
-     'Multiplayer\tThe team room takes the pad as well, with Back where\n'
-     '\tTAB was.\n'
-     'Replays\tRB and LB change the camera, the left stick turns it,\n'
-     '\tRT and LT zoom, Y the meter, X the switch.\n'
-     'LB and RB\tThe Records pages and the Replay Gallery\'s sort; LB\n'
-     '\theld through choosing a car picks its other colour.\n'
-     'Name entry\tX erases the last letter, as Backspace does on the\n'
-     '\tkeyboard.\n'
-     'Prompts\tWith a pad connected every prompt names a button: START\n'
-     '\tBUTTON on the title and attract screens, A BUTTON for a\n'
-     '\treplay, LB and RB on the Records pages and the gallery\'s\n'
-     '\tsort, B button and D-pad in the hint bars, SEL on the team\n'
-     '\troom\'s TAB button, in lettering set to match the game\'s.',
+     'Menus\tD-pad or stick to move, A to choose, B to go back. The\n'
+     '\tprompts show the pad\'s buttons while one is connected.\n'
+     'Device Settings\tA new page under Options that rebinds both players\'\n'
+     '\tkeys and buttons.',
      ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'erasekey', 'sortpad', 'padprompts', 'padtitle', 'padattract', 'padgallery', 'padoptions', 'tabmenu')),
 
     ('internet', 'Internet play',
@@ -6921,7 +6907,7 @@ PAD_DEFAULT = {0: PAD_RT, 1: PAD_LT, 2: PAD_UP, 3: PAD_DOWN, 4: PAD_LS_LEFT, 5: 
 # are menu-only - a scancode at MENUKEY_BASE, a pad input with MENU_ONLY
 # set - answered only outside a race; up and down are nobody else's and
 # stay plain, for the pause menu. The exe's own screens take their
-# confirm, back and Enter from actions 10, 11 and 12 (NOTES.md, *The
+# confirm, back and Enter from actions 10, 11 and 12 (GAMEPAD.md, *The
 # menus' directions*), so A, B and Start sit on those as well, menu-only.
 MENU_ONLY, MENUKEY_BASE = 0x20, 0x400
 MENU_CONFIRM, MENU_BACK, MENU_ENTER = 10, 11, 12
@@ -7200,15 +7186,15 @@ def hint_art():
     return tuple(blit[:6] + (zlib.decompress(base64.b64decode(blit[7])),) for blit in HINT_ART)
 
 
-OPTIONS_STRIPS = 13                     # the sheet padoptions appends to OPTIONS.TXR, with the page's lines for a pad on rows 42-78 and 82-118
+OPTIONS_STRIPS = 13                     # the sheet padoptions appends to OPTIONS.TXR
+DEVICES_PAD_TOPS = ((42, 62), (82, 102))    # the rows on it of the page's two lines for a pad, a row a half
 
 
 def devices_bar_strips(line, pad=False):
     """A hint line's two strips, (x, y, width, height) each: the
     keyboard's from HINT_ART, or the pad's from padoptions' art."""
     if pad:
-        tops = ((42, 62), (82, 102))[line]
-        return [b[2:6] for top in tops for b in prompt_art('padoptions') if b[0] == 'OPTIONS.TXR' and b[1] == OPTIONS_STRIPS and b[3] == top]
+        return _strips(prompt_art('padoptions'), 'OPTIONS.TXR', OPTIONS_STRIPS, DEVICES_PAD_TOPS[line])
     return [b[2:6] for b in hint_art()[2 * line:2 * line + 2]]
 
 
@@ -8303,7 +8289,7 @@ def prompt_art(key, variant=None):
 
 def _uv_box(x, y, width, height, size=256):
     """The UV box of a rectangle of a sheet, inset as the stock boxes are."""
-    return tuple(struct.unpack('<f', struct.pack('<f', (v + UV_INSET) / size))[0] for v in (x, y, x + width, y + height))
+    return _f32(*((v + UV_INSET) / size for v in (x, y, x + width, y + height)))
 
 
 def _f32(*values):
@@ -8396,24 +8382,25 @@ def _halves_rects(stock, strips):
     return (_f32(left - HINT_MARGIN, y0, left - HINT_MARGIN + wa, y1), _f32(left + width + HINT_MARGIN - wb, y0, left + width + HINT_MARGIN, y1))
 
 
-def _bar(buf, texture, boxes, stock_rects, strips, sheet, taken, size=256):
+def _bar(buf, texture, boxes, stock_rects, strips, sheet, taken):
     """A bar line's switch: for every sprite drawing the two stock boxes
     as two quads, the quads' entry indices and rectangles switched to
     two spare entries of the page, which the fills make the strips'
     boxes on the appended sheet. Returns (fields, fills)."""
     fields, fills = [], []
-    left = _sprite_quads(buf, texture, boxes[0], size)
-    right = {(page, uv): (quad, rect) for page, quad, uv, rect in _sprite_quads(buf, texture, boxes[1], size)}
+    left = _sprite_quads(buf, texture, boxes[0])
+    right = {(page, quad): (uv, rect) for page, quad, uv, rect in _sprite_quads(buf, texture, boxes[1])}
     if not left:
         raise ValueError('no sprite draws the bar at %s' % (boxes[0],))
+    whole = lambda rect: tuple(round(v) for v in rect)
     for page, quad, uv, rect in left:
-        mate = next(((q, r) for (pg, u), (q, r) in right.items() if pg == page and abs(q - quad) == 52), None)
-        if mate is None or tuple(round(v) for v in rect) != tuple(round(v) for v in stock_rects[0]) or tuple(round(v) for v in mate[1]) != tuple(round(v) for v in stock_rects[1]):
+        mate = next((quad + d for d in (-52, 52) if (page, quad + d) in right), None)       # the other half is the quad beside it
+        if mate is None or whole(rect) != whole(stock_rects[0]) or whole(right[page, mate][1]) != whole(stock_rects[1]):
             raise ValueError('the bar\'s quads at 0x%x are not the pair expected' % quad)
-        spares = _spares(buf, page, 2, taken)
-        rects = _halves_rects((rect, mate[1]), [(w, h) for _x, _y, w, h in strips])
-        for (q, r), (index, entry, was), (x, y, w, h), new in zip(((quad, rect), mate), spares, strips, rects):
-            fields.append((q, '<i4f', (uv if q == quad else next(u for (pg, u), (qq, _r) in right.items() if qq == q),) + tuple(r), (index,) + new))
+        halves = ((quad, uv, rect), (mate,) + right[page, mate])
+        rects = _halves_rects((rect, right[page, mate][1]), [(w, h) for _x, _y, w, h in strips])
+        for (q, u, r), (index, entry, was), (x, y, w, h), new in zip(halves, _spares(buf, page, 2, taken), strips, rects):
+            fields.append((q, '<i4f', (u,) + tuple(r), (index,) + new))
             fills.append((entry, was, struct.pack('<i4f', sheet, *_uv_box(x, y, w, h))))
     return fields, fills
 
@@ -8472,9 +8459,9 @@ def prompt_switches(buf, build, key, variant):
                 fields.append((entry + 4, '<4f', stock, _uv_box(x, y, w, h)))
         return fields, fills
     if key == 'padoptions':
-        fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', 13, (2, 22)), 13, taken)
-        for line, tops in enumerate(((42, 62), (82, 102))):
-            strips = _strips(art, 'OPTIONS.TXR', 13, tops)
+        fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', OPTIONS_STRIPS, (2, 22)), OPTIONS_STRIPS, taken)
+        for line in range(len(DEVICES_PAD_TOPS)):
+            strips = devices_bar_strips(line, pad=True)
             stock = devices_bar_rects(line)
             found = [buf.find(struct.pack('<4f', *r)) for r in stock]
             if any(f < 0 for f in found):
@@ -8546,24 +8533,8 @@ def _apply_prompts(buf, build, key, variant=None):
     return out
 
 
-def apply_padprompts(buf, build):
-    return _apply_prompts(buf, build, 'padprompts')
-
-
-def apply_padtitle(buf, build):
-    return _apply_prompts(buf, build, 'padtitle')
-
-
-def apply_padattract(buf, build):
-    return _apply_prompts(buf, build, 'padattract')
-
-
-def apply_padgallery(buf, build):
-    return _apply_prompts(buf, build, 'padgallery')
-
-
-def apply_padoptions(buf, build):
-    return _apply_prompts(buf, build, 'padoptions')
+for _key in PROMPTS:                    # apply_padprompts, apply_padtitle, ...: the patch table's names
+    globals()['apply_' + _key] = lambda buf, build, key=_key: _apply_prompts(buf, build, key)
 
 
 def txr_sheets(data):

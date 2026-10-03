@@ -57,18 +57,9 @@ MISC = ('BINDATA', 'MISC')
 # ---- the sheets ------------------------------------------------------
 
 
-def sheet_count(game, name):
-    folder = os.path.join(game, *MISC)
-    found = {f.lower(): f for f in os.listdir(folder)}
-    path = os.path.join(folder, found.get(name.lower() + '.bak', found.get(name.lower(), name)))
-    with open(path, 'rb') as fh:
-        return struct.unpack('<I', fh.read(8)[4:])[0]
-
-
-def sheet(game, name, index):
-    """(format, width, the texels) of one sheet of a .TXR under
-    BINDATA\\MISC, from its .bak when the patcher has written the file,
-    whatever the name's case on disc."""
+def txr(game, name):
+    """A .TXR under BINDATA\\MISC, from its .bak when the patcher has
+    written the file, whatever the name's case on disc."""
     folder = os.path.join(game, *MISC)
     found = {f.lower(): f for f in os.listdir(folder)}
     path = os.path.join(folder, found.get(name.lower() + '.bak', found.get(name.lower(), name)))
@@ -76,6 +67,16 @@ def sheet(game, name, index):
         data = fh.read()
     if data[:4] != b'RTEX':
         raise SystemExit('%s is not a TXR' % path)
+    return data
+
+
+def sheet_count(game, name):
+    return struct.unpack_from('<I', txr(game, name), 4)[0]
+
+
+def sheet(game, name, index):
+    """(format, width, the texels) of one sheet of a .TXR."""
+    data = txr(game, name)
     off = 0x1000
     for i in range(index):
         off += struct.unpack_from('<4I', data, 16 + 16 * i)[2]
@@ -509,15 +510,18 @@ def jp_line(text, width):
     return lettering('japanese', text, width, HINT_ROWS, JP_X, JP_BASE, JP_SIZE, JP_WIDE)
 
 
-def bars(game, log):
+BAR_LINES = (('bar', hint_line, BAR_PAD, 520), ('back', hint_line, BACK_PAD, 560), ('back2', hint_line, BACK2_PAD, 600),
+             ('bar_jp', jp_line, BAR_PAD_JP, 520), ('back_jp', jp_line, BACK_PAD_JP, 300), ('back2_jp', jp_line, BACK2_PAD_JP, 520), ('back3_jp', jp_line, BACK3_PAD_JP, 520),
+             ('devices1', hint_line, DEVICES_PAD[0], 560), ('devices2', hint_line, DEVICES_PAD[1], 560))
+
+
+def bars(_game, log):
     """The pad's bar lines: Record.txr's and the RG files' appended
     sheets, English and Japanese, and OPTIONS.TXR's with the Device
     Settings page's two."""
-    lines = {'bar': hint_line(BAR_PAD, 520), 'back': hint_line(BACK_PAD, 560), 'back2': hint_line(BACK2_PAD, 600),
-             'bar_jp': jp_line(BAR_PAD_JP, 520), 'back_jp': jp_line(BACK_PAD_JP, 300), 'back2_jp': jp_line(BACK2_PAD_JP, 520), 'back3_jp': jp_line(BACK3_PAD_JP, 520),
-             'devices1': hint_line(DEVICES_PAD[0], 560), 'devices2': hint_line(DEVICES_PAD[1], 560)}
-    for name, text in (('bar', BAR_PAD), ('back', BACK_PAD), ('back2', BACK2_PAD), ('bar_jp', BAR_PAD_JP), ('back_jp', BACK_PAD_JP), ('back2_jp', BACK2_PAD_JP), ('back3_jp', BACK3_PAD_JP), ('devices1', DEVICES_PAD[0]), ('devices2', DEVICES_PAD[1])):
-        cov = lines[name]
+    lines = {}
+    for name, line, text, width in BAR_LINES:
+        cov = lines[name] = line(text, width)
         if any(int(round(c * 15)) for c in cov[0] + cov[-1]):
             raise SystemExit('"%s" reaches the edge of its strip' % text)
         first, cut, end = halves(cov)
@@ -648,18 +652,6 @@ def replay(_game, log):
     return [(file, REPLAY_SHEET, REPLAY_AT[0], REPLAY_AT[1], REPLAY_W, REPLAY_H, '', out) for file in REPLAY_TXRS]
 
 
-def records(game, log):
-    return record(game, log) + replay(game, log) + [b for b in bars(game, log) if b[0] == RECORD_TXR]
-
-
-def gallery_all(game, log):
-    return [b for b in bars(game, lambda _l: None) if b[0] in GALLERY_TXRS] + gallery(game, log)
-
-
-def options_all(game, log):
-    return [b for b in bars(game, lambda _l: None) if b[0] == HINT_TXR]
-
-
 # The connection screen's SEARCH button (BINDATA\connect\button\showteam_*.BMP,
 # relettered by the lobby patch) and the team room's TAB button
 # (BINDATA\chat\tab_menu_on.BMP and _on2.BMP, SEL on the pad's copies the
@@ -708,14 +700,17 @@ def tab(_game, log):
     return [(TAB_FILE, 0, x, y, w, h, '', mask(TAB_TEXT, w, h, (10 + 33) / 2.0 - x, TAB_BASE))]
 
 
-PROMPTS = (('padtitle', title), ('padattract', attract), ('padprompts', records), ('padgallery', gallery_all), ('padoptions', options_all),
-           ('lobby', buttons), ('tabmenu', tab))
+PROMPTS = ('padtitle', 'padattract', 'padprompts', 'padgallery', 'padoptions', 'lobby', 'tabmenu')      # PROMPT_ART's keys, in its order
 HINTS = 'devices'                         # the devices page's hint lines, HINT_ART
 
 
 def make(game, log=print):
-    art = {key: maker(game, log) for key, maker in PROMPTS}
-    art[HINTS] = hints(game, log)
+    art = {'padtitle': title(game, log), 'padattract': attract(game, log), 'padprompts': record(game, log) + replay(game, log)}
+    strips = bars(game, log)              # each bar line's strips go with the file's key
+    art['padprompts'] += [b for b in strips if b[0] == RECORD_TXR]
+    art['padgallery'] = [b for b in strips if b[0] in GALLERY_TXRS] + gallery(game, log)
+    art['padoptions'] = [b for b in strips if b[0] == HINT_TXR]
+    art['lobby'], art['tabmenu'], art[HINTS] = buttons(game, log), tab(game, log), hints(game, log)
     return art
 
 
@@ -733,7 +728,7 @@ def generated(art):
              '# the file under BINDATA\\\\MISC, the variant \'\' for every release or the language\n',
              '# of the file it goes with, the texels 16-bit and zlib-compressed; see\n',
              '# tools/prompts.py.\n', 'PROMPT_ART = {\n']
-    for key, _maker in PROMPTS:
+    for key in PROMPTS:
         lines += ["    '%s': (\n" % key] + packed(art[key]) + ['    ),\n']
     lines += ['}\n', '# The Device Settings page\'s hint lines, the same way: each line\'s two\n',
               '# halves, strips for the sheet the patcher appends to OPTIONS.TXR.\n', 'HINT_ART = (\n']
@@ -770,7 +765,7 @@ def compare(baked, made):
     """What sets two sets of art apart, or '' when nothing does, and
     whether they are the same texel for texel."""
     same = True
-    for key in [key for key, _maker in PROMPTS] + [HINTS]:
+    for key in PROMPTS + (HINTS,):
         a, b = baked.get(key, ()), made[key]
         if [blit[:7] for blit in a] != [blit[:7] for blit in b]:
             return '%s: the blits are not where the baked ones are' % key, False

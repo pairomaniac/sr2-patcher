@@ -5,7 +5,7 @@ This document says where things are: in the repository, inside
 DLLs the patches touch. The other documents say how things work; this
 one says where to look. The addresses are the European build's. The
 American and Australian rows in `BUILDS` map the exe's addresses to
-those builds (NOTES.md, *Builds*). The DLLs are the same file in every
+those builds (GAME.md, *Builds*). The DLLs are the same file in every
 build unless a section says otherwise.
 
 Six DLLs have a section here. `MGameGL.dll`'s addresses are in
@@ -96,7 +96,7 @@ addresses are not mapped here.
 
 | Address | What | Touched by |
 | --- | --- | --- |
-| `0x421399`–`0x484b84` | the nine `CoCreateInstance` sites (NOTES.md, *Musashi*) | manifests |
+| `0x421399`–`0x484b84` | the nine `CoCreateInstance` sites (GAME.md, *Musashi*) | manifests |
 | `0x426af0` | `RegisterClassA`; `0x426b80` the window procedure; `0x426bc5` its `WM_ACTIVATEAPP` case; `0x426bf7` the resume call | altab |
 | `0x420fa0` | the lobby name entry: `TextOutA` of the buffer at `0x4d3d1c`, `DSTINVERT` caret; `0x41fe20` its `WM_CHAR` handler; `0x435400`, `0x4356f0`, `0x435ad0`, `0x436100`, `0x436c90` the list, status, timer, IP and chat text | textcolor |
 | `0x435df4`, `0x435e9b`, `0x435f33` | the three Courier New fonts (`0x4eacd8`, `0x4ea8c8`, `0x4e84c4`) | - |
@@ -106,7 +106,7 @@ addresses are not mapped here.
 | `0x454cf0` | sprites at 3D points: each projected through MGameGL `+0x78` (`0x454ea6`, `0x454f0e`, `0x454f40`) and drawn as a 2D triangle list at `0x45510f`; `0x407840` a trail strip the same way (`0x407965`, `0x4079fd`) | widescreen3d |
 | `0x448c70` | the race's background layers: a sky over (0, 0, 640, 256) and a sea over (0, 256, 640, 480). The `.SKY` and `.SEA` course files are loaded at `0x462b80`, and the `MGLBackground` objects are made at `0x462e10`. The sea's class is at `0x49dca4`, with its update at `0x4633b0` and its draw at `0x463500`. The sea sits on a ground plane that `MGLBackground` builds at `0x100030a0` from the renderer's focal length and centre, and draws as 2D strips at `0x10003de0` | widescreen3d |
 | `0x4219f0` | the resolution mode setter. It stores the mode at `0x4d5e54`, puts the size into the init struct, and re-inits the renderer. `0x421450` reloads the textures. `0x4216a0` sets the viewport (through `0x46bfd0`) and the 84.375° field of view (through `0x46bf90`, MGameGL `+0x114`). The rect table is at `0x4b12f0` | widescreen |
-| `0x47f2d0` | the input wrapper's update, slot `+8` of the vtable at `0x4a158c`. It builds the button mask at `+0x34` from `GetActionState` on actions 10, 11, 12 and 2-5, which land on bits 0, 1, 6 and 9-12; ±5000 is the threshold. `0x43f8e0` packs that mask into the pad's menu flags at `0x4ef7e4`. `0x4edcb4` holds the frame's menu flags, and `0x4d5e08` the keyboard's, which `0x41fe20` fills (NOTES.md, *The menus' directions*). `0x47f5c0` is the wrapper's keyboard: a scancode per bit at `0x4cfe90`, bit 3's at `0x4cfe9c` | pagepad, padmenu, erasekey |
+| `0x47f2d0` | the input wrapper's update, slot `+8` of the vtable at `0x4a158c`. It builds the button mask at `+0x34` from `GetActionState` on actions 10, 11, 12 and 2-5, which land on bits 0, 1, 6 and 9-12; ±5000 is the threshold. `0x43f8e0` packs that mask into the pad's menu flags at `0x4ef7e4`. `0x4edcb4` holds the frame's menu flags, and `0x4d5e08` the keyboard's, which `0x41fe20` fills (GAMEPAD.md, *The menus' directions*). `0x47f5c0` is the wrapper's keyboard: a scancode per bit at `0x4cfe90`, bit 3's at `0x4cfe9c` | pagepad, padmenu, erasekey |
 | `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | windowed |
 | `0x4272b0` | language from `GetUserDefaultLangID`, 0 Japanese to 6 other, into the settings block's `+0x60`; `0x4edcd0` its copy, the lobby's `_US` bitmaps and font when not 0 (NOTES.md, *Invisible lobby text*) | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
@@ -115,7 +115,7 @@ addresses are not mapped here.
 | `0x427600` | main init; `0x427657` constructs the loader; `0x427b10` the rest, one `jl` at `0x427e05` to the error box `0x4404b0` ("Failed to initialize. Error code %X") | - |
 | `0x426ea0` | device select by the `display` string; `0x427240` the card warning, string 5 OK/Cancel | nocardwarn |
 | `0x46e160` | the CD wrapper's SetVolume(percent, flags). It passes percent × the level read at startup / 100 to MGAudio's method. It is called from `0x473c5c` (the menu's level, step × 11.11), `0x473f11` (the race's level, step × 9, with bit 31 set), `0x474210` (the mute at a race start, with bit 31 set) and `0x4741bc` (the fade, which passes an entry's percentage) | cdlevel |
-| `0x4280a0` | one frame. It runs the step, then `0x428000`, then the frame gate `0x4287f0` (the present, the catch-up steps, and the spin until 1/60 s has passed), then the draw. `0x427eef` is the timer init, which takes QPF/60 as the budget. `0x4287a0` reads the counter. Inside the gate, `0x428835` is the present call, `0x4288a6` the catch-up test and `0x42890b` the exit (NOTES.md, *Frame timing*) | frametrace, starting |
+| `0x4280a0` | one frame. It runs the step, then `0x428000`, then the frame gate `0x4287f0` (the present, the catch-up steps, and the spin until 1/60 s has passed), then the draw. `0x427eef` is the timer init, which takes QPF/60 as the budget. `0x4287a0` reads the counter. Inside the gate, `0x428835` is the present call, `0x4288a6` the catch-up test and `0x42890b` the exit (GAME.md, *Frame timing*) | frametrace, starting |
 | `0x438dc0` | the online race setup. It gathers the players' cars and the stage, and blocks on `timeGetTime` until every player has answered. It is called at `0x4373c8` (the host's START) and `0x4365bf` (a guest, on the host's word). `0x406fa0` is the lobby's surface loader, which every lobby screen's init calls (NOTES.md, *The starting box*) | starting |
 | `0x4187b0` | the race state's draw. It runs the scene pass `0x418b00`, sets the full viewport through `0x46bfd0`, calls the HUD `0x429d70` at `0x418ab1` while the state's `+0x3c` is set, and makes the reset `0x46cec0`. The frame's root-tree draw, `0x470ff0` called at `0x4280f2`, comes after it and carries the lake and the fade node; the fade node's draw is `0x426930`, which jumps to `0x46bd80`, the renderer's fade quad (NOTES.md, *HUD after the water*) | hudlast |
 | `0x419af0` | the ending, the race state's sub-state 8: `0x418f30` its scene pass (the zoom to the window through `0x41905f`), `0x48656c` the credits' draw, `0x4198fc` and `0x419ab7` the two branches that gate it (WIDESCREEN.md, *The credits*) | - |
@@ -124,7 +124,7 @@ addresses are not mapped here.
 | `0x420f10` | the lobby entry's init, with the arguments (surface, x, y, field, width shown). It copies the field to `0x4d3d1c` and its length to `0x4d454c`. `0x41fe20` is the entry's character handler; `0x41fef1` and `0x420849` are its 0x800 cap; `0x420337` and `0x420c4c` handle CTRL+V from the clipboard, with `lstrcpyA` at `0x4203ba` and `0x420cd5`. Patched by lobby (entrycap) |
 | `0x43ca20` | the IP entry popup's input state. `0x43cb4e` is the OK press's length compare (a blank entry meant a broadcast search), followed by the copy to `0x4eacec`; `0x43cbac` is its sound call. `0x43cd30` is the popup's init, which makes the entry `0x420f10` on `0x4d3d1c` with 18 characters shown of 2048 (`0x41fef1`) | lobby (ipcheck) |
 | `0x43bd30` | the connection screen's drawer. It blits four buttons at y 54, 106, 158 and 210 from the row table at `0x4b4274`; the ON2 rows start at `0x4b42d8`. `0x43bef0` is the screen's input, with the cursor wrap at `0x43bf55` and `0x43bf75` and the confirm at `0x43bfbd`. `0x43fff0` turns the type into the `OpenConnection` call, with the latency test at `0x4400d6`. `0x43efd8` is the SHOW TEAMS jump table. `0x4eace6` holds the type and `0x4edcc0` the cursor (NOTES.md, *The connection screen*; NETWORK.md) | lobby |
-| `0x428140` | the debug-build overlay, `FPS:%2d TPF:%5d`; unreachable in retail (NOTES.md, *RallyDebug.ini*) | - |
+| `0x428140` | the debug-build overlay, `FPS:%2d TPF:%5d`; unreachable in retail (GAME.md, *RallyDebug.ini*) | - |
 | `0x421330` | the D3D bring-up. `0x421380` creates MGameD3D and inits it through `0x4214f0`; `0x421450` clears and presents three times; `0x4215a0` creates and inits MGameGL; then `0x421670` follows | - |
 | `0x444be0` | processor check via `miscdll.dll!CheckKatmai` | - |
 | `0x46e210`, `0x46e260` | pause and resume of the sound object at `0x50b12c` | - |

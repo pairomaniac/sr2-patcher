@@ -9,7 +9,7 @@
 ; up, down, left, right (bits 0-3), confirm (4), cancel (5) and Enter
 ; (15), and the keyboard's own word (0x4d5e08, from WM_KEYDOWN) for the
 ; same, for TAB (bit 13), which alone opens the team room's MENU row,
-; and for any key (bit 31), which closes the room's stat card (NOTES.md,
+; and for any key (bit 31), which closes the room's stat card (GAMEPAD.md,
 ; *The menus' directions*). In the team room the wrapper's mask carries
 ; nothing from an XInput pad, and the poll's own repeat of a held
 ; direction runs at the keyboard's rate, two frames a step.

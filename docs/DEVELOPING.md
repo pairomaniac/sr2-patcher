@@ -265,7 +265,7 @@ python3 tools/frames.py ~/games/sr2/logs/frames.log
 ```
 
 which prints the frame rate, the spread of the intervals, the catch-up
-frames, and the worst intervals with the time each happened. NOTES.md,
+frames, and the worst intervals with the time each happened. GAME.md,
 *Frame timing*, says what the numbers mean.
 
 Take a baseline of the stock configuration first and read every later

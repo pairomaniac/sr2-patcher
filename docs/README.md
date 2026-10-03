@@ -6,7 +6,9 @@ Everything in this folder is for working on the patcher.
 
 | Read | For |
 | --- | --- |
-| [NOTES.md](NOTES.md) | Says how the game works and what each patch changes. It holds the patch table with every site, the builds and Sega's updates, the executable, Musashi, startup and files, a section per patch, and the two discs. |
+| [NOTES.md](NOTES.md) | Says what each patch changes. It holds the patch table with every site and a section per patch. |
+| [GAME.md](GAME.md) | Describes the game as it shipped: the executable, the builds and Sega's updates, Musashi, startup and files, and the two discs. |
+| [GAMEPAD.md](GAMEPAD.md) | Describes the gamepad patches: the model, XInput, DirectInput 8, the store, the menus, the pad's prompts and the replay's controls, and the Options screen with the Device Settings page. |
 | [WIDESCREEN.md](WIDESCREEN.md) | Describes the widescreen patch: the setting, the 3D, the 2D and its exceptions (the HUD's frame, the side bars, the `.bg` screens, the lobby, the device viewport), the sea, the credits, and the Graphic Settings page. |
 | [NETWORK.md](NETWORK.md) | Describes the multiplayer. It covers what ships (MGNetWk, DirectPlay, the exe's protocol, the race data path, the screens) and what replaces it: the UDP DLL, the three rows, the directory and the relay, and what is and is not reproduced. |
 | [MAP.md](MAP.md) | Says where things are: the repository, the regions of `sr2-patcher.py`, the addresses mapped in the exe and six of the DLLs, and then the sites by patch. |
@@ -20,8 +22,8 @@ Where something lives, by question:
   both.
 - *What does patch X change?* Start with NOTES.md's table, then read the
   patch's section under *How each patch works*. The four widescreen
-  patches are in WIDESCREEN.md.
-- *Which builds are there, and how do their offsets map?* NOTES.md,
+  patches are in WIDESCREEN.md and the gamepad patches in GAMEPAD.md.
+- *Which builds are there, and how do their offsets map?* GAME.md,
   *Builds*, lists them.
 - *How do I rebuild after editing assembly?* asm/README.md says how.
 - *How do I run the checks, or one of them?* DEVELOPING.md, *The
@@ -30,7 +32,7 @@ Where something lives, by question:
   *Diagnostics*, lists the traces.
 - *How does multiplayer work, and what replaces DirectPlay?* NETWORK.md
   answers that. The wire format and the server are in net/README.md.
-- *What is in `data1.cab`, and how is it read?* NOTES.md, *The install
+- *What is in `data1.cab`, and how is it read?* GAME.md, *The install
   disc*, describes it.
 - *How do I cut a release?* DEVELOPING.md, *Releasing*, gives the steps.
 - *How is the exe signed, and how is signing set up?* DEVELOPING.md,

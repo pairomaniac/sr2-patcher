@@ -628,7 +628,7 @@ being cleared by the frame. A press of Back sets TAB there, and any press
 sets the "any key" bit. Then the edge word is made again against the
 stored previous level - the exe made one before the site, from a level
 without the annex's bits - and the three stores are done.
-[docs/NOTES.md](../docs/NOTES.md), *The menus' directions*, has the
+[docs/GAMEPAD.md](../docs/GAMEPAD.md), *The menus' directions*, has the
 account. `tools/padmenutest.py` runs it.
 
 ## sortpad.asm
@@ -640,7 +640,7 @@ asks MGInput's annex for side 0's LB and RB through the published poll,
 steps the sort mode left on a press of LB and right on a press of RB,
 then does the two displaced instructions. It finds the image base from
 its own RVA and keeps track of which buttons were already down.
-[docs/NOTES.md](../docs/NOTES.md), *Page Up and Page Down*, has the
+[docs/GAMEPAD.md](../docs/GAMEPAD.md), *Page Up and Page Down*, has the
 account. `tools/sortpadtest.py` runs it.
 
 ## pagepad.asm
@@ -652,7 +652,7 @@ annex replaces the load and test after the wrapper's action table loop.
 It asks MGInput's annex for the player's LB and RB through the published
 poll, ORs them into the player's level word as the Page Up and Page Down
 bits, then does the load and test so the site's branch sees the right
-flags. [docs/NOTES.md](../docs/NOTES.md), *Page Up and Page Down*, has
+flags. [docs/GAMEPAD.md](../docs/GAMEPAD.md), *Page Up and Page Down*, has
 the account. `tools/pagepadtest.py` runs it.
 
 ## tabmenu.asm
@@ -699,7 +699,7 @@ rectangles and the sprite's size where the pad's lettering is another
 size. A row whose RVA has bit 31 set holds, for each device, the RVA of
 the dword to copy: an entry's texture handle, which the DLL's init
 writes and the patcher cannot know. Then it jumps to the export's own
-routine. It finds the image base from its own RVA. [docs/NOTES.md](../docs/NOTES.md), *The pad's
+routine. It finds the image base from its own RVA. [docs/GAMEPAD.md](../docs/GAMEPAD.md), *The pad's
 prompts*, has the account. `tools/padpromptstest.py` runs it.
 
 ## replaypad.asm
@@ -713,7 +713,7 @@ It asks MGInput's annex for the player's bumpers, left stick, triggers,
 Y and X through the published poll, ORs their bits into the player's
 level word, puts the left stick's x into the analog value when the
 keyboard left it at 0, then does the two loads.
-[docs/NOTES.md](../docs/NOTES.md), *The replay's controls*, has the
+[docs/GAMEPAD.md](../docs/GAMEPAD.md), *The replay's controls*, has the
 account. `tools/replaypadtest.py` runs it.
 
 ## padinput.asm
