@@ -352,7 +352,7 @@ bit 3's cell of the scancode table (`0x4cfe9c`). That table is read only
 for player 1, while bit 0 of `+0x14c` is set (`0x47f5f8`). The keyboard's
 word is ORed into player 1's by the query (`0x47f750`). `pagepad` gives
 bit 3 the pad's X. The edge is made from the level at `0x47f540` (the
-level against the previous one), so a held X erases once. Neither has been tried in the game yet.
+level against the previous one), so a held X erases once.
 
 The Replay Gallery's sort is not input the game reads at all. F6, F7 and
 F8 are accelerators in the exe's resources (VK_F6-F8, commands
@@ -386,9 +386,8 @@ frame. The F keys still move the sort box there, so the patch has a
 second site in that state: `push 0; mov edi, eax; mov edx, [ecx]`
 (`0x1000286a`, file `0x1c6a`, the same in every build) becomes a call to
 the stub's second entry, which steps the mode the same way and then does
-the three instructions. This second site has not been tried in the game
-yet. `tools/sortpadtest.py` runs both sites on the real DLL, relocated,
-under Unicorn.
+the three instructions. `tools/sortpadtest.py` runs both sites on the
+real DLL, relocated, under Unicorn.
 
 ## The pad's prompts
 
