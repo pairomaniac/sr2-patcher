@@ -504,10 +504,10 @@ chosen by fitting about 45 open fonts to each stock prompt that way:
 | the title | Nimbus Roman Bold (Times Bold) | below |
 | the attract screen | Open Sans Bold Italic, 125% wide | 9.8% of the ink off; Noto Sans Bold Italic is as close, Nimbus Sans Bold Italic 20% |
 | the replay prompt | Nimbus Sans Bold Italic (Helvetica Bold Oblique), 85% wide, two sizes, 1 px bolder | by eye: the words' widths and cap heights, the stock's straight-hooked f, and the outline's count of black and grey texels (stock 665 and 394 of the box, the render 660 and 431) |
-| the frame's hint lines, 11 px caps | Liberation Sans Narrow Bold, 90% wide | 9.9% |
+| the frame's hint lines, 11 px caps | Liberation Sans Narrow Bold, 90% wide, 0.5625 px bolder | 10.0%; the stock's words are within a texel of the render's in width, and its ink within 1% |
 | the Records labels, 9 px caps | Liberation Sans Narrow Bold, 90% wide | about 28%: no face tried does better than about 15% a word, the stock's rasteriser being sharper than any render |
 | the gallery's plates | URW Gothic Demi, 105% wide | 12% a word |
-| the Japanese lines | Noto Sans CJK JP Bold, 14 px, 105% wide | 39%, mostly the letters' places; the shapes match. The bubble behind a bar is a sprite of its own, the stock line's width, so a pad line wider than the stock's hangs out of it: the Records bar's pad line says Bボタンで戻ります, not 前画面に戻ります (397 texels against the stock's 406; the longer form was 456 and was seen hanging out in the Japanese build). The popups' lines are 389 and 392 against the stock's 381 and 386, the gallery foot's 192 against 181; `tools/prompts.py` refuses a bar line past 410 |
+| the Japanese lines | Noto Sans CJK JP Bold, 14 px, 100% wide, 0.25 px bolder, tracked -0.25 px | the stock's own three lines come out within 4 texels of the stock's width and 1% of its ink; at 105% wide and untracked they were 11 to 32 texels wider. The letters' places still differ, the stock face setting its kana closer. The bubble behind a bar is a sprite of its own, the stock line's width, so a pad line wider than the stock's hangs out of it: the Records bar's pad line says Bボタンで戻ります, not 前画面に戻ります (372 texels against the stock's 406; the longer form is 427, and at the earlier setting's 456 was seen hanging out in the Japanese build). The popups' lines are 364 and 367 against the stock's 381 and 386, the gallery foot's 179 against 181; `tools/prompts.py` refuses a bar line past 410. The lines at this setting have not been seen in the game |
 | the lobby buttons and the team room's TAB button, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
 
 **The bars.** A bar line is a sprite of two quads about the bar's
@@ -518,7 +518,13 @@ sprite the stub switches both quads' entry index and rectangle: the
 page's first two spare entries (texture -1, no quad; every page has
 them) are filled in at patch time as the two strips' boxes on the
 appended sheet, and the rectangles put the strips end to end, centred
-(`_bar`, `_halves_rects`). The Records page has one such sprite, the
+(`_bar`, `_halves_rects`). `Record.dll`'s own two quads overlap by two
+pixels, (-206, -20) to (1, -3) and (-1, -20) to (206, -3), where every other
+screen's meet at 0. The right half is drawn second, so its white margin
+covers the last two columns of the left half, and the stock line's `a`
+in `change` is cut. padprompts writes the two rectangles at `0x100c52e0` and
+`0x100c5314` as (-207, -20) to (0, -3) and (0, -20) to (207, -3) for good, so
+the keyboard's line is whole as well. The Records page has one such sprite, the
 gallery three (its foot and the two popups), the Options frame one on
 each of four pages. On the Device Settings page the two lines are the
 patcher's own: `devices_page` lists each pad strip's entry right after
@@ -947,8 +953,8 @@ On the bar is one of two lines. The frame's own lettering is sheet 4:
 six lines in a narrow bold grotesque with 11 px caps, dark ink on opaque
 white, each in a strip of 17 rows that starts a row above its ascenders.
 The page's lines are set the same way by `tools/prompts.py`, in
-Liberation Sans Narrow Bold at 90% width, 0.5 px bolder across and
-tracked 0.75 px, which is 9.9% of the ink off the stock on a stock
+Liberation Sans Narrow Bold at 90% width, 0.5625 px bolder across and
+tracked 0.75 px, which is 10.0% of the ink off the stock on a stock
 line. A line is wider than a sheet, so each is cut in two at the word
 gap nearest its middle. Each half is a strip with two texels of white
 beyond each end, so the edge samples filter to white and not to the

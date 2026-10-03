@@ -60,7 +60,7 @@ EXPECTED = {
         'Title.dll': '432a6d65e596f4c909d9c07af64e8a4b',
         'Options.dll': 'a2404043d58f73537312795c714e730e',
         'ReplayGallery.dll': '2ba9a104b6937becb2e0e2a65e889da7',
-        'Record.dll': '580a555f8b1961d71c9cc2de62e19e9d',
+        'Record.dll': '9f2afe5bcc1c7f2c5f9adf829e487aa3',
         'AdvTelop.dll': '6d8e54fdddcbde12b627fa522fdc913e',
     },
     'American': {
@@ -74,7 +74,7 @@ EXPECTED = {
         'Title.dll': 'c3615cdc3c6a60f876ca66010d572fdd',
         'Options.dll': 'a2404043d58f73537312795c714e730e',
         'ReplayGallery.dll': '2ba9a104b6937becb2e0e2a65e889da7',
-        'Record.dll': '580a555f8b1961d71c9cc2de62e19e9d',
+        'Record.dll': '9f2afe5bcc1c7f2c5f9adf829e487aa3',
         'AdvTelop.dll': '6d8e54fdddcbde12b627fa522fdc913e',
     },
     'Australian': {
@@ -88,7 +88,7 @@ EXPECTED = {
         'Title.dll': 'cc9285aee0c5dc00a8f55ccfa9d6d090',
         'Options.dll': '0aadf9270a4a069129520c4c5867b65e',
         'ReplayGallery.dll': '1b93ce6a681adcfda55d1aef77d1f8f0',
-        'Record.dll': 'be9e6c5cb93956003c4012e869ee2e79',
+        'Record.dll': '47ff9d8b4ba17181341ab79aa3adfdc8',
         'AdvTelop.dll': 'eea793ceff7b2d7b297903dd324f0396',
     },
     'Japanese (DigiCube, MediaKite)': {
@@ -102,7 +102,7 @@ EXPECTED = {
         'Title.dll': '432a6d65e596f4c909d9c07af64e8a4b',
         'Options.dll': 'a2404043d58f73537312795c714e730e',
         'ReplayGallery.dll': '2ba9a104b6937becb2e0e2a65e889da7',
-        'Record.dll': '580a555f8b1961d71c9cc2de62e19e9d',
+        'Record.dll': '9f2afe5bcc1c7f2c5f9adf829e487aa3',
         'AdvTelop.dll': '6d8e54fdddcbde12b627fa522fdc913e',
     },
 }

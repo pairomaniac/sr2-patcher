@@ -400,7 +400,7 @@ HINT_SHEET = 12                           # the appended sheet
 HINT_TOPS = (130, 150, 170, 190)          # the strips' rows on it, from column 1
 HINT_ROWS, HINT_MARGIN = 17, 2            # a strip starts a row above the ascenders, as the stock's do
 HINT_CAPS = 11
-HINT_WIDE, HINT_BOLD, HINT_TRACK = 0.9, 0.5, 0.75
+HINT_WIDE, HINT_BOLD, HINT_TRACK = 0.9, 0.5625, 0.75
 HINT_X, HINT_BASE = 3.3125, 12.625        # the first letter's origin past the column, and the baseline, in a strip
 HINT_GAP = 3                              # clear columns that make a word gap
 
@@ -490,11 +490,12 @@ BACK_PAD = 'Hit the B button to go back to the previous screen'    # for: Hit th
 BACK2_PAD = 'Go back to the previous screen by pressing the B button'    # for: Go back to the previous screen by pressing the ESC key
 # The Records bar's bubble is a separate sprite the stock line's width
 # (406 texels of lettering); the pad's line must stay within it.
-BAR_PAD_JP = '十字ボタンで項目を選択してください。Bボタンで戻ります。'          # for: ↑↓←→で項目を選択してください。ESCキーで前画面に戻ります。 (397 wide; with 前画面に, 456)
+BAR_PAD_JP = '十字ボタンで項目を選択してください。Bボタンで戻ります。'          # for: ↑↓←→で項目を選択してください。ESCキーで前画面に戻ります。 (372 wide; with 前画面に, 427)
 BACK_PAD_JP = 'Bボタンで前画面に戻ります。'                               # for: ESCキーで前画面に戻ります。
 BACK2_PAD_JP = '↑↓で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ↑↓で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, the popups' first line
 BACK3_PAD_JP = '←→で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ←→で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, their second
-JP_SIZE, JP_WIDE, JP_X, JP_BASE = 14.0, 1.05, 3.5, 14.0            # Noto Sans CJK JP Bold against a stock Japanese line
+JP_SIZE, JP_WIDE, JP_X, JP_BASE = 14.0, 1.0, 3.5, 14.0             # Noto Sans CJK JP Bold against the stock Japanese lines
+JP_BOLD, JP_TRACK = 0.25, -0.25                                    # the stock face is a little heavier and its kana sit closer
 BAR_WIDEST = 410                          # the bubbles behind the bars are sprites of their own, the stock lines' width: 406 the Records bar's, 381 and 386 the popups'
 # The Device Settings page's lines with a pad; HINT_LINES are the keyboard's.
 DEVICES_PAD = ('Select an action and hit the button to bind it', 'Hit the button to bind it, or hold START to keep it')
@@ -507,7 +508,7 @@ OPTIONS_TOPS = {'bar': (2, 22), 'devices1': (42, 62), 'devices2': (82, 102)}
 
 
 def jp_line(text, width):
-    return lettering('japanese', text, width, HINT_ROWS, JP_X, JP_BASE, JP_SIZE, JP_WIDE)
+    return lettering('japanese', text, width, HINT_ROWS, JP_X, JP_BASE, JP_SIZE, JP_WIDE, JP_BOLD, JP_TRACK)
 
 
 BAR_LINES = (('bar', hint_line, BAR_PAD, 520), ('back', hint_line, BACK_PAD, 560), ('back2', hint_line, BACK2_PAD, 600),
