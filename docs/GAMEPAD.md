@@ -122,9 +122,9 @@ counts and the flag stand still, so nothing fires.
 
 The pulse is sent every frame. Its strength comes from the player's
 vibration setting, 0 to 9, 5 as shipped: none at 0, and from 1 to 9
-`0xffff × (setting + 3) / 12`. A hit is 48 frames at a level strength,
-the left motor at the strength, doubled for the first 6 frames, and the
-right at a quarter. A landing is 36 frames, the left at three eighths
+`0xffff × (setting + 3) / 12`. A hit is 36 frames at a level strength,
+the left motor at three quarters of it, doubled for the first 6 frames,
+and the right at a half. A landing is 36 frames, the left at three eighths
 and the right at a half, fading out over the last 20. A hit in the frame
 of a landing takes its place. The setting is the page's
 VIBRATION row, kept in `SR2.CFG` as `Vibration = 5` in the player's

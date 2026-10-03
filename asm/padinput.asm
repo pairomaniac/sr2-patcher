@@ -55,7 +55,7 @@ bits 32
 %define SLOTS           16
 %define CAR_AIR         0x270           ; a car: 1 while all four wheels are off the ground
 %define AIR_FRAMES      10              ; in the air for this long, the landing is felt
-%define HIT_FRAMES      48              ; a hit's pulse, in frames
+%define HIT_FRAMES      36              ; a hit's pulse, in frames
 %define KICK_FRAMES     6               ; its first frames, the left motor doubled
 %define LAND_FRAMES     36              ; a landing's pulse
 %define FADE_FRAMES     20              ; its last frames, over which it fades out
@@ -1157,7 +1157,8 @@ rumble:
         div     edi                     ; the strength
         cmp     byte [ebx + shakeleft - $$ + 2 + esi], 0
         jne     .land
-        mov     edx, eax                ; a hit, level to its end: the left motor at the strength,
+        lea     edx, [eax + eax * 2]
+        shr     edx, 2                  ; a hit, level to its end: the left motor at three quarters,
         cmp     ecx, HIT_FRAMES - KICK_FRAMES
         jb      .hit
         add     edx, edx                ; doubled over its first frames,
@@ -1165,7 +1166,7 @@ rumble:
         jbe     .hit
         mov     edx, 0xffff
 .hit:   mov     ecx, eax
-        shr     ecx, 2                  ; the right at a quarter
+        shr     ecx, 1                  ; the right at a half
         jmp     .both
 .land:  cmp     ecx, FADE_FRAMES        ; a landing, lighter, fading out
         jbe     .fade

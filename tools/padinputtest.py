@@ -409,7 +409,7 @@ def main(argv):
     slots = [b - 1 for b in mu.mem_read(padidx, 2)]
     assert sorted(slots) == [1, 2], slots
 
-    FRAMES, KICK, FADE = {'hit': 48, 'land': 36}, 6, 20
+    FRAMES, KICK, FADE = {'hit': 36, 'land': 36}, 6, 20
 
     def strength(side):                         # the setting through the page's poll
         call(BASE + annex + 25, 0x300 + side * 0x40 + 0x3d, value, rng)
@@ -421,10 +421,10 @@ def main(argv):
         """A pulse's (left, right) words with this many frames left."""
         s = (level + 3) * 0xffff // 12
         if kind == 'hit':                       # level, the left motor doubled over the first frames
-            return (min(s * 2, 0xffff) if left >= FRAMES['hit'] - KICK else s, s >> 2)
+            return (min(s * 3 // 4 * 2, 0xffff) if left >= FRAMES['hit'] - KICK else s * 3 // 4, s >> 1)
         s = s * min(left, FADE) // FADE         # a landing fades
         return (s * 3 >> 3, s >> 1)
-    assert strength(0) == 5 and motors('hit', 47) == (0xffff, 0x2aaa) and motors('hit', 41) == (0xaaaa, 0x2aaa) and motors('land', 35) == (0x3fff, 0x5555)
+    assert strength(0) == 5 and motors('hit', 35) == (0xfffe, 0x5555) and motors('hit', 29) == (0x7fff, 0x5555) and motors('land', 35) == (0x3fff, 0x5555)
 
     def frame(c=car, hit=None, wall=None, air=0, cfg=cfg0):
         frame.n += 1
@@ -470,7 +470,7 @@ def main(argv):
     mu.mem_write(name, b'VB12\0')
     ret, _p = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and [line for line in disk['text'].splitlines() if line.startswith(b'Vibration')] == [b'Vibration = 5', b'Vibration = 9'], disk['text'].decode()
-    assert strength(1) == 9 and motors('hit', 1, 9) == (0xffff, 0x3fff)
+    assert strength(1) == 9 and motors('hit', 1, 9) == (0xbfff, 0x7fff)
     assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', FRAMES['hit'] - 1, 9)]
     rest('hit', slots[1], 9, c=car2, cfg=cfg1)
     disk['text'] = disk['text'].replace(b'Vibration = 9', b'Vibration = 0')     # read back at 0: no rumble
