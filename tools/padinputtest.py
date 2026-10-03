@@ -409,7 +409,7 @@ def main(argv):
     slots = [b - 1 for b in mu.mem_read(padidx, 2)]
     assert sorted(slots) == [1, 2], slots
 
-    PULSE, FADE = 36, 20
+    FRAMES, KICK, FADE = {'hit': 48, 'land': 36}, 6, 20
 
     def strength(side):                         # the setting through the page's poll
         call(BASE + annex + 25, 0x300 + side * 0x40 + 0x3d, value, rng)
@@ -419,9 +419,12 @@ def main(argv):
 
     def motors(kind, left, level=5):
         """A pulse's (left, right) words with this many frames left."""
-        s = (level + 3) * 0xffff * min(left, FADE) // (12 * FADE)
-        return (s, s >> 2) if kind == 'hit' else (s * 3 >> 3, s >> 1)
-    assert strength(0) == 5 and motors('hit', PULSE) == (0xaaaa, 0x2aaa) and motors('land', PULSE) == (0x3fff, 0x5555)
+        s = (level + 3) * 0xffff // 12
+        if kind == 'hit':                       # level, the left motor doubled over the first frames
+            return (min(s * 2, 0xffff) if left >= FRAMES['hit'] - KICK else s, s >> 2)
+        s = s * min(left, FADE) // FADE         # a landing fades
+        return (s * 3 >> 3, s >> 1)
+    assert strength(0) == 5 and motors('hit', 47) == (0xffff, 0x2aaa) and motors('hit', 41) == (0xaaaa, 0x2aaa) and motors('land', 35) == (0x3fff, 0x5555)
 
     def frame(c=car, hit=None, wall=None, air=0, cfg=cfg0):
         frame.n += 1
@@ -432,9 +435,9 @@ def main(argv):
         call(site(update_off), cfg)
         return list(shakes)
 
-    def rest(kind, slot, level=5, start=PULSE - 2, **kw):
+    def rest(kind, slot, level=5, start=None, **kw):
         """The pulse's frames after its first: one send a frame, fading, then the motors off."""
-        for left in range(start, 0, -1):
+        for left in range(FRAMES[kind] - 2 if start is None else start, 0, -1):
             got = frame(**kw)
             assert got == [(slot,) + motors(kind, left, level)], (left, got)
         assert frame(**kw) == [(slot, 0, 0)], 'the pulse over'
@@ -443,18 +446,18 @@ def main(argv):
     assert shakes == [], shakes                 # nothing outside a race
     w(flag, car)
     assert frame() == [] and frame() == []      # a car first seen, then its counts going up
-    assert frame(hit=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a hit of a car or an object'
+    assert frame(hit=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a hit of a car or an object'
     rest('hit', slots[0])
-    assert frame(wall=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a hit of a wall'
-    assert frame(wall=0) == [(slots[0],) + motors('hit', PULSE - 2)], 'the count held, the game paused: no new pulse'
-    rest('hit', slots[0], start=PULSE - 3)
+    assert frame(wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a hit of a wall'
+    assert frame(wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 2)], 'the count held, the game paused: no new pulse'
+    rest('hit', slots[0], start=FRAMES['hit'] - 3)
     assert all(frame(air=1) == [] for _ in range(10))
-    assert frame() == [(slots[0],) + motors('land', PULSE - 1)], 'a landing'
+    assert frame() == [(slots[0],) + motors('land', FRAMES['land'] - 1)], 'a landing'
     rest('land', slots[0])
     assert all(frame(air=1) == [] for _ in range(9)) and frame() == [], 'a hop, too short'
-    assert all(frame(air=1) == [] for _ in range(12)) and frame(hit=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a landing on a hit: the hit'
-    assert frame() == [(slots[0],) + motors('hit', PULSE - 2)]
-    assert frame(wall=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a hit during a pulse: the pulse again'
+    assert all(frame(air=1) == [] for _ in range(12)) and frame(hit=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a landing on a hit: the hit'
+    assert frame() == [(slots[0],) + motors('hit', FRAMES['hit'] - 2)]
+    assert frame(wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a hit during a pulse: the pulse again'
     rest('hit', slots[0])
     w(game + 0x44, 4)                           # a replay: nothing, and nothing on the way back
     assert frame(hit=0) == [] and frame(wall=0) == []
@@ -467,8 +470,8 @@ def main(argv):
     mu.mem_write(name, b'VB12\0')
     ret, _p = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and [line for line in disk['text'].splitlines() if line.startswith(b'Vibration')] == [b'Vibration = 5', b'Vibration = 9'], disk['text'].decode()
-    assert strength(1) == 9 and motors('hit', PULSE, 9) == (0xffff, 0x3fff)
-    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', PULSE - 1, 9)]
+    assert strength(1) == 9 and motors('hit', 1, 9) == (0xffff, 0x3fff)
+    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', FRAMES['hit'] - 1, 9)]
     rest('hit', slots[1], 9, c=car2, cfg=cfg1)
     disk['text'] = disk['text'].replace(b'Vibration = 9', b'Vibration = 0')     # read back at 0: no rumble
     fresh()
@@ -480,7 +483,7 @@ def main(argv):
     w(flag + 8, car2)
     assert frame(car2) == [] and frame(car2, cfg=cfg1) == []
     assert frame(car, hit=0) == [] and frame(car2, wall=0, cfg=cfg1) == []
-    assert frame(car2, wall=0) == [(slots[0],) + motors('hit', PULSE - 1)]
+    assert frame(car2, wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)]
     w(flag, 0)                                  # the race over mid-pulse: the pulse still runs out
     w(flag + 8, 0)
     w(game + 0x38, 0)

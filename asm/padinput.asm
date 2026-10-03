@@ -55,7 +55,9 @@ bits 32
 %define SLOTS           16
 %define CAR_AIR         0x270           ; a car: 1 while all four wheels are off the ground
 %define AIR_FRAMES      10              ; in the air for this long, the landing is felt
-%define PULSE_FRAMES    36              ; a pulse, in frames
+%define HIT_FRAMES      48              ; a hit's pulse, in frames
+%define KICK_FRAMES     6               ; its first frames, the left motor doubled
+%define LAND_FRAMES     36              ; a landing's pulse
 %define FADE_FRAMES     20              ; its last frames, over which it fades out
 %define VIB_DEFAULT     5               ; the strength setting, 0 off, 1..VIB_MAX: (setting + 3) twelfths of a motor's full 0xffff
 %define VIB_MAX         9
@@ -1059,9 +1061,8 @@ refresh:
 ; paused, so nothing fires. The car is the side's slot of the car table:
 ; in a network race this machine's slot, for side 0 alone; side 1's only
 ; in split screen; none in a replay. A car first seen sets the counts and
-; fires nothing. The pulse is sent every frame, fading over its last
-; FADE_FRAMES, and runs out by the frame, in or out of a race. The left
-; motor is the heavy, low one and carries most of it.
+; fires nothing. The pulse is sent every frame and runs out by the
+; frame, in or out of a race.
 rumble:
         movzx   eax, byte [ebx + padidx - $$ + esi]
         test    eax, eax
@@ -1136,7 +1137,11 @@ rumble:
         jz      .run
         cmp     dword [ebx + vib - $$ + esi * 4], 0
         je      .run                    ; the setting at 0: no rumble
-        mov     byte [ebx + shakeleft - $$ + esi], PULSE_FRAMES
+        mov     al, HIT_FRAMES
+        test    ecx, ecx
+        jz      .start
+        mov     al, LAND_FRAMES
+.start: mov     [ebx + shakeleft - $$ + esi], al
         mov     [ebx + shakeleft - $$ + 2 + esi], cl
 .run:   movzx   ecx, byte [ebx + shakeleft - $$ + esi]
         test    ecx, ecx
@@ -1144,27 +1149,36 @@ rumble:
         dec     ecx
         mov     [ebx + shakeleft - $$ + esi], cl
         jz      .set                    ; the pulse over: the motors off
-        cmp     ecx, FADE_FRAMES
-        jbe     .fade
-        mov     ecx, FADE_FRAMES
-.fade:  mov     eax, [ebx + vib - $$ + esi * 4]
+        mov     eax, [ebx + vib - $$ + esi * 4]
         add     eax, 3
         imul    eax, eax, 0xffff
-        imul    eax, ecx
         xor     edx, edx
-        mov     edi, 12 * FADE_FRAMES
-        div     edi                     ; the strength, faded
-        mov     ecx, eax
+        mov     edi, 12
+        div     edi                     ; the strength
         cmp     byte [ebx + shakeleft - $$ + 2 + esi], 0
         jne     .land
-        shr     ecx, 2                  ; a hit: the left motor at the strength, the right at a quarter
-        shl     ecx, 16
-        or      ecx, eax
-        jmp     .set
-.land:  lea     edx, [eax + eax * 2]
-        shr     edx, 3                  ; a landing, lighter: the left at three eighths, the right at a half
+        mov     edx, eax                ; a hit, level to its end: the left motor at the strength,
+        cmp     ecx, HIT_FRAMES - KICK_FRAMES
+        jb      .hit
+        add     edx, edx                ; doubled over its first frames,
+        cmp     edx, 0xffff
+        jbe     .hit
+        mov     edx, 0xffff
+.hit:   mov     ecx, eax
+        shr     ecx, 2                  ; the right at a quarter
+        jmp     .both
+.land:  cmp     ecx, FADE_FRAMES        ; a landing, lighter, fading out
+        jbe     .fade
+        mov     ecx, FADE_FRAMES
+.fade:  imul    eax, ecx
+        xor     edx, edx
+        mov     edi, FADE_FRAMES
+        div     edi
+        lea     edx, [eax + eax * 2]
+        shr     edx, 3                  ; the left at three eighths, the right at a half
+        mov     ecx, eax
         shr     ecx, 1
-        shl     ecx, 16
+.both:  shl     ecx, 16
         or      ecx, edx
 .set:   push    ecx                     ; XINPUT_VIBRATION
         mov     eax, esp

@@ -120,14 +120,13 @@ flags is set, which the replays set. A car seen for the first time only
 sets the stub's copies of the counts. While the game is paused the
 counts and the flag stand still, so nothing fires.
 
-A pulse is 36 frames, sent every frame, and fades to nothing over its
-last 20. Its strength comes from the player's vibration setting, 0 to 9,
-5 as shipped. At 0 no pulse starts, and the page shows OFF. From 1 to 9
-the strength is `0xffff × (setting + 3) / 12`, so a third at 1, `0xaaaa`
-at 5 and full at 9. A hit drives the left motor, the heavy low one, at
-the strength and the right at a quarter of it. A landing is lighter, the left
-at three eighths and the right, the small high one, at a half. A hit in the frame of a
-landing takes its place. The setting is the page's
+The pulse is sent every frame. Its strength comes from the player's
+vibration setting, 0 to 9, 5 as shipped: none at 0, and from 1 to 9
+`0xffff × (setting + 3) / 12`. A hit is 48 frames at a level strength,
+the left motor at the strength, doubled for the first 6 frames, and the
+right at a quarter. A landing is 36 frames, the left at three eighths
+and the right at a half, fading out over the last 20. A hit in the frame
+of a landing takes its place. The setting is the page's
 VIBRATION row, kept in `SR2.CFG` as `Vibration = 5` in the player's
 controller section; a save under a name beginning `VB` sets it and input
 `0x3d` reads it back, as `DZ` and `0x3f` do for the deadzone. The pulse goes through
