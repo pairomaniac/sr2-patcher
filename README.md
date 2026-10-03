@@ -206,16 +206,17 @@ Start to pause, and in the menus A to choose and B to go back. The
 driving and menu controls can be rebound for both players, keyboard and
 pad, under **Options → Device Settings**.
 
+<p align="center">
+  <img src="assets/readme/options-menu.png" alt="Options menu with Device Settings selected" width="100%" />
+</p>
+
 The less obvious ones:
 
 | Where | What | Pad | Keyboard (2P) |
 | --- | --- | --- | --- |
 | Car select | The other colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185 | Hold LB while choosing | Hold Page Up while choosing |
-| Records | Turn the page | LB / RB | Page Up / Page Down |
-| Replay Gallery | Step the sort | LB / RB | F6-F8 |
 | Name entry | Erase the last letter | X | Backspace |
 | Name entry | Jump to END | Start | - |
-| Team room | Switch between the slot list and the MENU row | Back | TAB |
 | Replay | Next / previous camera | RB / LB | Up / Down (S / X) |
 | Replay | Turn the revolving camera; driver's or rear view; the side camera's side | Left stick | Left / Right (Z / C) |
 | Replay | Zoom the revolving camera | RT / LT | Page Up / Page Down |
@@ -225,10 +226,6 @@ The less obvious ones:
 
 The settings are saved as plain text in `SR2.CFG` beside the game;
 delete the file for the defaults.
-
-<p align="center">
-  <img src="assets/readme/options-menu.png" alt="Options menu with Device Settings selected" width="100%" />
-</p>
 
 <p align="center">
   <img src="assets/readme/device-settings.png" alt="Device Settings page listing each control's key and pad binding" width="49.5%" />
