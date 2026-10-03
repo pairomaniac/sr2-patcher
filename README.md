@@ -160,19 +160,10 @@ the byte, is in [docs/NOTES.md](docs/NOTES.md).
 
 ### Add-ons
 
-An add-on is an extra file beside the game rather than an edit to it,
-downloaded when you press **Apply patches**.
-
 **dgVoodoo 2** is [dege's](https://github.com/dege-diosg/dgVoodoo2)
 DirectDraw on Direct3D 11. Windows' own DirectDraw stops at 2048 a side
-and is slow and erratic with this game on some machines. On by default
-on Windows, off under Wine and Proton, which do not need it. Untick it
-and Apply to take it out.
-
-### Diagnostics
-
-The collapsed **DIAGNOSTICS** section adds logging for a bug report, all
-off by default; see [Reporting a bug](#reporting-a-bug).
+and is slow and erratic with this game on some machines. It is on by
+default on Windows and off under Wine and Proton, which do not need it.
 
 ## Widescreen
 
@@ -185,8 +176,7 @@ off by default; see [Reporting a bug](#reporting-a-bug).
 
 **Options → Graphic Settings** gains an **Aspect Ratio** row - 4:3,
 16:10, 16:9, 21:9, 32:9 - and a **Resolution** row listing that shape's
-sizes, up to 5120x2880 at 16:9, 3840x2400 at 16:10, 5120x2160 at 21:9
-and 7680x2160 at 32:9. The picture changes at the next screen.
+sizes, up to 7680x2160. The picture changes at the next screen.
 
 A wide screen shows more at the sides rather than stretching the middle.
 The menus and the HUD keep their shape in the centre; the title and mode
@@ -253,52 +243,36 @@ and serial:
   the team.
 - **LAN** - the local network, searched as the screen opens.
 
-The team room, the chat, the car and course selection and the race are
-the game's own. Up to four players. After START the room says the race
-is starting while the players are gathered, which can take a few
-seconds. How it works is in [docs/NETWORK.md](docs/NETWORK.md).
+Up to four players. The team room, the chat, the car and course
+selection and the race are the game's own. How it works is in
+[docs/NETWORK.md](docs/NETWORK.md).
 
 ## Music
 
 The soundtrack is thirteen audio tracks on the play disc, which is why
 a stock install is silent without it in the drive. **Rip soundtrack**
-copies them into a `music` folder beside the game (about 550 MB) and
-the **Music from files** patch plays them from there.
-
-Or from a terminal:
-
-```bash
-python3 sr2-patcher.py --rip "Sega Rally 2 (Disc 2).cue" ~/games/sr2
-```
-
-Any pressing's disc 2 will do: they all carry the same recording.
+copies them into a `music` folder beside the game and the **Music from
+files** patch plays them from there. Any release's disc 2 will do: they
+all carry the same recording.
 
 ## Builds
 
-The patcher knows the European, American and Australian releases and
-the Japanese reissue, tells them apart by itself, and installs and
-patches the Pentium III build of each - the one the original installer
-picks on any modern CPU.
+The patcher knows these releases and tells them apart by itself:
 
-| Release | `SEGA RALLY 2.exe` | MD5 | Redump |
-| --- | --- | --- | --- |
-| European | 1,469,952 | `51b3da97c3c73611d3516b65bb684cb5` | EI-1183-1 |
-| American | 1,472,000 | `90d1f25110781707a888475ca37e9240` | 40924-0919 |
-| Australian / Japanese (Sega) | 1,754,624 | `84c95aed1b8cd8402fcff98f1687df7b` | MK-85078-40 |
-| Japanese (DigiCube, MediaKite) | 1,469,952 | `5c0242443ea289d3d461b15eddb63388` | DWRPD-00081 |
+| Release | Disc |
+| --- | --- |
+| European | EI-1183-1 |
+| American | 40924-0919 |
+| Australian | MK-85078-40 |
+| Japanese (Sega) | HCJ-0145 |
+| Japanese (DigiCube, MediaKite) | DWRPD-00081 |
 
-Sega's own 1999 Japanese disc (HCJ-0145) carries the same contents as
-the Australian one, so that row covers both; the Japanese row covers
-DigiCube's and MediaKite's reissues, whose discs are also the same.
+Before writing anything the patcher checks every file it knows. If one
+does not match, nothing is touched and a line names it - usually a
+modified or half-patched install; install afresh from the disc.
 
-Before writing anything the patcher checks every file it knows by size
-and checksum. If one does not match, nothing is touched and a line names
-it - usually a modified or half-patched install; install afresh from the
-disc.
-
-Each patched file gets a `.bak` beside it. Apply starts from those every
-time, so patching twice is the same as patching once, and **Restore
-original** puts them back.
+Each patched file gets a `.bak` beside it, which **Restore original**
+puts back. Patching twice is the same as patching once.
 
 ## From a terminal
 
@@ -311,13 +285,10 @@ python3 sr2-patcher.py --patch ~/games/sr2
 python3 sr2-patcher.py --restore ~/games/sr2
 ```
 
-`--patch` applies every patch unless you name some (the table in
-`docs/NOTES.md` has the names); a leading minus leaves one out, as in
-`--patch ~/games/sr2 -music`, along with whatever needs it. The
-`dgvoodoo` add-on follows the same rule and is on by default on Windows.
-`--patch ~/games/sr2 logs` turns on every diagnostic for a bug report;
-a plain `--patch` turns them off again, all but the network log, which
-stays until `-netlog`.
+`--patch` applies every patch. A leading minus leaves one out, as in
+`--patch ~/games/sr2 -music`; the table in
+[docs/NOTES.md](docs/NOTES.md) has the names. `--patch ~/games/sr2 logs`
+turns on the logging for a bug report.
 
 On Linux the terminal commands need nothing extra; the window needs Tk:
 
@@ -335,22 +306,19 @@ Open an [issue](https://github.com/pairomaniac/sr2-patcher/issues) with
 the release (the window names it), Windows or Wine/Proton, and what you
 were doing just before.
 
-The game can log what it is doing, and most bugs need that to be found.
-Under **DIAGNOSTICS** in the patcher, tick the boxes you are asked for
-and press **Apply patches**; or turn them all on from a terminal with
-`--patch <game folder> logs`. Reproduce the bug, then attach the `logs`
-folder from beside `SEGA RALLY 2.exe`. For anything online, tick
-**Network log** on every machine and send each one's folder. A plain
-**Apply patches** turns the logging off again; the network log stays
-until its box is unticked.
+Most bugs need the game's own log to be found. Under **DIAGNOSTICS** in
+the patcher, tick the boxes you are asked for and press **Apply
+patches**. Reproduce the bug, then attach the `logs` folder from beside
+`SEGA RALLY 2.exe`. For anything online, tick **Network log** on every
+machine and send each one's folder.
 
 For a disc image of a release the patcher does not know, or anything
 that does not fit an issue: pairo@segaonline.net.
 
 ## Known issues
 
-The first three are rare and hard to reproduce; a report of what led up
-to one helps.
+All three are rare and hard to reproduce; a report of what led up to
+one helps.
 
 - **Linux: half of the team room black.** Under Wine or Proton, usually
   after an ALT+TAB, the multiplayer team room can come back with half
@@ -374,9 +342,7 @@ In no particular order:
 ## Working on the patcher
 
 [docs/](docs/README.md) covers how the game works and how the patches
-are made; `tools/check.py` runs every check. The Windows build is
-`tools/bundle.py` and `launcher/`, run by
-[.github/workflows/build.yml](.github/workflows/build.yml).
+are made.
 
 ## AI disclaimer
 
