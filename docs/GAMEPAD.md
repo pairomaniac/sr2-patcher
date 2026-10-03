@@ -377,8 +377,18 @@ The order stays as it was; an F key pressed again still turns it over,
 and the keyboard's Page Up and Page Down do nothing here, as before. The
 DLL is relocated at load, so the stub finds the image base from its own
 RVA and the sort block's global (`0x100be620`) from that base. The poll
-slot is an exe address, filled per build. `tools/sortpadtest.py` runs the
-site on the real DLL, relocated, under Unicorn.
+slot is an exe address, filled per build.
+
+With no replay saved the list never reaches the browse state. Its state 2
+(`0x100025b7`) goes to state 3 when the list has rows and to state 6 when
+it has none, and state 7 (`0x1000285c`) then shows the empty notice every
+frame. The F keys still move the sort box there, so the patch has a
+second site in that state: `push 0; mov edi, eax; mov edx, [ecx]`
+(`0x1000286a`, file `0x1c6a`, the same in every build) becomes a call to
+the stub's second entry, which steps the mode the same way and then does
+the three instructions. This second site has not been tried in the game
+yet. `tools/sortpadtest.py` runs both sites on the real DLL, relocated,
+under Unicorn.
 
 ## The pad's prompts
 

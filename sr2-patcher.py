@@ -468,6 +468,7 @@ D3DINIT_SITES = (0x1a34, 0x1a8c, 0x1ac1, 0x1ada, 0x1af6, 0x1b12, 0x1b2e, 0x1b4f,
 D3DINIT_STORE = bytes.fromhex('a3c41f0110')   # `mov [0x10011fc4], eax`
 REPLAYFREE_SITES = (0x2f65, 0x3b1f)     # ReplayGallery, the gallery's new and its End's free
 SORTPAD_SITE = 0x1b64                   # ReplayGallery, after the list's row update in its browse state; every build
+SORTPAD_EMPTY_SITE = 0x1c6a             # in the state that shows the empty notice, with no replay saved; every build
 # The pad's prompts, a key per screen DLL: the file, its Exec export and
 # the routine that names (an RVA, or None for the build's row's
 # `options` EXEC), and the sheet files the key's art goes on, under
@@ -688,7 +689,8 @@ def patches(build):
         'd3dinit': ('MUSASHI\\MGameD3D.dll', tuple((off, D3DINIT_STORE, None) for off in D3DINIT_SITES), 'apply_d3dinit'),
         'replayfree': ('ReplayGallery.dll', ((REPLAYFREE_SITES[0], bytes.fromhex('e881820000'), None),
                                              (REPLAYFREE_SITES[1], bytes.fromhex('50e8bb760000'), None)), 'apply_replayfree'),
-        'sortpad': ('ReplayGallery.dll', ((SORTPAD_SITE, bytes.fromhex('8b4e5081e7ff000000'), None),), 'apply_sortpad'),
+        'sortpad': ('ReplayGallery.dll', ((SORTPAD_SITE, bytes.fromhex('8b4e5081e7ff000000'), None),
+                                          (SORTPAD_EMPTY_SITE, bytes.fromhex('6a008bf88b11'), None)), 'apply_sortpad'),
         'padprompts': ('Record.dll', (), 'apply_padprompts'),
         'padtitle': ('Title.dll', (), 'apply_padtitle'),
         'padattract': ('AdvTelop.dll', (), 'apply_padattract'),
@@ -4330,12 +4332,13 @@ PAGEPAD_BLOB = bytes.fromhex(
     '5150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c3'
 )
 SORTPAD_BLOB = bytes.fromhex(
-    '60e8000000005d81ed06000000833ddfdfdfdf00746331ffb808030000e87900'
-    '0000730383cf01b809030000e86a000000730383cf028b85a800000089bda800'
-    '0000f7d021f8743189eb81ebe7e7e7e78b9320e60b0085d2741f8b4a04a90100'
-    '0000740a49790fb902000000eb084183f903720231c9894a04618b4e5081e7ff'
-    '000000c383ec088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff'
-    '01c039c2c390909000000000'
+    'e905000000e90f000000e8180000008b4e5081e7ff000000c3e80900000089c7'
+    '8b11596a00ffe160e8000000005d81ed2d000000833ddfdfdfdf00746331ffb8'
+    '08030000e870000000730383cf01b809030000e861000000730383cf028b85c4'
+    '00000089bdc4000000f7d021f8743189eb81ebe7e7e7e78b9320e60b0085d274'
+    '1f8b4a04a901000000740a49790fb902000000eb084183f903720231c9894a04'
+    '61c383ec088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c0'
+    '39c2c39000000000'
 )
 PADPROMPTS_BLOB = bytes.fromhex(
     '60e8000000005d81ed0600000089eb81ebe7e7e7e731ff833ddfdfdfdf007411'
@@ -8287,11 +8290,13 @@ def apply_sortpad(buf, build):
     """sortpad.asm in ReplayGallery: the two instructions after the list's
     row update in its browse state become a call into the blob, which
     steps the sort mode on a press of the pad's LB or RB, then makes them.
+    Three in the state that shows the empty notice call its second entry.
     The exe's poll slot is the build's; the section is writable, the blob
     keeping what was down."""
     blob = SORTPAD_BLOB.replace(struct.pack('<I', SORTPAD_MAGICS['PADPOLL']), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
     out, rva = _self_section(buf, blob)
     _branch(out, SORTPAD_SITE, rva, 9)
+    _branch(out, SORTPAD_EMPTY_SITE, rva + 5, 6)
     return out
 
 

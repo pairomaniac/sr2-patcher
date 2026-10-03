@@ -638,7 +638,8 @@ no pad input can reach. One entry in `ReplayGallery.dll`'s annex replaces
 the two instructions after the list's row update in its browse state. It
 asks MGInput's annex for side 0's LB and RB through the published poll,
 steps the sort mode left on a press of LB and right on a press of RB,
-then does the two displaced instructions. It finds the image base from
+then does the two displaced instructions. A second entry replaces three
+instructions in the state an empty gallery stays in. It finds the image base from
 its own RVA and keeps track of which buttons were already down.
 [docs/GAMEPAD.md](../docs/GAMEPAD.md), *Page Up and Page Down*, has the
 account. `tools/sortpadtest.py` runs it.

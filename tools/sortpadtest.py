@@ -11,7 +11,8 @@ stub that answers side 0's inputs from a table. Checked: a press of LB
 steps the mode left and RB right, round at both ends; held, nothing
 more; both pressed at once, LB; other inputs and side 1's ignored; the
 order never touched; the site's two instructions made as before; an
-empty poll slot or no sort block passed over.
+empty poll slot or no sort block passed over; the same steps from the
+site in the empty gallery's state, its three instructions made.
 
 Needs python3-unicorn; exits 77 with a note when missing.
 """
@@ -62,7 +63,9 @@ def main(argv):
         mu.reg_write(UC_X86_REG_EAX, 0x5a5a5a5a)
     mu.hook_add(UC_HOOK_CODE, poll, begin=STUBS, end=STUBS + 1)
 
-    def frame(mode, down=(), order=7, polled=True, block=BLOCK):
+    empty = BASE + patcher._off_to_rva(out, patcher.SORTPAD_EMPTY_SITE)
+
+    def frame(mode, down=(), order=7, polled=True, block=BLOCK, at=site):
         state['down'] = {s: 0x80 for s in down}
         w(slot, STUBS if polled else 0)
         w(BASE + SORTBLOCK_RVA, block)
@@ -77,11 +80,20 @@ def main(argv):
         mu.reg_write(UC_X86_REG_ECX, 0x55555555)
         esp = STACK + 0x8000
         mu.reg_write(UC_X86_REG_ESP, esp)
-        mu.emu_start(site, site + 9, timeout=2000000)
-        assert mu.reg_read(UC_X86_REG_ESP) == esp, 'the stack came back wrong'
+        if at == empty:                              # eax = the notice's result, ecx = the sort block, its first dword to edx
+            del regs[UC_X86_REG_EDX]
+            mu.reg_write(UC_X86_REG_ECX, BLOCK)
+            w(BLOCK, 0x77)
+            w(esp - 4, 0xdeadbeef)
+            mu.emu_start(empty, empty + 6, timeout=2000000)
+            assert mu.reg_read(UC_X86_REG_ESP) == esp - 4 and r(esp - 4) == 0, 'the site\'s push not made'
+            assert mu.reg_read(UC_X86_REG_EDX) == 0x77 and mu.reg_read(UC_X86_REG_EDI) == 0x11111111, 'the site\'s own three not made'
+        else:
+            mu.emu_start(site, site + 9, timeout=2000000)
+            assert mu.reg_read(UC_X86_REG_ESP) == esp, 'the stack came back wrong'
+            assert mu.reg_read(UC_X86_REG_ECX) == 0x5a and mu.reg_read(UC_X86_REG_EDI) == 0x45, 'the site\'s own two not made'
         for reg, v in regs.items():
             assert mu.reg_read(reg) == v, 'a register came back changed'
-        assert mu.reg_read(UC_X86_REG_ECX) == 0x5a and mu.reg_read(UC_X86_REG_EDI) == 0x45, 'the site\'s own two not made'
         assert r(BLOCK + 8) == order, 'the order changed'
         return r(BLOCK + 4)
 
@@ -102,6 +114,13 @@ def main(argv):
     n = len(state['calls'])
     assert frame(1, [LB], polled=False) == 1 and len(state['calls']) == n, 'asked with the slot empty'
     assert frame(1, [RB], block=0) == 1, 'no sort block'
+    assert frame(1, at=empty) == 1, 'the empty gallery: nothing pressed'
+    assert frame(1, [LB], at=empty) == 0, 'the empty gallery: LB from CAR'
+    assert frame(1, [LB], at=empty) == 1, 'the empty gallery: LB held'
+    assert frame(1, at=empty) == 1
+    assert frame(2, [RB], at=empty) == 0, 'the empty gallery: RB from DATE, round to MODE'
+    assert frame(1, at=empty) == 1
+    assert frame(1, [RB], polled=False, at=empty) == 1, 'the empty gallery: asked with the slot empty'
     print('sortpad: LB and RB step the gallery\'s sort, %s' % build.lower())
     return 0
 
