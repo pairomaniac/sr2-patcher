@@ -487,11 +487,14 @@ def hints(game, log):
 BAR_PAD = 'Use the D-pad to change mode selections'               # for: Use Cursor keys to change mode selections
 BACK_PAD = 'Hit the B button to go back to the previous screen'    # for: Hit the ESC key to go back to the previous screen
 BACK2_PAD = 'Go back to the previous screen by pressing the B button'    # for: Go back to the previous screen by pressing the ESC key
-BAR_PAD_JP = '十字ボタンで項目を選択してください。Bボタンで前画面に戻ります。'    # for: ↑↓←→で項目を選択してください。ESCキーで前画面に戻ります。
+# The Records bar's bubble is a separate sprite the stock line's width
+# (406 texels of lettering); the pad's line must stay within it.
+BAR_PAD_JP = '十字ボタンで項目を選択してください。Bボタンで戻ります。'          # for: ↑↓←→で項目を選択してください。ESCキーで前画面に戻ります。 (397 wide; with 前画面に, 456)
 BACK_PAD_JP = 'Bボタンで前画面に戻ります。'                               # for: ESCキーで前画面に戻ります。
 BACK2_PAD_JP = '↑↓で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ↑↓で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, the popups' first line
 BACK3_PAD_JP = '←→で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ←→で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, their second
 JP_SIZE, JP_WIDE, JP_X, JP_BASE = 14.0, 1.05, 3.5, 14.0            # Noto Sans CJK JP Bold against a stock Japanese line
+BAR_WIDEST = 410                          # the bubbles behind the bars are sprites of their own, the stock lines' width: 406 the Records bar's, 381 and 386 the popups'
 # The Device Settings page's lines with a pad; HINT_LINES are the keyboard's.
 DEVICES_PAD = ('Select an action and hit the button to bind it', 'Hit the button to bind it, or hold START to keep it')
 RECORD_STRIPS = 15                        # the sheet the patcher appends to Record.txr: tops 2, 22 the English line's halves, 42, 62 the Japanese
@@ -519,6 +522,8 @@ def bars(game, log):
             raise SystemExit('"%s" reaches the edge of its strip' % text)
         first, cut, end = halves(cov)
         log('bars: "%s", %d wide, cut at %d' % (text, end - first, cut - first))
+        if end - first > BAR_WIDEST:
+            raise SystemExit('"%s" is %d wide; the bars\' bubbles take %d' % (text, end - first, BAR_WIDEST))
     blits = line_strips(lines['bar'], RECORD_TXR, RECORD_STRIPS, (2, 22), 'en') + line_strips(lines['bar_jp'], RECORD_TXR, RECORD_STRIPS, (42, 62), 'jp')
     for file in GALLERY_TXRS:
         blits += line_strips(lines['back'], file, GALLERY_STRIPS, GALLERY_TOPS['back'], 'en')

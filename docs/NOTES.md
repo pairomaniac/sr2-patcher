@@ -1895,7 +1895,7 @@ chosen by fitting about 45 open fonts to each stock prompt that way:
 | the frame's hint lines, 11 px caps | Liberation Sans Narrow Bold, 90% wide | 9.9% |
 | the Records labels, 9 px caps | Liberation Sans Narrow Bold, 90% wide | about 28%: no face tried does better than about 15% a word, the stock's rasteriser being sharper than any render |
 | the gallery's plates | URW Gothic Demi, 105% wide | 12% a word |
-| the Japanese lines | Noto Sans CJK JP Bold, 14 px, 105% wide | 39%, mostly the letters' places; the shapes match |
+| the Japanese lines | Noto Sans CJK JP Bold, 14 px, 105% wide | 39%, mostly the letters' places; the shapes match. The bubble behind a bar is a sprite of its own, the stock line's width, so a pad line wider than the stock's hangs out of it: the Records bar's pad line says Bボタンで戻ります, not 前画面に戻ります (397 texels against the stock's 406; the longer form was 456 and was seen hanging out in the Japanese build). The popups' lines are 389 and 392 against the stock's 381 and 386, the gallery foot's 192 against 181; `tools/prompts.py` refuses a bar line past 410 |
 | the lobby buttons and the team room's TAB button, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
 
 **The bars.** A bar line is a sprite of two quads about the bar's
@@ -2088,9 +2088,10 @@ under Unicorn, and checks each sheet as the patcher writes it. The
 `prompts` check renders the art again and compares it with the baked
 texels. The live switch has been seen in the game on the Records pages
 and the title, with earlier lettering. The attract screen's prompt, the
-font-set Records and hint lettering, the bars, the gallery's plates, the
-replay prompt and the Japanese lines have not been tried in the game
-yet.
+font-set Records and hint lettering, the bars, the gallery's plates and
+the replay prompt have not been tried in the game yet; of the Japanese
+lines, the Records bar's has been seen in the Japanese build, the others
+have not.
 
 #### The replay's controls
 
