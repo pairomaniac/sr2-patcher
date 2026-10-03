@@ -33,7 +33,7 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('WIDE2D_BLOB', 'wide2d.asm', ()), ('WIDEGL_BLOB', 'widegl.asm', ()), ('RESOLUTION_BLOB', 'resolution.asm', ()),
          ('LOADHOLD_BLOB', 'loadhold.asm', ()), ('HUDLAST_BLOB', 'hudlast.asm', ()), ('D3DINIT_BLOB', 'd3dinit.asm', ()),
          ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
-         ('PADPROMPTS_BLOB', 'padprompts.asm', ()),
+         ('PADPROMPTS_BLOB', 'padprompts.asm', ()), ('TABMENU_BLOB', 'tabmenu.asm', ()),
          ('IPCHECK_BLOB', 'ipcheck.asm', ()), ('ENTRYCAP_BLOB', 'entrycap.asm', ()),
          ('STATUS_BLOB', 'status.asm', ()), ('STARTING_BLOB', 'starting.asm', ())]
 
@@ -99,6 +99,11 @@ EXE_MAGICS = {
     'ROOMFONT': 0xBDBDBDBD,
     'RACESETUP': 0xBFBFBFBF,
     'ROOMLOAD': 0xA1A1A1A1,
+    'BMPFREE': 0xA3A3A3A3,
+    'CHATOBJS': 0xA5A5A5A5,
+    'TABOBJS': 0xA6A6A6A6,
+    'ROOMFLAG': 0xA7A7A7A7,
+    'POLLBASE': 0xA8A8A8A8,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
@@ -115,6 +120,7 @@ EXE_BLOB_MAGICS = {
     'PADMENU_BLOB': ('PADPOLL',) * 2 + ('MENUKEYS',) * 3 + ('PADLEVEL', 'PADEDGE') + ('PADPREV',) * 2,
     'REPLAYPAD_BLOB': ('PADPOLL',) * 2,
     'PAGEPAD_BLOB': ('PADPOLL',) * 2,
+    'TABMENU_BLOB': ('HWND', 'ROOMLOAD', 'BMPFREE', 'TABOBJS') + ('TABOBJS', 'CHATOBJS', 'ROOMFLAG', 'CHATOBJS') + ('ROOMLOAD', 'ROOMBG') + ('PADPOLL', 'TABOBJS', 'ROOMBG', 'POLLBASE', 'PADPOLL'),
     'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
     'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF', 'IPLEN'),
     'STATUS_BLOB': ('NETOBJ', 'DRAW'),
@@ -268,6 +274,18 @@ DLL_MAGICS = {'MUSIC_BLOB': (MAGICS, False), 'DEVICES_BLOB': (DEVICES_MAGICS, Fa
 SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'PADPROMPTS_BLOB': 1}
 
 
+def bordered(src, name, magic, raw, value):
+    """Every occurrence of a placeholder stands clear of its own byte on
+    both sides, so the patcher's replace lands on the four bytes meant.
+    `mov ebx, 0xBBBBBBBB` is five of them, and the first four would go."""
+    pattern = struct.pack('<I', value)
+    at = raw.find(pattern)
+    while at >= 0:
+        if (at and raw[at - 1] == pattern[0]) or raw[at + 4:at + 5] == pattern[:1]:
+            raise SystemExit('%s: %s at %#x in %s runs into its own byte; another register or an indirect load' % (src, magic, at, name))
+        at = raw.find(pattern, at + 4)
+
+
 def generated():
     out = [BEGIN]
     offsets = {}
@@ -297,11 +315,13 @@ def generated():
                 n = raw.count(struct.pack('<I', value))
                 if n == 0 or (once and n != 1):
                     raise SystemExit('%s: %s must occur %s in %s' % (src, magic, 'exactly once' if once else 'at least once', name))
+                bordered(src, name, magic, raw, value)
         else:
             for magic, value in EXE_MAGICS.items():
                 want = EXE_BLOB_MAGICS.get(name, ()).count(magic)
                 if raw.count(struct.pack('<I', value)) != want:
                     raise SystemExit('%s: %s should occur %d time(s) in %s' % (src, magic, want, name))
+                bordered(src, name, magic, raw, value)
         if name == 'RESOLUTION_BLOB' and offsets[name]['table'] != len(raw):
             raise SystemExit('%s: the table must be the last thing in the blob' % src)
         out.append(hexblob(name, raw))
