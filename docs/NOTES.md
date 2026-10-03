@@ -62,6 +62,7 @@ lists. The key in parentheses is what `--patch` takes.
 | **Backspace erases** (`erasekey`) | `SEGA RALLY 2.exe` | `0xce89c` (4 bytes) (`0xceb7c` American, `0x1140d4` Australian) | the input wrapper's key for bit 3 (`0x4cfe9c`) goes from -1 to `0x0e`, Backspace, which the name entries take as erase |
 | **Pad in a replay** (`replaypad`) | `SEGA RALLY 2.exe` | `0x400ea` (5 bytes) (`0x4047a` American, `0x6e99a` Australian), the annex | the two loads where the replay controls' keyboard and joystick paths join (`0x440cea`) become a `call` into asm/replaypad.asm. The stub ORs the annex's bumpers, left stick, triggers, Y and X into the player's level word, then does the two loads itself |
 | **Pad on the multiplayer screens** (`padmenu`) | `SEGA RALLY 2.exe` | `0x3ed4f` (6 bytes), the annex | the store of the pad poll's level word (`0x43f94f`) becomes a `call` into asm/padmenu.asm. The stub puts the annex's buttons into the level word. It puts the annex's directions, Back as TAB and any press as a key into the keyboard's menu word. Then it makes the edge word and does the three stores |
+| **SEL on the team room's TAB button** (`tabmenu`) | `SEGA RALLY 2.exe`, `BINDATA\chat\TAB_MENU_SEL.BMP`, `TAB_MENU_SEL2.BMP`, `TAB_MENU_BACK.BMP` and `TAB_MENU_BACK_SEL.BMP` | `0x35002`, `0x35629`, `0x37053` (6 bytes), `0x36eac`, `0x3ed13` (5 each), the annex; the four files, new | five `call`s into asm/tabmenu.asm. The room constructor's call that loads the backdrop (`0x435c02`) goes through the stub, which makes that call and then loads the two backdrop files; the room destructor's release loop (`0x436229`) frees them. After the menu layer's first draw has loaded its thirty bitmaps and called the TAB pair's `+0x34` (`0x437c53`), the stub loads the two button files beside them; the menu's release loop (`0x437aac`) puts the stock's back and frees them. In the multiplayer pad poll (`0x43f913`), every frame, it writes the array's two TAB entries as the pad's objects while side 0 holds a pad, else the stock's, and when that changes blits the backdrop's TAB MENU box (`CHAT.BMP` at (18, 454), 98 by 18) as SEL or as stock through the surfaces' `SetTarget` (`+0x34`) and `Blit` (`+0x1c`). The button files are the stock pair with SEL over TAB, from a mask `tools/prompts.py` renders; the backdrop files are that box of `CHAT.BMP` as it is and with SEL over TAB |
 | **Loading screens** (`loadhold`) | `SEGA RALLY 2.exe` | `0x19bbb`, `0x189be` (6 bytes each), the annex | the store of the new loading picture when it is created (`0x41a7bb`) and the load of it at the step that deletes it (`0x4195be`) become `call`s into asm/loadhold.asm |
 | **Connection rows** (`lobby`) | `SEGA RALLY 2.exe`, `BINDATA\connect\PROTOCOL\` | `0x3b158`, `0x3b176` (50 bytes), `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3c2`, `0x3f4dd`, `0x3e3e0`; `CONNECT.BMP`, nine button files, three `showteam_*` files and `Ip_entry_US.bmp` | the connection screen's four rows IPX / TCP-IP / MODEM / SERIAL become three, INTERNET / DIRECT IP / LAN, centred. In the exe: the drawer's row y's change, its fourth blit is skipped, the cursor wraps in 0..2, the confirm never picks the modem screen, the latency is read for every type, SHOW TEAMS on row 2 searches at once, and SHOW TEAMS is relettered SEARCH. The IP entry's OK goes through asm/ipcheck.asm (`0x3bf4e`, the annex). The entries are capped by field and CTRL+V is bounded through asm/entrycap.asm (`0x20310`, `0x1f2f1`, `0x1fc49`, `0x1f7ba`, `0x200d5`, the annex). The team room's status line comes from the DLL through asm/status.asm (`0x3544b`, the annex). The chat line's block is 64 bytes larger (`0x344e4`). The popup's lower lines are redrawn. The labels are rendered by `tools/labels.py` and carried as masks. See *The connection screen* |
 | **Starting box** (`starting`) | `SEGA RALLY 2.exe` | `0x367c8`, `0x359bf`, `0x27c35` (7 bytes), `0x63a0` (8 bytes), the annex | the two calls into the race setup (`0x438dc0`) go into asm/starting.asm. The stub draws a box saying the race is starting on the team room's background, blits it onto the room's last frame, presents, then runs the setup. The frame gate's present call goes through the stub's second entry, which keeps the box up. The lobby's surface loader goes through the stub's third entry, which takes the box down. Needs `lobby`. See *The starting box* |
@@ -189,6 +190,8 @@ Twelve files are patched in every build: `SEGA RALLY 2.exe`,
 (`OPTIONS.TXR`, `Record.txr`, `TITLE.TXR`, `ADV_TXT.TXR`, the three
 `Rank*.txr` and the four `RG_*.txr`), the lobby's art and `MPDATA.DAT`. Each
 patched file gets a `.bak` beside it, which is the untouched original.
+Four files are new, `BINDATA\chat\TAB_MENU_SEL.BMP`, `TAB_MENU_SEL2.BMP`,
+`TAB_MENU_BACK.BMP` and `TAB_MENU_BACK_SEL.BMP`, which a restore takes away.
 The patcher always starts from the `.bak`, so patching twice is the same
 as patching once, and restoring is a rename. A file that a run with
 fewer keys leaves alone goes back to its `.bak`. So the keys given on a
@@ -1798,10 +1801,11 @@ message sprites (page `0x100b3c38`) built from word-sized boxes of the
 Japanese sheet 4, the Dreamcast calibration page's; on the English sheet
 they read as nonsense and no page draws them.
 
-The one keyboard prompt left is the team room's TAB MENU button,
-`BINDATA\chat\tab_menu_on.BMP`, which the exe blits through GDI; the pad's
-Back opens that row (`padmenu`). It is not a sprite, so the stub cannot
-switch it.
+The team room's TAB MENU button, `BINDATA\chat\tab_menu_on.BMP` (and
+`_on2.BMP` with the CHAT tab up), is a bitmap the exe blits through GDI,
+not a sprite, so the stub cannot switch it; the pad's Back opens that
+row (`padmenu`). It has its own patch, `tabmenu` (*The team room's TAB
+button*, below).
 
 What is left of the Dreamcast's prompts is the same in every build:
 
@@ -1823,8 +1827,8 @@ prompts are new lettering, and the Dreamcast's is not used. Each is one
 line of one font, the open one that comes closest to the stock prompt it
 stands in for, set and finished as that prompt is. No letter is cut from
 the game's sheets or drawn by hand, so a prompt can say anything. The
-lobby's SEARCH button (the `lobby` patch) is set the same way, in the
-face closest to the buttons' own.
+lobby's SEARCH button (the `lobby` patch) and the team room's SEL are
+set the same way, in the face closest to the buttons' own.
 
 **The stub.** A screen DLL draws a prompt as a sprite of quads. A quad
 is a rectangle about the sprite's centre over a UV entry, and the draws
@@ -1892,7 +1896,7 @@ chosen by fitting about 45 open fonts to each stock prompt that way:
 | the Records labels, 9 px caps | Liberation Sans Narrow Bold, 90% wide | about 28%: no face tried does better than about 15% a word, the stock's rasteriser being sharper than any render |
 | the gallery's plates | URW Gothic Demi, 105% wide | 12% a word |
 | the Japanese lines | Noto Sans CJK JP Bold, 14 px, 105% wide | 39%, mostly the letters' places; the shapes match |
-| the lobby buttons, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
+| the lobby buttons and the team room's TAB button, 10 px caps | Noto Sans Mono Regular, 13.5 px, 92.5% wide, tracked 1 px | 23.5% on SHOW TEAMS; of 46 monospaced and technical faces tried, Source Code Pro and Space Mono come next at 26% |
 
 **The bars.** A bar line is a sprite of two quads about the bar's
 centre, each a strip of 17 rows with two white texels beyond each end,
@@ -1920,10 +1924,62 @@ the list) has no spare entry, so the entries are switched in place: the
 box, and the sheet number through a bit-31 row, from the array's handle
 for sheet 7 to its handle for the appended sheet 9. 90 rows in all.
 
-**The lobby's SEARCH button.** The SHOW TEAMS button files are
-relettered SEARCH from Noto Sans Mono: the face cleared and the mask
-laid over it in the stock lettering's colour, read off the file
-(`lettered`). Not tried in the game yet.
+**The team room's TAB button.** `tab_menu_on.BMP` is TAB and then MENU
+on black, `tab_menu_on2.BMP` TAB on black and then CHAT, 98 by 18, the
+same files in every build. Two things show TAB MENU. With the menu
+closed it is painted into the room's backdrop: `CHAT.BMP` (8-bit, 640 by
+480, the same file in every build) at (18, 454), 98 by 18, with TAB's
+box on the same pixels as the button files'. The room object's
+constructor (`0x435b90`, the class whose vtable is `0x49b82c`) loads it
+first of the room's surfaces through the lobby's loader (`0x406fa0`:
+context, directory `0xc`, flag, name, &object, &size, 1; the call at
+`0x435c02`) into `[0x4eade0]`, and the room's first draw layer
+(`0x436310`) blits the whole backdrop onto the frame every frame; the
+destructor (`0x4361f0`) releases the surfaces in a loop from `0x436229`.
+When TAB opens the menu, the room's key layer (`0x4366b0`) registers a
+layer whose first draw is `0x437b10`: it loads thirty bitmaps from the
+table at `0x4b3670` through the same loader (the loop at `0x437b3e`
+pushes them from a table of `(directory, flag, name)` rows) into the
+object array at `0x4eae08`, the TAB pair fifth and sixth. The objects
+are MGameD3D's surfaces, the class *The starting box* draws through: the
+draw calls each one's `SetTarget` (`+0x34`) with the first object,
+`MENU_BACK`, and the TAB pair's again with 0, the back buffer; the open
+menu's draws read the array and call `Blit` (`+0x1c`; `0x43f301` and
+about a dozen more); closing the menu frees the thirty through
+`0x406f80` (the loop at `0x437aac`). The layer list is torn down
+(`0x401060`) without that exit, so a room left with the menu open leaks
+the thirty.
+
+The `tabmenu` patch writes four files: `TAB_MENU_SEL.BMP` and
+`TAB_MENU_SEL2.BMP`, the stock pair with TAB's letters (rows 4 to 13,
+columns 10 to 33) cleared to the box's colour and SEL laid over them in
+the letters' own colour; `TAB_MENU_BACK.BMP`, the backdrop's box as it
+is, and `TAB_MENU_BACK_SEL.BMP`, the same with SEL. asm/tabmenu.asm has
+five entries. The constructor's backdrop call goes through it: it makes
+that call with the site's own seven arguments and then loads the two
+backdrop files; the destructor's loop frees them, and the menu's two
+objects too when the room is left with the menu open, the stock
+pointers put back first. The menu layer's first draw loads the two
+button files beside the stock and the menu's release loop frees them.
+The multiplayer pad poll (`0x43f913`, which `padmenu` also hooks,
+further on) switches the two array entries each frame while the menu's
+objects are loaded and, when the pad's answer changes, blits the
+matching backdrop file onto the backdrop at (18, 454) with the backdrop
+as the target and the back buffer put back after; a fresh room's
+backdrop counts as the keyboard's. The first version loaded the
+backdrop files with the menu's, so nothing showed until the menu had
+been opened once and nothing changed after it closed. `tools/tabmenutest.py`
+runs the five entries under Unicorn; the patcher refuses the files when
+the stock pair or `CHAT.BMP` is not the one it knows. A placeholder in a
+`mov reg, imm32` whose opcode byte is the placeholder's own byte
+(`mov ebx, 0xBBBBBBBB`) gets the patcher's replace on the wrong four
+bytes; `asm/build.py` refuses that, and the stub loads `[ROOMBG]`
+indirectly. The lobby's SHOW TEAMS button files are relettered SEARCH
+from the same face: the face cleared and the mask laid over it in the
+stock lettering's colour, read off the file (`lettered`). In the
+European build under Proton, the open menu's SEL button and the
+backdrop's SEL after a menu had been opened have been seen; the room
+entries and the lobby's button have not been tried in the game yet.
 
 **The replay prompt.** PRESS ENTER KEY for REPLAY is one 166 by 24 box
 of sheet 9 (rows 190 to 213), the same sheet in the three `Rank` files

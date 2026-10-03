@@ -65,6 +65,7 @@ the loader would add the relocation delta into the new code.
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake, but before the tree's fade quad, so the fade stays over the HUD |
 | `loadhold.asm` | exe | the stage loading screens held on screen for three seconds |
 | `padmenu.asm` | exe | the pad on the multiplayer screens, read straight from MGInput's annex; Back acts as TAB, which is how the team room's MENU row opens |
+| `tabmenu.asm` | exe | the team room's TAB MENU button shown as SEL MENU while player 1 holds a pad: the backdrop's box loaded with the room and blitted over the painted-in one when the pad comes or goes, the pad's button bitmaps loaded with the menu and switched into the array each frame, each freed with its owner |
 | `sortpad.asm` | `ReplayGallery.dll` | LB and RB step the gallery's sort, which the exe's F6-F8 accelerators set |
 | `pagepad.asm` | exe | LB and RB act as Page Up and Page Down in the input wrapper's level word: the Records pages, the car select's alternative colour |
 | `padprompts.asm` | `Record.dll`, `Title.dll`, `AdvTelop.dll`, `ReplayGallery.dll`, `Options.dll` | a screen's key prompts drawn as the pad's while player 1 holds a pad: the Records pages' page keys and replay prompt, PRESS ENTER KEY on the title and the attract screen, the gallery's sort keys, the hint bars |
@@ -81,7 +82,7 @@ the loader would add the relocation delta into the new code.
 | `nogeneric.asm` | `MGInput.dll` | the device loop skipping DirectInput 8 devices of no usable kind (types 0x11, 0x19-0x1c) |
 | `mix.asm` | `MGSound.dll` | every buffer's dB range remapped to −43..−8 in `SetRange`, and the streamed music put on that curve plus `STREAM_DB` |
 | `mix.inc` | - | the mix's numbers: the effects' range and the two music offsets; included by `mix.asm` and `music.asm` |
-| `padpoll.inc` | - | one pad input read through the page poll MGInput's annex publishes, and the "past half its range" test; included by `padmenu.asm`, `replaypad.asm`, `pagepad.asm`, `sortpad.asm` and `padprompts.asm` |
+| `padpoll.inc` | - | one pad input read through the page poll MGInput's annex publishes, and the "past half its range" test; included by `padmenu.asm`, `tabmenu.asm`, `replaypad.asm`, `pagepad.asm`, `sortpad.asm` and `padprompts.asm` |
 | `frametrace.asm` | exe | a diagnostic: every drawn frame's counter and step count appended to `logs\frames.log` |
 | `voltrace.asm` | exe | a diagnostic: five volume entry points report their arguments through `OutputDebugStringA` |
 | `d3dinit.asm` | `MGameD3D.dll` | a diagnostic: every step of the renderer's bring-up appended to `logs\d3dinit.log` with its HRESULT |
@@ -653,6 +654,35 @@ poll, ORs them into the player's level word as the Page Up and Page Down
 bits, then does the load and test so the site's branch sees the right
 flags. [docs/NOTES.md](../docs/NOTES.md), *Page Up and Page Down*, has
 the account. `tools/pagepadtest.py` runs it.
+
+## tabmenu.asm
+
+The team room's TAB MENU button is a bitmap the exe blits through
+MGameD3D's surface wrapper, not a sprite, so padprompts.asm cannot
+switch it. With the menu closed, TAB MENU is painted into the room's
+backdrop (`CHAT.BMP`, loaded in the room object's constructor and blitted
+whole onto the frame every draw) at (18, 454), 98 by 18. When TAB opens
+the menu, a layer's first draw loads thirty bitmaps from `BINDATA\chat`
+into an array of surface objects, `TAB_MENU_ON.BMP` and
+`TAB_MENU_ON2.BMP` the fifth and sixth, and calls each object's
+`SetTarget` (vtable `+0x34`) with the first object, then those two again
+with 0; the open menu's draws read the array; closing the menu frees
+the thirty. Five calls into this blob. In place of the constructor's
+backdrop load: that call, then the patcher's `TAB_MENU_BACK.BMP` and
+`TAB_MENU_BACK_SEL.BMP` the same way. After the menu's two `+0x34`
+calls: the patcher's `TAB_MENU_SEL.BMP` and `TAB_MENU_SEL2.BMP`, the
+stock pointers kept and the two calls done on the new objects. In the
+multiplayer screens' pad poll, every frame: whether side 0 holds a pad,
+from MGInput's annex; while the menu's objects are loaded, the two
+array entries written as the pad's objects or the stock's; while the
+backdrop's are, and the answer has changed, the backdrop file for it
+blitted onto the backdrop (`SetTarget` to the backdrop, `Blit` at
+(18, 454), `SetTarget` back to 0). At the menu's release loop: the
+stock's back and the buttons freed. At the room destructor's release
+loop: the same if the menu was still open, then the backdrop's two
+freed. The patcher writes the button files from the stock ones with SEL
+over TAB and the backdrop files from `CHAT.BMP`'s box, as it is and with
+SEL. `tools/tabmenutest.py` runs the five entries.
 
 ## padprompts.asm
 

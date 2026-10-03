@@ -27,10 +27,11 @@ numbers below were fitted.
 
 The Device Settings page's two hint lines are made here as well, in the
 face of the Options frame's own messages (OPTIONS.TXR sheet 4), which
-is that narrow bold grotesque with 11 px caps. So is the mask for a
-bitmap the exe blits, the connection screen's SEARCH button (the lobby
-patch), in Noto Sans Mono, the closest open face to its monospaced 10
-px lettering.
+is that narrow bold grotesque with 11 px caps. So are the masks for two
+bitmaps the exe blits: the connection screen's SEARCH button (the lobby
+patch) and SEL for TAB on the team room's button (the tabmenu patch),
+in Noto Sans Mono, the closest open face to their monospaced 10 px
+lettering.
 
 Needs Pillow and the fonts; --check exits 77 with a note without them.
 """
@@ -655,16 +656,20 @@ def options_all(game, log):
 
 
 # The connection screen's SEARCH button (BINDATA\connect\button\showteam_*.BMP,
-# relettered by the lobby patch): 24-bit bitmaps the exe blits, their
-# lettering a monospaced sans with 10 px caps. The art is a mask: 4444
-# texels whose alpha is the coverage, which the patcher lays over the
-# stock face in the stock lettering's colour.
+# relettered by the lobby patch) and the team room's TAB button
+# (BINDATA\chat\tab_menu_on.BMP and _on2.BMP, SEL on the pad's copies the
+# tabmenu patch writes): 24-bit bitmaps the exe blits, their lettering a
+# monospaced sans with 10 px caps. The art is a mask: 4444 texels whose
+# alpha is the coverage, which the patcher lays over the stock face in
+# the stock lettering's colour.
 FACES['mono'] = ('Noto Sans Mono:style=Regular', ('NotoSansMono-Regular.ttf',),
                  ('/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf', '/usr/share/fonts/google-noto/NotoSansMono-Regular.ttf'),
                  'Noto Sans Mono Regular not found; install fonts-noto-mono (Fedora: google-noto-sans-mono-fonts)')
 MONO_SIZE, MONO_WIDE, MONO_TRACK = 13.5, 0.925, 1.0
 BUTTON_FILE, BUTTON_W, BUTTON_H, BUTTON_BASE = 'showteam', 102, 16, 12.5      # the lobby button's face; the stock caps are rows 3 to 12
 BUTTON_TEXT, BUTTON_STOCK = 'SEARCH', 'SHOW TEAMS'
+TAB_FILE, TAB_BOX, TAB_BASE = 'tab_menu', (9, 3, 26, 12), 10.5                 # TAB's letters, rows 4 to 13 and columns 10 to 33 of the file, with a pixel round them
+TAB_TEXT = 'SEL'
 
 
 def mask(text, width, height, centre, base):
@@ -692,8 +697,14 @@ def buttons(game, log):
     return [(BUTTON_FILE, 0, 0, 0, BUTTON_W, BUTTON_H, '', mask(BUTTON_TEXT, BUTTON_W, BUTTON_H, BUTTON_W / 2.0 - 0.5, BUTTON_BASE))]
 
 
+def tab(_game, log):
+    x, y, w, h = TAB_BOX
+    log('tabmenu: %s over TAB' % TAB_TEXT)
+    return [(TAB_FILE, 0, x, y, w, h, '', mask(TAB_TEXT, w, h, (10 + 33) / 2.0 - x, TAB_BASE))]
+
+
 PROMPTS = (('padtitle', title), ('padattract', attract), ('padprompts', records), ('padgallery', gallery_all), ('padoptions', options_all),
-           ('lobby', buttons))
+           ('lobby', buttons), ('tabmenu', tab))
 HINTS = 'devices'                         # the devices page's hint lines, HINT_ART
 
 

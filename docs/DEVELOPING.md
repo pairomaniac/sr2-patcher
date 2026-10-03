@@ -98,7 +98,7 @@ two music offsets - live in `asm/mix.inc`, which `mix.asm` and
 ## The checks
 
 `tools/check.py` runs every check. `--list` names them and `--only a,b`
-picks some. There are 39. The first 23, down to `gui`, need only nasm,
+picks some. There are 40. The first 24, down to `gui`, need only nasm,
 pyflakes, Unicorn, Pillow and the fonts, tkinter, xvfb and a C
 compiler, and CI runs them; `prompts` skips there until CI has its
 five fonts. Every test that maps a PE image does so

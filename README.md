@@ -229,7 +229,7 @@ title and attract screens, A BUTTON for a replay, LB BUTTON and RB
 BUTTON on the Records pages, LB/RB on the gallery's sort box, the B
 button and the D-pad in the hint bars, all in lettering set to match
 the game's, in Japanese on a Japanese install. Unplug the pad and they
-name the keys again. The team room's TAB MENU button still says TAB. On the
+name the keys again, and the team room's TAB button reads SEL. On the
 car select, hold LB from pressing A until the car is taken for the other
 colour of the Stratos, Corolla, Impreza, Lancer Evo VI or ST185.
 

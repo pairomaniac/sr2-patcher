@@ -79,7 +79,7 @@ BUILDS = {
                   'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'tabmenu': (0x37053, 0x36eac, 0x3ed13, 0x35002, 0x35629), 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
@@ -100,7 +100,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0,
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0, 'BMPFREE': 0x406f80, 'CHATOBJS': 0x4eae08, 'TABOBJS': 0x4eae18, 'ROOMFLAG': 0x4edcc0, 'POLLBASE': 0x50b120,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfd0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470ff0, 'HUDRESET': 0x46cec0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd80},
     },
     'American': {
@@ -126,7 +126,7 @@ BUILDS = {
                   'noregistry': (0xd0bc0, 0x7e779), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),
                   'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0), 'nogeneric': 0x26d2,
                   'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
-                  'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'erasekey': 0xceb7c, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
+                  'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'tabmenu': (0x37383, 0x371dc, 0x3f043, 0x35332, 0x35959), 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'erasekey': 0xceb7c, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
                   'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x6600,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8},
@@ -143,7 +143,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc, 'IPSLOT': 0x4eaddc, 'TEAMSLOT': 0x4eae0c, 'LINEBUF': 0x4d3c0c, 'NETOBJ': 0x4eacfc, 'DRAW': 0x43624c, 'ROOMBG': 0x4eaed0, 'ROOMSIZE': 0x4eaf90, 'ROOMFONT': 0x4e85b4, 'RACESETUP': 0x438ef0, 'ROOMLOAD': 0x407000,
+                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc, 'IPSLOT': 0x4eaddc, 'TEAMSLOT': 0x4eae0c, 'LINEBUF': 0x4d3c0c, 'NETOBJ': 0x4eacfc, 'DRAW': 0x43624c, 'ROOMBG': 0x4eaed0, 'ROOMSIZE': 0x4eaf90, 'ROOMFONT': 0x4e85b4, 'RACESETUP': 0x438ef0, 'ROOMLOAD': 0x407000, 'BMPFREE': 0x406fe0, 'CHATOBJS': 0x4eaef8, 'TABOBJS': 0x4eaf08, 'ROOMFLAG': 0x4eddb0, 'POLLBASE': 0x50b220,
                       'RENDERER': 0x50b210, 'SETVIEWPORT': 0x46c1e0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429e50, 'TREEDRAW': 0x471220, 'HUDRESET': 0x46d0d0, 'LATEFLAG': 0x4e69ec, 'FADEDRAW': 0x46bf90},
     },
     'Australian': {
@@ -170,7 +170,7 @@ BUILDS = {
                   'dinput8': (0x2870, 0x8550, 0x39f9, '8b9660020000', 0x10678, 0x106b8), 'nogeneric': 0x2694,   # the older MGInput.dll: the type read is a six-byte load
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'cardwarn': 0x4b263, 'cdlevel': 0xb2668,
                   'clearsize': 0x40b83,
-                  'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'erasekey': 0x1140d4, 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
+                  'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'tabmenu': (0x60a63, 0x608bc, 0x6d603, 0x5ea22, 0x5f049), 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'erasekey': 0x1140d4, 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
                   'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df), 'startpresent': (0x4c877, 0x4c8ff), 'startload': 0xfdf0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
@@ -188,7 +188,7 @@ BUILDS = {
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
         'addresses': {'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
-                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c, 'IPSLOT': 0x549e34, 'TEAMSLOT': 0x549e64, 'LINEBUF': 0x5245c4, 'NETOBJ': 0x549d54, 'DRAW': 0x45fb3c, 'ROOMBG': 0x549f28, 'ROOMSIZE': 0x549fe8, 'ROOMFONT': 0x545efc, 'RACESETUP': 0x464f40, 'ROOMLOAD': 0x4109f0,
+                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c, 'IPSLOT': 0x549e34, 'TEAMSLOT': 0x549e64, 'LINEBUF': 0x5245c4, 'NETOBJ': 0x549d54, 'DRAW': 0x45fb3c, 'ROOMBG': 0x549f28, 'ROOMSIZE': 0x549fe8, 'ROOMFONT': 0x545efc, 'RACESETUP': 0x464f40, 'ROOMLOAD': 0x4109f0, 'BMPFREE': 0x4109d0, 'CHATOBJS': 0x549f50, 'TABOBJS': 0x549f60, 'ROOMFLAG': 0x54ce08, 'POLLBASE': 0x575af0,
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
     },
     # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
@@ -225,7 +225,7 @@ BUILDS = {
                   'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'tabmenu': (0x37053, 0x36eac, 0x3ed13, 0x35002, 0x35629), 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
@@ -245,7 +245,7 @@ BUILDS = {
         'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0,
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0, 'BMPFREE': 0x406f80, 'CHATOBJS': 0x4eae08, 'TABOBJS': 0x4eae18, 'ROOMFLAG': 0x4edcc0, 'POLLBASE': 0x50b120,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
     },
 }
@@ -301,6 +301,7 @@ RESTORE_RELOCS = 10
 #   hudlast     the race's HUD drawn after the water, so the gauge's plate blends over the lake
 #   loadhold    the stage loading screens held three seconds
 #   padmenu     the pad on the multiplayer screens straight from MGInput's annex, the directions the keyboard's way; Back is TAB, which opens the team room's MENU row
+#   tabmenu     the team room's TAB MENU button reads SEL MENU while player 1 holds a pad; writes the pad's two bitmaps under BINDATA\chat
 #   pagepad     LB and RB as Page Up and Page Down: the Records pages, the car select's alternative colour; X as the name entry's erase
 #   erasekey    Backspace erases a letter in the name entry: the wrapper's key for bit 3, which had none
 #   sortpad     the pad's LB and RB step the Replay Gallery's sort (MODE, CAR, DATE), which F6-F8 set as accelerators
@@ -672,6 +673,11 @@ def patches(build):
             (site['loadhold'][0], b'\x89\x0d' + struct.pack('<I', row['addresses']['LOADPIC']), None),
             (site['loadhold'][1], b'\x8b\x0d' + struct.pack('<I', row['addresses']['LOADPIC']), None)), 'apply_loadhold'),
         'padmenu': (EXE, ((site['padmenu'], b'\x89\x0d' + struct.pack('<I', row['addresses']['PADLEVEL']), None),), 'apply_padmenu'),
+        'tabmenu': (EXE, ((site['tabmenu'][0], b'\x8b\x15' + struct.pack('<I', row['addresses']['ROOMFLAG']), None),
+                          (site['tabmenu'][1], b'\xbe' + struct.pack('<I', row['addresses']['CHATOBJS']), None),
+                          (site['tabmenu'][2], b'\xa1' + struct.pack('<I', row['addresses']['POLLBASE']), None),
+                          (site['tabmenu'][3], b'\xe8', None),
+                          (site['tabmenu'][4], b'\xbe' + struct.pack('<I', row['addresses']['ROOMBG']), None)), 'apply_tabmenu'),
         'replaypad': (EXE, ((site['replaypad'], bytes.fromhex('8b56088b06'), None),), 'apply_replaypad'),
         'pagepad': (EXE, ((site['pagepad'][0], bytes.fromhex(site['pagepad'][1]), None),),
                     'apply_pagepad'),
@@ -943,9 +949,9 @@ FEATURES = (
      'Prompts\tWith a pad connected every prompt names a button: START\n'
      '\tBUTTON on the title and attract screens, A BUTTON for a\n'
      '\treplay, LB and RB on the Records pages and the gallery\'s\n'
-     '\tsort, B button and D-pad in the hint bars, in lettering set\n'
-     '\tto match the game\'s.',
-     ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'erasekey', 'sortpad', 'padprompts', 'padtitle', 'padattract', 'padgallery', 'padoptions')),
+     '\tsort, B button and D-pad in the hint bars, SEL on the team\n'
+     '\troom\'s TAB button, in lettering set to match the game\'s.',
+     ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'erasekey', 'sortpad', 'padprompts', 'padtitle', 'padattract', 'padgallery', 'padoptions', 'tabmenu')),
 
     ('internet', 'Internet play',
      'Play over the internet, in place of the DirectPlay the game shipped\n'
@@ -4351,6 +4357,33 @@ PADPROMPTS_BLOB = bytes.fromhex(
     '0825ffffff7f8b141389140383c608ebe68d83e6e6e6e68944241c61ffe083ec'
     '088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c390'
 )
+TABMENU_BLOB = bytes.fromhex(
+    'e999000000e9e8000000e964010000e9f7000000e9310100006a018d84f57c02'
+    '0000508dbcb56c020000578b84b55c02000001e8506a006a0cff35ededededb8'
+    'a1a1a1a1ffd083c41cc38b84b56c02000085c0741650b8a3a3a3a3ffd083c404'
+    'c784b56c02000000000000c38b859c02000085c07427bba6a6a6a689038b85a0'
+    '02000089430431f6e8bdffffff4683fe0272f5c7859c02000000000000c360e8'
+    '000000005d81eda4000000bba6a6a6a68b0389859c0200008b43048985a00200'
+    '0031f6e851ffffff8b0785c074168b08ff35a5a5a5a550ff51348b078b086a00'
+    '50ff51344683fe0272d9618b15a7a7a7a7c360e8000000005d81edf8000000e8'
+    '68ffffff61bea5a5a5a5c360e8000000005d81ed11010000b907000000ff7424'
+    '3c4975f9b8a1a1a1a1ffd083c41cbe02000000e8e1feffff4683fe0472f5c785'
+    'a40200000000000061c360e8000000005d81ed50010000e810ffffffbe020000'
+    '00e8e4feffff4683fe0472f561bebbbbbbbbc360e8000000005d81ed79010000'
+    '83bd6c02000000750d83bd74020000000f849d00000031ff833ddfdfdfdf0074'
+    '0db83e030000e8a600000083d70083bd6c02000000742883bd7002000000741f'
+    '8db59c02000085ff74068db56c020000bba6a6a6a68b0689038b460489430483'
+    'bd7402000000744b83bd780200000074423bbda4020000743a8b1dbbbbbbbb85'
+    'db743089bda40200008bb4bd740200008b0e5356ff51348b0e8d85a802000050'
+    '68c60100006a1256ff511c8b0e6a0056ff513461a1a8a8a8a8c383ec088d4c24'
+    '04518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c390b8020000'
+    'c9020000db020000ed0200000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000062000000120000005441425f4d454e55'
+    '5f53454c2e424d50005441425f4d454e555f53454c322e424d50005441425f4d'
+    '454e555f4241434b2e424d50005441425f4d454e555f4241434b5f53454c2e42'
+    '4d5000'
+)
 IPCHECK_BLOB = bytes.fromhex(
     '5356575152beb3b3b3b3e8200000005a595f5e5b85c07408833db4b4b4b400c3'
     '586a006a006a006a1c68b5b5b5b5c331c983caff8a040e84c074093c3a750289'
@@ -4465,6 +4498,11 @@ EXE_MAGICS = {
     'ROOMFONT': 0xBDBDBDBD,
     'RACESETUP': 0xBFBFBFBF,
     'ROOMLOAD': 0xA1A1A1A1,
+    'BMPFREE': 0xA3A3A3A3,
+    'CHATOBJS': 0xA5A5A5A5,
+    'TABOBJS': 0xA6A6A6A6,
+    'ROOMFLAG': 0xA7A7A7A7,
+    'POLLBASE': 0xA8A8A8A8,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 DEVICES_MAGICS = {
@@ -5882,6 +5920,12 @@ PROMPT_ART = {
          'hixy9lZUWeaSs2kxPe5cxtRY6wn3g8tW5kPLw+FhwE3fEI/nYr9yaV/dycSrHgGIg+yM5hKYw8J3J7k1V9AqejDw6JvtxGVC'
          'TLZC4ToP5TIXDA53EtuH1jy1P6ItVUWYaAtmMZVp4PA9zCnilVf+nHwAe2qDMQ=='),
     ),
+    'tabmenu': (
+        ('tab_menu', 0, 9, 3, 26, 12, '',
+         'eNqdkGERgCAMhReBCEQgghGMYAQjLIIRiGAEIhCBCETwKRsqnh7n3g/GeB/Hg+goB5nSYrVVOtEzLUeREpTR7TWiK0riWIgb'
+         'xmNWWCNMaBxPJtB02/cwDI+9MVHSmFdmn2W80FZG8/gPhuD3SOy633b+Bf9g5m5mhXfCNEmiEd0iUibIfqiZ+bjJ1mwsmi+O'
+         'Ikc/awO+ejkR'),
+    ),
 }
 # The Device Settings page's hint lines, the same way: each line's two
 # halves, strips for the sheet the patcher appends to OPTIONS.TXR.
@@ -6783,6 +6827,27 @@ def apply_padmenu(buf, build):
     return out
 
 
+def apply_tabmenu(buf, build):
+    """tabmenu.asm: five calls into the blob. The room constructor's call
+    that loads the backdrop goes through the blob, which loads the
+    backdrop box's two files after it; after the menu layer's first draw
+    has loaded its bitmaps, the blob loads the pad's two button files
+    beside them; in the multiplayer pad poll, every frame, it points the
+    array's two TAB entries at the pad's or the stock's and, when the pad
+    comes or goes, blits the backdrop's box as SEL or as stock; at the
+    menu's release loop it puts the stock's back and frees the buttons;
+    at the room destructor's release loop it frees whatever is left."""
+    out, rva = append_section(buf, exe_blob(TABMENU_BLOB, build))
+    init, free, frame, room, roomfree = BUILDS[build]['sites']['tabmenu']
+    _check_call(buf, room, BUILDS[build]['addresses']['ROOMLOAD'], 'the lobby surface loader')
+    _branch(out, init, rva, 6)
+    _branch(out, free, rva + 5, 5)
+    _branch(out, frame, rva + 10, 5)
+    _branch(out, room, rva + 15, 5)
+    _branch(out, roomfree, rva + 20, 5)
+    return out
+
+
 def apply_replaypad(buf, build):
     """replaypad.asm: the two loads at the join of the replay controls'
     keyboard and joystick paths (`mov edx, [esi+8]; mov eax, [esi]`)
@@ -7575,6 +7640,16 @@ LOBBY_BUTTON_MD5 = {'showteam': ('eb63942470f1fd42f686179f1f1f1413', '0aa7e865dc
 LOBBY_BUTTON_FILES = tuple('showteam_%s.BMP' % state for state in LOBBY_BUTTON_STATES)
 LOBBY_FACE = (102, 16)
 LOBBY_GLYPH_ROWS = (1, 14)
+# The team room's TAB button, tab_menu_on.BMP (TAB, then MENU on black)
+# and tab_menu_on2.BMP (TAB on black, then CHAT) in BINDATA\chat, 98x18
+# 24-bit, the same in every build. The tabmenu patch writes copies that
+# read SEL, TAB_MENU_SEL.BMP and TAB_MENU_SEL2.BMP, which asm/tabmenu.asm
+# loads beside them and shows while a pad is held.
+TABMENU_DIR = 'BINDATA\\chat'
+TABMENU_STOCK = ('tab_menu_on.BMP', 'tab_menu_on2.BMP', 'CHAT.BMP')
+TABMENU_STOCK_MD5 = ('8e560bd8ddbf7ee8032b42ca786de6ad', '260ac4847657828b34f9d6ac100febcc', '49662ce80eea0f71945e4481c64b8406')
+TABMENU_FILES = ('TAB_MENU_SEL.BMP', 'TAB_MENU_SEL2.BMP', 'TAB_MENU_BACK.BMP', 'TAB_MENU_BACK_SEL.BMP')
+TABMENU_BACK_BOX = (18, 454, 98, 18)    # where CHAT.BMP, the room's backdrop, has TAB MENU painted in
 # The IP entry popup, Ip_entry_US.bmp in BINDATA\connect\IP_ENTRY, a
 # 385x184 24-bit BMP: its two lines under the box said a blank entry
 # searches, which the LAN row does now. They are painted over and
@@ -7727,6 +7802,63 @@ def lobby_buttons(stock):
         top, bottom = LOBBY_GLYPH_ROWS
         out[state] = lettered(stock['showteam'][i], (w, h, texels), (shift, shift), (top + shift, bottom + shift, shift, LOBBY_FACE[0] - 1 + shift))
     return out
+
+
+def bmp8_crop24(data, box):
+    """A 24-bit BMP of a box (x, y, width, height) of an 8-bit BMP."""
+    w, h = struct.unpack_from('<ii', data, 18)
+    off = struct.unpack_from('<I', data, 10)[0]
+    palette = [data[54 + i * 4:54 + i * 4 + 3] for i in range(256)]
+    stride = (w + 3) & ~3
+    x0, y0, cw, ch = box
+    mask = bytearray()
+    for y in range(y0, y0 + ch):
+        row = data[off + (h - 1 - y) * stride:off + (h - 1 - y) * stride + w]
+        mask += bytes(row[x0:x0 + cw])
+    out = bytearray(bmp24(bytes(cw * ch), (cw, ch)))
+    rows = [bytearray(r) for r in bmp24_rows(out)]
+    for y in range(ch):
+        rows[y][:] = b''.join(palette[v] for v in mask[y * cw:(y + 1) * cw])
+    return bmp24_pack(rows, bytes(out))
+
+
+def tabmenu_files(stock):
+    """The pad's four team room TAB files from the stock tab_menu_on,
+    _on2 and CHAT.BMP: the two buttons with TAB's letters cleared to the
+    box's colour and SEL laid over them from the mask tools/prompts.py
+    renders, in the letters' own colour; and the backdrop's TAB MENU box
+    cut out as it is and again with SEL. {name: bytes}."""
+    (_f, _s, x, y, w, h, texels), = prompt_art('tabmenu')
+    texels = struct.unpack('<%dH' % (w * h), texels)
+    back = bmp8_crop24(stock[2], TABMENU_BACK_BOX)
+    out = {}
+    for name, data in zip(TABMENU_FILES, (stock[0], stock[1], None, back)):
+        out[name] = back if data is None else lettered(data, (w, h, texels), (x, y), (y, y + h - 1, x, x + w - 1))
+    return out
+
+
+def tabmenu_art(dest, wanted, log):
+    """Write the pad's TAB button files from the stock ones, or take them
+    away."""
+    folder = os.path.join(dest, *TABMENU_DIR.split('\\'))
+    if not wanted:
+        for name in TABMENU_FILES:
+            path = os.path.join(folder, name)
+            if os.path.isfile(path):
+                os.remove(path)
+                log('patch: %s\\%s taken away' % (TABMENU_DIR, name))
+        return
+    stock = []
+    for name, digest in zip(TABMENU_STOCK, TABMENU_STOCK_MD5):
+        path = installed(dest, TABMENU_DIR + '\\' + name)
+        if not os.path.isfile(path) or md5(path) != digest:
+            log('patch: %s\\%s is not the file the patcher knows; the TAB button stays' % (TABMENU_DIR, name))
+            return
+        with open(path, 'rb') as fh:
+            stock.append(fh.read())
+    for name, out in tabmenu_files(stock).items():
+        write_whole(os.path.join(folder, name), out)
+    log('patch: %s\\%s written, tabmenu' % (TABMENU_DIR, ', '.join(TABMENU_FILES)))
 
 
 def lobby_popup(stock):
@@ -8929,6 +9061,7 @@ def patch(dest, log=print, keys=None):
     if 'netlog' in keys or '-netlog' in keys:
         network_log(dest, 'netlog' in keys, log)
     lobby_art(dest, 'lobby' in keys, log)
+    tabmenu_art(dest, 'tabmenu' in keys and 'tabmenu' in table, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
         wanted = [table[key] for key in keys if key in table and table[key][0] == name]
@@ -8983,6 +9116,7 @@ def restore(dest, log=print):
             os.replace(path + '.bak', path)
             log('restore: original %s back in place' % name)
             found = True
+    tabmenu_art(dest, False, log)
     if remove_dgvoodoo(dest, log, everything=True):
         log('restore: dgVoodoo 2 taken out')
         found = True

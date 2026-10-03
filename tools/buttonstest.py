@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""The SEARCH button and the IP entry popup composed from a game's stock files.
+"""The SEARCH button, the IP entry popup and the pad's TAB button files
+composed from a game's stock files.
 
     python3 tools/buttonstest.py GAMEDIR [--show DIR]
 
-Reads BINDATA\\connect\\button\\showteam_* and
-BINDATA\\connect\\IP_ENTRY\\Ip_entry_US.bmp from the game (their .bak when
-patched), composes the button's three states and the popup the way the
-patcher does and checks them against the pinned digests; --show writes
-them to DIR to look at.
+Reads BINDATA\\connect\\button\\showteam_*,
+BINDATA\\connect\\IP_ENTRY\\Ip_entry_US.bmp, BINDATA\\chat\\tab_menu_on*.BMP and
+CHAT.BMP from the game (their .bak when patched), composes the button's
+three states, the popup and the four TAB files the way the patcher does and
+checks them against the pinned digests; --show writes them to DIR to
+look at.
 """
 import hashlib
 import os
@@ -17,6 +19,7 @@ from uctest import patcher
 
 PINNED = {'off': '1469cd02cf133e9b47c823ebb18fb5e0', 'on': '00c7ad978bc72ad13dbeee9845d7d5a9', 'on2': '7b1543349e635302770caf8aa288aef4'}
 PINNED_POPUP = '89b4564852536c16a5e6ef37f1c0595e'
+PINNED_TAB = ('0204544e71baa45894e863d032a38582', 'acc62545c9dce7a67ad82aca05a83d44', '23ff7c4fa006f232816fd0665687d5c3', 'e87167f26dd20a88bac49a20db050c6d')
 
 
 def main(argv):
@@ -66,7 +69,25 @@ def main(argv):
             fh.write(popup)
     if hashlib.md5(popup).hexdigest() != PINNED_POPUP:
         raise SystemExit('buttonstest: %s came out %s, pinned %s' % (name, hashlib.md5(popup).hexdigest(), PINNED_POPUP))
-    print('buttonstest: SEARCH as pinned in three states, from the mask; the popup as pinned')
+    stock = []
+    for name, digest in zip(patcher.TABMENU_STOCK, patcher.TABMENU_STOCK_MD5):
+        path = patcher.installed(argv[1], patcher.TABMENU_DIR + '\\' + name)
+        if not os.path.isfile(path):
+            print('buttonstest: SEARCH and the popup as pinned')
+            print('note: no %s in this install; the TAB files were not tested' % name)
+            return 0
+        with open(path, 'rb') as fh:
+            data = fh.read()
+        if hashlib.md5(data).hexdigest() != digest:
+            raise SystemExit('buttonstest: %s is not the stock file' % path)
+        stock.append(data)
+    for (name, data), pinned in zip(patcher.tabmenu_files(stock).items(), PINNED_TAB):
+        if len(argv) == 4 and argv[2] == '--show':
+            with open(os.path.join(argv[3], name), 'wb') as fh:
+                fh.write(data)
+        if hashlib.md5(data).hexdigest() != pinned:
+            raise SystemExit('buttonstest: %s came out %s, pinned %s' % (name, hashlib.md5(data).hexdigest(), pinned))
+    print('buttonstest: SEARCH as pinned in three states, from the mask; the popup and the four TAB files as pinned')
     return 0
 
 
