@@ -59,15 +59,20 @@ def main(argv):
     flag = patcher.BUILDS[build]['addresses']['CARS']         # the exe's car table: a car in slot 0 means a race
     mu.mem_map(flag & ~0xfff, 0x1000)
     publish = patcher.BUILDS[build]['addresses']['PADPOLL']   # the exe slot the annex publishes the page's poll at
-    if publish & ~0xfff != flag & ~0xfff:
-        mu.mem_map(publish & ~0xfff, 0x1000)
+    game_at = patcher.BUILDS[build]['addresses']['GAMED3D'] - 0x10    # the exe's pointer to the race block
+    netslot = flag + 0x94c                                            # this machine's slot in a network race
+    mapped = {flag & ~0xfff}
+    for at in (publish, game_at, netslot):
+        if at & ~0xfff not in mapped:
+            mu.mem_map(at & ~0xfff, 0x1000)
+            mapped.add(at & ~0xfff)
 
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'CreateFileA', 'ReadFile',
              'WriteFile', 'SetFilePointer', 'CloseHandle', 'SetEndOfFile', 'XInputGetState',
-             'GetPrivateProfileStringA']
+             'GetPrivateProfileStringA', 'XInputSetState']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'CreateFileA': 7, 'ReadFile': 5,
             'WriteFile': 5, 'SetFilePointer': 4, 'CloseHandle': 1, 'SetEndOfFile': 1, 'XInputGetState': 2,
-            'GetPrivateProfileStringA': 6}
+            'GetPrivateProfileStringA': 6, 'XInputSetState': 2}
     addr = {n: STUBS + 0x10 * k for k, n in enumerate(names)}
     for n in names:
         mu.mem_write(addr[n], b'\xc2' + struct.pack('<H', argc[n] * 4))
@@ -77,6 +82,7 @@ def main(argv):
     # the file as the stubs see it, and the pads
     disk = {'text': None, 'pos': 0, 'opened': [], 'loaded': [], 'ended': 0}
     pads = {}                                   # slot: (buttons, lt, rt, lx, ly, rx, ry)
+    shakes = []                                 # XInputSetState's calls: (slot, left motor, right motor)
 
     def cstr(p):
         return bytes(mu.mem_read(p, 300)).split(b'\0')[0].decode('latin-1')
@@ -147,6 +153,8 @@ def main(argv):
                 ret = 0
             else:
                 ret = 1167                      # ERROR_DEVICE_NOT_CONNECTED
+        elif name == 'XInputSetState':
+            shakes.append((args[0],) + struct.unpack('<HH', mu.mem_read(args[1], 4)))
         mu.reg_write(UC_X86_REG_EAX, ret)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
@@ -237,7 +245,7 @@ def main(argv):
         t3[a] = (patcher.KEYS_2P[a], patcher.PAD_DEFAULT[a])
     assert recs == uctest.annex_records(1, t3), count
     ret, _p = call(site(save_off), this, slot0, 0, buf, 0)      # a save with no records: 1P's row emptied, no deadzone change
-    assert b'[1P Controller]\nDeadzone = 10\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
+    assert b'[1P Controller]\nDeadzone = 10\nVibration = 5\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
     assert b'MenuUp' not in disk['text'] and b'Enter' not in disk['text']
 
     # 3b. an old file, the game's 100 binary bytes before the text: skipped
@@ -383,6 +391,101 @@ def main(argv):
     call(BASE + annex + 25, patcher.MENUKEY_BASE + 0x2d, value, rng)
     assert struct.unpack('<I', mu.mem_read(value, 4))[0] == 0
     assert 'xinput1_4.dll' in disk['loaded'] and 'xinput1_3.dll' in disk['loaded']
+
+    # 5. the rumble: a pulse when a car's hit counts go down or it lands, on the side's pad
+    game, car, car2 = SCRATCH + 0x7000, SCRATCH + 0x8000, SCRATCH + 0x9000
+    hit_at = patcher.CARHIT_OLD if australian else patcher.CARHIT
+    w = lambda a, v: mu.mem_write(a, struct.pack('<I', v))
+    padidx = BASE + annex + len(blob) - 260 - 32 - 4
+    pads.clear()
+    pads[1] = pads[2] = (0, 0, 0, 0, 0, 0, 0)
+    w(flag, 0)
+    w(game_at, game)
+    w(game + 0x38, 0)
+    w(game + 0x44, 0)
+    for _ in range(130):                        # both sides take a pad
+        call(site(update_off), cfg0)
+        call(site(update_off), cfg1)
+    slots = [b - 1 for b in mu.mem_read(padidx, 2)]
+    assert sorted(slots) == [1, 2], slots
+
+    PULSE, FADE = 36, 20
+
+    def strength(side):                         # the setting through the page's poll
+        call(BASE + annex + 25, 0x300 + side * 0x40 + 0x3d, value, rng)
+        n, most = struct.unpack('<II', mu.mem_read(value, 4) + mu.mem_read(rng, 4))
+        assert most == 9 and 0 <= n <= 9, (n, most)
+        return n
+
+    def motors(kind, left, level=5):
+        """A pulse's (left, right) words with this many frames left."""
+        s = (level + 3) * 0xffff * min(left, FADE) // (12 * FADE)
+        return (s, s >> 2) if kind == 'hit' else (s * 3 >> 3, s >> 1)
+    assert strength(0) == 5 and motors('hit', PULSE) == (0xaaaa, 0x2aaa) and motors('land', PULSE) == (0x3fff, 0x5555)
+
+    def frame(c=car, hit=None, wall=None, air=0, cfg=cfg0):
+        frame.n += 1
+        w(c + hit_at, frame.n if hit is None else hit)
+        w(c + hit_at + 4, frame.n if wall is None else wall)
+        w(c + 0x270, air)
+        del shakes[:]
+        call(site(update_off), cfg)
+        return list(shakes)
+
+    def rest(kind, slot, level=5, start=PULSE - 2, **kw):
+        """The pulse's frames after its first: one send a frame, fading, then the motors off."""
+        for left in range(start, 0, -1):
+            got = frame(**kw)
+            assert got == [(slot,) + motors(kind, left, level)], (left, got)
+        assert frame(**kw) == [(slot, 0, 0)], 'the pulse over'
+        assert frame(**kw) == []
+    frame.n = 100
+    assert shakes == [], shakes                 # nothing outside a race
+    w(flag, car)
+    assert frame() == [] and frame() == []      # a car first seen, then its counts going up
+    assert frame(hit=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a hit of a car or an object'
+    rest('hit', slots[0])
+    assert frame(wall=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a hit of a wall'
+    assert frame(wall=0) == [(slots[0],) + motors('hit', PULSE - 2)], 'the count held, the game paused: no new pulse'
+    rest('hit', slots[0], start=PULSE - 3)
+    assert all(frame(air=1) == [] for _ in range(10))
+    assert frame() == [(slots[0],) + motors('land', PULSE - 1)], 'a landing'
+    rest('land', slots[0])
+    assert all(frame(air=1) == [] for _ in range(9)) and frame() == [], 'a hop, too short'
+    assert all(frame(air=1) == [] for _ in range(12)) and frame(hit=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a landing on a hit: the hit'
+    assert frame() == [(slots[0],) + motors('hit', PULSE - 2)]
+    assert frame(wall=0) == [(slots[0],) + motors('hit', PULSE - 1)], 'a hit during a pulse: the pulse again'
+    rest('hit', slots[0])
+    w(game + 0x44, 4)                           # a replay: nothing, and nothing on the way back
+    assert frame(hit=0) == [] and frame(wall=0) == []
+    w(game + 0x44, 0)
+    assert frame(hit=0) == [] and frame() == []
+    assert frame(cfg=cfg1) == [] and frame(hit=0, cfg=cfg1) == [], 'side 1 outside split screen'
+    w(game + 0x38, 5)                           # split screen: side 1's car is slot 1
+    w(flag + 4, car2)
+    mu.mem_write(buf, three)                    # side 1's strength saved past the most: 9, full
+    mu.mem_write(name, b'VB12\0')
+    ret, _p = call(site(save_off), this, slot1, name, buf, 3)
+    assert ret == 0 and [line for line in disk['text'].splitlines() if line.startswith(b'Vibration')] == [b'Vibration = 5', b'Vibration = 9'], disk['text'].decode()
+    assert strength(1) == 9 and motors('hit', PULSE, 9) == (0xffff, 0x3fff)
+    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', PULSE - 1, 9)]
+    rest('hit', slots[1], 9, c=car2, cfg=cfg1)
+    disk['text'] = disk['text'].replace(b'Vibration = 9', b'Vibration = 0')     # read back at 0: no rumble
+    fresh()
+    load(slot0)
+    assert strength(1) == 0 and strength(0) == 5
+    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [] and frame(car2, cfg=cfg1) == []
+    w(game + 0x38, 6)                           # a network race: this machine's slot, side 0 alone
+    w(netslot, 2)
+    w(flag + 8, car2)
+    assert frame(car2) == [] and frame(car2, cfg=cfg1) == []
+    assert frame(car, hit=0) == [] and frame(car2, wall=0, cfg=cfg1) == []
+    assert frame(car2, wall=0) == [(slots[0],) + motors('hit', PULSE - 1)]
+    w(flag, 0)                                  # the race over mid-pulse: the pulse still runs out
+    w(flag + 8, 0)
+    w(game + 0x38, 0)
+    rest('hit', slots[0])
+    w(netslot, 0)
     print('padinputtest: %s MGInput.dll OK' % build)
     return 0
 

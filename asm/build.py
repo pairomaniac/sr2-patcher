@@ -172,6 +172,8 @@ PADINPUT_MAGICS = {
     'CARS': 0xE9E9E9E9,                 # an absolute exe address, not an offset
     'KBDPOLL': 0xECECECEC,
     'PUBLISH': 0xEDEDEDED,              # an absolute exe address
+    'GAME': 0xEEEEEEEE,                 # an absolute exe address
+    'CARHIT': 0xEFEFEFEF,               # an offset in a car object
 }
 
 # sortpad.asm's placeholder: the exe's slot for the annex's page poll,

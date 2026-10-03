@@ -46,6 +46,25 @@ bits 32
 %define MAGIC_CARS      0xE9E9E9E9      ; the absolute address of the exe's car table
 %define MAGIC_KBDPOLL   0xECECECEC      ; offset to the Australian build's stock keyboard poll
 %define MAGIC_PUBLISH   0xEDEDEDED      ; the absolute address of the exe slot that takes pollpage's address
+%define MAGIC_GAME      0xEEEEEEEE      ; the absolute address of the exe's pointer to the current-race block
+%define MAGIC_CARHIT    0xEFEFEFEF      ; in a car, the frames since it last hit a car or an object; the wall's follow
+
+%define GAME_MODE       0x38            ; the race block: 5 split screen, 6 a network race
+%define GAME_FLAGS      0x44            ; bit 2 a replay
+%define NETSLOT         0x94c           ; from the car table, the dword that holds this machine's slot in a network race
+%define SLOTS           16
+%define CAR_AIR         0x270           ; a car: 1 while all four wheels are off the ground
+%define AIR_FRAMES      10              ; in the air for this long, the landing is felt
+%define PULSE_FRAMES    36              ; a pulse, in frames
+%define FADE_FRAMES     20              ; its last frames, over which it fades out
+%define VIB_DEFAULT     5               ; the strength setting, 0 off, 1..VIB_MAX: (setting + 3) twelfths of a motor's full 0xffff
+%define VIB_MAX         9
+%define IN_VIBRATION    0x3d            ; the virtual input that reads the strength setting
+%define SHAKE_SIZE      16              ; a side's: its car, the two counts as last seen, its frames in the air
+%define SHAKE_CAR       0
+%define SHAKE_HIT       4
+%define SHAKE_WALL      8
+%define SHAKE_AIR       12
 
 %define CFG_STOCK       0               ; where the text starts in the file
 %define RECORD          0x34
@@ -196,13 +215,20 @@ save:
         test    esi, esi
         jz      .named
         cmp     word [esi], 'DZ'
-        jne     .named
+        jne     .vib
         add     esi, 2
         call    number
         cmp     eax, DEADZONE_MAX       ; as the parser clamps: a full deadzone leaves no range to scale by
         jbe     .setdz
         mov     eax, DEADZONE_MAX
 .setdz: mov     [ebx + tables - $$ + W_DZ + edi * 4], eax
+        jmp     .named
+.vib:   cmp     word [esi], 'VB'
+        jne     .named
+        add     esi, 2
+        call    number
+        call    strength
+        mov     [ebx + vib - $$ + edi * 4], eax
 .named:
         ; the table's row for this player: every key and pad forgotten,
         ; then the first of each per action from the records
@@ -401,6 +427,8 @@ ensure_table:
         rep movsd
         mov     dword [ebx + tables - $$ + W_DZ], DEADZONE_DEFAULT
         mov     dword [ebx + tables - $$ + W_DZ + 4], DEADZONE_DEFAULT
+        mov     dword [ebx + vib - $$], VIB_DEFAULT
+        mov     dword [ebx + vib - $$ + 4], VIB_DEFAULT
         push    OPEN_EXISTING
         push    GENERIC_READ
         call    open_cfg
@@ -463,7 +491,25 @@ parse:                                  ; eax = where in W_TEXT to start
 .setting:
         cmp     dword [ebx + sect - $$], SECT_NONE
         je      .skip
-        cmp     ecx, 8
+        cmp     ecx, 9
+        jne     .dz
+        cmp     dword [esi], 'Vibr'
+        jne     .action
+        cmp     dword [esi + 4], 'atio'
+        jne     .action
+        cmp     byte [esi + 8], 'n'
+        jne     .action
+        cmp     dword [ebx + sect - $$], SECT_CONTROLLER
+        jne     .skip
+        mov     esi, edi
+        call    value
+        jz      .skip
+        call    number
+        call    strength
+        mov     edx, [ebx + sectplayer - $$]
+        mov     [ebx + vib - $$ + edx * 4], eax
+        jmp     .skip
+.dz:    cmp     ecx, 8
         jne     .action
         cmp     dword [esi], 'Dead'
         jne     .action
@@ -547,6 +593,13 @@ value:
         mov     esi, edi
         call    token
 .done:  ret
+
+; eax = a strength setting: eax = it in 0..VIB_MAX.
+strength:
+        cmp     eax, VIB_MAX
+        jbe     .ok
+        mov     eax, VIB_MAX
+.ok:    ret
 
 ; eax = a percentage: eax = it in 0..FULL, at most DEADZONE_MAX.
 percent:
@@ -670,6 +723,15 @@ write_text:
         call    puts
         mov     eax, [ebx + tables - $$ + W_DZ + ebp * 4]
         call    putpercent
+        mov     al, 10
+        stosb
+        lea     esi, [ebx + vibration_name - $$]
+        call    puts
+        mov     al, ' '
+        stosb
+        mov     eax, [ebx + vib - $$ + ebp * 4]
+        add     al, '0'
+        stosb
         mov     al, 10
         stosb
 .actions:
@@ -867,6 +929,7 @@ netvalue:       times 8 db 0
 controller:     db 'Controller', 0
 keyboard:       db 'Keyboard', 0
 deadzone_name:  db 'Deadzone =', 0
+vibration_name: db 'Vibration =', 0
 equals:         db ' = ', 0
 
 ; open_cfg(access, disposition): SR2.CFG beside the exe, positioned at
@@ -931,6 +994,7 @@ update:
         mov     eax, [MAGIC_CARS]       ; the first car, if a race is set up; read once a frame
         mov     [ebx + inrace - $$], eax
 .pad:   call    refresh
+        call    rumble
 .skip:  popad
 replay_update:                          ; the site's six displaced bytes, from the patcher
         times 6 db 0xc1
@@ -985,6 +1049,132 @@ refresh:
         mov     [edi + 4], eax
         mov     [edi + 8], eax
 .done:  ret
+
+; esi = player: the side's pad shaken when its car hits something or
+; lands. The game counts a car's frames since its last hit of a car or an
+; object, and since its last hit of a wall, and zeroes a count when the
+; hit is hard enough for the crash sound and the last was over 60 frames
+; back; a count that went down is that hit. The landing is the airborne
+; flag gone after AIR_FRAMES frames up. Nothing changes while the game is
+; paused, so nothing fires. The car is the side's slot of the car table:
+; in a network race this machine's slot, for side 0 alone; side 1's only
+; in split screen; none in a replay. A car first seen sets the counts and
+; fires nothing. The pulse is sent every frame, fading over its last
+; FADE_FRAMES, and runs out by the frame, in or out of a race. The left
+; motor is the heavy, low one and carries most of it.
+rumble:
+        movzx   eax, byte [ebx + padidx - $$ + esi]
+        test    eax, eax
+        jz      .out
+        cmp     dword [ebx + fn_setstate - $$], 0
+        je      .out
+        lea     ebp, [esi * 8]
+        lea     ebp, [ebx + ebp * 2 + shake - $$]       ; the side's SHAKE_SIZE bytes
+        xor     edi, edi                ; the car
+        mov     eax, [MAGIC_GAME]
+        test    eax, eax
+        jz      .car
+        test    byte [eax + GAME_FLAGS], 4
+        jnz     .car
+        mov     edx, [eax + GAME_MODE]
+        mov     ecx, esi
+        cmp     edx, 6
+        jne     .local
+        test    esi, esi
+        jnz     .car
+        mov     ecx, MAGIC_CARS
+        mov     ecx, [ecx + NETSLOT]
+        cmp     ecx, SLOTS
+        jae     .car
+        jmp     .slot
+.local: test    esi, esi
+        jz      .slot
+        cmp     edx, 5
+        jne     .car
+.slot:  mov     edi, [MAGIC_CARS + ecx * 4]
+.car:   xor     edx, edx                ; 1 for a pulse to start, its kind in ecx: 0 a hit, 1 a landing
+        cmp     edi, [ebp + SHAKE_CAR]
+        mov     [ebp + SHAKE_CAR], edi
+        je      .same
+        test    edi, edi
+        jz      .tick
+        mov     eax, [edi + MAGIC_CARHIT]
+        mov     [ebp + SHAKE_HIT], eax
+        lea     eax, [edi + 4]
+        mov     eax, [eax + MAGIC_CARHIT]
+        mov     [ebp + SHAKE_WALL], eax
+        mov     dword [ebp + SHAKE_AIR], 0
+        jmp     .tick
+.same:  test    edi, edi
+        jz      .tick
+        mov     eax, [edi + MAGIC_CARHIT]
+        cmp     eax, [ebp + SHAKE_HIT]
+        mov     [ebp + SHAKE_HIT], eax
+        jae     .wall
+        mov     edx, 1
+.wall:  lea     eax, [edi + 4]
+        mov     eax, [eax + MAGIC_CARHIT]
+        cmp     eax, [ebp + SHAKE_WALL]
+        mov     [ebp + SHAKE_WALL], eax
+        jae     .air
+        mov     edx, 1
+.air:   xor     ecx, ecx                ; a hit
+        cmp     dword [edi + CAR_AIR], 0
+        je      .down
+        cmp     dword [ebp + SHAKE_AIR], AIR_FRAMES
+        jae     .tick
+        inc     dword [ebp + SHAKE_AIR]
+        jmp     .tick
+.down:  cmp     dword [ebp + SHAKE_AIR], AIR_FRAMES
+        mov     dword [ebp + SHAKE_AIR], 0
+        jb      .tick
+        test    edx, edx
+        jnz     .tick                   ; a hit in the same frame is the stronger
+        mov     edx, 1
+        inc     ecx                     ; a landing
+.tick:  test    edx, edx
+        jz      .run
+        cmp     dword [ebx + vib - $$ + esi * 4], 0
+        je      .run                    ; the setting at 0: no rumble
+        mov     byte [ebx + shakeleft - $$ + esi], PULSE_FRAMES
+        mov     [ebx + shakeleft - $$ + 2 + esi], cl
+.run:   movzx   ecx, byte [ebx + shakeleft - $$ + esi]
+        test    ecx, ecx
+        jz      .out
+        dec     ecx
+        mov     [ebx + shakeleft - $$ + esi], cl
+        jz      .set                    ; the pulse over: the motors off
+        cmp     ecx, FADE_FRAMES
+        jbe     .fade
+        mov     ecx, FADE_FRAMES
+.fade:  mov     eax, [ebx + vib - $$ + esi * 4]
+        add     eax, 3
+        imul    eax, eax, 0xffff
+        imul    eax, ecx
+        xor     edx, edx
+        mov     edi, 12 * FADE_FRAMES
+        div     edi                     ; the strength, faded
+        mov     ecx, eax
+        cmp     byte [ebx + shakeleft - $$ + 2 + esi], 0
+        jne     .land
+        shr     ecx, 2                  ; a hit: the left motor at the strength, the right at a quarter
+        shl     ecx, 16
+        or      ecx, eax
+        jmp     .set
+.land:  lea     edx, [eax + eax * 2]
+        shr     edx, 3                  ; a landing, lighter: the left at three eighths, the right at a half
+        shr     ecx, 1
+        shl     ecx, 16
+        or      ecx, edx
+.set:   push    ecx                     ; XINPUT_VIBRATION
+        mov     eax, esp
+        push    eax
+        movzx   eax, byte [ebx + padidx - $$ + esi]
+        dec     eax
+        push    eax
+        call    [ebx + fn_setstate - $$]
+        pop     ecx
+.out:   ret
 
 ; XInputGetState(ecx, the side's state); eax = its result, ecx kept.
 getstate:
@@ -1136,6 +1326,8 @@ answer:
         je      .value
         cmp     ecx, IN_HELD
         je      .value
+        cmp     ecx, IN_VIBRATION
+        je      .value
         test    ecx, MENU_ONLY
         jz      .value
         and     ecx, ~MENU_ONLY
@@ -1157,11 +1349,14 @@ answer:
 ;   22-25   right stick likewise
 ;   0x3e    down while the side holds a pad
 ;   0x3f    the side's deadzone
+;   0x3d    the side's vibration strength, 0..VIB_MAX
 padvalue:
         imul    edi, esi, STATE_SIZE
         lea     edi, [ebx + state - $$ + edi]
         cmp     ecx, IN_DEADZONE
         je      .deadzone
+        cmp     ecx, IN_VIBRATION
+        je      .vibration
         cmp     ecx, IN_HELD
         je      .held
         cmp     ecx, 16
@@ -1228,6 +1423,10 @@ padvalue:
         mov     eax, [ebx + tables - $$ + W_DZ + esi * 4]
         mov     edx, FULL
         ret
+.vibration:
+        mov     eax, [ebx + vib - $$ + esi * 4]
+        mov     edx, VIB_MAX
+        ret
 .held:  xor     eax, eax
         cmp     byte [ebx + padidx - $$ + esi], 0
         je      .digital
@@ -1240,8 +1439,8 @@ padvalue:
 
 ; ---- imports ---------------------------------------------------------
 
-; Once: kernel32's file routines by name, and XInputGetState from the
-; first of three DLLs present. Registers kept.
+; Once: kernel32's file routines by name, and XInputGetState and
+; XInputSetState from the first of three DLLs present. Registers kept.
 resolve:
         cmp     dword [ebx + resolved - $$], 0
         jne     .done
@@ -1267,21 +1466,28 @@ resolve:
         call    [ebx + MAGIC_LOADLIB]
         test    eax, eax
         jz      .nextdll
+        mov     edi, eax
         lea     ecx, [ebx + procname - $$]
         push    ecx
         push    eax
         call    [ebx + MAGIC_GETPROC]
         test    eax, eax
-        jnz     .found
+        jz      .nextdll
+        mov     [ebx + fn_xinput - $$], eax
+        lea     ecx, [ebx + setname - $$]
+        push    ecx
+        push    edi
+        call    [ebx + MAGIC_GETPROC]
+        mov     [ebx + fn_setstate - $$], eax
+        jmp     .out
 .nextdll:
         inc     ebp
         cmp     byte [ebp - 1], 0
         jne     .nextdll
         cmp     byte [ebp], 0
         jne     .dll
-        mov     eax, 1                  ; none: tried and failed
-.found: mov     [ebx + fn_xinput - $$], eax
-        popad
+        mov     dword [ebx + fn_xinput - $$], 1        ; none: tried and failed
+.out:   popad
 .done:  ret
 
 kernel32:   db 'kernel32.dll', 0
@@ -1290,12 +1496,17 @@ names:      db 'CreateFileA', 0, 'ReadFile', 0, 'WriteFile', 0
             db 'GetPrivateProfileStringA', 0, 0
 xinputdlls: db 'xinput1_4.dll', 0, 'xinput1_3.dll', 0, 'xinput9_1_0.dll', 0, 0
 procname:   db 'XInputGetState', 0
+setname:    db 'XInputSetState', 0
 
 ; stick directions: the axis's offset in XINPUT_STATE, and 1 for its
 ; positive half
 dirtab:     db 8, 0, 8, 1, 10, 1, 10, 0, 12, 0, 12, 1, 14, 1, 14, 0
 
         align 4
+shake:      times 2 * SHAKE_SIZE db 0
+fn_setstate: dd 0                       ; XInputSetState; 0 when missing
+vib:        dd VIB_DEFAULT, VIB_DEFAULT ; each side's strength setting
+shakeleft:  db 0, 0, 0, 0               ; each side's pulse: the frames left, then each side's kind
 resolved:   dd 0
 fn_createfile:  dd 0                    ; in the order of names
 fn_readfile:    dd 0
