@@ -8975,8 +8975,39 @@ def terminal_output():
             return
         sys.stdout = open('CONOUT$', 'w')
         print()                         # the shell's prompt is already on this line
+        import atexit
+        atexit.register(terminal_prompt)
     except (AttributeError, OSError, ValueError):
         pass                            # no output, as before
+
+
+def terminal_prompt():
+    """An Enter typed into the attached console at exit. The shell showed
+    its prompt before the output and is waiting at it, unseen; the empty
+    line makes it show the prompt again, under the output."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Key(ctypes.Structure):        # KEY_EVENT_RECORD
+        _fields_ = [('bKeyDown', wintypes.BOOL), ('wRepeatCount', wintypes.WORD), ('wVirtualKeyCode', wintypes.WORD),
+                    ('wVirtualScanCode', wintypes.WORD), ('UnicodeChar', wintypes.WCHAR),
+                    ('dwControlKeyState', wintypes.DWORD)]
+
+    class Record(ctypes.Structure):     # INPUT_RECORD, its union as the key event
+        _fields_ = [('EventType', wintypes.WORD), ('Event', Key)]
+    try:
+        sys.stdout.flush()
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateFileW.restype = wintypes.HANDLE
+        conin = kernel32.CreateFileW('CONIN$', 0xc0000000, 3, None, 3, 0, None)    # read and write, shared, OPEN_EXISTING
+        if conin in (None, wintypes.HANDLE(-1).value):
+            return
+        records = (Record * 2)(Record(1, Key(1, 1, 0x0d, 0x1c, '\r', 0)),          # KEY_EVENT: VK_RETURN down, then up
+                               Record(1, Key(0, 1, 0x0d, 0x1c, '\r', 0)))
+        kernel32.WriteConsoleInputW(wintypes.HANDLE(conin), records, 2, ctypes.byref(wintypes.DWORD()))
+        kernel32.CloseHandle(wintypes.HANDLE(conin))
+    except (AttributeError, OSError, ValueError):
+        pass
 
 
 def default_keys():

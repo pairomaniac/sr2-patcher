@@ -529,8 +529,11 @@ small exe to start it:
   console. With arguments and no redirect, the script attaches the
   console of the shell that started the exe and prints there
   (`terminal_output`). The shell does not wait for a windowed program:
-  its prompt comes back first and the output follows it. `start /wait
-  sr2-patcher.exe ...` waits. This has not been run on Windows.
+  its prompt comes back first and the output follows it. At exit the
+  script types an Enter into the console, so that the shell shows its
+  prompt again under the output (`terminal_prompt`). `start /wait
+  sr2-patcher.exe ...` waits for the exit code. The Enter has not been
+  run on Windows.
 
 It is not PyInstaller because scanners match on PyInstaller's
 bootloader and packed archive.
