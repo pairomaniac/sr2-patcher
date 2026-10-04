@@ -75,9 +75,10 @@ left out:
 Some patches need others, and the patcher refuses a set that names a
 patch without what it needs:
 
-- `xinput` needs `noregistry`. `noregistry` gives the game's own
-  settings block a file of its own, `SR2.DSP`, and leaves `SR2.CFG` to
-  the controls text that `xinput` writes.
+- `noregistry` is in every set. It gives the game's own settings block
+  a file of its own, `SR2.DSP`, and leaves `SR2.CFG` to the text the
+  other patches keep there.
+- `borderless` and `altenter` need `windowed`.
 - `devices` needs `xinput`.
 - `nogeneric` needs `dinput8`.
 - `music` needs `cdlevel`.

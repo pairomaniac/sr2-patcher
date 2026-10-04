@@ -524,7 +524,14 @@ user32 entry points are resolved once through the exe's `LoadLibraryA`
 and `GetProcAddress` and kept in the section, which is therefore
 writable.
 
-`windowed` and `borderless` are the game's mode and cannot be left out.
+`windowed` and `borderless` are the game's mode. The patcher's window
+always applies them; `--patch DIR -borderless` leaves the stock window
+(640x480, the present a plain stretch), and `-windowed` the stock
+exclusive mode, with `borderless` and `altenter` out as well. The
+exclusive mode is for tests: the other patches apply there, and none has
+been played in it. `noregistry` is in every set and `--patch` refuses to
+leave it out: without it the game writes its display block over
+`SR2.CFG`, the other patches' settings with it.
 
 ### HUD after the water
 

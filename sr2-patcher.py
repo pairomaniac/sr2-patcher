@@ -11664,17 +11664,23 @@ def selfcheck():
 
 
 # What a key needs: dropping the second drops the first with it.
-NEEDS = (('padoptions', 'devices'), ('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
+NEEDS = (('padoptions', 'devices'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
          ('widescreen2d', 'widescreen'), ('widescreen3d', 'widescreen'), ('resolution', 'widescreen'),
-         ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'))
-# The game's mode, not options: borderless full screen, framed with ALT+ENTER.
-FIXED = ('windowed', 'borderless')
+         ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'),
+         ('borderless', 'windowed'), ('altenter', 'windowed'))
+# In every set, and not to be left out: SR2.CFG is the patches' text file
+# only with it, the stock game writing its display block over the file.
+FIXED = ('noregistry',)
+# The game's mode, in every set unless left out by name: -borderless is
+# the stock window, -windowed the stock exclusive mode.
+WINDOW = ('windowed', 'borderless')
 
 
 def parse_keys(words):
     """The patches --patch's key words name: every patch, or the ones
     listed, less any given with a leading minus; a diagnostic named is
-    added to either, the windowed mode to any list, and the dgvoodoo
+    added to either, noregistry and the windowed mode to any list - the
+    mode unless named with a minus, noregistry always - and the dgvoodoo
     add-on where it is the default unless named with a minus. Words may be
     separated by commas or spaces (PowerShell hands a,b over as two). A
     list that names a patch without what it needs is refused by patch().
@@ -11693,8 +11699,8 @@ def parse_keys(words):
     wanted += [k for k in ADDONS if k in default_keys() and k not in wanted]
     dropped = set(k[1:] for k in keys if k.startswith('-'))
     if dropped & set(FIXED):
-        raise ValueError('%s is the game\'s mode, not an option' % ' and '.join(sorted(dropped & set(FIXED))))
-    wanted = [k for k in PATCH_KEYS if k in wanted or k in FIXED] + [k for k in wanted if k in extra]
+        raise ValueError('%s cannot be left out: the other patches keep their settings in the file it frees' % ' and '.join(sorted(dropped & set(FIXED))))
+    wanted = [k for k in PATCH_KEYS if k in wanted or k in FIXED + WINDOW] + [k for k in wanted if k in extra]
     off = ('-netlog',) if 'netlog' in dropped else ()      # named with a minus: the log off, not merely not on
     for _ in range(len(NEEDS)):             # a dropped need drops what needs it, and so on
         dropped |= set(key for key, needs in NEEDS if needs in dropped)
