@@ -43,7 +43,9 @@ lists. The key in parentheses is what `--patch` takes.
 | **Missing lettering** (`texfmt`) | `MUSASHI\MGameD3D.dll` | `0xf79c` (12 bytes) | the 16-bit texture-format preference list `1, 2, 3` becomes `3, 1, 2` |
 | **Invisible lobby text** (`textcolor`) | `SEGA RALLY 2.exe` | `0x203c7`, `0x20566`, `0x3485f`, `0x34b2a`, `0x34efc`, `0x35533`, `0x360c3`, `0x3a6c0`, `0x3cef4`, `0x3da96`, the annex | eight `call [__imp__SetTextColor]` become `call stub; nop`; two `mov esi, [__imp__SetTextColor]` become `mov esi, stub; nop` |
 | **Lobby panels** (`surfmem`) | `MUSASHI\MGameD3D.dll` | `0x7cb2` | the offscreen surface create's video-memory caps `0x4040` become `0x840`, system memory |
-| **Windowed** (`windowed`) | `SEGA RALLY 2.exe` | `0x273e6`; `0x14671`, the annex | the fullscreen flag pushed at `0x427fe5` becomes 0; the .bg row copy at `0x415271` becomes a `call` into asm/bgrow.asm |
+| **Windowed** (`windowed`) | `SEGA RALLY 2.exe` | `0x273e6` | the fullscreen flag pushed at `0x427fe5` becomes 0 |
+| **The .bg pictures** (`bgrow`) | `SEGA RALLY 2.exe` | `0x14671`, the annex | the .bg row copy at `0x415271` becomes a `call` into asm/bgrow.asm |
+| **32-bit exclusive mode** (`depth32`) | `MUSASHI\MGameD3D.dll` | `0x2550` (3 bytes) | `mov eax, [esi+0xc]`, the init struct's depth, becomes `push 0x20; pop eax` |
 | **Any desktop depth** (`anydepth`) | `MUSASHI\MGameD3D.dll` | `0x271e` | a `je` becomes a `jmp`, so the windowed path's "desktop must be 16-bit" check is skipped |
 | **Any mode** (`anymode`) | `MUSASHI\MGameD3D.dll` | `0x2ef8` | `and eax, 0x80004005` becomes `and eax, 0`: the `E_FAIL` the mode check returns when `EnumDisplayModes` lists no 640x480x16 mode becomes `S_OK` |
 | **Title picture** (`titlebg`) | `Title.dll` | `0x8ba`, the annex | the DLL's own .bg row copy at `0x100014ba` becomes a `call` into asm/bgrow.asm, assembled for that routine's stack layout |
@@ -526,10 +528,34 @@ writable.
 
 `windowed` and `borderless` are the game's mode. The patcher's window
 always applies them; `--patch DIR -borderless` leaves the stock window
-(640x480, the present a plain stretch), and `-windowed` the stock
-exclusive mode, with `borderless` and `altenter` out as well. The
-exclusive mode is for tests: the other patches apply there, and none has
-been played in it. `noregistry` is in every set and `--patch` refuses to
+(640x480, the present a plain stretch), and `-windowed` the exclusive
+mode, with `borderless` and `altenter` out as well. The exclusive mode
+is for tests: the other patches apply there, and none has been played in
+it.
+
+#### The exclusive mode's depth
+
+`depth32` makes the exclusive mode 32 bits deep. The exe asks for 16
+(`0x421501`: one `mov eax, 0x10` stored to the init struct's `+0xc`, the
+depth, and to `+0x18`, a table's entry count that `0x100071e0` reads).
+MGameD3D copies the struct's depth to `0x10012404` at `0x10002550`, and
+the patch makes the value copied 32. The patch is in the DLL because the
+DLL is the same file in every build, and because the exe's 16 has to
+stay for `+0x18`. The address in the instruction stays where it was, so
+its relocation entry stands.
+
+The DLL reads `0x10012404` in five places. Two are the fullscreen
+path's: the mode check's callback (`0x10002f2b`) and `SetDisplayMode`
+(`0x10002616`). One is the windowed path's desktop check, which
+`anydepth` skips. The other two (`0x1000323e`, `0x10003840`) compare it
+with 8 and with 16, and 32 answers both as 16 does. So in a window the
+patch changes nothing. The surfaces take the mode's format, which is the
+format they already have in a window on a 32-bit desktop, and `bgrow`
+and `titlebg` expand the `.bg` pictures for it. `-windowed -depth32` is
+the stock 640x480 at 16 bits. Neither depth has been played in the
+exclusive mode.
+
+`noregistry` is in every set and `--patch` refuses to
 leave it out: without it the game writes its display block over
 `SR2.CFG`, the other patches' settings with it.
 

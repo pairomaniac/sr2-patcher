@@ -4,6 +4,7 @@
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab, then patch with the defaults
     python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game: every patch, the ones KEYS names, or all but the ones it names with a minus (-music);
+                                                    -borderless for the stock 640x480 window, -windowed for the exclusive mode (32 bits; 16 with -depth32);
                                                     the dgvoodoo add-on on Windows unless -dgvoodoo, elsewhere only when named;
                                                     a diagnostic by name (voltrace, frametrace, gltrace, d3dtrace, d3dtrace2d, d3dinit, netlog), or logs for all of them
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
@@ -294,9 +295,11 @@ RESTORE_RELOCS = 10
 #   texfmt      A1R5G5B5 first in the texture-format preference list
 #   surfmem     MGameD3D's video-memory offscreen surfaces made in system memory
 #   textcolor   the lobby's SetTextColor(-1) masked to RGB
-#   windowed    the fullscreen flag cleared; the .bg row copy expands to 32 bits (always on)
+#   windowed    the fullscreen flag cleared
+#   bgrow       the exe's .bg row copy expands to 32 bits, and composes at a wide size
 #   anydepth    the windowed path's 16-bit desktop check skipped
 #   anymode     the mode check before the window, EnumDisplayModes for 640x480x16, passes
+#   depth32     MGameD3D's depth is 32, not the 16 asked for: the exclusive mode's, and nothing in a window
 #   altenter    ALT+ENTER toggles a framed window
 #   hudlast     the race's HUD drawn after the water, so the gauge's plate blends over the lake
 #   loadhold    the stage loading screens held three seconds
@@ -447,6 +450,7 @@ TITLEROW_SITE, TITLEROW_LEN = 0x8ba, 22  # Title.dll, the row copy at 0x100014ba
 PRESENT_SITE = 0x4d7b                   # MGameD3D, the windowed present's first instruction
 SIZE_SITE = 0x26be                      # MGameD3D, `call [__imp__MoveWindow]` in the windowed init
 TEXRANGE_SITE = 0x4430                  # MGameD3D, the texture release's first ten bytes
+DEPTH_SITE = 0x2550                     # MGameD3D, the init struct's depth copied to `0x10012404`
 SURFMEM_SITE = 0x7cb2                   # MGameD3D, the offscreen surface create's video-memory caps
 # MGameD3D, every `mov [0x10011fc4], eax` (the last-HRESULT slot) in the
 # bring-up tree, by function: Init 0x10002090 and its 0x10001fd0, the
@@ -660,11 +664,12 @@ def patches(build):
         'textcolor': (EXE, tuple(
             (off, bytes.fromhex(op) + slot('SetTextColor'), None)
             for off, op in row['textcolor']), 'apply_textcolor'),
-        'windowed': (EXE, (
-            (site['flag'], b'\x01', b'\x00'),
-            (site['bgrow'], bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None)), 'apply_windowed'),
+        'windowed': (EXE, ((site['flag'], b'\x01', b'\x00'),), None),
+        'bgrow': (EXE, ((site['bgrow'], bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None),), 'apply_bgrow'),
         'anydepth': ('MUSASHI\\MGameD3D.dll', ((0x271e, b'\x74', b'\xeb'),), None),
         'anymode': ('MUSASHI\\MGameD3D.dll', ((0x2ef8, bytes.fromhex('05400080'), bytes(4)),), None),
+        'depth32': ('MUSASHI\\MGameD3D.dll', ((DEPTH_SITE, bytes.fromhex('8b460ca304240110'),
+                                                bytes.fromhex('6a2058a304240110')),), None),
         'altenter': (EXE, ((site['altenter'], b'\xe8', None),), 'apply_altenter'),
         'hudlast': (EXE, (
             (site['hudlast'][0], b'\xe8', None),
@@ -877,7 +882,7 @@ FEATURES = (
      'ALT+TAB\tEither mode, and the window comes back where it was.\n'
      'The picture\tFitted to the window: 4:3 with black bars until a\n'
      '\twidescreen size is picked.',
-     ('windowed', 'borderless', 'altenter', 'titlebg', 'clearsize')),
+     ('windowed', 'bgrow', 'depth32', 'borderless', 'altenter', 'titlebg', 'clearsize')),
 
     ('lettering', 'Text and panel fixes',
      'Text the game drew and the card did not show, and the panels behind\n'
@@ -6822,7 +6827,7 @@ def apply_textcolor(buf, build):
     return out
 
 
-def apply_windowed(buf, build):
+def apply_bgrow(buf, build):
     """The .bg row copy in the exe through bgrow.asm."""
     out, rva = append_section(buf, exe_blob(BGROW_BLOB, build), chars=CODE_SECTION)
     _branch(out, BUILDS[build]['sites']['bgrow'], rva, BGROW_LEN)
@@ -9104,6 +9109,9 @@ def patch(dest, log=print, keys=None):
     for key, needs in NEEDS:
         if key in keys and key in table and needs not in keys:
             raise ValueError('%s needs %s' % (key, needs))
+    for key in FIXED:
+        if key in table and key not in keys:
+            raise ValueError('%s is in every set' % key)
     if 'netplay' in keys and 'netplay' in table:
         netplay_dll()           # say so now, not half way through
     dgvoodoo = fetch_dgvoodoo(dest, log) if 'dgvoodoo' in keys else None
@@ -11672,7 +11680,7 @@ NEEDS = (('padoptions', 'devices'), ('nogeneric', 'dinput8'), ('lobby', 'netplay
 # only with it, the stock game writing its display block over the file.
 FIXED = ('noregistry',)
 # The game's mode, in every set unless left out by name: -borderless is
-# the stock window, -windowed the stock exclusive mode.
+# the stock window, -windowed the exclusive mode.
 WINDOW = ('windowed', 'borderless')
 
 

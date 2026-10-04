@@ -88,7 +88,11 @@ patch without what it needs:
 - Among the diagnostics, `gltrace` needs `widescreen3d`, `d3dtrace` and
   `d3dtrace2d` need `widescreen2d`, and `netlog` needs `netplay`.
 
-`windowed` and `borderless` are always in the set.
+`windowed` and `borderless` are in every set unless they are named with
+a minus. `-borderless` leaves the stock 640x480 window. `-windowed`
+leaves the exclusive mode, and takes `borderless` and `altenter` out
+with it. The exclusive mode is 32 bits deep; with `-depth32` as well it
+is the stock 16. Exclusive mode is for tests and has not been played.
 
 `tools/loudness.py GAMEDIR` measures the CD rips against the streamed
 music and says what value of `CD_DB - STREAM_DB` makes them equally loud
@@ -171,7 +175,7 @@ shapes a transform takes:
 
 | Shape | Examples |
 | --- | --- |
-| a blob in the file's annex, with the sites pointed at it by `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `starting`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
+| a blob in the file's annex, with the sites pointed at it by `_branch` | `altab`, `textcolor`, `bgrow`, `altenter`, `starting`, `loadhold`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
 | a blob in a relocated DLL's annex, which finds its own base | `music`, `borderless`, `xinput` |
 | a blob in a DLL's annex that an export is pointed at | `padprompts`, `padtitle`, `padattract`, `padgallery`, `padoptions` |
 | a routine rewritten in place | `restoreall` |

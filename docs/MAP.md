@@ -57,7 +57,7 @@ the names each one starts with:
 | Install | `install_groups`, `write_manifests`, `install` |
 | Music patch | `append_section`, `_off_to_rva`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Restore-all patch | `apply_restore` |
-| Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_windowed`; `apply_clearsize`, `apply_loadhold`, `apply_padmenu`, `apply_tabmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter`, `apply_starting` |
+| Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_bgrow`; `apply_clearsize`, `apply_loadhold`, `apply_padmenu`, `apply_tabmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter`, `apply_starting` |
 | Gamepad | `apply_xinput` and the pad annex (`annex_tables` and the tables before it); `apply_dinput8`, `apply_nogeneric`, `_fill_relative` |
 | No-mixer patch | `apply_mixerless` |
 | Mix patch | `apply_mix` (its second entry from `BLOB_LABELS`), `apply_sfxoptions` |
@@ -101,13 +101,13 @@ addresses are not mapped here.
 | `0x420fa0` | the lobby name entry: `TextOutA` of the buffer at `0x4d3d1c`, `DSTINVERT` caret; `0x41fe20` its `WM_CHAR` handler; `0x435400`, `0x4356f0`, `0x435ad0`, `0x436100`, `0x436c90` the list, status, timer, IP and chat text | textcolor |
 | `0x435df4`, `0x435e9b`, `0x435f33` | the three Courier New fonts (`0x4eacd8`, `0x4ea8c8`, `0x4e84c4`) | - |
 | `0x426cbc` | the window procedure's call to the text-input handler `0x41fe20`, its default for every message without a case | altenter |
-| `0x4214f0` | builds MGameD3D's init struct at `0x4d5e18`: hwnd, 640, 480, 16 bpp, 120 textures, format -1, "Direct3D HAL", fullscreen at `+0x2c`; `0x427fe5` pushes that flag | windowed |
+| `0x4214f0` | builds MGameD3D's init struct at `0x4d5e18`: hwnd, 640, 480, 16 bpp, 120 textures, format -1, "Direct3D HAL", fullscreen at `+0x2c`; `0x427fe5` pushes that flag. `0x421501` is the one `mov eax, 0x10` for the depth (`+0xc`) and for `+0x18` | windowed |
 | `0x432ca0` | the init of the name entry after a time attack; it calls `SetPerspective` with 0x3000 at `0x432e4b`. `0x433fe0` is the entry's start, which sets the centre (320, 240) through MGameGL `+0x38` at `0x434037`. `0x433389` is its task: Start spins to END (state 7, `0x433a99`), bit 3 or 4 of the wrapper's edge erases (`0x43368a`, `0x43393c`). `0x434040`–`0x43493d` draw its 3D letters through the renderer's matrix stack and `0x487a60`. `0x48656c` flushes the exe's own model list | widescreen3d, pagepad, erasekey |
 | `0x454cf0` | sprites at 3D points: each projected through MGameGL `+0x78` (`0x454ea6`, `0x454f0e`, `0x454f40`) and drawn as a 2D triangle list at `0x45510f`; `0x407840` a trail strip the same way (`0x407965`, `0x4079fd`) | widescreen3d |
 | `0x448c70` | the race's background layers: a sky over (0, 0, 640, 256) and a sea over (0, 256, 640, 480). The `.SKY` and `.SEA` course files are loaded at `0x462b80`, and the `MGLBackground` objects are made at `0x462e10`. The sea's class is at `0x49dca4`, with its update at `0x4633b0` and its draw at `0x463500`. The sea sits on a ground plane that `MGLBackground` builds at `0x100030a0` from the renderer's focal length and centre, and draws as 2D strips at `0x10003de0` | widescreen3d |
 | `0x4219f0` | the resolution mode setter. It stores the mode at `0x4d5e54`, puts the size into the init struct, and re-inits the renderer. `0x421450` reloads the textures. `0x4216a0` sets the viewport (through `0x46bfd0`) and the 84.375° field of view (through `0x46bf90`, MGameGL `+0x114`). The rect table is at `0x4b12f0` | widescreen |
 | `0x47f2d0` | the input wrapper's update, slot `+8` of the vtable at `0x4a158c`. It builds the button mask at `+0x34` from `GetActionState` on actions 10, 11, 12 and 2-5, which land on bits 0, 1, 6 and 9-12; ±5000 is the threshold. `0x43f8e0` packs that mask into the pad's menu flags at `0x4ef7e4`. `0x4edcb4` holds the frame's menu flags, and `0x4d5e08` the keyboard's, which `0x41fe20` fills (GAMEPAD.md, *The menus' directions*). `0x47f5c0` is the wrapper's keyboard: a scancode per bit at `0x4cfe90`, bit 3's at `0x4cfe9c` | pagepad, padmenu, erasekey |
-| `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | windowed |
+| `0x415110` | the .bg loader; `0x415180` its 565→555 pass; `0x415210` copies the picture into the locked back buffer, row copy at `0x415271` | bgrow |
 | `0x4272b0` | language from `GetUserDefaultLangID`, 0 Japanese to 6 other, into the settings block's `+0x60`; `0x4edcd0` its copy, the lobby's `_US` bitmaps and font when not 0 (NOTES.md, *Invisible lobby text*) | - |
 | `0x4273c0` | **the disc check**: `SR2.CFG` present → message 2 or 3, drive scan, retry loop | nodisc |
 | `0x427450` | `SR2.CFG` exists beside the exe | - |
@@ -322,7 +322,9 @@ offsets are the VA minus the base unless a cell gives one.
 | clearsize | 1 + section | in `SEGA RALLY 2.exe`, 12 bytes at `0x441783`, and the annex; Australian build only |
 | widescreen2d | 9 + section | in `MGameD3D.dll`, `0x10005120` and `0x100050d0` (6 bytes each), `0x10004fe0`, `0x10005170`, `0x10005030` and `0x10005080` (10 each), `0x10006040` (9), `0x10004d50` (8) and `0x1000411c` (13), with seven relocation entries dropped, and the annex |
 | resolution | 11 + section | in `Options.dll`, `0x10003415` (file `0x2815`, 14 bytes), `0x10003426` (file `0x2826`, 13, a jump over), `0x10003128` (file `0x2528`, 8), `0x10003701` (file `0x2b01`, 12), `0x1000365b` (file `0x2a5b`, 6), and the "7"s at `0x10003124`, `0x100034e4`, `0x10003533`, `0x1000357d`, `0x100035c4` and `0x100035f9` (a byte each), with three relocation entries dropped, and the annex. The sites are the same in the Australian DLL |
-| windowed | 2 + section | in the exe, `0x427fe6` (file `0x273e6`) and `0x415271` (file `0x14671`, 20 bytes), and the annex |
+| windowed | 1 | in the exe, `0x427fe6` (file `0x273e6`) |
+| bgrow | 1 + section | in the exe, `0x415271` (file `0x14671`, 20 bytes), and the annex |
+| depth32 | 1 | in `MGameD3D.dll`, 3 bytes at `0x10002550` (file `0x2550`) |
 | anydepth | 1 | in `MGameD3D.dll`, `0x1000271e` (file `0x271e`) |
 | anymode | 1 | in `MGameD3D.dll`, 4 bytes at `0x10002ef8` (file `0x2ef8`) |
 | titlebg | 1 + section | in `Title.dll`, 22 bytes at `0x100014ba` (file `0x8ba`), and the annex |

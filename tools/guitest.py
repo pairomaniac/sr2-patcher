@@ -315,6 +315,20 @@ def main():
     check('and a minus on the command line leaves one out with what needs it',
           set(patcher.parse_keys(['-widescreen', '-xinput'])) == set(patcher.PATCH_KEYS)
           - {'widescreen', 'widescreen2d', 'widescreen3d', 'resolution', 'xinput', 'devices', 'padoptions'})
+    check('-windowed is the exclusive mode: the window\'s three patches out, the rest in',
+          set(patcher.parse_keys(['-windowed'])) == set(patcher.PATCH_KEYS) - {'windowed', 'borderless', 'altenter'})
+    check('-borderless leaves the stock window, with ALT+ENTER',
+          set(patcher.parse_keys(['-borderless'])) == set(patcher.PATCH_KEYS) - {'borderless'})
+    check('a list gets the window and noregistry, and loses the window by name',
+          patcher.parse_keys(['nodisc']) == ('nodisc', 'windowed', 'borderless', 'noregistry')
+          and patcher.parse_keys(['nodisc', '-windowed']) == ('nodisc', 'noregistry'),
+          ' '.join(patcher.parse_keys(['nodisc'])))
+    try:
+        patcher.parse_keys(['-noregistry'])
+        refused = False
+    except ValueError:
+        refused = True
+    check('and noregistry cannot be left out', refused)
 
     # ---- every description can be shown ------------------------------
     bubbles = []
