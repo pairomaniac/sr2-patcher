@@ -525,6 +525,12 @@ small exe to start it:
   temporary file. If Python exits with an error and wrote to it, the
   launcher shows the text in a message box, or copies it to its own
   stderr when that is a file or a pipe.
+- Both are windowed programs, so started from a terminal they have no
+  console. With arguments and no redirect, the script attaches the
+  console of the shell that started the exe and prints there
+  (`terminal_output`). The shell does not wait for a windowed program:
+  its prompt comes back first and the output follows it. `start /wait
+  sr2-patcher.exe ...` waits. This has not been run on Windows.
 
 It is not PyInstaller because scanners match on PyInstaller's
 bootloader and packed archive.

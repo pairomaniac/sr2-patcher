@@ -8935,6 +8935,50 @@ def hide_console():
         pass                            # not worth failing to start over
 
 
+def terminal_output():
+    """stdout to the terminal the Windows exe was started from.
+
+    The exe and pythonw are windowed programs, so started from a terminal
+    with no redirect they have no console and no stdout. The terminal's
+    shell is an ancestor - pythonw's parent is the launcher - so its
+    console is attached and opened as stdout. A redirect or a pipe is
+    left as it is. stderr stays the launcher's, for its message box."""
+    if sys.platform != 'win32' or sys.stdout is not None:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    class Entry(ctypes.Structure):      # PROCESSENTRY32W
+        _fields_ = [('dwSize', wintypes.DWORD), ('cntUsage', wintypes.DWORD), ('th32ProcessID', wintypes.DWORD),
+                    ('th32DefaultHeapID', ctypes.c_size_t), ('th32ModuleID', wintypes.DWORD),
+                    ('cntThreads', wintypes.DWORD), ('th32ParentProcessID', wintypes.DWORD),
+                    ('pcPriClassBase', wintypes.LONG), ('dwFlags', wintypes.DWORD), ('szExeFile', wintypes.WCHAR * 260)]
+    try:
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot = kernel32.CreateToolhelp32Snapshot(2, 0)      # TH32CS_SNAPPROCESS
+        parents, entry = {}, Entry()
+        entry.dwSize = ctypes.sizeof(Entry)
+        more = kernel32.Process32FirstW(wintypes.HANDLE(snapshot), ctypes.byref(entry))
+        while more:
+            parents[entry.th32ProcessID] = entry.th32ParentProcessID
+            more = kernel32.Process32NextW(wintypes.HANDLE(snapshot), ctypes.byref(entry))
+        kernel32.CloseHandle(wintypes.HANDLE(snapshot))
+        pid = os.getpid()
+        for _ in range(4):              # the launcher, the shell, and a wrapper or two
+            pid = parents.get(pid)
+            if not pid:
+                return
+            if kernel32.AttachConsole(pid):
+                break
+        else:
+            return
+        sys.stdout = open('CONOUT$', 'w')
+        print()                         # the shell's prompt is already on this line
+    except (AttributeError, OSError, ValueError):
+        pass                            # no output, as before
+
+
 def default_keys():
     return PATCH_KEYS + (ADDONS if windows_native() else ())
 
@@ -11724,6 +11768,7 @@ def main(argv):
             print(problem, file=sys.stderr)     # where the Windows launcher shows it from
             return 1
         return 0
+    terminal_output()
     try:
         if args[0] == '--install' and 3 <= len(args) <= 4:
             install(*args[1:])
