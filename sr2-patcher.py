@@ -4,7 +4,7 @@
     python3 sr2-patcher.py                          the window
     python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab, then patch with the defaults
     python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game: every patch, the ones KEYS names, or all but the ones it names with a minus (-music);
-                                                    -borderless for the stock 640x480 window, -windowed for the exclusive mode (32 bits; 16 with -depth32);
+                                                    -borderless for the DLL's own 640x480 window, -windowed for the exclusive mode (32 bits; 16 with -depth32);
                                                     the dgvoodoo add-on on Windows unless -dgvoodoo, elsewhere only when named;
                                                     a diagnostic by name (voltrace, frametrace, gltrace, d3dtrace, d3dtrace2d, d3dinit, netlog), or logs for all of them
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
@@ -11755,7 +11755,7 @@ NEEDS = (('padoptions', 'devices'), ('nogeneric', 'dinput8'), ('lobby', 'netplay
 # only with it, the stock game writing its display block over the file.
 FIXED = ('noregistry',)
 # The game's mode, in every set unless left out by name: -borderless is
-# the stock window, -windowed the exclusive mode.
+# the DLL's own window, -windowed the exclusive mode.
 WINDOW = ('windowed', 'borderless')
 
 

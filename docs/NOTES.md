@@ -527,7 +527,7 @@ and `GetProcAddress` and kept in the section, which is therefore
 writable.
 
 `windowed` and `borderless` are the game's mode. The patcher's window
-always applies them; `--patch DIR -borderless` leaves the stock window
+always applies them; `--patch DIR -borderless` leaves the DLL's own window
 (640x480, the present a plain stretch), and `-windowed` the exclusive
 mode, with `borderless` and `altenter` out as well. The exclusive mode
 is for tests: the other patches apply there, and none has been played in

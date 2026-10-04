@@ -89,7 +89,7 @@ patch without what it needs:
   `d3dtrace2d` need `widescreen2d`, and `netlog` needs `netplay`.
 
 `windowed` and `borderless` are in every set unless they are named with
-a minus. `-borderless` leaves the stock 640x480 window. `-windowed`
+a minus. `-borderless` leaves MGameD3D's own 640x480 window. `-windowed`
 leaves the exclusive mode, and takes `borderless` and `altenter` out
 with it. The exclusive mode is 32 bits deep; with `-depth32` as well it
 is the stock 16. Exclusive mode is for tests and has not been played.

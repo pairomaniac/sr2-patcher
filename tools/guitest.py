@@ -317,7 +317,7 @@ def main():
           - {'widescreen', 'widescreen2d', 'widescreen3d', 'resolution', 'xinput', 'devices', 'padoptions'})
     check('-windowed is the exclusive mode: the window\'s three patches out, the rest in',
           set(patcher.parse_keys(['-windowed'])) == set(patcher.PATCH_KEYS) - {'windowed', 'borderless', 'altenter'})
-    check('-borderless leaves the stock window, with ALT+ENTER',
+    check('-borderless leaves the DLL\'s own window, with ALT+ENTER',
           set(patcher.parse_keys(['-borderless'])) == set(patcher.PATCH_KEYS) - {'borderless'})
     check('a list gets the window and noregistry, and loses the window by name',
           patcher.parse_keys(['nodisc']) == ('nodisc', 'windowed', 'borderless', 'noregistry')
