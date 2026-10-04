@@ -530,8 +530,10 @@ writable.
 always applies them; `--patch DIR -borderless` leaves the DLL's own window
 (640x480, the present a plain stretch), and `-windowed` the exclusive
 mode, with `borderless` and `altenter` out as well. The exclusive mode
-is for tests: the other patches apply there, and none has been played in
-it.
+is for tests, and the other patches apply there. It has been run on
+Windows with dgVoodoo, at 32 bits. There the picture did not fill the
+screen at 640x480, and did once the size picked was the monitor's own.
+Without dgVoodoo it is untested.
 
 #### The exclusive mode's depth
 
@@ -552,8 +554,7 @@ with 8 and with 16, and 32 answers both as 16 does. So in a window the
 patch changes nothing. The surfaces take the mode's format, which is the
 format they already have in a window on a 32-bit desktop, and `bgrow`
 and `titlebg` expand the `.bg` pictures for it. `-windowed -depth32` is
-the stock 640x480 at 16 bits. Neither depth has been played in the
-exclusive mode.
+the stock 640x480 at 16 bits, which is untested.
 
 `noregistry` is in every set and `--patch` refuses to
 leave it out: without it the game writes its display block over

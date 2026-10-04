@@ -92,7 +92,9 @@ patch without what it needs:
 a minus. `-borderless` leaves MGameD3D's own 640x480 window. `-windowed`
 leaves the exclusive mode, and takes `borderless` and `altenter` out
 with it. The exclusive mode is 32 bits deep; with `-depth32` as well it
-is the stock 16. Exclusive mode is for tests and has not been played.
+is the stock 16. Exclusive mode is for tests. It has been run on Windows
+with dgVoodoo at 32 bits. Without dgVoodoo, and at 16 bits, it is
+untested.
 
 `tools/loudness.py GAMEDIR` measures the CD rips against the streamed
 music and says what value of `CD_DB - STREAM_DB` makes them equally loud
