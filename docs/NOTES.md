@@ -528,7 +528,8 @@ writable.
 
 `windowed` and `borderless` are the game's mode. The patcher's window
 always applies them; `--patch DIR -borderless` leaves the DLL's own window
-(640x480, the present a plain stretch), and `-windowed` the exclusive
+(the size of the picture, 640x480 until a size is picked, with the
+present a plain `Blt` to the client rect), and `-windowed` the exclusive
 mode, with `borderless` and `altenter` out as well. The exclusive mode
 is for tests, and the other patches apply there. It has been run on
 Windows with dgVoodoo, at 32 bits. There the picture did not fill the
