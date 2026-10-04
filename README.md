@@ -320,19 +320,19 @@ that does not fit an issue: pairo@segaonline.net.
 
 ## Known issues
 
-All three are rare and hard to reproduce; a report of what led up to
-one helps.
-
-- **Linux: half of the team room black.** Under Wine or Proton, usually
-  after an ALT+TAB, the multiplayer team room can come back with half
-  the screen black or garbled.
-- **The tachometer needle during the countdown.** Now and then the
-  needle is drawn off its pivot for the start countdown, and is right
-  again once the race is under way.
-- **Stuck leaving the Network menu.** Backing out of the Network menu
-  the moment it opens can leave the game in the transition: not
-  crashed, but not going anywhere. Give the menu a second before
-  leaving it.
+- **Windows: stutter on laptops with two graphics cards.** The game
+  stutters or skips frames every few seconds, on either screen and
+  with either card. Seen with AMD integrated and NVIDIA at 60 Hz. No
+  workaround yet; with a report, name both cards, the resolution and
+  the refresh rate.
+- **Windows: stutter in a window.** After ALT+ENTER to a window a frame
+  in three is held. Borderless fullscreen is not affected.
+- **Linux: half of the team room black.** Rare, usually after an
+  ALT+TAB: the team room comes back half black or garbled.
+- **The tachometer needle during the countdown.** Now and then it is
+  drawn off its pivot until the race starts.
+- **Stuck leaving the Network menu.** Backing out the moment it opens
+  can leave the game in the transition. Give the menu a second.
 
 ## Planned
 
