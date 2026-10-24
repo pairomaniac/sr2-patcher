@@ -425,6 +425,16 @@ At startup the exe does three things:
 The in-game options live in `SR2_SAVE.DAT`. With the `noregistry` patch the
 block's file is `SR2.DSP`.
 
+`SR2_SAVE.DAT` is 29,456 bytes. The install writes it from the cab, the
+same file on every disc (`541d80a1…`), and the game loads its options
+over the defaults block at every start. The records table at the front
+is obfuscated (`0x44f710`). The options from `0x7220` are plain dwords:
+the three volume sliders are at `0x7270`, `0x7274` and `0x7278` (9 in
+the shipped file; DEFAULT on the Sound page writes 6), `SEGA` is at
+`0x7300`, and the dword at `0x730c` is a checksum, the sum of every byte
+before it, which held on the shipped file and on three saves the game
+had written. What the other fields are has not been looked at.
+
 ### The loader
 
 `0x476260` constructs the loader object. The object holds two prefixes.

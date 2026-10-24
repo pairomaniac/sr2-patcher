@@ -68,7 +68,7 @@ lists. The key in parentheses is what `--patch` takes.
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads its min and max through asm/mix.asm's first routine; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load becomes `mov eax, 9`; in the DLL the load's relocation entry is dropped with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` becomes `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` becomes `call hookaddr; nop`; the entry point is repointed at the setup thunk; the CD-volume methods' entries become `jmp setvolume` and `jmp getvolume` |
-| **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes | the defaults block's three sliders go from 9 to 6 |
+| **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe`, `SR2_SAVE.DAT` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes; the save's `0x7270`, 12 bytes, and its checksum at `0x730c` | the defaults block's three sliders go from 9 to 6; so do the shipped save's, while the file is still the shipped one |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags `0x40` instead of 0 |
 
 **Controls**
@@ -712,6 +712,15 @@ block's `+0x60`, `+0x64` and `+0x68`, each 9, the top. `voldefault` makes
 them 6. A first start, or DEFAULT, then sits 10.5 dB below the top on the
 mix's curve. The block is the same in every build.
 
+The game also loads the options saved in `SR2_SAVE.DAT` over the block
+at every start, and the install ships a save, the same file on every
+disc, with the three sliders at 9. So a first start sat at the top, and
+only DEFAULT gave 6. `quiet_save` sets the shipped file's sliders to 6
+and redoes its checksum, only while the file is the shipped one byte for
+byte, so a save anyone has played on is never touched; a run without
+`voldefault`, or a restore, puts the 9s back the same way. GAME.md, *The
+install contract*, has what is known of the file's layout.
+
 ### Effects at full
 
 Australian only. The volume routine sets each effect's ceiling from its
@@ -958,7 +967,7 @@ build, with the surface, the present, the load and gdi32 stubbed.
   `0x421330` (MGameD3D Init, MGameGL Init, its `+0x18`, `0x421670`) was
   0. So the failure is not deterministic, and it has not been seen twice.
 - What `LAUNCH.EXE` and `MUSASHI\SR2.dll` offer, and `SR2_SAVE.DAT`'s
-  layout beyond the records table.
+  layout beyond the records table, the sliders and the checksum.
 - Widescreen: the resolution value text's exact place, and whether every
   2D element scales, are to be checked on the running game. The `.bg`
   path with brightness or contrast set (`0x46c900`) and the car select's

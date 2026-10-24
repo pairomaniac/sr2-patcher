@@ -319,7 +319,7 @@ RESTORE_RELOCS = 10
 #   replayfree  the replay gallery frees only the replay it loaded, not a race's in MainMode's data
 #   borderless  the window covers its monitor, the present letterboxes (always on)
 #   mix         MGSound: every buffer's dB range remapped to -43..-8, the streams on the same curve
-#   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT
+#   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT; the shipped save's sliders too, while nothing has been saved to it
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
 #   devices     a fourth Options item, Device Settings, placed for the controller page; also grows OPTIONS.TXR
@@ -8993,6 +8993,35 @@ def carry_display_block(dest, log):
         log('patch: the display block of SR2.CFG carried to SR2.DSP')
 
 
+SAVE_FILE = 'SR2_SAVE.DAT'              # the in-game options and the records; the install ships one, the same file on every disc
+SAVE_STOCK_MD5 = '541d80a175b0a2a332dc1bf121e4c693'
+SAVE_QUIET_MD5 = '839bb7665c65654ac7a11baeaa51331b'     # the shipped file with its sliders at 6
+SAVE_SLIDERS, SAVE_SUM = 0x7270, 0x730c  # the three volume sliders, dwords; the checksum dword, the sum of every byte before it
+
+
+def quiet_save(dest, level, log):
+    """The shipped SR2_SAVE.DAT's three volume sliders at level: 6 with
+    voldefault, as the defaults block then has them, 9 without. The game
+    loads the file's options over the block at every start, and the
+    shipped file holds 9s, so a first start sat at the top while DEFAULT
+    gave 6. Touched only while the file is the shipped one, or the
+    shipped one quietened, byte for byte: a save anyone has played on is
+    left alone. The checksum is redone. Returns whether it wrote."""
+    path = os.path.join(dest, SAVE_FILE)
+    if not os.path.isfile(path):
+        return False
+    with open(path, 'rb') as fh:
+        data = fh.read()
+    if hashlib.md5(data).hexdigest() != (SAVE_STOCK_MD5 if level == 6 else SAVE_QUIET_MD5):
+        return False
+    out = bytearray(data)
+    struct.pack_into('<3I', out, SAVE_SLIDERS, level, level, level)
+    struct.pack_into('<I', out, SAVE_SUM, sum(out[:SAVE_SUM]) & 0xffffffff)
+    write_whole(path, bytes(out))
+    log('%s: %s: the shipped save\'s volume sliders at %d' % ('patch' if level == 6 else 'restore', SAVE_FILE, level))
+    return True
+
+
 def write_settings(dest, keys, log):
     """SR2.CFG with the sections the applied patches read, so each is there
     to find before the game first runs: the controls for the gamepad
@@ -9403,6 +9432,7 @@ def patch(dest, log=print, keys=None):
         sheets.append((path, name, [key for key, _writer in wanted], data))
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
+    quiet_save(dest, 6 if 'voldefault' in keys and 'voldefault' in table else 9, log)
     write_settings(dest, keys, log)
     if 'netlog' in keys or '-netlog' in keys:
         network_log(dest, 'netlog' in keys, log)
@@ -9463,6 +9493,7 @@ def restore(dest, log=print):
             log('restore: original %s back in place' % name)
             found = True
     tabmenu_art(dest, False, log)
+    found = quiet_save(dest, 9, log) or found
     if remove_dgvoodoo(dest, log, everything=True):
         log('restore: dgVoodoo 2 taken out')
         found = True
