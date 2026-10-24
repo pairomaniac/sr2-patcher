@@ -492,7 +492,7 @@ PROMPTS = {
     'padattract': ('AdvTelop.dll', b'_AdvTelopExec@4', 0x11c0, {'ADV_TXT.TXR': {3: '7b13691ff7800403d380766c68602add'}}),
     'padgallery': ('ReplayGallery.dll', b'_GalleryModeExec@4', 0x4660,
                    {name: {3: GALLERY_SHEET3, 7: GALLERY_SHEET7, 8: {LINES_EN: 'en', LINES_JP: 'jp'}} for name in ('RG_10.txr', 'RG_AC.txr', 'RG_RG.txr', 'RG_TA.txr')}),
-    'padoptions': ('Options.dll', b'_OptionsModeExec@4', None, {'OPTIONS.TXR': {4: LINES_EN}}),
+    'padoptions': ('Options.dll', b'_OptionsModeExec@4', None, {'OPTIONS.TXR': {4: {LINES_EN: 'en', LINES_JP: 'jp'}}}),
 }
 PROMPT_DIR = 'BINDATA\\MISC'
 PROMPT_VARIANT = {}                     # key -> the language of the key's sheet files, as the last patch() read them
@@ -5886,7 +5886,7 @@ PROMPT_ART = {
          'mcJ9U83AAmopp5gFJTfrJ93k2Te/Zw9xia1Z'),
     ),
     'padoptions': (
-        ('OPTIONS.TXR', 13, 1, 2, 112, 17, '',
+        ('OPTIONS.TXR', 13, 1, 2, 112, 17, 'en',
          'eNrdluFto0AQRmnBLbgFWkgLtOAWaMEt0AItuAVaoAWEjTEGAz49fRrtLuD4EkWnU+BHDJmdnffN7AzP509caXe4VfPzH1zs'
          'VE5fW7O/RHUx8isfovrj+vcr80Hr8PCe73CLau7d+ftqxE1U+3zVnPXvfH2Xr5yi+nj/Oh/3/vI9wiVf1lvsX+U7PbLerazm'
          'fMgHP6ZqPt6j+nDDBg/lhMVre/Ghx+mxO0d12oVanR54ON5PD3sXRlCM+VBOIV85JW1UZ73eKIK1blt8+OFWFMVIRFEdN241'
@@ -5898,7 +5898,7 @@ PROMPT_ART = {
          '7854I/K4STvTAjXjBl/+1MJqf4F/yQfJ2v6z+a7+mbR4glw7amLgA19xo3r1+bD7uFoPT1r12WXlZL3NN1VuNbMOWuvn8kyW'
          '/ZnMKtRe8lWzpldo777Pknb5Dan+iT/NWE1cOpzyYc/L06VzSpSaFTBufxlRT/4z9Ro+r9ctbd7Zv76svzh/5tv8vNrL32fJ'
          '8P9cxvdbr9/Ox6TXl+bPXn8AQAG7zw=='),
-        ('OPTIONS.TXR', 13, 1, 22, 161, 17, '',
+        ('OPTIONS.TXR', 13, 1, 22, 161, 17, 'en',
          'eNrtmOuxokAQhU2BFEzBFEzBFEiBFEyBFEyBFEiBFCjxgSIPt7461dXDyLp3797a+2MXq8Rhus+cPtPTM/h8Ll/7e9qWw/Nb'
          'r2pM2/39s95pm7Yfty6HtM27r2S/vayORf+9CpbD6rg5f9Z7dVwdPzJLhwf3vFsdf0fx/wp6psqqnqqxnv6c8eFhqknBoj88'
          'DLeeDg9r1VPRVyPz5ytdvUVvT+iN56Acih4cns+9w7ENrehdwbjfnzrD5xO+1RgrKObu5VblsD4RZz0pImceRloOc65Fn3dL'
@@ -5914,6 +5914,42 @@ PROMPT_ART = {
          '0McKK4kpyCjUEvDCM2ZYVVRHYwV1ShLftI0VVHUQf7XnaO8VdGubVZ2iPM5lNKtI24t2RXmtT1LZFKxGnfo0Umyl0114HrSx'
          '1HpdxfL/WV1592bDuUE2H30P+733pLm1jfYrbrHXMrt3Vku475l/zRtgPCK7oHbRr30//3cunSX8Pe3/9Zn/8raX3fW7/8/5'
          '+9cP9SYj9Q=='),
+        ('OPTIONS.TXR', 13, 1, 122, 205, 17, 'jp',
+         'eNrtmOuNo0oQhZ2CU3AKTsEpkIJTIAVScAqkQApOgRSQXxgMhl19OipVN2CPZ3d/3CsNLc0Ymq6uOqdeza9fP9fP9XP9+ZU2'
+         'q1PWLs9tr6tTOSzPlQMz1Vj0ebe/hzNZu78fn/9Sx8Njez08/qXEcsjacCAdW6YjtuP4PDymlhU9a4t+f2ccHmmjX3ova1en'
+         'omc/SdOoxj9jZn9Pao31eXWy30kd6lSNq9PqhK6sXp3yzmdYhTbxlbXzZ1OrQWiJU3aY6sj+SyO0uhqPTzwHyax3PqbrNxdm'
+         '59LW5ylWeVeN4Kx9qhHvPTyKHqnr8+5m0oWIMRPv95mXzZkB2fU5HsiLkTWt8RPT0zHb3RibS9popuh5mjavWME+G9vrNE7n'
+         'zGStdmAPcLW73U1z26t0jrGXFtJPsbg6ebzDDLHpw5lB3uYSyjQdywF88k4o7W77u37BIJGE5vqfNshM6r9hBiviC8kws73a'
+         'EIYavj7vsGZzYcgOs4B9iECXaXHGGhBCZtrsbkiIuZkzE2vmEWs7rc/ba1KDEmgdHnknv6pG5JNPQMgHEmAm1A8kjJm0SWr0'
+         '21z297Qhtt0Xi54YEvJJvbvB0/6etbJLkYeWnt/+hpm0CeMFG8UMeHsU2W+LBfmkxRaSYyaYtWxFHuQ3Pmey9YS9YoSwxuMi'
+         '5kHeGOawcrA70Mc2MqWiRM/gnf/K+spRX2czOIUF0z9EjawGEsScMNrfpzHzGTOOcJy7LFpgnSHPWspC0xys3MCuqhVL9YYq'
+         'aJbAA3KluyqXJKqGhVhjjWsZ26XsubnMrcVP4ANNqAFiNGTGY9uYISZ8hDZKB+2Vd7Ck2EsbBhVNPo7/UZPFYFhndjeqterS'
+         'a2a2V2klvSz/bC7ba2wbcuKIKgf1AtK66Hc36XB8Iom8IS6ly/LuyimbC+jDEP9ZZ++za9gJfJXNLLfG3UNYh71/CZlR/2Xv'
+         'vctmZhX2ip+kVs+lO69gNuRtsEXVE8vmX3HUf57NvAKCWlLbnWxDM94XM2BmeJIZtN4q5XLvLF6slphfhpXR8trndaboWROv'
+         'UkWZvs8+dGuvYsZ7Ud6QbpZxrToltUe0nlVjNZIzQImaaffW06BLOfD3s455mZlX/Si4sZviyrReik7TaSlqheH6bJhxx9kI'
+         '26W1/HCazb7qAKqR3DvlYKqBd4GglHeMMGbirtSzGacWZWDzzHifuJ+QnOOTfsA6J84YYY3RefB7zNh5SFaE5yPFrDA1rXm2'
+         'Poc40kHiffMey3JB2Bdjk3o99a+KqDgPfq83C/3DPcA9hv6GnGy9JZp+lc0cKeydM0N3xvmPeWpC3oUnTSon/qyotNy/ubzn'
+         '5nvfAOgMrUp7R+nWy2KhTDV0THRuVbaOOyk9p+qUgzKoGOVeAx1B00a4/jUz0h+Ws1YaElfWg+QdfXXWpg1dP/u9O8/MY9C0'
+         'KAf1Mt6j5h1P9KaYQZLm8Dp+6YT6nptlZnRaBrP5WrEy782kO8/nSFl3Bb7zcyZ9EJaqVlgl1wnoVV79hBmY8Ho8j168QbGj'
+         '/v1912wRZyc1dQA6MfEmPNsXBmq+4gjtlLHdD52buOP6LGYMpaU19H7h+TLM4nFEfP51RnjR/YR3yyPMUO+YERaHByjFz/Dw'
+         'rJWmdCxkMZjZ3TyXU8tj78s7WU5FT2rJ3F7ROGunXx1ATv4LKv6loejZ2fL2u++LMLsUU+VgPfl/+0LPz/sdX7V0F+dJsPu+'
+         '5GnFRkIs5f+A6s8VX78B2dEqtg=='),
+        ('OPTIONS.TXR', 13, 1, 142, 165, 17, 'jp',
+         'eNrtmIutm0oQhmnBLdCCW3ALbsEt0AIt0IJboAVaoAUL4wdgwI4+/RrtLqx9kpNI0dUNoxzhXXYe/zw3r9e/59/zX3iyLm3L'
+         'Mb5XDGlbDN/hmjRp6/+upuMjTtqv52qq59+xoxhOz3Dl9CxHn2c9L784PrJuufb9Z3dNmmqK7x3uSWO2rh+sL8diyPu856ty'
+         '3F6MkiZp3K9qyjpW1rQ5O0mH+3stT896LsfjA2lZt9YJ/ttLiMrxwZq9533a7m/hqf0tafwoQsqvI3t8HO7Q5pw0+5veRa9X'
+         '3sf3iM/DfXdNW3Z84pRDEoTsr5BEx2qCyhH79O7iECSyLubL7SVtl/gvEcEPSeOy5/QEj2JImt0VW4QqWLKODkiu57zni6zj'
+         '3xJ7/d7fvs6UT1Gy1l20u75eIJS2u+vhjkfBsBjQzLiSL9haz/wtBsMHLddkEYA2eR/PGEkTWof78RHm7OnJN5uzH1sg5Eh1'
+         'JutMR3FaRwKxIBt9jJZee19dYhbg09MTpI4PvRu5anN6gjf6V9PhLrzgtr+hT9aBpOx3/gYHrNxeqJCc/wpJw8xJW+6zvr2E'
+         'kUMs7W/kDZVgGVXliL/RjWjkG9NiieTpCY+fq9+gFa+SIBF2jfABEWxHOu/UMdmEbcVglQ9dQQAkiS5l/e66u6Klj+Sn3mbS'
+         'ljqq/sQrq/KrHDdnvtqcY9ZgpcvnJZLvq05Mmt8ZIDunvMK3RiFHF1HUIkUL/RPZaZv3aM4q1chiknoEwmlLVPgxyeonJMF/'
+         'HRucsp617gNCpRx3V7THd7Hc8yVXU1gnhe2nePI9LfzwWto6JMNKIwplsBL3jniBVda5OPo9JOG5XsVyYjLWbz9xBFXrSeoN'
+         'VrHMM+VoPH8mv7HZeIRZDo5wcNiFWfBegqqffKK+ZbWNzk4vZ9V6uptblvMW885SWqwKkbvrOun0q+diWO45W6qJzu5nm1lF'
+         'FXLZgGZ8+24iBD3j4SMphFX13iPJiXCCOz3V1/nHlMEvv7aBJHjGZlS4OeyEj48ASMfwsp6zOYc42zxD1C0jE8vedWRhQqxb'
+         'jB3uVCk04i1WM4k7zVfrmNScJ91FIa6u2sPfeZ1I4mZh9SDsEdWkKTTk40/W8LEpPrRVeLGa90s85cHN2fcPVR7pWMlEpsle'
+         '1gonphKdZtr1URYZZpKmuAXPWA3fnOvZugl6qjK7WfRznUSG7jLmA26Eea/pw+oPGhQDM3jeY52tI0tziM7KL47Wvq9nO7/O'
+         'cs2UrpKofsovPl+zzCZK2/OnK+0t70vMS/glFgXcOejAZHJIpql6sEgxE6v5ukM4f4ISkUlsCWk8xh64MlWDtt2SnI+rSav0'
+         'vHe3V87GZxLi0t0261l3Nb1nnc0efuxxe4KY+sMo5w4U9xVV6zs3cndzcRn/1Yn1N/IY52P2/7n/P/hznP6ehP/f8wNwgvrh'),
         ('OPTIONS.TXR', 13, 1, 42, 136, 17, '',
          'eNrtl+uRqkAQhUnBFEjBFEzBFEiBFEzBFEyBFEiBFChABZWHt7461TXDOLq3bu3W/bPjD2XsPt19+jHD82mrXqq5Xp7RdXpk'
          'fTE+//PK+qz/ftRizPrjfb1XL/tr0vDZnqs55knShDpx3srp+z0+3uUT/v0EetKEPOdD0mza/XXTJs3u8q981EvS5MN3+1tO'
@@ -6531,6 +6567,8 @@ def install(src, dest, lang='English', log=print, progress=None):
                 os.makedirs(os.path.dirname(out), exist_ok=True)
                 with open(out, 'wb') as dst:
                     dst.write(data)
+                if os.path.isfile(out + '.bak'):    # a patched install's backup of the file: stale now, the stock is this one
+                    os.remove(out + '.bak')
                 done += e.size
                 written += 1
                 if progress:
@@ -8568,7 +8606,8 @@ def prompt_switches(buf, build, key, variant):
                 fields.append((entry + 4, '<4f', stock, _uv_box(x, y, w, h)))
         return fields, fills
     if key == 'padoptions':
-        fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', OPTIONS_STRIPS, (2, 22)), OPTIONS_STRIPS, taken)
+        tops = (2, 22) if variant == 'en' else (122, 142)
+        fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', OPTIONS_STRIPS, tops), OPTIONS_STRIPS, taken)
         for line in range(len(DEVICES_PAD_TOPS)):
             strips = devices_bar_strips(line, pad=True)
             stock = devices_bar_rects(line)

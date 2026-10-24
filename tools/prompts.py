@@ -493,8 +493,9 @@ def hints(game, log):
 # Gallery shows the second at its foot and the second and third on its
 # popups. The Japanese files (Sega's Japanese and the DigiCube and
 # MediaKite releases) have Record.txr's and the RG files' lines in
-# Japanese, with their own wording on the popups; the Options frame's
-# line is English in every release.
+# Japanese, with their own wording on the popups. An install in Japanese
+# from any disc has OPTIONS.TXR's sheet in Japanese as well, with the
+# Options frame's line worded for the Options pages.
 BAR_PAD = 'Use the D-pad to change mode selections'               # for: Use Cursor keys to change mode selections
 BACK_PAD = 'Hit the B button to go back to the previous screen'    # for: Hit the ESC key to go back to the previous screen
 BACK2_PAD = 'Go back to the previous screen by pressing the B button'    # for: Go back to the previous screen by pressing the ESC key
@@ -504,6 +505,7 @@ BAR_PAD_JP = '十字ボタンで項目を選択してください。Bボタン�
 BACK_PAD_JP = 'Bボタンで前画面に戻ります。'                               # for: ESCキーで前画面に戻ります。
 BACK2_PAD_JP = '↑↓で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ↑↓で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, the popups' first line
 BACK3_PAD_JP = '←→で選択、Aボタンで決定。Bボタンで前画面に戻ります。'          # for: ←→で選択、ENTERキーで決定。ESCキーで前画面に戻ります。, their second
+OPTIONS_PAD_JP = '十字ボタンの上下で項目を選択、左右で変更してください。'      # for: ↑↓で項目を選択、←→で変更してください。, the Options frame's line (line 2 of the sheet)
 JP_SIZE, JP_WIDE, JP_X, JP_BASE = 14.0, 1.0, 3.5, 14.0             # Noto Sans CJK JP Bold against the stock Japanese lines
 JP_BOLD, JP_TRACK = 0.125, -0.25                                   # the stock face's kana sit closer
 BAR_WIDEST = 410                          # the bubbles behind the bars are sprites of their own, the stock lines' width: 406 the Records bar's, 381 and 386 the popups'
@@ -514,7 +516,7 @@ GALLERY_TXRS = ('RG_10.txr', 'RG_AC.txr', 'RG_RG.txr', 'RG_TA.txr')
 GALLERY_STRIPS = 9                        # the sheet appended to each RG file
 GALLERY_TOPS = {'back': (2, 20), 'back_jp': (38, 56), 'back2': (74, 92), 'back2_jp': (110, 128), 'back3': (146, 164), 'back3_jp': (182, 200)}
 OPTIONS_STRIPS = 13                       # the sheet appended to OPTIONS.TXR after the devices patch's twelfth
-OPTIONS_TOPS = {'bar': (2, 22), 'devices1': (42, 62), 'devices2': (82, 102)}
+OPTIONS_TOPS = {'bar': (2, 22), 'devices1': (42, 62), 'devices2': (82, 102), 'bar_jp': (122, 142)}
 
 
 def jp_line(text, width, spare=0):
@@ -523,13 +525,14 @@ def jp_line(text, width, spare=0):
 
 BAR_LINES = (('bar', hint_line, BAR_PAD, 520), ('back', hint_line, BACK_PAD, 560), ('back2', hint_line, BACK2_PAD, 600),
              ('bar_jp', jp_line, BAR_PAD_JP, 520), ('back_jp', jp_line, BACK_PAD_JP, 300), ('back2_jp', jp_line, BACK2_PAD_JP, 520), ('back3_jp', jp_line, BACK3_PAD_JP, 520),
+             ('options_jp', jp_line, OPTIONS_PAD_JP, 520),
              ('devices1', hint_line, DEVICES_PAD[0], 560), ('devices2', hint_line, DEVICES_PAD[1], 560))
 
 
 def bars(_game, log):
-    """The pad's bar lines: Record.txr's and the RG files' appended
-    sheets, English and Japanese, and OPTIONS.TXR's with the Device
-    Settings page's two."""
+    """The pad's bar lines: Record.txr's, the RG files' and OPTIONS.TXR's
+    appended sheets, English and Japanese, OPTIONS.TXR's with the Device
+    Settings page's two, which are the patcher's own and English."""
     lines = {}
     for name, line, text, width in BAR_LINES:
         cov = lines[name] = line(text, width)
@@ -547,7 +550,8 @@ def bars(_game, log):
         blits += line_strips(lines['back2_jp'], file, GALLERY_STRIPS, GALLERY_TOPS['back2_jp'], 'jp')
         blits += line_strips(lines['back2'], file, GALLERY_STRIPS, GALLERY_TOPS['back3'], 'en')
         blits += line_strips(lines['back3_jp'], file, GALLERY_STRIPS, GALLERY_TOPS['back3_jp'], 'jp')
-    blits += line_strips(lines['bar'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['bar'])
+    blits += line_strips(lines['bar'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['bar'], 'en')
+    blits += line_strips(lines['options_jp'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['bar_jp'], 'jp')
     blits += line_strips(lines['devices1'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices1'])
     blits += line_strips(lines['devices2'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices2'])
     return blits

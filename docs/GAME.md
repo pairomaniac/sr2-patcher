@@ -119,7 +119,11 @@ Four files are new, `BINDATA\chat\TAB_MENU_SEL.BMP`, `TAB_MENU_SEL2.BMP`,
 The patcher always starts from the `.bak`, so patching twice is the same
 as patching once, and restoring is a rename. A file that a run with
 fewer keys leaves alone goes back to its `.bak`. So the keys given on a
-run are exactly the patches in place after it.
+run are exactly the patches in place after it. An install into a folder
+that has `.bak` files removes each one beside a file it writes, since
+the file it writes is the original now: an install in another language
+over a patched one would otherwise be patched from the old language's
+backups.
 
 ### Sega's updates
 

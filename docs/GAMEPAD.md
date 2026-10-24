@@ -547,8 +547,14 @@ and stay as they are, since the pad has no delete and no letters. In the
 Japanese files (Sega's Japanese and the DigiCube and MediaKite releases)
 `Record.txr` 14, the `RG_` files' 3 and 8 are Japanese, with ENTER, ESC
 and DELETE as keys, and the pad's lines there are Japanese too
-(十字ボタン, Aボタン, Bボタン); `OPTIONS.TXR` is English in every
-release. Every one of these screens' sprites was traced to its UV entry
+(十字ボタン, Aボタン, Bボタン). `OPTIONS.TXR` is Japanese in an install
+made in Japanese from any of the five discs: every disc's *Japanese
+Binary* group carries it, with the same sheet 4 as the Japanese
+`Record.txr` 14, where the Options frame's line (line 2) reads
+↑↓で項目を選択、←→で変更してください。 The pad's line for it is
+十字ボタンの上下で項目を選択、左右で変更してください。 An install in
+English, or any other language, has the English file. Every one of
+these screens' sprites was traced to its UV entry
 (`_sprite_quads` in the patcher). `Options.dll` also holds fourteen
 message sprites (page `0x100b3c38`) built from word-sized boxes of the
 Japanese sheet 4, the Dreamcast calibration page's; on the English sheet
