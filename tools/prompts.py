@@ -396,8 +396,9 @@ def record(_game, log):
 HINT_TXR, HINT_STOCK = 'OPTIONS.TXR', 4
 HINT_KEYS = ('Hit the ESC key to go back to the', 58, 46)     # a stock line's first words, the row its strip starts on and a column left of it
 HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to bind it, or hit ESC to keep it')
+HINT_LINES_JP = ('↑↓で項目を選択、ENTERキーで割り当てます。', 'キーかボタンで割り当てます。ESCキーで中止します。')   # for a Japanese OPTIONS.TXR, at the same rows
 HINT_SHEET = 12                           # the appended sheet
-HINT_TOPS = (130, 150, 170, 190)          # the strips' rows on it, from column 1
+HINT_TOPS = (130, 150, 170, 190)          # the strips' rows on it, from column 1; the same rows in either language, a file holding one
 HINT_ROWS, HINT_MARGIN = 17, 2            # a strip starts a row above the ascenders, as the stock's do
 HINT_CAPS = 12                            # whole, the stock's: rows 1 to 12 of a strip, the stems two texels
 HINT_WIDE, HINT_BOLD, HINT_TRACK, HINT_SPACE = 0.84, 0.3125, 0.75, -0.25
@@ -476,13 +477,14 @@ def hints(game, log):
         stock = [[d if d >= 0.06 else 0.0 for d in (dark(texels[(top + y) * 256 + x]) for x in range(left, 256))] for y in range(HINT_ROWS)]
         log('hints: the model of "%s" against the stock: %.1f%% of the ink off' % (text, 100 * share(hint_line(text, 256 - left), stock)))
     blits = []
-    for text, tops in zip(HINT_LINES, (HINT_TOPS[:2], HINT_TOPS[2:])):
-        cov = hint_line(text, 520)
-        if cut_off(hint_line, text, 520):
-            raise SystemExit('the hint lettering runs past its strip')
-        blits += line_strips(cov, HINT_TXR, HINT_SHEET, tops)
-        first, cut, end = halves(cov)
-        log('hints: "%s", %d wide, cut at %d' % (text, end - first, cut - first))
+    for variant, line, texts in (('en', hint_line, HINT_LINES), ('jp', jp_line, HINT_LINES_JP)):
+        for text, tops in zip(texts, (HINT_TOPS[:2], HINT_TOPS[2:])):
+            cov = line(text, 520)
+            if cut_off(line, text, 520):
+                raise SystemExit('the hint lettering runs past its strip')
+            blits += line_strips(cov, HINT_TXR, HINT_SHEET, tops, variant)
+            first, cut, end = halves(cov)
+            log('hints: "%s", %d wide, cut at %d' % (text, end - first, cut - first))
     return blits
 
 
@@ -511,6 +513,7 @@ JP_BOLD, JP_TRACK = 0.125, -0.25                                   # the stock f
 BAR_WIDEST = 410                          # the bubbles behind the bars are sprites of their own, the stock lines' width: 406 the Records bar's, 381 and 386 the popups'
 # The Device Settings page's lines with a pad; HINT_LINES are the keyboard's.
 DEVICES_PAD = ('Select an action and hit the button to bind it', 'Hit the button to bind it, or hold START to keep it')
+DEVICES_PAD_JP = ('十字ボタンで項目を選択、Aボタンで割り当てます。', 'ボタンを押して割り当てます。START長押しで中止します。')     # at the English lines' rows
 RECORD_STRIPS = 15                        # the sheet the patcher appends to Record.txr: tops 2, 22 the English line's halves, 42, 62 the Japanese
 GALLERY_TXRS = ('RG_10.txr', 'RG_AC.txr', 'RG_RG.txr', 'RG_TA.txr')
 GALLERY_STRIPS = 9                        # the sheet appended to each RG file
@@ -526,13 +529,14 @@ def jp_line(text, width, spare=0):
 BAR_LINES = (('bar', hint_line, BAR_PAD, 520), ('back', hint_line, BACK_PAD, 560), ('back2', hint_line, BACK2_PAD, 600),
              ('bar_jp', jp_line, BAR_PAD_JP, 520), ('back_jp', jp_line, BACK_PAD_JP, 300), ('back2_jp', jp_line, BACK2_PAD_JP, 520), ('back3_jp', jp_line, BACK3_PAD_JP, 520),
              ('options_jp', jp_line, OPTIONS_PAD_JP, 520),
-             ('devices1', hint_line, DEVICES_PAD[0], 560), ('devices2', hint_line, DEVICES_PAD[1], 560))
+             ('devices1', hint_line, DEVICES_PAD[0], 560), ('devices2', hint_line, DEVICES_PAD[1], 560),
+             ('devices1_jp', jp_line, DEVICES_PAD_JP[0], 520), ('devices2_jp', jp_line, DEVICES_PAD_JP[1], 520))
 
 
 def bars(_game, log):
     """The pad's bar lines: Record.txr's, the RG files' and OPTIONS.TXR's
     appended sheets, English and Japanese, OPTIONS.TXR's with the Device
-    Settings page's two, which are the patcher's own and English."""
+    Settings page's two, both languages' at the same rows."""
     lines = {}
     for name, line, text, width in BAR_LINES:
         cov = lines[name] = line(text, width)
@@ -552,8 +556,10 @@ def bars(_game, log):
         blits += line_strips(lines['back3_jp'], file, GALLERY_STRIPS, GALLERY_TOPS['back3_jp'], 'jp')
     blits += line_strips(lines['bar'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['bar'], 'en')
     blits += line_strips(lines['options_jp'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['bar_jp'], 'jp')
-    blits += line_strips(lines['devices1'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices1'])
-    blits += line_strips(lines['devices2'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices2'])
+    blits += line_strips(lines['devices1'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices1'], 'en')
+    blits += line_strips(lines['devices2'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices2'], 'en')
+    blits += line_strips(lines['devices1_jp'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices1'], 'jp')
+    blits += line_strips(lines['devices2_jp'], HINT_TXR, OPTIONS_STRIPS, OPTIONS_TOPS['devices2'], 'jp')
     return blits
 
 

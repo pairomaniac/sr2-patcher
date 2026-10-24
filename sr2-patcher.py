@@ -5950,7 +5950,7 @@ PROMPT_ART = {
          '1gonphKdZtr1URYZZpKmuAXPWA3fnOvZugl6qjK7WfRznUSG7jLmA26Eea/pw+oPGhQDM3jeY52tI0tziM7KL47Wvq9nO7/O'
          'cs2UrpKofsovPl+zzCZK2/OnK+0t70vMS/glFgXcOejAZHJIpql6sEgxE6v5ukM4f4ISkUlsCWk8xh64MlWDtt2SnI+rSav0'
          'vHe3V87GZxLi0t0261l3Nb1nnc0efuxxe4KY+sMo5w4U9xVV6zs3cndzcRn/1Yn1N/IY52P2/7n/P/hznP6ehP/f8wNwgvrh'),
-        ('OPTIONS.TXR', 13, 1, 42, 136, 17, '',
+        ('OPTIONS.TXR', 13, 1, 42, 136, 17, 'en',
          'eNrtl+uRqkAQhUnBFEjBFEzBFEiBFEzBFEyBFEiBFChABZWHt7461TXDOLq3bu3W/bPjD2XsPt19+jHD82mrXqq5Xp7RdXpk'
          'fTE+//PK+qz/ftRizPrjfb1XL/tr0vDZnqs55knShDpx3srp+z0+3uUT/v0EetKEPOdD0mza/XXTJs3u8q981EvS5MN3+1tO'
          'SXN68KuaY7n6CT6256ShH6oZXrRXzaeH9YjPRzGeHs4vpORtvRxuIK8rpJwcSjUXY72gH/ZlvYDidp1WNWM7H7BYjIYkefOi'
@@ -5964,7 +5964,7 @@ PROMPT_ART = {
          'pZ2LlMi45enM000i1i9Y1V1w03JHcM9ESf9sz+Db+QLO9kx+1Tfv68O3HvLhYnnl4/W+Xk6arsq3y5FOtbTTrauaJSU83Qv8'
          '+63mjc403hPifNhJqHMUT3XaSYZa1b7xUS+6R5ivcT5C6yEfVgWx+oi/z8Xf75B7JxX+Z//Wy7s3RdPT//699xPq14h/Z/39'
          'G+zv+l2/6+v1B4Y2cr4='),
-        ('OPTIONS.TXR', 13, 1, 62, 155, 17, '',
+        ('OPTIONS.TXR', 13, 1, 62, 155, 17, 'en',
          'eNrtl+1xozAQhmnBLdCCW6CFtEALacEtuAW3QAu04BYYjAmxzdfNM+/sScKAuZtM7n6EzAQjpHd3H61WYhztytq0OT1+P455'
          'lzbH+7h6pU3aFMP44jre0yZrx39ynfu0OdzcczGkzfvnq5jWnsPrcItKX+/0iEr1zzufpt6de+67S1S+ppY2UbnOP2uN6umR'
          'd39CpRiO9zUP8i4qk9qnGJVxtaY4jSkqo3LZ0pRaMZx79Urq/TWcP6PwVdR2l7cPU/Yz4/V1vEelZnAbNWys9X+Oyfpj6XlG'
@@ -5978,7 +5978,7 @@ PROMPT_ART = {
          'D//Lye2qU2rEtL9Swf3zsnZt/Wft6IShEwuMmGf2R2WMlLUXSs/3eUoNW0mNqs4m/Pe/gERB7TrRzFPT/CS1ziJz1JylLdTU'
          'P5w/LNFnSq0YxCKpp+c17ejSUy/2DVksBnwlFp0xqS/FIKtxpb1+iZpOWXA+93O2tfKkj9IytayVbfrOUXOWtn8Dh2diMnr5'
          'y3D+Gytsn463Z195zcq87tTPZXvzSuu9liL7uX6un+v/un4B3Lmc+A=='),
-        ('OPTIONS.TXR', 13, 1, 82, 158, 17, '',
+        ('OPTIONS.TXR', 13, 1, 82, 158, 17, 'en',
          'eNrtmP2NozAQxWmBFmghLaSFtEALaWFbSAtpgRbSAi0gIAnZhACnn55Gtgkfyep0988arbw24zczzzP2kGGYaqdn2hzuw2Lb'
          '39Km6IeVdnykTdYO/6XlXdrsb25c9OF43ae0WfNxc45K+Xe4R2XaDEPWRuXuKhaPj1D6cM87+qSOSv23bE1Ufn0vSWStcXt8'
          'rOP5regP9yXP8i4qN2dfPirjagkRn3zEuNJ4XtMrd0Wfd5LdXpI6jMioVET+Le6SWruEp2uxPo7pqDw93+eOmWWLx9yZPJqm'
@@ -5992,7 +5992,7 @@ PROMPT_ART = {
          '8HQvwt6YO91mxklYSaQNVuC3qgFVHMix59yhYjepQdZ9yU2hfZvjDontxdjdXvBDMezqeGyy+TnuxIDWh/W+f2ttL1QD4+xa'
          '+iZjlY8ne6y+87krejGyvYzru90VG8wrV3GIY91UqsNDrUmtimSOO+0DsZp38jvUrTtA+Fg6z53qw815/K1k3JmmV+7WvqjD'
          'ap3Ynv/CnP7qC9eMEe2dL7WkZVrfnG6Hv4y0LGXoVKrDb/tRSxudzr/t87a7jn9X+m0/aX8AsUfxxA=='),
-        ('OPTIONS.TXR', 13, 1, 102, 164, 17, '',
+        ('OPTIONS.TXR', 13, 1, 102, 164, 17, 'en',
          'eNrtmOuRqkAQhUmBFEjBFEjBFEjBFEzBFEiBFEyBFChARQRhb506dWp6BnT1em/tn8XaB0zPdPc3/Rj8+nrn2vdZV06Pxw+3'
          'rDve3X0+ZF0xhlLlVM1fP3Id71l3uH22RjVnXdZ9tsbmFNWWU3hlXVTng7vfXaN634cS+GxOWAfj7pO02g3cSU8+OIn0jF3c'
          'Xuys9Gx36DmlYozq7eVTjlEdN9L2dxHxKUcQipvtJWlB8hFHctI8y5HUHnPc91H9zLN/wRH8mJOPtZVTPuSDxorxeD/eLRdy'
@@ -6007,6 +6007,76 @@ PROMPT_ART = {
          'u4Uc197u4Nv2gt+IrVc4wt6kZRdWPsEinbfX+jV8gGXr50dnM3tCeH50s9Y40gP5zkpn9YfnHli4OWF/IMX1VS2pIWn97ma5'
          'SNvyFM4OsL3YbvaMo8iwntjzIyRJ0vpRzTp18b0w5KicsPaG50editc48tQIC4qRvvhvwuKoeq7zLz3W+5W6GfSDYtzYM6Lj'
          '4rStvdG8+8ZYzevfXDxaCfL/73sKZOl7vtgZvjfk9WwVf+7vtX4t8/H3+uX4c9c73zP+AcNKrTU='),
+        ('OPTIONS.TXR', 13, 1, 42, 164, 17, 'jp',
+         'eNrtmOuRo0AMhJ0CKTgFUnAKTsEpOAWnQApOgRRIwSlQBvzCYO7qqy6VZgB7vbu3VfdjmR+LeWikVrck9s+f3+P3+F+P7XVx'
+         '3N3m76XN4nh4zN87PLhTDnm3v28u4Z3dbXMp+n/pY9HvbuHKO+08XvGu+3vWlkNsKWt5N2s3F5b93Vz03Oq0OGo/bNn6Ko6b'
+         'y/qslVSLo52vz6HFclgc2bPoeXtx3N/9Dm/hbXwo+lfH4YH/WQtS2Ms7w434wkXesja+xlqfpywoh8PDdj48kiqpin5/392I'
+         'e3s162KL4bisQ6vPmPQRjuDAfuHCXowDzwh1cux531x4dnViLevtVXfyjqvb63T/zYXntEOMFPnRkn9Y9nyB4/qctbaIQziS'
+         '46QKsZCn4ii+YZkddzd25gx15R3I7+9Fz7uy+kqRH+O4rKfRCse0sYV/du7v4yfvs4SNecE+MWOECZaW9eqECoQgeYH75QC3'
+         'k0p/Q5TJDThmbah9xxH1gAVW4Zyjz3vlgC8gv70m1eq0v6/P1CazrrzqaXz6Do7s4Fxcnw1H5c8YaufGM7HOeOsMcYwXR6sO'
+         'xM05ylP0RM67RU/0cU6TKm1UrdCe4fhc1yC/rIveMKCKuyd5pziISxHs78ZHcvg+jo5HrGJjIvlhiSNzegzV4kqTHsSmaZ2k'
+         'F1icoBbaRWvkk1xwLu8dR1jLCvmYNtYnqA4hjvJb2EqdeFv0cDBrqcQ8kXdiUdHHfYZdvEO8wjFt5JXUZ0pc1mkTx40HMVsP'
+         'D3UceZZ3q5P2KXosZa1Yt73C4NVpfvdywONlHXZTfLdovCeFfFRPxqPXupYSkor6YLrZXvFZvlGHxkxW5rENR/HFFfdVXXvt'
+         'Vl7slxQJAjwvHPHI0LIZIWutms3PDEJx7J/6//gARzQprVjenY8+TTgfQWtZwzlV8d3N84VK0oaKK8Vq1rDfQg6tk725PvEZ'
+         'HKd1R4vsy/tQ1/ga8sIVPr1utYl3xxhPFcSEqIykDTHt76yQj+OZwviIUtEHmI2zybXxdCC2iIdgKm74PARHPo+jT6BWd7WI'
+         'y1lmOHKNnhr2E1WzKeeoAsJlqhX4AFPiK1yjwwoTVsjHZ7o23aj+TXFkgsQSkzodO+/C+ZGIbELVFwZnq9N4pv/O9wxV2mc0'
+         'u+aeUj19/gunPdVs1c45j5iRpSr6gFB3y0x6TDDoVzp9Pj9O+V0OZkdzmeZHebe7aTZ3HNWBwk6p2v+s2r/CkcrBDnPdShhO'
+         '+7UxyDyMv2as3j+v2oeH6tmYQeVglVpdnr8ff8/IF59jvXJKKZuLfS2RG/yyuYdnvD4pGiEZf/++x0dNGHH/dh/j6du1lTbz'
+         'bHvnu9C+pMfeEn3aKDflwBzAzsQIX22JnyH6fPGpFjCPK1P0H+bw+MtPljSDU5OdB14XqEmvlE0e5jhCv3uv4//8EfuhX3w3'
+         'x3GNf3/2MBzGVn//l/Wzx19dNnIl'),
+        ('OPTIONS.TXR', 13, 1, 62, 160, 17, 'jp',
+         'eNrtmIuNo0oQRUnBKZCCU3AKpOAUnAIpkAIpkIJTIAULg8F8bM/q6KpUzcfjWem9p7fSdmtHmO6uunW7fuzX19/xd/wJo3yW'
+         'z8vr66uYzo/DjScbxZS0+fhP6cmG3bWYQumHm/3OhmzYOnN5SX8+RlXSamcxhRg/2cb+94iy4fdkbe3fN1EFpt31dI/rY+cr'
+         'h1tUne7L/cWU9t9rurzOj2LKx2xIe/bC1OEW11G1b3jKx9P9/MiGqBI7l1dUxTX2JO2xOz9cUtJGFcwaf6CMqvIZ6iqf54d0'
+         'ne5LZJzDAhCtcSLr5/yBJarWtsMS0rMB7I4N3WbxvklarciCuZ9qpD37WA0nvMj6Y3e48Q+LYMX5K5+ss6LpHsPK7ooXij/O'
+         '6IbTft/E9ZY2wx7X7OC8dgnxsUtaJlbJEs3PPO6u8gD9Onb7RhMp6GIebo5c7zXRb5Gcj6zsG2daEQUruytMHzshy4Z8hIvz'
+         'A7/m/k73pI3rtJ/zV0yc1C/eGgvCyXvjD8akF21xzY2c7qaNDGTo0Sefj+ukdc80Rs0qs/ATf2CEM/P+pEWK3Y09G7vlE+kW'
+         'u7LPZZ0fnLKMdXnBCGcMA0zxhhjVjchbdE+wOuePJ48M9hkPl1cxFROZB4bKJ3FqcbDUtjXQpDVDZ6eIaDT9NHp1j9zaUpfF'
+         'b8gPkpOWHLadB8unSwG/+63Y5jeRnva7KzLyUXeHv5Ct5vzhj+5zlvMM9XqG+e/8mGv3WrWM39BGxZBH9eehXGm2GVLwi7/y'
+         'abUWf8JXFcFJi53koG253Mgcm25KvCStVorpdEcP0YYXrfnzusV54w/e53NZP1zbPNqIXvP5w40I9lPcLPcKovfVeRm9cY0/'
+         'Oeeghkvxpxg1H7e8pBzh9mx59RL/2p+Ro1yvvANzS/7cnznvEumuwukZyHe/5wCr1h2E6pXufr363ktswgZ+r1wMIuyFC/VY'
+         'c03MY7f2P9my5jaMP4/2cC79Lx/h1H3DGaKz+T5+32U/vEuRu2/WvYsii7/h2XxM+60+RzkZ3MSDug/eCLPxJ+TheeXBefW1'
+         'FXnevCO23MP7OY7w/tKeehD2f0v2PcNcXqf7fIIm5E/alijUv1DtpXPJoUeWn1T3q3w9H/I1fyaC6fa8f5Z0KmOInJ1wTfZy'
+         'zcfOdFtPuNWRc9JvE1nUUa+HsjzEStbgpHUo24N4na+rb0RbyIVkE790ZXOmFBO8tX5DPsYOcvZW9PrbsPewfnfptdRN3q+z'
+         'g/hH3raniwmrm8aVEKhH1heJ6onzZx4a9pWKm+/jd0ub/G93VYeMDdkQdnh8p6517Rt20r3+/Jv0dKdrXp+4vOg0tv0AL/1c'
+         '9YlRlyD+9PUh/tS7ugY6zmO3jEP7WvC5rL+GNxvCCqv8RwdjHjBHTAyl/fydstW++fkX3X/5fxTGjPWx4Zfi7ww6hX/Pwv8j'
+         'd3/m+AXdtmZ/'),
+        ('OPTIONS.TXR', 13, 1, 82, 192, 17, 'jp',
+         'eNrtmOuRqkAQhU3BFEyBFEyBFEiBFEzBFEjBFEyBFCyVl+Lr1lenunqAgd29f27VrWVq1YWZ7p7Tpx/D5/N7/V6/l67Tu3yd'
+         '3p/P8Xl8ps3hET7Z1vs7z35yHZ/7+/E5vpt3qzN30eKjfNma4/Onerg2120d/p82abNkheniO6lkUfna3cyO71z7+zwmaA0R'
+         '/M4FMrvb57OtkyptNtfhk6Qazy9fWbuEFauKHq8eHj5P+Jev1TkchhZYFP0SR47Pw6Po9/fdLe9ALWu39bZendcXvvOOJ/jD'
+         '7JcV5Svv0mZ3czuwQHMM/93N7ZjTprvm89VZkqZe299X56z9O/yPz22NXrd0fcFW9pdUSWVPsHtzjTEmqdaXzZVVNmxW0acN'
+         'Wop+dSam+Az3jcwpb4g/ZA59tjrv76zYXPNuW6cN9mteiL/02dowSrJW+zX8wRM7l7T57ljF/vnMO+4fHkQdg/WGGPtbjiIw'
+         'ZQhl/d5czcunt2RpoM38Wr74f30JPSWOwDWtytq8290sTk9v5zt/hwef+CLEP5Yt0ENUwnZ+513RK6qydnPd30EEb+bdGH8k'
+         'EhvkVn4biooAolo6Q8bOa+Pa3UB4W4MXcywykMBs4x7fDHlnHn9WaGi1hmnDAmON8HN8tCOPWazy3zDZ87pYAEfAAOTn8k8M'
+         'f5czjrnyBV+EmNAc4g9HjE2KOl+5v5M7FHNkf6s989qGNUf5hww7tpaYXsZ9Pv8M9wZHDD2kDuvc6Z135in8b35jpsbmWvT4'
+         'wnD1/K/MM80/8WoZenV4L2vJJOsLTJziD6uM857zw1iM8WBeG7Lla+0O+SEmZC/J+j7+5AiQBH++bSVcTSqxPKmKHl1zVV2M'
+         '1k7hGfoPD7PF+ymwSip0pQ38ylplIefUfA8CZmFfYNbnHbFO7Z3ij3ZjCPjzVLLwWziUE7/Spopv+Zq6k7VhxwCbshYuTjuW'
+         'uV5JvDX8Q5QluXw5jnEZQlz5U/WafMmOWBPuXzkSXTHeLeOPpcP4g6NWl5Rrp/w3xC2fhP12OMI6NKdt2GW4Z8POVxGMRd/r'
+         '+rEenC3/YMfU79pjUk3RgUlhXSYWqLiswG9hTlNdVv5RFFgsxPH3rm/MX/f87ubj+JzWX98LmtxKWT2ff2LabL/W3YUdrfM/'
+         'qcTXYUWInxaYKa2e/8eoKaepQg+72tPbertxlyVp5JbhEzt/0Y+wQ+Tp3DfFn70MmcBzj6dpHscfZCHHP+Qzlro/i57M5WOc'
+         'f2LajPd0u2Lk+jLeedYKEY8dcoq60lhMmwbHn3rrWumQwAHWOvqcaCwrUaFjcRj2eibP8DeGDf3J3jjVnd5WO1yGVxlqbdjT'
+         'po31MY7cEH+s/aomhnVoTpv0CUfsE9bjLCXEvFLS4ysXzvUWVLDpbrFA96csUJ1Ad/y8qm4YHDRP1qgXmsdfdcTG+jK2B4uM'
+         'd2GV5NSDnrAeO/Yxpsq+5f5nqs3Pnep5ieGkCuVaXIT3QJGzUaxe2L6JDk4pU89s63jPQ5Zfel/CWVenOboEzSQq/Gw3xV+W'
+         '4DX60jlrDw+yaYg//Yv144qbkOl0LGNpflr1U2u8vwi12XsXqkocF7Ic7w/GOSnOpn/xjm+4t5+88ZrzhmSYbJj2N+/wyHlL'
+         'Z4/f63+7/gAIigNL'),
+        ('OPTIONS.TXR', 13, 1, 102, 181, 17, 'jp',
+         'eNrtmO2N4jAQhmmBFtJCWkgLtEALtJAWaIEWaCEt0AKCJED4zOnRq9HYScyyq7sfJ20s3WWT2DN+PPN6TN//Xr/X7/WTa3Nb'
+         'XeJWPfQmb+bHvt+/qkfY9i/e6anuv3+tLrPD5jb9rnrMDkUbP/vE2vq6vqa+qB7r6/b+qXe75/q6upTd7ollxvVmXm9uPqJ/'
+         's7nRp++397iXni7Ps0NWh81GE+n1dXYI2/qq0bnXCNPX/rV7bu94VHarS8zg+6TT1mzkrJ4dxGn8HXNYnj/jvL3PjzbXssOb'
+         'sGW1bHAPHffO2urS90Ub99JcIb26hCug3psbvm9uZYeXfKV/9b7vGWHKz6LNG3rGjdlXD8uavIGm/SUy+5eYTZFOWbN4yGpG'
+         'hIPNFU8WJzU84l3R0sruPWk4L89EZVZv73Ag6+HKneIYJqLjpHnH89lheyfCxG955s5jen4Mm7LDGC1OrC1jEJtfk2a0vFmc'
+         'lmcsZXXZmX/D7LCmtxbn3yVddrAsWghh1dRP1phPVvOO/2lah3Qm0sv0M55VuLpwsDxRH8UJtMyCvvJeqZje3vnS1mlKPULb'
+         'oWZ4xkIMDclq/OAJ6rd7Kje4w7Mx6awmf6Dm85+yFl6mHu6B6y5zeE84HierY82PSaMdeeM+haRhZlkzRXoc07FOm3rA5T1p'
+         'J85IWCe+84bVZyT1dp1m3DFpa6ESpqwRsXlj6kH0hhmxf5lmfkq6ekin50ffXWLSzIPRFIlGGkY8mR9tpUPSaAiekOFhU3++'
+         'hBHfixKx4aS1O6QqGsut6pHVqhs+J120xLvvbe+sLc/oMFFBP/Qj3Gu1y2A5bz6tPfavspPi25rFpCG2urAPaI7hjshcY41x'
+         '9Ztq1B92B4uxepBB70hL18cVgNQSKlJN7r7W6a+s2bzGVR40mHta59/NwOqdkHRcaeCVabvm5z6EpE0piWKtR/WgcqgePJfy'
+         '0Z8d3P5NkV6ew3ni5+I0Jk2VoPjzu5+Qdmv7F3uvMr7shqzxI2+kILFyp6pvKjuv5MaklR/KfaySr6bTsHWVGuq0rTqxK7qm'
+         'T3Zy2T2pzeGg+6m5WyaFVXFsB3+pnmL1oILSbL5DOrTGfBan1UX5Pj8OM2l51ir4mOwhqv2maye+VeU0pR5SW/cDWkZavad0'
+         '2klzCpOvrnIi7SsZ6p9GZxwqTu0EcW0EOVafPeCrMyIryEpTmaBbrtN2Ik1Z442IQUBUh+u0vnrm6G/1GHpsMW2ngcVpvCPG'
+         'VaCyNKw98MJyOVYPjatVX1+VZYsTmUXlnSatHJjeCdznYTSlSHv1PmzmddqaTiWiz4qxtqElcQufcQrcPcmd1Omdtz/9pSE1'
+         'ouKO7EMbICr9UF3pSjsmDUmdz4o2VokwVlGH8S8OQ9K75/C3F2v+Vcoa2cDeUrRTv2xQsxXtMApU2aa8/jfX1G8Jylk7HRsz'
+         'TqZ/z+rfHO33+l+uPwqVrD0='),
     ),
     'lobby': (
         ('showteam', 0, 0, 0, 102, 16, '',
@@ -6026,7 +6096,7 @@ PROMPT_ART = {
 # The Device Settings page's hint lines, the same way: each line's two
 # halves, strips for the sheet the patcher appends to OPTIONS.TXR.
 HINT_ART = (
-    ('OPTIONS.TXR', 12, 1, 130, 136, 17, '',
+    ('OPTIONS.TXR', 12, 1, 130, 136, 17, 'en',
      'eNrtl+uRqkAQhUnBFEjBFEzBFEiBFEzBFEyBFEiBFChABZWHt7461TXDOLq3bu3W/bPjD2XsPt19+jHD82mrXqq5Xp7RdXpk'
      'fTE+//PK+qz/ftRizPrjfb1XL/tr0vDZnqs55knShDpx3srp+z0+3uUT/v0EetKEPOdD0mza/XXTJs3u8q981EvS5MN3+1tO'
      'SXN68KuaY7n6CT6256ShH6oZXrRXzaeH9YjPRzGeHs4vpORtvRxuIK8rpJwcSjUXY72gH/ZlvYDidp1WNWM7H7BYjIYkefOi'
@@ -6040,7 +6110,7 @@ HINT_ART = (
      'nXYuUixzy9OZp5tErF+wqrvgpuWO4J6Jkv7ZnsG38wWc7Zn8qm/e14dvPeTDxfLKx+t9vZw0XZVvlyOdammnW1c1S0p4uhf4'
      '91vNG51pvCfE+bCTUOconuq0kwy1qn3jo150jzBf43yE1kM+rApi9RF/n4u/3yH3Tir8z/6tl3dviqan//177yfUrxH/zvr7'
      'N9jf9bt+19frD/QpcwY='),
-    ('OPTIONS.TXR', 12, 1, 150, 135, 17, '',
+    ('OPTIONS.TXR', 12, 1, 150, 135, 17, 'en',
      'eNrlmIFx4jAQRd2CW6AFWqCFtOAWaIEWaIEW3AIt0ILHBuIABvvmzZ89rWRMSHK5y8yJGbCllXb3aXelZBislV3Rbi6/X4ft'
      'tWjX5+FhK9qirfrhnbY+F23ZDX+4rU5Fu7vFWrbXafnUv83lkVWrU1Yv37x0VhetuPhVNCY78iar36dRtFn9Htd71j/ybRgW'
      'x6z2Ei+vWZ3a+ci/5VtWr07SNKaSSlf97iZPF8f5wUvububdd9LIG+3FszSCvc/RCPJ58/J6X5o40L5XfdnxVHZ5M9sHelUP'
@@ -6053,7 +6123,7 @@ HINT_ART = (
      'a8pOFYIzT9Gg2IktCjaaN1YnPA2ssP4pGvSb3NdpKHP9DTycMikNNM8Pqd74hOVMQYNVRzuz4/sZzPKGVazO2LnlaVClmEvM'
      'TdEgw7hfpWe00QianqEhvf7OqVsFMikNuxssjuP7RthF7nNIWdUU7/j+o1uCYlIe+xugxYx81DpTNIzb1JniNT3X0jsvt9op'
      'WXb/YytC4541Qce0vo9ruz8+/JC2u7Gbj/8m+X+a7s0/Z3f+bVu+fcd/Pz7XfgEY91/+'),
-    ('OPTIONS.TXR', 12, 1, 170, 142, 17, '',
+    ('OPTIONS.TXR', 12, 1, 170, 142, 17, 'en',
      'eNrtl+1tgzAQhlmBFVghK2SFrMAKWSErZIWswApZgRUQkIQ0IUD16NXJNg0fkSr1T40qanO+j8fnszMM79r5lTbHxzDb9ve0'
      'KfphoZ2eaZO1w5+0vEub/d31iz7sr4lpc4lK+X98RGXaDEPWRuXuJkqnZzj/+Mg73kkdlfpv3lpUHr7mJLLW2J2ey/r8VvTH'
      'x9zq5F1Ubi6+fFTG1ZxGYlpiU/R5J5ntNanDjIpKZdRvsUnq7dUiWcrVcU5G5fm1ng0j8x6vY5O1WD2/4iqu3J4oemLd37Eg'
@@ -6066,7 +6136,7 @@ HINT_ART = (
      'XOau5urJOzZWZ0x+PRtGnLzOFeiM2eg0sJjDkzZt8Jq4dFrqREaONeMMErWkRrPOGyqx1mWKDRLbq9HbXolDe8vdU/HJxqfY'
      'iIDmj++zc78ZsO/Ly57db3w2Ra+It9fx/WZ3g4x57U5kMdRJYPcj32pS68SeYiPO5FreKa7QtuqI9OPpNBvdjzaXdXd9/5YQ'
      'Zhm5N/0L5/3vm3DOWKN986XmrLy3N2Xb6Z/X9Nlvuf/23/7b5+0bVXgQTQ=='),
-    ('OPTIONS.TXR', 12, 1, 190, 152, 17, '',
+    ('OPTIONS.TXR', 12, 1, 190, 152, 17, 'en',
      'eNrtmN2xokAQhU2BFEjBFEzBFEjBFEyBFEjBFEjBFChARUXEra9Odc0MoItX92V34UFlZvrndPfpxsfDrqRJmqJ/fHRtL0mz'
      'v4e/827++aL3T9uT963K2qTZ3T7zJe+SJr0+X4+qRYllRZ9ef4rb8rAofXxWx0Upu7PWf170i9Ldy4N2xDW/osqsLPr1STuS'
      'ZuhL1r6yY3NelNvLZ3hl7aJcn55r298VW/b9NDZDvCw79vfQ/jFeRU+8VkcQNhlIA78xYqujMP6TeLnMXh3jeir/QGl/J6bp'
@@ -6080,6 +6150,69 @@ HINT_ART = (
      'bs42t9BFjcfexQvLV8esHfKf0CDSsuIdvLDc8dSQ79GrLhXXmkbE+OoA43nVGIhuzjpMFHYemyeEhDqUdoG6+AzpSJVmZtJQ'
      'i4+XtE3jpWiatpA3NKesT3pvmo8Xk9B4/vLxot6FTFRZJj5/H1JfcKeG/d7ymfN8MuE6/hdHgpnNX8sDnmkeG78PyYrpCd6f'
      'GNPrOA9/8vY7/SY93fnmvm+7p/MkDy03Hx1/vZIyz2s68OOvv9w88em1Pr3+F+A/Xv/ixf9c8//L+AUrJ3Ac'),
+    ('OPTIONS.TXR', 12, 1, 130, 120, 17, 'jp',
+     'eNrtl+uNo0AQhJ0CKTgFUiAFp0AKpEAKpEAKToEUnAIy5o0Bnz6VWjN+sLZX9++O1gpsPD1d3dXVs7fb/+tfuMr10G69S/r9'
+     '5XuP+ZQOvp2W2+20HK+PxvfuSodsfIws6cuVKOIOy0bd00HvgyqsueOrmM3eRRc1u3PcvX4Xd0G1laXTUsz5lI3pkPTs4lDu'
+     'L7uzb/l0ux3a++8wi1v+dmdyW64u5nzancO6XPHJevNuNRDe0+L7fFefuHveextvuUZNWO8vQfWMiLzJFC+oXQWJN+mz0Uzx'
+     'C1VQgcF5c3xLelZFTVCxYzbqDiZqypPuYS2veHqHNqz19wrxM17lMGriDnxBlfT5dLzCunJl50NLhfxciHPg8/mbDrZjMR9a'
+     '5erQxl3Sp4PPSTgeNftLPvEOJuZT1JwWIpbxbdRYxX/Gi3dYU8x0xyd8tpjBtL+cFtCF9fFq31Eb7nGnbrIe+5nPyhTeDKWP'
+     'OR2oa1Clgyq9v+DZ6stun+K1Ltnq8u3+pSKgRNHiTrv4eMVRWOrwUj8zn1Hl6thMh8JZ/ORT0ic9ulbM+Cpm7WrRuv4NqkOL'
+     've/f3+E1dVGs+aT1Pt5DKw326/uaz2gCWUH7THOk6dIW+veRGWIaOKMGPvPEn+32t/HCJeOQu4RTcb+qb9SoChhvhBdU+EK3'
+     'iFy9oUzgkZlEVvcXJidZg/XGiKBiPd2zPWU+w0uOhVdT8BHZI3OYG4qBeoAb8+urLjRz9cU/OQLTfX6p4avOz0aYrlwSf9Lf'
+     '967L2ad4y5X16AP7PWsZ+b3Pp6oTNbCb2MMae6/PtltQlSu/f8TLdGfShDWqSj2LWflXLsFtE567zb5v64u2bs9mVoGKmard'
+     'OXnoiYrRg+kQ1qb72/PX8cVYxFnGzV/0kKwRY7nq2cdL5vkslWSldGAL8Xb/CvHWuuNVPfQ8sZJepwOtF6p35yt8qedZI20Q'
+     'Nk0gJqcMFYBDxB018MTOJ/weFTfEqvY3epWNz6p0j5maPZ9hokYeTwsdQTeJbe6Uy698vGSJs1tYg8dOXlFDraVu9+c5aYWm'
+     'l7EBpTeWpMOWejn2vH77/f8L9/706XEXPv/Gt6/d5nl773/5+gN5C492'),
+    ('OPTIONS.TXR', 12, 1, 150, 182, 17, 'jp',
+     'eNrtmP2No0AMxdNCWqAFWkgLtEALaSEtpIW0QAu0QAsogZAvCHv66cnyDCHZ5O50uj92rNUSmBnbz55nw9fXz/gZP+PPRj0W'
+     '/e729/bbXpeHovffRb862u/tdXudt0EW7G6LfdZpZtHX47s6qzvzn1u0vb63VzkwV4JF9ehruebe7uZz9DRchX9apT2qe2zn'
+     'Yr88/F6UyoE4ba+by+YiVFfHpFns05ar3W19xo7FXkjW42KfNPiedfmpHHynrFvssdKwrsflYbEP7azH6l4O0rU+oy0crFuf'
+     'ZdGjnez1Htb5abE3wdJy4Eraih6/vr7S1ucg5bC5hL/lpwt2xbaA2frsGfh8bC6rY9qyJhQsE1L5aXXkDy0g6FgT1azjicR1'
+     'Kd5kt7BmTX6StrRNmjlthnHSMIP1miVU81PWIcSc+/xHXmMO1uSIxLDGMscapHY39lyfuapHsE5bXyWsd7eiVxTws+i31/U5'
+     '60JPphnzOEBweUhbUJUXnBX2K4ekwUesyLqkQVOINdaygl/cNcTMSywV1qCrrEZb0hC99dm0Fb1lb3VHn85S0mSdZ7yhnzRc'
+     '8VTyPdaKsXGKLOaeYR3mp2UfdoVn0GMuNPTfJG03l6KP2eUZN5q9rMc3eEK6lIXKNSIQY82VR5N5hhk1A+3MWB2rO1whW+px'
+     'qm1uoEnPzDpbBaug6T1WBOuswxZVC7BWJKv7a6zT1leFWMM4WLa7ga+f3DAyZMijxDVP0YRbN5flQXUjP7E7eQi7xlhjk+ey'
+     'cfSUJ13CyMvruTo85ZCQsXXW3fNP+Jp90ErWKAKvsDZxDslPwsJOqLNl0sAoPCUKMbvPM4xOvXRlnTwsejgfPesz2fmItZ9Q'
+     '1hvWxCiWaW10beEoehjEztLqCIv4KrKAHMCi7+uQaQEBhH3AmuwAM7x5jjWMiYBDiF7SCBnOxeaiOuYCGvUIGz9K6C2r4qpf'
+     '9DAiVognQXmKtUeL9b5fdY8F70KsX+NFzsX13muxOP/x6bt8DdY6w5/xtTow1VXZ75J122s5vN/ThhxgvsWMM83r3Q38Pecc'
+     'zflzFGL9jK3JWrFH2j72e9xX7Q/Xwp1zveFzrA2rT2sjGaMo04UI3/A8v//OQtRim8kg5xtqXdhfTyPl9lEfYlE9mmqbZrZ6'
+     'Proeq/CPJ23aX7I3HDX3/gYOcJEkxFrd33OslwdbRXU2rDkPsR9hP/vJUFe/OnqWgDX9hPcF2jv0i1r8WDOmgzyKnyuz0Bbi'
+     'pr1VtzQjjkd1j88+/Q8zqDGvayNoOdbKju9rI1aHfQjaY03hnp+8N5pthiu+6w1C96xWOtaW+WkbImnZ95xD5rQpr8kovVkQ'
+     '17CDLgc7+eFOaat+9/Pc+lvfRNL293TDE/nJfBHWqrbCWrXYfa3unOApF9hbnsu0DzE74b3wPnxN12e1L643+Yn+IL6nfjtt'
+     '369M/+egs4nfeMrhnfejua9An3x7+jy3fr45/vvxCwJH4w8='),
+    ('OPTIONS.TXR', 12, 1, 170, 192, 17, 'jp',
+     'eNrtmOuxokAQhUmBFEzBFEjBFEyBFEyBFEzBFEyBFChQFFFht7461TUPwMfP3ZKp2r17YXq6T58+3bN//vye3/N7eI7Poi+H'
+     'b3cdHodHNS69rcZywGY5HJ+72+7mv9tcdrfvz1t6VqesDa1vLi6u43M+Yv1+fU5qfiqH7zwq+qJfip1TD49vIthek7rov40b'
+     '3/f3pbf7e1KDy+6WNrtbUrvoDo+kTpup93n3GgEyenzu70W/u+UdqG2vWZu1WOPvvOMN+VidzCIelkPekXF3Yjkktb4x/PHQ'
+     'smanHZ+Hh3+afms5T2pZmvpc9Em9vX6DJDs2l8Oj6LfX0IvXvDNUiTBkuFCWrawljnCfEMva1cnyDlZpM81nNWbt+rw6pU1S'
+     '+4sv+X3eZe3mwm6+Sxsf/80lqcm/dvhVAuPw2PC3WHRafJZjJ+9WJ3aRQf7MO0VL1bHYzzvFF6MSx7a/727bq+zZeod7NaI8'
+     '8Js8593hUQ5pkzZSG7xjCWX9vD67eiRyYmAR5/rscMai7zG7qlGxZi1sZ2/e7e9Svu2V/GENBuVdjD9xkelyqEZ+djVOBXCy'
+     '8PcZK683l+lpPLsbCGctnvONVQYW+BpfeGcRKjvLuu/jTv0en8uK7jM7XIcH/OMsZULLPGIZr6lzZcrw8XWP3KxOLlaplH2N'
+     't6sTWB6fymg5kFvLs9jp4w8HzJ7poeFPx2M/3qP+Fnl82nLtmyaGb7BlVfH+Ibt+/fn6TdecLqlN0au2hej2CktDTXf6E+Kb'
+     'NvRjviTCuA+4Lihu+H0MPvLvvFudYL4syiZMnOIPByy/TvOtpuIVemunxbgr16pJ7PuqZjX8Of5uZgDN/Z1OZZHN+Uh8jrtg'
+     'Bc7ULhYUK1bKwfAnU67LgL4Q29+xsOQnOhYiAmbyrBpXJ7GGXOQdtQ4jpvjjseUX/M37aiRv/sL7+dNiBqHv6hD0ne3V71ji'
+     'InGaqr5TcuYJMPc7jvSBXjy3YjYZ/vt72oAB6KCphj+MMJSpdEWvk5zWxLqIjfU5rqdwzsQ2WMsSOZjy3/FFehJOx26hTj7+'
+     'fB2fFs9+U9/JIrz4pItO9Z85UQi9f5zGkW10qBrlDz6QD8OfjhBrm1VX2szNyZpYQvRj/OY0kq4Q91+3gw7lpsK56vbx96sl'
+     'ZCzKJ7b6E61DZX2WBoUdYem2wFwM5tLvb+48yrQicTWIB2K103/NhmHXsfktrNNqLHrxeXOZ+subcK4OdZx8UIEOfz97YObu'
+     'YlS9v2L90WlTL+A90668hLExr5QbF281po2m0k+n+c/uC+szGnN4hOwuh81FUTr84Yx/+1L32t/931cjk53NTPN3QU280nrh'
+     'Av6bi80xLpIQf+aFdz1xOi1oyqOzO+5ynnCE48I6VinmYb9zF7120PleYYrF5dtsyDpOgGtzc4N81/wZvxFOyt3c+aA7rWrf'
+     'rvHO75LcejjN78dhH4+Zap6/mn+mpxn/df9iciMe367VRXiHoZ+inq8n+90taz/Dn2rWrJ932+scXuWgKWGq7kw98+xmIn/N'
+     'EItHs47Dn6nA5nFl0Wc6E0vso7utulvrHI/4Eu32veS2ym1wrnOhclkbR6F57/v/3/kXHpsX7B4E097fIOfv9J9k//f8L89f'
+     'kBA7Hw=='),
+    ('OPTIONS.TXR', 12, 1, 190, 149, 17, 'jp',
+     'eNrtl+mNo0AQhUmBFEiBFEiBFEiBFEiBFEiBFEhhUrC4b3tXn0qlbg7bzO5KMytN1w8w0F2vXp3+9etn/azvuT7u2Zwv//bM'
+     '28MpvfrZ26B1ymLdoyjWj/trnOn0HGc6pdPtcQVbNvOtiJ6XzfEQD/bpxZqM8bA9M52cMuz+jONizZd0SsZkzOa/YyrqnTLq'
+     'X1volPHA2fu9LLdyymtMebVTqqDx9vAb/e03cgZoRNzKaPu4Y1WxplM8BO17bVEftF4NMlvESvyAoMmt5D4eklH5k9PPmIoH'
+     '4eGcIa/2Gyx0K9Gr9oQdErRBy3OuyGsbOCfqsxkBBZq9Ol+yOWglYnjiVsmYL/Eg3GVzMmK3bfH7PMQDXh204BSOiGKx3PaX'
+     'Eb+RnRpnz5hSRveRiya8w/6wM8wrd14terki75myMwA0djSTD9svJGJVwg57X1cKRS5Ibg90wmyxRr3EA7H2cUfAzbVYz5kK'
+     'u6hH1DPPmbJjS74wCNS2YgXLtZrBl9QkRDXDldqOHrfa7knGdCrW24NcSSf7TbHiub3Eg81kMgryfOHqlLyDqW2d4u6MKRXV'
+     'C94tBlNHiZpt9tkRmc3q8c/XKUGoeIKWc7FFER+x4ON8ScawI2OF1zOxEaJR6w45rTF1jalslthT647e0pUv5J4wRdaTf8Zj'
+     'twfsUWOuVA7FHXbie6ND2CIjzpgqVioV7NhsgLdYNTtsCTs7ptQnexRSK0zduFannjNlrDmr+eQ5dfh5R3hXpwwbxCZd/Bif'
+     '2/4VD9ILri527+ua8CL+N3dXmbLxM/WYe3ob+vzmiJDnYSdW2vuT8dyaPVNMTqZXJSNRamq8oKCDkwXyzWdYYtH5dP4wHUz8'
+     'amcf89t7pjjNcJMvxg8yJcSDdNojW/miOWGyLx68OurJynOm/EbmCfiQPNAZAJ0SVX4T9bzb9pktzqtzJ9a4FVPCPraOk6fd'
+     'D+06pTvJHr/hF91EurF5g8VkHxYeZxk50a4tUm2pLK8rOnuKVSu67BLv6Fdht40FqtjrCfmcK51u9xFyZMrMweddQni3a4E9'
+     'HbiVzJY8TSd7YlI7hWWjjS+ptVf/fR3/SzHhHLsptf/1NPNskeVHPEemdHo/iqKhi9A7sXLLPHWKOUHZ2+InR6guW1SSY9fm'
+     'hq9dOrV/3fofWPpu6zf8emEi'),
 )
 # --- GENERATED by tools/prompts.py: END ---
 
@@ -7310,31 +7443,44 @@ FLAGS_PROPORTIONAL = 4                  # the text routine: 4 proportional, +1 r
 # word gap because a line is wider than a sheet, each half a strip of
 # HINT_ROWS rows with HINT_MARGIN white texels each side, so its edges
 # filter to white. The first line shows outside a bind, the second
-# during one.
+# during one. The lines are English or Japanese, by the language of
+# sheet 4, and both languages' strips sit at the same rows: a file holds
+# one language's, as the pad's lines for the page do on padoptions' sheet.
 HINT_ROWS, HINT_MARGIN = 17, 2
 
 
-def hint_art():
-    """The hint lines' strips: ((file, sheet, x, y, width, height, the texels' bytes), ...), two a line."""
-    return tuple(blit[:6] + (zlib.decompress(base64.b64decode(blit[7])),) for blit in HINT_ART)
+def hint_art(variant=None):
+    """The hint lines' strips for a language: ((file, sheet, x, y, width,
+    height, the texels' bytes), ...), two a line; every language's when
+    variant is None."""
+    return tuple(blit[:6] + (zlib.decompress(base64.b64decode(blit[7])),) for blit in HINT_ART
+                 if variant is None or blit[6] in ('', variant))
+
+
+def options_variant():
+    """The language of OPTIONS.TXR's hint sheet, as patch_txr last read
+    it in this patch(); English when it has not."""
+    return PROMPT_VARIANT.get('devices', 'en')
 
 
 OPTIONS_STRIPS = 13                     # the sheet padoptions appends to OPTIONS.TXR
-DEVICES_PAD_TOPS = ((42, 62), (82, 102))    # the rows on it of the page's two lines for a pad, a row a half
+DEVICES_PAD_TOPS = ((42, 62), (82, 102))    # the rows on it of the page's two lines for a pad, a row a half, in either language
 
 
-def devices_bar_strips(line, pad=False):
+def devices_bar_strips(line, pad=False, variant=None):
     """A hint line's two strips, (x, y, width, height) each: the
-    keyboard's from HINT_ART, or the pad's from padoptions' art."""
+    keyboard's from HINT_ART, or the pad's from padoptions' art, in the
+    language given or OPTIONS.TXR's."""
+    variant = variant or options_variant()
     if pad:
-        return _strips(prompt_art('padoptions'), 'OPTIONS.TXR', OPTIONS_STRIPS, DEVICES_PAD_TOPS[line])
-    return [b[2:6] for b in hint_art()[2 * line:2 * line + 2]]
+        return _strips(prompt_art('padoptions', variant), 'OPTIONS.TXR', OPTIONS_STRIPS, DEVICES_PAD_TOPS[line])
+    return [b[2:6] for b in hint_art(variant)[2 * line:2 * line + 2]]
 
 
-def devices_bar_rects(line):
+def devices_bar_rects(line, variant=None):
     """A hint line's two quads about the bar's centre: each strip at its
     place in the line, the line centred, as the page draws it."""
-    strips = devices_bar_strips(line)
+    strips = devices_bar_strips(line, variant=variant)
     width = sum(w for _x, _y, w, _h in strips) - 4 * HINT_MARGIN       # the line, the halves' margins apart
     rects, x0 = [], 0
     for _x, _y, w, h in strips:
@@ -7705,12 +7851,19 @@ def patch_txr(data):
     """OPTIONS.TXR with a thirteenth sheet, 256x256: the icon at its top
     left - the third icon's plate, its picture filled back in, with a
     steering wheel cut out the same way - and the page's hint lines
-    below, in strips as the stock's messages are on sheet 4. The gutter
+    below, in strips as the stock's messages are on sheet 4, in that
+    sheet's language, which is recorded for the DLL's page. The gutter
     is clear white like the stock sheets', so the edge texels filter to
     white, not to black. Returns the grown file."""
     why = txr_check(data)
     if why:
         raise ValueError('%s: %s' % (TXR, why))
+    lines = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:4])
+    digest = hashlib.md5(data[lines:lines + 256 * 256 * 2]).hexdigest()
+    if digest not in (LINES_EN, LINES_JP):
+        raise ValueError('%s: sheet 4 is not one the patcher knows' % TXR)
+    variant = 'en' if digest == LINES_EN else 'jp'
+    PROMPT_VARIANT['devices'] = variant
     sheet = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:10])
     plate = bytearray(126 * 126 * 2)
     for y in range(126):
@@ -7727,7 +7880,7 @@ def patch_txr(data):
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
     for y in range(126):
         texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
-    for _file, sheet, x, top, w, h, texels in hint_art():      # the hint lines' strips
+    for _file, sheet, x, top, w, h, texels in hint_art(variant):      # the hint lines' strips
         if sheet != TXR_ICON:
             raise ValueError('%s: a hint strip for sheet %d' % (TXR, sheet))
         for y in range(h):
@@ -8609,8 +8762,8 @@ def prompt_switches(buf, build, key, variant):
         tops = (2, 22) if variant == 'en' else (122, 142)
         fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', OPTIONS_STRIPS, tops), OPTIONS_STRIPS, taken)
         for line in range(len(DEVICES_PAD_TOPS)):
-            strips = devices_bar_strips(line, pad=True)
-            stock = devices_bar_rects(line)
+            strips = devices_bar_strips(line, pad=True, variant=variant)
+            stock = devices_bar_rects(line, variant)
             found = [buf.find(struct.pack('<4f', *r)) for r in stock]
             if any(f < 0 for f in found):
                 raise ValueError('Options.dll: the Device Settings page\'s bar quads not found; the devices patch goes first')
