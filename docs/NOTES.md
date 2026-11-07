@@ -42,6 +42,7 @@ parentheses is what `--patch` takes.
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads min and max through asm/mix.asm; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load → `mov eax, 9`; in the DLL the load's relocation entry goes with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume` |
+| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | `0x2ae57` (`0x2b137` American, `0x52227` Australian), the annex | the ten-year ending's `call 0x473d80` (the sound bank's play, slot 9) at `0x42ba57` → `call` asm/dcmusic.asm, which plays track 18 in slot 14 when `music\track18.wav` is there |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes | the defaults block's three sliders, 9 → 6 |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags 0 → `0x40` |
 | **Device Settings** (`devices`) | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x2f0c`, `0x3638`, the dispatch entry at `0x31c0` + 12 (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x567c`, `0x5da8`, `0x5930`), nine `x` fields and two UV entries in `.data`, the annex; the TXR grows a thirteenth sheet | the cursor's and the icon set's item counts 3 → 4; the item tables and the state table moved to the annex with a fourth item and two more states; the dispatch table's fourth slot → a stub that selects the page's state |
@@ -999,6 +1000,30 @@ level from the fade: the menu's CD-level set at `0x473c48` pushed flags
 0, and now pushes `0x40`, a bit the DLL never read; the race's level and
 the mute already carry bit 31. The full account is in
 [asm/README.md](../asm/README.md), *music.asm*.
+
+### Dreamcast music
+
+The exe plays its music through a sound bank, the object at `[0x50b134]`:
+its play (`0x473d80`, thiscall: slot, loop, two more) takes a slot of the
+list at `0x5a2514` (file `0xd0314`; `0xd0714` American, `0x115b14`
+Australian), which names a descriptor of the 24-byte array at `0x5098c8`.
+A CD descriptor holds its track less one; the CD object hands that to
+MGAudio, which plays the track one above it. The bank copies each slot's
+descriptor into a record of its own, `0x28` bytes a slot from `[bank]`,
+when it is built. Slot 14's descriptor, id `0x0d`, is a CD track nothing
+plays - track 15, which the PC's disc does not have - and the extra
+tracks are played through it: their number less one written into slot
+14's record, slot 14 played. The bank's own bookkeeping then holds - the
+fades at `0x474040` take any CD slot as the CD - and the CD object
+(`0x46df90`) starts any track that is not the one already going.
+
+The ten-year ending (`0x42ba35`: the mode at `[[0x50b108]+0x38]` is 4 and
+bit `0x20` of `+0x44` is set) plays slot 9, track 11, at `0x42ba57`.
+`dcmusic.asm` takes that call: it plays track 18 in slot 14 when
+`music\track18.wav` is beside the exe, and slot 9 otherwise. The four
+files from `track15.wav` on are looked for once, at the first call, with
+`GetFileAttributesA`. `tools/dcmusictest.py` runs the entry under Unicorn
+in every build.
 
 ### Device Settings
 

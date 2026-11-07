@@ -41,6 +41,7 @@ Two rules every blob follows:
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
+| `dcmusic.asm` | exe | the Dreamcast's extra tracks from `music\track15.wav` on, through the CD slot no scene plays: the ten-year ending's track 18 |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
 | `sortpad.asm` | `ReplayGallery.dll` | the pad's LB and RB step the gallery's sort, which the exe's F6-F8 accelerators set |
 | `pagepad.asm` | exe | the pad's LB and RB from MGInput's annex as Page Up and Page Down in the wrapper's level word: the Records pages, the car select's alternative colour |
@@ -385,6 +386,15 @@ picture at its create and the load of it at the step that deletes it:
 the tick noted at the one, the other made to wait until three seconds
 have passed. [docs/NOTES.md](../docs/NOTES.md), *Loading screens*;
 `tools/loadholdtest.py`.
+
+## dcmusic.asm
+
+One entry in the exe's annex, in place of the ten-year ending's call of
+the sound bank's play: track 18 written into slot 14's record and slot
+14 played when `music\track18.wav` is there, slot 9 (track 11) played
+otherwise. The files are looked for once, through `GetFileAttributesA`,
+beside the path `GetModuleFileNameA` gives. [docs/NOTES.md](../docs/NOTES.md),
+*Dreamcast music*; `tools/dcmusictest.py`.
 
 ## padmenu.asm
 

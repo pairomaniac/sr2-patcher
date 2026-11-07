@@ -165,6 +165,8 @@ What each one changes, down to the byte, is in
   shape instead of 640x480 stretched. See [Widescreen](#widescreen).
 - **Music from files** - the soundtrack plays from the folder instead of
   the disc. See [Music](#music).
+- **Dreamcast music** - tracks the Dreamcast release has, from files you
+  add to the same folder. See [Music](#music).
 - **XInput gamepad support** - a modern pad works everywhere, the
   driving and menu controls rebindable in-game. See [Controls](#controls).
 - **Internet play** - race anyone, no port forwarding. See
@@ -294,6 +296,17 @@ python3 sr2-patcher.py --rip "Sega Rally 2 (Disc 2).cue" ~/games/sr2
 
 Any pressing's disc 2 will do: stripped of digital silence the three are
 the same recording.
+
+The Dreamcast release has music this one dropped. With **Dreamcast
+music** the game plays such tracks from the same folder, in the format
+the ripper writes (44.1 kHz, 16-bit stereo WAV):
+
+| File | Plays |
+| --- | --- |
+| `music\track18.wav` | the ten-year championship's ending, in place of track 11 |
+
+A track that is not there is not missed: the game plays what it always
+did.
 
 ## Builds
 
