@@ -85,6 +85,7 @@ EXE_MAGICS = {
     'MENUKEYS': 0xCFCFCFCF,
     'PADPOLL': 0xDFDFDFDF,
     'BGMPLAY': 0xB3B3B3B3,
+    'RACEBLOCK': 0xB4B4B4B4,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
@@ -101,7 +102,7 @@ EXE_BLOB_MAGICS = {
     'PADMENU_BLOB': ('PADPOLL',) * 2 + ('MENUKEYS',) * 3 + ('PADLEVEL', 'PADEDGE', 'PADPREV'),
     'REPLAYPAD_BLOB': ('PADPOLL',) * 2,
     'PAGEPAD_BLOB': ('PADPOLL',) * 2,
-    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY'),
+    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY') + ('RACEBLOCK',) * 2,
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,

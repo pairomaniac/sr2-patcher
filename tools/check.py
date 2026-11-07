@@ -61,7 +61,7 @@ CHECKS = [
      [PY, 'tools/altentertest.py'], ''),
     ('loadhold', 'the loading screens\' hold under Unicorn',
      [PY, 'tools/loadholdtest.py'], ''),
-    ('dcmusic', 'the Dreamcast music\'s ending under Unicorn',
+    ('dcmusic', 'the Dreamcast music\'s ending and replays under Unicorn',
      [PY, 'tools/dcmusictest.py'], ''),
     ('padmenu', 'the pad\'s Back as TAB under Unicorn',
      [PY, 'tools/padmenutest.py'], ''),

@@ -41,7 +41,7 @@ Two rules every blob follows:
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
-| `dcmusic.asm` | exe | the Dreamcast's extra tracks from `music\track15.wav` on, through the CD slot no scene plays: the ten-year ending's track 18 |
+| `dcmusic.asm` | exe | the Dreamcast's extra tracks from `music\track15.wav` on, through the CD slot no scene plays: the replays' set (15, 11, 16, 17), the ten-year ending's track 18 |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
 | `sortpad.asm` | `ReplayGallery.dll` | the pad's LB and RB step the gallery's sort, which the exe's F6-F8 accelerators set |
 | `pagepad.asm` | exe | the pad's LB and RB from MGInput's annex as Page Up and Page Down in the wrapper's level word: the Records pages, the car select's alternative colour |
@@ -389,12 +389,20 @@ have passed. [docs/NOTES.md](../docs/NOTES.md), *Loading screens*;
 
 ## dcmusic.asm
 
-One entry in the exe's annex, in place of the ten-year ending's call of
-the sound bank's play: track 18 written into slot 14's record and slot
-14 played when `music\track18.wav` is there, slot 9 (track 11) played
-otherwise. The files are looked for once, through `GetFileAttributesA`,
-beside the path `GetModuleFileNameA` gives. [docs/NOTES.md](../docs/NOTES.md),
-*Dreamcast music*; `tools/dcmusictest.py`.
+Four entries in the exe's annex, each in place of a call of the sound
+bank's play. +0, the ten-year ending's: track 18 written into slot 14's
+record and slot 14 played when `music\track18.wav` is there, slot 9
+(track 11) played otherwise. +5 and +10, a championship replay's first
+race and its later ones: by the race index, tracks 15, 11 (slot 9), 16
+and 17, a track without its file keeping the course's slot; +10 on race
+0 is a slot-7 branch the call is shared with, and plays as it did. +15,
+the single-race modes' replays (modes 2, 3, 5 and 6, with the replay
+bit): one of the four the files allow, picked by `rdtsc`; the arcade
+ending and mode 10 share that call and play as they did. Without any of
+tracks 15 to 17 the replays play the course's slot. The files are
+looked for once, through `GetFileAttributesA`, beside the path
+`GetModuleFileNameA` gives. [docs/NOTES.md](../docs/NOTES.md), *Dreamcast
+music*; `tools/dcmusictest.py`.
 
 ## padmenu.asm
 

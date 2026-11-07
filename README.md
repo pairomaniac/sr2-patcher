@@ -303,10 +303,17 @@ the ripper writes (44.1 kHz, 16-bit stereo WAV):
 
 | File | Plays |
 | --- | --- |
+| `music\track15.wav` | a championship's replay, race 1 |
+| `music\track16.wav` | a championship's replay, race 3 |
+| `music\track17.wav` | a championship's replay, race 4 |
 | `music\track18.wav` | the ten-year championship's ending, in place of track 11 |
 
+The four replays of a championship play tracks 15, 11, 16 and 17, as on
+the Dreamcast, in place of each course's music; any other replay plays
+one of those four at random.
+
 A track that is not there is not missed: the game plays what it always
-did.
+did. Without any of tracks 15 to 17 the replays keep the course's music.
 
 ## Builds
 

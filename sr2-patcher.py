@@ -83,7 +83,7 @@ BUILDS = {
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European build only: the diagnostic was never sited elsewhere
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
-                  'voldefault': 0xd01a8, 'dcending': 0x2ae57},  # the defaults block's three sliders
+                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcreplay': (0x523a3, 0x1c09a, 0x52405)},  # the defaults block's three sliders
         # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
@@ -95,7 +95,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
                     'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
-        'addresses': {'BGMPLAY': 0x473d80, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+        'addresses': {'BGMPLAY': 0x473d80, 'RACEBLOCK': 0x50b108, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
                       'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
@@ -126,7 +126,7 @@ BUILDS = {
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': 0x7ed26, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
                   'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd),
-                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8, 'dcending': 0x2b137},
+                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8, 'dcending': 0x2b137, 'dcreplay': (0x52723, 0x1c32a, 0x52785)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
@@ -137,7 +137,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
                     'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
-        'addresses': {'BGMPLAY': 0x473fb0, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
+        'addresses': {'BGMPLAY': 0x473fb0, 'RACEBLOCK': 0x50b208, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
                       'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0),
@@ -170,7 +170,7 @@ BUILDS = {
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
                   'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d),
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
-                  'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8, 'dcending': 0x52227,
+                  'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8, 'dcending': 0x52227, 'dcreplay': (0x8cde3, 0x3960a, 0x8ce45),
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
@@ -182,7 +182,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100be46c, 'HANDLES': 0x100be470, 'TOPTABLE': 0x10006500,
                     'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090, 'CHARMAP': 0x101052bc,
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
-        'addresses': {'BGMPLAY': 0x4b3410, 'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
+        'addresses': {'BGMPLAY': 0x4b3410, 'RACEBLOCK': 0x575ad8, 'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
                       'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28),
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
@@ -234,7 +234,7 @@ BUILDS = {
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
-                  'voldefault': 0xd01a8, 'dcending': 0x2ae57},  # the defaults block's three sliders, in STATUSDA where the relink left it
+                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcreplay': (0x52393, 0x1c09a, 0x523f5)},  # the defaults block's three sliders, in STATUSDA where the relink left it
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
@@ -245,7 +245,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
                     'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
-        'addresses': {'BGMPLAY': 0x473d70, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+        'addresses': {'BGMPLAY': 0x473d70, 'RACEBLOCK': 0x50b108, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
                       'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
@@ -303,7 +303,7 @@ RESTORE_RELOCS = 10
 #   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
-#   dcmusic     the Dreamcast's extra tracks from music\track15.wav on: the ten-year ending's track 18; needs music
+#   dcmusic     the Dreamcast's extra tracks from music\track15.wav on: the replays' set (15, 11, 16, 17), the ten-year ending's track 18; needs music
 #   devices     a fourth Options item, Device Settings, placed for the controller page; also grows OPTIONS.TXR
 #   widescreen  the picture at the size SR2.CFG names, the 3D field widened (exe)
 #   widescreen2d  the 2D scaled into the picture's 4:3 box, the race HUD to a 16:9 frame (MGameD3D)
@@ -591,7 +591,7 @@ def patches(build):
         'voldefault': (EXE, ((site['voldefault'], struct.pack('<3I', 9, 9, 9), struct.pack('<3I', 6, 6, 6)),), None),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
-        'dcmusic': (EXE, ((site['dcending'], b'\xe8', None),), 'apply_dcmusic'),
+        'dcmusic': (EXE, tuple((s, b'\xe8', None) for s in (site['dcending'],) + site['dcreplay']), 'apply_dcmusic'),
         'devices': ('Options.dll', devices_sites(site['devices'], row['addresses']['MENUTABLES']), 'apply_devices'),
         'widescreen': (EXE, wide_sites(site['wide'], row['addresses'], build == 'American'), 'apply_widescreen'),
         'widescreen2d': ('MUSASHI\\MGameD3D.dll', (
@@ -814,6 +814,9 @@ FEATURES = (
      'is there; without it the game plays what it always did. Needs Music\n'
      'from files.\n'
      '\n'
+     'track15.wav\tA championship\'s replay, race 1. Race 2 plays\n'
+     '\ttrack 11, races 3 and 4 tracks 16 and 17; other\n'
+     '\treplays one of the four at random.\n'
      'track18.wav\tThe ten-year championship\'s ending, in place of\n'
      '\ttrack 11.',
      ('dcmusic',)),
@@ -4196,17 +4199,22 @@ SORTPAD_BLOB = bytes.fromhex(
     '01c039c2c390909000000000'
 )
 DCMUSIC_BLOB = bytes.fromhex(
-    'e900000000516a12e8200000005985c074148b01c7803002000011000000c744'
-    '24040e000000b8b3b3b3b3ffe055e8000000005d81ed3300000080bd0a010000'
-    '007505e8160000008b4c240883e90f8b850c010000d3e883e0015dc204005356'
-    '57c6850a010000018d851001000050ff15e3e3e3e385c00f84890000008d8d1d'
-    '0100005150ff15e4e4e4e485c0747789c368f80000008dbd42010000576a00ff'
-    '15f9f9f9f985c0745d8d340739fe74564e803e5c75f64689f28d8d300100008a'
-    '018802414284c075f683c60bbf0f00000089f8d40a6605303088268846018d85'
-    '4201000050ffd383f8ff7414a81075108d4ff1b801000000d3e009850c010000'
-    '4783ff1276cb5f5e5bc30090000000006b65726e656c33322e646c6c00476574'
-    '46696c654174747269627574657341006d757369635c747261636b31352e7761'
-    '7600000000000000000000000000000000000000000000000000000000000000'
+    'e90f000000e919000000e918000000e928000000e8ce000000ba12000000e9a2'
+    '00000031c0eb78a1b4b4b4b48b406485c00f84a900000083e003eb63a1b4b4b4'
+    'b4f64044040f84950000008b403883f802740f83f803740a83f805740583f806'
+    '757ee880000000a8077475515389c383e00183e306d1e309c383cb0231c989da'
+    'd1ea83d10085d275f70f3131d2f7f1b8ffffffff400fa3c373fa4a79f75b5989'
+    'c2e841000000a807743683fa01750ac744240409000000eb27720583c20eeb05'
+    'ba0f00000083ea0f0fa3d0731383c20e8b01899030020000c74424040e000000'
+    'b8b3b3b3b3ffe0555152e8000000005d81edef00000080bdba010000007505e8'
+    '0a0000008b85bc0100005a595dc3535657c685ba010000018d85c001000050ff'
+    '15e3e3e3e385c00f84890000008d8dcd0100005150ff15e4e4e4e485c0747789'
+    'c368f80000008dbdf2010000576a00ff15f9f9f9f985c0745d8d340739fe7456'
+    '4e803e5c75f64689f28d8de00100008a018802414284c075f683c60bbf0f0000'
+    '0089f8d40a6605303088268846018d85f201000050ffd383f8ff7414a8107510'
+    '8d4ff1b801000000d3e00985bc0100004783ff1276cb5f5e5bc3009000000000'
+    '6b65726e656c33322e646c6c0047657446696c65417474726962757465734100'
+    '6d757369635c747261636b31352e776176000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -4214,7 +4222,8 @@ DCMUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -4263,6 +4272,7 @@ EXE_MAGICS = {
     'MENUKEYS': 0xCFCFCFCF,
     'PADPOLL': 0xDFDFDFDF,
     'BGMPLAY': 0xB3B3B3B3,
+    'RACEBLOCK': 0xB4B4B4B4,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 DEVICES_MAGICS = {
@@ -5243,16 +5253,19 @@ def apply_loadhold(buf, build):
 
 
 def apply_dcmusic(buf, build):
-    """dcmusic.asm: the ten-year ending's call of the sound bank's play
-    (slot 9, track 11) becomes a call into the blob, which plays track 18
-    in slot 14 when music\\track18.wav is there and leaves through the
-    play either way. The annex keeps what it found and the path, so it is
-    writable."""
+    """dcmusic.asm: four calls of the sound bank's play become calls into
+    the blob - the ten-year ending's (slot 9, track 11), a championship
+    replay's first race, its later races, and the other modes' replays -
+    which plays tracks 15 to 18 in slot 14 when their files are there and
+    leaves through the play either way. The annex keeps what it found and
+    the path, so it is writable."""
     row = BUILDS[build]
-    site = row['sites']['dcending']
-    _check_call(buf, site, row['addresses']['BGMPLAY'], 'the sound bank\'s play')
+    sites = (row['sites']['dcending'],) + row['sites']['dcreplay']
+    for site in sites:
+        _check_call(buf, site, row['addresses']['BGMPLAY'], 'the sound bank\'s play')
     out, rva = append_section(buf, exe_blob(DCMUSIC_BLOB, build))
-    _branch(out, site, rva)
+    for entry, site in enumerate(sites):
+        _branch(out, site, rva + 5 * entry)
     return out
 
 

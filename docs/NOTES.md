@@ -42,7 +42,7 @@ parentheses is what `--patch` takes.
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads min and max through asm/mix.asm; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load → `mov eax, 9`; in the DLL the load's relocation entry goes with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume` |
-| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | `0x2ae57` (`0x2b137` American, `0x52227` Australian), the annex | the ten-year ending's `call 0x473d80` (the sound bank's play, slot 9) at `0x42ba57` → `call` asm/dcmusic.asm, which plays track 18 in slot 14 when `music\track18.wav` is there |
+| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405` (American `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`), the annex | four `call 0x473d80`s (the sound bank's play) → `call` asm/dcmusic.asm: the ten-year ending's at `0x42ba57`, which plays track 18 in slot 14 when `music\track18.wav` is there; the replays' at `0x452fa3`, `0x41cc9a` and `0x453005`, which play tracks 15, 11, 16 and 17 |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes | the defaults block's three sliders, 9 → 6 |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags 0 → `0x40` |
 | **Device Settings** (`devices`) | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x2f0c`, `0x3638`, the dispatch entry at `0x31c0` + 12 (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x567c`, `0x5da8`, `0x5930`), nine `x` fields and two UV entries in `.data`, the annex; the TXR grows a thirteenth sheet | the cursor's and the icon set's item counts 3 → 4; the item tables and the state table moved to the annex with a fourth item and two more states; the dispatch table's fourth slot → a stub that selects the page's state |
@@ -1022,8 +1022,29 @@ bit `0x20` of `+0x44` is set) plays slot 9, track 11, at `0x42ba57`.
 `dcmusic.asm` takes that call: it plays track 18 in slot 14 when
 `music\track18.wav` is beside the exe, and slot 9 otherwise. The four
 files from `track15.wav` on are looked for once, at the first call, with
-`GetFileAttributesA`. `tools/dcmusictest.py` runs the entry under Unicorn
-in every build.
+`GetFileAttributesA`.
+
+A replay plays the race's own music, `slot = opt[map[course]] + 1` (the
+seven course choices at settings `+0x6c`, the map at `0x5b2374`), from
+three calls of the play:
+
+| Call | Scene |
+| --- | --- |
+| `0x452fa3` | a championship replay's first race: modes 1 and 4, race index `+0x64` 0, not year 10 |
+| `0x41cc9a` | its later races (`+0x44` bit `0x100`); shared with a `push 7` branch taken on race index 0 |
+| `0x453005` | the single-race modes' replays (2, 3, 5, 6); shared with the arcade ending's slot 8 and mode 10's scene |
+
+Each gate - mode 1 and the settings' `+0x18`, mode 4 and `+0x20`, and so
+on - is the race's own, and stays. `dcmusic.asm` takes the three calls:
+the first two play, by the race index modulo 4, track 15, slot 9 (track
+11), track 16 and track 17; the third, when the mode is a single-race one
+and `+0x44` bit 4 (a replay) is set, one of those four the files allow,
+picked by `rdtsc`. A track without its file keeps the course's slot, and
+without any of tracks 15 to 17 every replay does. American: `0x453123`,
+`0x41cd2a`, `0x453185`, the race block at `[0x50b208]`; Australian:
+`0x48d9e3`, `0x43a20a`, `0x48da45`, `[0x575ad8]`; MediaKite: `0x452f93`,
+`0x41cc9a`, `0x452ff5`. `tools/dcmusictest.py` runs every entry under
+Unicorn in every build.
 
 ### Device Settings
 
