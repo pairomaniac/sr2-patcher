@@ -42,7 +42,7 @@ parentheses is what `--patch` takes.
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads min and max through asm/mix.asm; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load → `mov eax, 9`; in the DLL the load's relocation entry goes with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` → `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` → `call hookaddr; nop`; entry → the setup thunk; the CD-volume methods' entries → `jmp setvolume` / `jmp getvolume` |
-| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405` (American `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`), the annex | four `call 0x473d80`s (the sound bank's play) → `call` asm/dcmusic.asm: the ten-year ending's at `0x42ba57`, which plays track 18 in slot 14 when `music\track18.wav` is there; the replays' at `0x452fa3`, `0x41cc9a` and `0x453005`, which play tracks 15, 11, 16 and 17 |
+| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405` (American `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`), the annex | four `call 0x473d80`s (the sound bank's play) → `call` asm/dcmusic.asm: the ten-year ending's at `0x42ba57`, which plays track 18 in slot 14 when `music\track18.wav` is there; the replays' at `0x452fa3`, `0x41cc9a` and `0x453005`, which play tracks 15, 11, 16 and 17; and the course's music read as choices 7 to 10: the race's play `0x2aedd`, the fades `0x1b9b2`, `0x1e15b`, `0x29765` and the restart `0x298bf` (American `0x2b1bd`, `0x1bc62`, `0x1e40b`, `0x29a45`, `0x29b9f`; Australian `0x522a4`, `0x38f52`, `0x3b6eb`, `0x50b45`, `0x50c95`) |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes | the defaults block's three sliders, 9 → 6 |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags 0 → `0x40` |
 | **Device Settings** (`devices`) | `Options.dll`, `BINDATA\MISC\OPTIONS.TXR` | DLL `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x2f0c`, `0x3638`, the dispatch entry at `0x31c0` + 12 (Australian `0x5b68`, `0x5b7f`, `0x5984`, `0x59d7`, `0x567c`, `0x5da8`, `0x5930`), nine `x` fields and two UV entries in `.data`, the annex; the TXR grows a thirteenth sheet | the cursor's and the icon set's item counts 3 → 4; the item tables and the state table moved to the annex with a fourth item and two more states; the dispatch table's fourth slot → a stub that selects the page's state |
@@ -50,6 +50,7 @@ parentheses is what `--patch` takes.
 | **Widescreen** (`widescreen`) | `SEGA RALLY 2.exe` | `0x20dfe`, `0x20e18`, `0x5128a`, `0x4e5`, the annex | the mode setter's entry compare and size stores, the screen-change routine's settings load and the element walker's callback call → `call`s into asm/wide.asm, the size table after it |
 | **Widescreen, the 3D** (`widescreen3d`) | `MUSASHI\MGameGL.dll` | `0x2bc0`, `0x2c70`, `0x2de0`, `0x27f0`, `0x2e80`, `0x2ee0`, the annex | `SetViewport`'s, `SetPerspective`'s, `SetCentre`'s and the parameter getter's prologues → `jmp` asm/widegl.asm; the projection's and its inverse's first eight bytes → entries of their own |
 | **Widescreen, the 2D** (`widescreen2d`) | `MUSASHI\MGameD3D.dll` | `0x5120`, `0x50d0`, `0x4fe0`, `0x5170`, `0x5030`, `0x5080`, `0x6040`, `0x4d50`, `0x411c`, the annex | the six 2D draws', the device viewport setter's, the present's and the texture create's first bytes → `jmp` asm/wide2d.asm; seven relocation entries dropped |
+| **Dreamcast music in OPTION** (`dcoptions`) | `Options.dll` | `0xbdc`, `0xaa7`, `0xeb6` (the same in the Australian), three BGM TEST sites, the annex | the BGM page's `mov ebx, 7` → `call`, the row name's text call and the preview's play → `call` asm/dcmusic.asm built with `-DOPTIONS`: 11 choices, choices 7 to 10 named and previewed; and BGM TEST's count `0x4293` (7 bytes), name `0x3f6e` and play `0x44b5` (Australian `0x9173`, `0x8e4e`, `0x9395`) → `call`: tracks 15 to 18 after its 13; needs `dcmusic` |
 | **Resolution list** (`resolution`) | `Options.dll` | `0x2815`, `0x2826`, `0x2528`, `0x2b01`, `0x2a5b`, six bytes, the annex | the Graphic Settings page's row load, count check, draw loop head, row store and DEFAULT's row store → asm/resolution.asm; the page's six "7"s → "8"; three relocation entries dropped |
 | **HUD after the water** (`hudlast`) | `SEGA RALLY 2.exe` | `0x17eb1`, `0x274f2`, `0x25d30` (11 bytes) (`0x18161`, `0x277b2`, `0x25fe0` American; `0x2de01`, `0x4c119`, `0x4a940` Australian), the annex | the race state's HUD call, the frame's root-tree draw and the fade node's draw thunk → branches into asm/hudlast.asm |
 | **Gallery sort on LB/RB** (`sortpad`) | `ReplayGallery.dll` | `0x1b64` (9 bytes), the annex | the list's `mov ecx, [esi+0x50]; and edi, 0xff` after its row update (`0x10002764`) → `call` asm/sortpad.asm, which steps the sort mode on a press of the annex's LB or RB |
@@ -1043,8 +1044,45 @@ picked by `rdtsc`. A track without its file keeps the course's slot, and
 without any of tracks 15 to 17 every replay does. American: `0x453123`,
 `0x41cd2a`, `0x453185`, the race block at `[0x50b208]`; Australian:
 `0x48d9e3`, `0x43a20a`, `0x48da45`, `[0x575ad8]`; MediaKite: `0x452f93`,
-`0x41cc9a`, `0x452ff5`. `tools/dcmusictest.py` runs every entry under
-Unicorn in every build.
+`0x41cc9a`, `0x452ff5`.
+
+Tracks 15, 11, 16 and 17 are the arcade original's practice-mode music;
+neither the Dreamcast nor the PC lets a course have them, and OPTION
+offers them here as choices 7 to 10. The exe reads a course's choice in
+five places, each `opt[map[course]] + 1`: the race's play (`0x42badd`),
+three fades (`0x41c5b2`, `0x41ed5b`, `0x42a365`) and the restart that
+replays a slot's CD track from its record (`0x42a4bf`, the restart at
+`0x474200`). Choices 7 to 10 would be slots 8 to 11, which are other
+scenes', so `dcmusic.asm` maps each: track 11 to slot 9, a track whose
+file is there into slot 14's record and slot 14, a missing one to slot
+9. The fades and the restart see the same slot the play did.
+
+`Options.dll`'s BGM page (EU, US and MediaKite share the file) counts its
+choices with `mov ebx, 7` at `0x100017dc` and keeps a row's value at
+`[page + 0x18 + row*4]`. The name tables hold seven entries a row, so
+the row-name call at `0x100016a7` (`edi` the row, `esi` the page) is
+taken and given the blob's string for values 7 to 10. The preview at
+`0x10001ab6` plays the page's own bank, value + 1; its slot 13 is id
+`0x0d`, track 15, and its slot 12 track 11, so the page maps as the exe
+does. The Australian file has the three at the same offsets. The
+names are the Dreamcast's. The page's font has no apostrophe, so
+IGNITION'98 and NIGHT GROOVIN' draw without it, as the stock SLIPPIN'
+does.
+
+The sound page's BGM TEST is its row 6: the value at `[esi+0x3c]`, the
+count at `[esi+0x68]`, 13, set at `0x10004e93` (file `0x4293`). Its name
+is drawn at `0x10004b6e` (file `0x3f6e`) from a table copied at load to
+`0x100b8fe8` from `0x1009c984` - indexed by the value, so in the page's
+own order: 8 IGNITION'98 is track 12, 11 ROUTE 246 track 10, 12 NIGHT
+GROOVIN' track 11. A fourteenth entry, TILL YOU SEE THE DAWN, follows
+unused. The decide plays the page bank's slot = value at `0x100050b5`
+(file `0x44b5`). `dcmusic.asm` takes the three: the count is 13 and one
+for each of tracks 15 to 18 there, and past the 13th the tracks there in
+order are named by the blob and played in slot 13 with the track in its
+record. The value past 13 still reads the table, into the next row's,
+before the name is replaced. Australian: `0x10009d73`, `0x10009a4e`,
+`0x10009f95` (files `0x9173`, `0x8e4e`, `0x9395`). `tools/dcmusictest.py`
+runs every entry, the exe's and the DLL's, under Unicorn in every build.
 
 ### Device Settings
 

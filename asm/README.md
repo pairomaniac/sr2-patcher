@@ -41,7 +41,7 @@ Two rules every blob follows:
 | `altenter.asm` | exe | ALT+ENTER between the borderless window and a framed one |
 | `hudlast.asm` | exe | the race HUD drawn after the frame's root tree, so the tachometer's plate blends over the lake; before the tree's fade quad, so the fade stays over it |
 | `loadhold.asm` | exe | the stage loading screens held three seconds |
-| `dcmusic.asm` | exe | the Dreamcast's extra tracks from `music\track15.wav` on, through the CD slot no scene plays: the replays' set (15, 11, 16, 17), the ten-year ending's track 18 |
+| `dcmusic.asm` | exe, `Options.dll` | the Dreamcast's extra tracks from `music\track15.wav` on, through the CD slot no scene plays: the replays' set (15, 11, 16, 17), the ten-year ending's track 18, the set as course choices 7 to 10; built with `-DOPTIONS`, the BGM page's four extra choices |
 | `padmenu.asm` | exe | the pad on the multiplayer screens straight from MGInput's annex; Back is TAB, which is how the team room's MENU row opens |
 | `sortpad.asm` | `ReplayGallery.dll` | the pad's LB and RB step the gallery's sort, which the exe's F6-F8 accelerators set |
 | `pagepad.asm` | exe | the pad's LB and RB from MGInput's annex as Page Up and Page Down in the wrapper's level word: the Records pages, the car select's alternative colour |
@@ -399,10 +399,27 @@ and 17, a track without its file keeping the course's slot; +10 on race
 the single-race modes' replays (modes 2, 3, 5 and 6, with the replay
 bit): one of the four the files allow, picked by `rdtsc`; the arcade
 ending and mode 10 share that call and play as they did. Without any of
-tracks 15 to 17 the replays play the course's slot. The files are
-looked for once, through `GetFileAttributesA`, beside the path
-`GetModuleFileNameA` gives. [docs/NOTES.md](../docs/NOTES.md), *Dreamcast
-music*; `tools/dcmusictest.py`.
+tracks 15 to 17 the replays play the course's slot. +20, +25 and +30, the
+course's own music - the race's play, the three fades and the restart
+that read `opt[map[course]] + 1`: slots 8 to 11 (choices 7 to 10) are
+mapped onto slot 14 with the track written into its record, or slot 9
+for track 11 and for a track without its file; the other slots pass as
+they are. The files are looked for once, through `GetFileAttributesA`,
+beside the path `GetModuleFileNameA` gives.
+
+The same source built with `-DOPTIONS` is `Options.dll`'s, three entries
+finding their own base: +0 in place of the BGM page's `mov ebx, 7`, 11
+choices when any of tracks 15 to 17 is there; +5 in place of the call
+that draws a row's name, the blob's own string for choices 7 to 10; +10
+in place of the preview's play, the page bank's slot mapped as the exe's
+are (its slot 13 is track 15, its slot 12 track 11). +15, +20 and +25
+are the sound page's BGM TEST: its `mov dword [esi+0x68], 13`, 13 and
+one more for each of tracks 15 to 18 there; its name's call of the text
+routine and its play, which past the 13th take the extra tracks there
+in order, named by the blob and played in slot 13 with the track in its
+record.
+[docs/NOTES.md](../docs/NOTES.md), *Dreamcast music*;
+`tools/dcmusictest.py`.
 
 ## padmenu.asm
 

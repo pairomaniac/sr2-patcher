@@ -59,7 +59,7 @@ The regions, in file order:
 | Device Settings | `apply_devices`, `patch_txr` and the page's tables |
 | Connection rows | `LOBBY_DIR`, `LOBBY_BACKDROP_MD5`, `lobby_mask`, `bmp24`, `lobby_backdrop`, `lobby_art`, `clamp_mpdata` |
 | Diagnostics and the rest of the exe | `apply_voltrace`, `apply_frametrace`, `apply_titlebg`, `apply_widescreen`, `apply_gltrace`, `apply_d3dtrace`, `apply_d3dtrace2d` |
-| The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`, `apply_fullwin` |
+| The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`, `apply_dcoptions`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`, `apply_fullwin` |
 | Patch | `md5`, `check_build`, `carry_display_block`, `patch`, `restore` |
 | Window | `run_tk` and the classes under the `# Window` comment |
 | CLI | `selfcheck`, `NEEDS`, `parse_keys`, `main` |
@@ -286,13 +286,14 @@ given.
 | netplay | the file | `MUSASHI\MGNetWk.dll` replaced whole (stock 121344 bytes, MD5 `0a9f86f5…`, the same in every build) |
 | lobby | 11 + art | exe `0x43bd58`, `0x43bd76` (50 bytes), `0x43bda8`, `0x43bdcc`, `0x43bddd`, `0x43bf57`, `0x43bf77`, `0x43bf85`, `0x43bfcf`, `0x4400dd`, `0x43efe0` (files `0x3b158`, `0x3b176`, `0x3b1a8`, `0x3b1cc`, `0x3b1dd`, `0x3b357`, `0x3b377`, `0x3b385`, `0x3b3cf`, `0x3f4dd`, `0x3e3e0`; the other builds' anchors in `BUILDS`); `BINDATA\connect\PROTOCOL\CONNECT.BMP` repainted, `CONNECT_{IPX,TCPIP,MODEM}_{OFF,ON,ON2}.BMP` rewritten |
 | loadhold | 2 + section | `SEGA RALLY 2.exe` `0x41a7bb` and `0x4195be` (6 bytes each), the annex |
-| dcmusic | 4 + section | `SEGA RALLY 2.exe` `0x42ba57`, `0x452fa3`, `0x41cc9a`, `0x453005` (files `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405`, 5 bytes each; American files `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`; MediaKite `0x2ae57`, `0x52393`, `0x1c09a`, `0x523f5`), the annex |
+| dcmusic | 9 + section | `SEGA RALLY 2.exe` `0x42ba57`, `0x452fa3`, `0x41cc9a`, `0x453005`, `0x42badd`, `0x41c5b2`, `0x41ed5b`, `0x42a365`, `0x42a4bf` (files `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405`, `0x2aedd`, `0x1b9b2`, `0x1e15b`, `0x29765`, `0x298bf`, 5 bytes each; American files `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`, `0x2b1bd`, `0x1bc62`, `0x1e40b`, `0x29a45`, `0x29b9f`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`, `0x522a4`, `0x38f52`, `0x3b6eb`, `0x50b45`, `0x50c95`; MediaKite as the European but `0x52393`, `0x523f5` for the second and fourth), the annex |
 | padmenu | 1 + section | `SEGA RALLY 2.exe` `0x43f94f` (6 bytes), the annex |
 | sortpad | 1 + section | `ReplayGallery.dll` `0x10002764` (file `0x1b64`, 9 bytes; the same in every build), the annex |
 | pagepad | 1 + section | `SEGA RALLY 2.exe` `0x47f506` (file `0x7e906`, 6 bytes; American `0x7ed26`, Australian `0xbdef8`, MediaKite `0x7e8f6`), the annex |
 | replaypad | 1 + section | `SEGA RALLY 2.exe` `0x440cea` (file `0x400ea`, 5 bytes; American `0x4047a`, Australian `0x6e99a`, MediaKite `0x400ea`), the annex |
 | clearsize | 1 + section | `SEGA RALLY 2.exe` `0x441783` (12 bytes), the annex; Australia only |
 | widescreen2d | 9 + section | `MGameD3D.dll` `0x10005120`, `0x100050d0` (6 bytes each), `0x10004fe0`, `0x10005170`, `0x10005030`, `0x10005080` (10 each), `0x10006040` (9), `0x10004d50` (8), `0x1000411c` (13), seven relocation entries dropped, the annex |
+| dcoptions | 6 + section | `Options.dll` `0x100017dc` (file `0xbdc`, 5 bytes), `0x100016a7` (file `0xaa7`, 5), `0x10001ab6` (file `0xeb6`, 5), the same in the Australian; BGM TEST's `0x10004e93` (file `0x4293`, 7), `0x10004b6e` (file `0x3f6e`, 5), `0x100050b5` (file `0x44b5`, 5), Australian `0x10009d73`, `0x10009a4e`, `0x10009f95` (files `0x9173`, `0x8e4e`, `0x9395`); the annex |
 | resolution | 11 + section | `Options.dll` `0x10003415` (file `0x2815`, 14 bytes), `0x10003426` (file `0x2826`, 13, a jump over), `0x10003128` (file `0x2528`, 8), `0x10003701` (file `0x2b01`, 12), `0x1000365b` (file `0x2a5b`, 6), the "7"s at `0x10003124`, `0x100034e4`, `0x10003533`, `0x1000357d`, `0x100035c4`, `0x100035f9` (a byte each), three relocation entries dropped, the annex; the same in the Australian |
 | windowed | 2 + section | exe `0x427fe6` (file `0x273e6`), `0x415271` (file `0x14671`, 20 bytes), the annex |
 | anydepth | 1 | `MGameD3D.dll` `0x1000271e` (file `0x271e`) |

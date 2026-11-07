@@ -154,7 +154,7 @@ Code goes in `asm/`, as a transform. The shapes:
 | Shape | Examples |
 | --- | --- |
 | a blob in the file's annex, sites pointed at it with `_branch` | `altab`, `textcolor`, `windowed`, `altenter`, `loadhold`, `dcmusic`, `padmenu`, `replaypad`, `pagepad` in the exe; `titlebg` in `Title.dll`, `mixerless` in `MGAudio.dll`, `mix` in `MGSound.dll` |
-| a blob in a relocated DLL's annex, finding its own base | `music`, `borderless`, `xinput` |
+| a blob in a relocated DLL's annex, finding its own base | `music`, `borderless`, `xinput`, `dcoptions` |
 | a routine rewritten in place | `restoreall` |
 | plain sites plus a transform that drops relocation entries | `borderless`, `texrange` |
 | a whole file replaced from a baked build | `netplay`; `lobby` also writes art and `MPDATA.DAT` beside the exe |

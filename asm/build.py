@@ -33,7 +33,7 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('WIDE2D_BLOB', 'wide2d.asm', ()), ('WIDEGL_BLOB', 'widegl.asm', ()), ('RESOLUTION_BLOB', 'resolution.asm', ()),
          ('LOADHOLD_BLOB', 'loadhold.asm', ()), ('HUDLAST_BLOB', 'hudlast.asm', ()), ('D3DINIT_BLOB', 'd3dinit.asm', ()),
          ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
-         ('DCMUSIC_BLOB', 'dcmusic.asm', ())]
+         ('DCMUSIC_BLOB', 'dcmusic.asm', ()), ('DCOPTIONS_BLOB', 'dcmusic.asm', ('-DOPTIONS',))]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -86,6 +86,8 @@ EXE_MAGICS = {
     'PADPOLL': 0xDFDFDFDF,
     'BGMPLAY': 0xB3B3B3B3,
     'RACEBLOCK': 0xB4B4B4B4,
+    'BGMFADE': 0xB5B5B5B5,
+    'BGMRESTART': 0xB6B6B6B6,
 }
 EXE_BLOB_MAGICS = {
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
@@ -102,7 +104,7 @@ EXE_BLOB_MAGICS = {
     'PADMENU_BLOB': ('PADPOLL',) * 2 + ('MENUKEYS',) * 3 + ('PADLEVEL', 'PADEDGE', 'PADPREV'),
     'REPLAYPAD_BLOB': ('PADPOLL',) * 2,
     'PAGEPAD_BLOB': ('PADPOLL',) * 2,
-    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY') + ('RACEBLOCK',) * 2,
+    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY', 'BGMFADE', 'BGMRESTART') + ('RACEBLOCK',) * 2,
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,
@@ -158,6 +160,16 @@ SORTPAD_MAGICS = {
     'PADPOLL': 0xDFDFDFDF,
 }
 
+# dcmusic.asm's Options.dll build (-DOPTIONS): RVAs, the base added at run
+# time from the blob's own RVA (SELF_MAGIC).
+DCOPTIONS_MAGICS = {
+    'TEXT': 0xDBDBDBDB,
+    'PLAYSOUND': 0xD5D5D5D5,
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'GETMODFN': 0xE5E5E5E5,
+}
+
 # dinput8.asm's placeholders: offsets from the blob to MGInput.dll's IAT
 # slots and to the create site's continuation, filled by the patcher.
 DINPUT8_MAGICS = {
@@ -203,8 +215,8 @@ def hexblob(name, raw):
 # exactly once (the MGInput stubs) or at least once.
 DLL_MAGICS = {'MUSIC_BLOB': (MAGICS, False), 'DEVICES_BLOB': (DEVICES_MAGICS, False), 'PADINPUT_BLOB': (PADINPUT_MAGICS, False),
               'DINPUT8_BLOB': (DINPUT8_MAGICS, True), 'NOGENERIC_BLOB': (NOGENERIC_MAGICS, True), 'RESOLUTION_BLOB': (RESOLUTION_MAGICS, False),
-              'SORTPAD_BLOB': (SORTPAD_MAGICS, False)}
-SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1}
+              'SORTPAD_BLOB': (SORTPAD_MAGICS, False), 'DCOPTIONS_BLOB': (DCOPTIONS_MAGICS, False)}
+SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'DCOPTIONS_BLOB': 5}
 
 
 def generated():
@@ -237,6 +249,7 @@ def generated():
     out.append('PADINPUT_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in PADINPUT_MAGICS.items()))
     out.append('RESOLUTION_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in RESOLUTION_MAGICS.items()))
     out.append('DINPUT8_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DINPUT8_MAGICS.items()))
+    out.append('DCOPTIONS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DCOPTIONS_MAGICS.items()))
     out.append('NOGENERIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in NOGENERIC_MAGICS.items()))
     out.append(END)
     return ''.join(out)

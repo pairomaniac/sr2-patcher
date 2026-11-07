@@ -312,8 +312,27 @@ The four replays of a championship play tracks 15, 11, 16 and 17, as on
 the Dreamcast, in place of each course's music; any other replay plays
 one of those four at random.
 
+Tracks 15, 11, 16 and 17 are the music of the arcade original's practice
+mode. Neither the Dreamcast nor the PC lets a race have them; here
+OPTION's BGM page does. With any of tracks 15 to 17 there, each course's
+row offers four choices past the seven it had:
+
+| Choice | Track |
+| --- | --- |
+| IGNITION'98 | 15 |
+| NIGHT GROOVIN' | 11 |
+| ESTRADA NOVA | 16 |
+| M N F ? | 17 |
+
+The preview plays them, and a race on that course plays the one chosen.
+OPTION's BGM TEST lists tracks 15 to 18 after its own 13, each one there
+is a file for: IGNITION'98, ESTRADA NOVA, M N F ? and TILL YOU SEE THE
+DAWN, the ten-year ending's.
+
 A track that is not there is not missed: the game plays what it always
-did. Without any of tracks 15 to 17 the replays keep the course's music.
+did. Without any of tracks 15 to 17 the replays keep the course's music
+and OPTION offers the seven choices it always did; a course set to a
+track whose file has gone plays track 11.
 
 ## Builds
 
