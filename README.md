@@ -327,7 +327,8 @@ row offers four choices past the seven it had:
 The preview plays them, and a race on that course plays the one chosen.
 OPTION's BGM TEST lists tracks 15 to 18 after its own 13, each one there
 is a file for: IGNITION'98, ESTRADA NOVA, M N F ? and TILL YOU SEE THE
-DAWN, the ten-year ending's.
+DAWN, the ten-year ending's. Its own 9th, the car select's music, which
+it names IGNITION'98 like the first replay, reads IGNITION 98 SELECT.
 
 A track that is not there is not missed: the game plays what it always
 did. Without any of tracks 15 to 17 the replays keep the course's music

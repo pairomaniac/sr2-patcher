@@ -346,7 +346,8 @@ def options():
             count = struct.unpack('<I', mu.mem_read(PAGE + 0x68, 4))[0]
             if got != [v for _, v in regs] or mu.reg_read(UC_X86_REG_ESP) != esp + 4 or count != 13 + len(files):
                 raise SystemExit('dcmusictest: %s BGM TEST count with %r: %d, %r' % (build, files, count, got))
-            # past the 13th, the tracks there in order: the name and the play of slot 13 with the track in its record
+            # past the 13th, the tracks there in order: the name and the play of slot 13 with the track in its record;
+        # the stock 9th, the car select's, renamed
             there = sorted(int(f[5:7]) for f in files)
             for value in range(13 + len(files) + 1):
                 track = there[value - 13] if 13 <= value < 13 + len(there) else None
@@ -354,8 +355,9 @@ def options():
                 mu.mem_write(PAGE + 0x3c, struct.pack('<I', value))
                 m.call(20, (SIGIL, 0x41200000, 0x41200000, 0x3f800000), ((UC_X86_REG_ESI, PAGE),), build)
                 (via, _ecx, frame, _record), = m.state['calls']
-                text = m.cstr(frame[1]) if track else frame[1]
-                if via != 'text' or text != (titles[track] if track else SIGIL) or frame[2] != 0x41200000:
+                named = titles[track] if track else 'IGNITION 98 SELECT' if value == 8 else None
+                text = m.cstr(frame[1]) if named else frame[1]
+                if via != 'text' or text != (named or SIGIL) or frame[2] != 0x41200000:
                     raise SystemExit('dcmusictest: %s BGM TEST name of %d with %r: %r' % (build, value, files, text))
                 m.state['calls'].clear()
                 mu.mem_write(RECORDS + 13 * RECORD, struct.pack('<I', OWN))

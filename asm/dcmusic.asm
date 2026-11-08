@@ -103,6 +103,7 @@ bits 32
 %define TESTVAL     0x3c                ; the sound page: BGM TEST's track
 %define TESTMAX     0x68                ;   and its count
 %define TESTSTOCK   13                  ;   which is the stock tracks'
+%define SELECT      8                   ;   its car select's track, track 12
 %else
 %define PLAY        0xB3B3B3B3          ; placeholders, EXE_MAGICS: the sound bank's play
 %define FADE        0xB5B5B5B5          ; its fade
@@ -202,11 +203,15 @@ title:  mov     eax, [esi + TESTVAL]
 .here:  pop     ebp
         sub     ebp, .here
         test    eax, eax
-        jz      text
+        jz      .stock
         mov     eax, [ebp + titles - FIRST * 4 + eax * 4]
-        add     eax, ebp
+.put:   add     eax, ebp
         mov     [esp + 8], eax
         jmp     text
+.stock: cmp     dword [esi + TESTVAL], SELECT
+        jne     text
+        mov     eax, select             ; the stock's name for it is the
+        jmp     .put                    ; replay's, IGNITION'98
 
 ; The page bank's play of BGM TEST's value at [esp+4], ecx the bank: an
 ; extra track goes into slot 13's record and slot 13 plays.
@@ -510,6 +515,7 @@ replay3:    db  'ESTRADA NOVA', 0               ; track 16
 replay4:    db  'M N F ?', 0                    ; track 17
 titles:     dd  replay1, replay3, replay4, dawn ; BGM TEST: tracks 15 to 18
 dawn:       db  'TILL YOU SEE THE DAWN', 0      ; track 18, the ten-year ending's
+select:     db  'IGNITION 98 SELECT', 0         ; BGM TEST 9, track 12, the car select's
 %endif
 kernel32:   db 'kernel32.dll', 0
 getattr:    db 'GetFileAttributesA', 0

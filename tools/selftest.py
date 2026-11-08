@@ -36,7 +36,7 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '66811b4f65d686ca9b3682f6cf2d31e1',
         'MUSASHI\\MGInput.dll': 'c92362a6b7db4bd76db67f982bb522e4',
         'Title.dll': '06dd8522fa81c0c812cc565303820cbf',
-        'Options.dll': '0848820328755982aa6edb804900e229',
+        'Options.dll': '5eea63742e4409d42af2f224677cb72e',
         'ReplayGallery.dll': '26b937c025a7da3f2a9117424821089a',
     },
     'American': {
@@ -48,7 +48,7 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '66811b4f65d686ca9b3682f6cf2d31e1',
         'MUSASHI\\MGInput.dll': '6d51cd74f10aa355e0e252e21cf7c48d',
         'Title.dll': 'a6a8c2762d7fa9d6b050aecb3391f18f',
-        'Options.dll': '0848820328755982aa6edb804900e229',
+        'Options.dll': '5eea63742e4409d42af2f224677cb72e',
         'ReplayGallery.dll': '26b937c025a7da3f2a9117424821089a',
     },
     'Australian': {
@@ -60,7 +60,7 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '66811b4f65d686ca9b3682f6cf2d31e1',
         'MUSASHI\\MGInput.dll': '565ad191c9394c9109e768a5de003bbd',
         'Title.dll': '8ed1b37cf433b161b009396e50ede65a',
-        'Options.dll': '41c98c82a5d1195a50e2b0135041aaf6',
+        'Options.dll': '8c049654923ea9aad925903d89a8eb81',
         'ReplayGallery.dll': 'df6943632cc46c835bc5b7bf0c33c8b6',
     },
     'Japanese (MediaKite)': {
@@ -72,7 +72,7 @@ EXPECTED = {
         'MUSASHI\\MGNetWk.dll': '66811b4f65d686ca9b3682f6cf2d31e1',
         'MUSASHI\\MGInput.dll': 'c92362a6b7db4bd76db67f982bb522e4',
         'Title.dll': '06dd8522fa81c0c812cc565303820cbf',
-        'Options.dll': '0848820328755982aa6edb804900e229',
+        'Options.dll': '5eea63742e4409d42af2f224677cb72e',
         'ReplayGallery.dll': '26b937c025a7da3f2a9117424821089a',
     },
 }

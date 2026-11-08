@@ -417,7 +417,7 @@ are the sound page's BGM TEST: its `mov dword [esi+0x68], 13`, 13 and
 one more for each of tracks 15 to 18 there; its name's call of the text
 routine and its play, which past the 13th take the extra tracks there
 in order, named by the blob and played in slot 13 with the track in its
-record.
+record; the stock 9th, the car select's, is named IGNITION 98 SELECT.
 [docs/NOTES.md](../docs/NOTES.md), *Dreamcast music*;
 `tools/dcmusictest.py`.
 

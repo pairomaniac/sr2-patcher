@@ -1080,7 +1080,9 @@ unused. The decide plays the page bank's slot = value at `0x100050b5`
 for each of tracks 15 to 18 there, and past the 13th the tracks there in
 order are named by the blob and played in slot 13 with the track in its
 record. The value past 13 still reads the table, into the next row's,
-before the name is replaced. Australian: `0x10009d73`, `0x10009a4e`,
+before the name is replaced. The 9th (value 8), the car select's, is
+named IGNITION 98 SELECT by the blob, after the Dreamcast's file for it,
+`MISC\IG98_SEL.WAV`, so it no longer shares the first replay's name. Australian: `0x10009d73`, `0x10009a4e`,
 `0x10009f95` (files `0x9173`, `0x8e4e`, `0x9395`). `tools/dcmusictest.py`
 runs every entry, the exe's and the DLL's, under Unicorn in every build.
 
