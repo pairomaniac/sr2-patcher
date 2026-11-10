@@ -8,10 +8,10 @@ and drives the four entries: loads with no text, after a save, from a
 fresh session, from an old file with the game's block ahead of the text
 and from a hand-written text; the save's text and deadzone; the update
 taking the first free pad and reading the race gate; the poll's
-buttons, triggers, stick halves through the deadzone, menu-only sources
-in and out of a race, and keyboard sources left to the DLL. Needs
-python3-unicorn; exits 0 with a note when it is missing so tools/check.py
-can skip it.
+buttons, triggers, stick halves through the deadzone, the held input,
+menu-only sources in and out of a race, and keyboard sources left to the
+DLL. Needs python3-unicorn; exits 77 with a note when it is missing so
+tools/check.py can skip it.
 """
 import os
 import struct
@@ -47,9 +47,8 @@ def main(argv):
         print('padinputtest: %s is not an MGInput.dll the patcher knows' % path)
         return 1
     image = patcher.apply_xinput(raw, build)
-    sites = patcher.BUILDS[build]['sites']['xinput']
-    load_off, save_off, update_off, poll_off = sites[:4]
-    australian = len(sites) == 5          # the keyboard poll's address in the dispatch, not a device method
+    load_off, save_off, update_off, poll_off = patcher.BUILDS[build]['sites']['xinput']
+    australian = 'kbdpoll' in patcher.BUILDS[build]['sites']   # the keyboard poll's address in the dispatch, not a device method
 
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     annex = uctest.map_image(mu, image, BASE)
@@ -60,15 +59,20 @@ def main(argv):
     flag = patcher.BUILDS[build]['addresses']['CARS']         # the exe's car table: a car in slot 0 means a race
     mu.mem_map(flag & ~0xfff, 0x1000)
     publish = patcher.BUILDS[build]['addresses']['PADPOLL']   # the exe slot the annex publishes the page's poll at
-    if publish & ~0xfff != flag & ~0xfff:
-        mu.mem_map(publish & ~0xfff, 0x1000)
+    game_at = patcher.BUILDS[build]['addresses']['GAMED3D'] - 0x10    # the exe's pointer to the race block
+    netslot = flag + 0x94c                                            # this machine's slot in a network race
+    mapped = {flag & ~0xfff}
+    for at in (publish, game_at, netslot):
+        if at & ~0xfff not in mapped:
+            mu.mem_map(at & ~0xfff, 0x1000)
+            mapped.add(at & ~0xfff)
 
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'CreateFileA', 'ReadFile',
              'WriteFile', 'SetFilePointer', 'CloseHandle', 'SetEndOfFile', 'XInputGetState',
-             'GetPrivateProfileStringA']
+             'GetPrivateProfileStringA', 'XInputSetState', 'GetKeyboardState']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'CreateFileA': 7, 'ReadFile': 5,
             'WriteFile': 5, 'SetFilePointer': 4, 'CloseHandle': 1, 'SetEndOfFile': 1, 'XInputGetState': 2,
-            'GetPrivateProfileStringA': 6}
+            'GetPrivateProfileStringA': 6, 'XInputSetState': 2, 'GetKeyboardState': 1}
     addr = {n: STUBS + 0x10 * k for k, n in enumerate(names)}
     for n in names:
         mu.mem_write(addr[n], b'\xc2' + struct.pack('<H', argc[n] * 4))
@@ -78,6 +82,8 @@ def main(argv):
     # the file as the stubs see it, and the pads
     disk = {'text': None, 'pos': 0, 'opened': [], 'loaded': [], 'ended': 0}
     pads = {}                                   # slot: (buttons, lt, rt, lx, ly, rx, ry)
+    shakes = []                                 # XInputSetState's calls: (slot, left motor, right motor)
+    vk = bytearray(256)                         # Windows' key state, as GetKeyboardState gives it
 
     def cstr(p):
         return bytes(mu.mem_read(p, 300)).split(b'\0')[0].decode('latin-1')
@@ -90,7 +96,7 @@ def main(argv):
         if name == 'LoadLibraryA':
             lib = cstr(args[0])
             disk['loaded'].append(lib)
-            ret = {'kernel32.dll': 2, 'xinput1_3.dll': 3}.get(lib, 0)
+            ret = {'kernel32.dll': 2, 'xinput1_3.dll': 3, 'user32.dll': 4}.get(lib, 0)
         elif name == 'GetProcAddress':
             ret = addr.get(cstr(args[1]), 0)
         elif name == 'GetModuleFileNameA':
@@ -123,16 +129,23 @@ def main(argv):
         elif name == 'CloseHandle':
             ret = 1
         elif name == 'GetPrivateProfileStringA':
-            # the [Display] Resolution line of the file, as Windows would read it
-            assert (cstr(args[0]), cstr(args[1])) == ('Display', 'Resolution') and cstr(args[5]) == CFG
-            value = b''
+            # a line of the file, as Windows would read it: [Display] Resolution, [Network] Staging and Log;
+            # with no key, the section's key names, NUL-separated
+            sect, key = cstr(args[0]), args[1] and cstr(args[1])
+            assert (sect, key) in (('Display', 'Resolution'), ('Network', 'Staging'), ('Network', 'Log'), ('Network', 0)) and cstr(args[5]) == CFG
+            value = cstr(args[2]).encode()
+            keys_ = []
             section = None
             for line in (disk['text'] or b'').splitlines():
                 line = line.strip()
                 if line.startswith(b'['):
                     section = line
-                elif section == b'[Display]' and line.split(b'=')[0].strip() == b'Resolution':
-                    value = line.split(b'=', 1)[1].strip()
+                elif section == ('[%s]' % sect).encode() and line and not line.startswith(b';'):
+                    if key and line.split(b'=')[0].strip() == key.encode():
+                        value = line.split(b'=', 1)[1].strip()
+                    keys_.append(line.split(b'=')[0].strip())
+            if not key:
+                value = b'\0'.join(keys_)
             mu.mem_write(args[3], value[:args[4] - 1] + b'\0')
             ret = len(value)
         elif name == 'XInputGetState':
@@ -141,6 +154,11 @@ def main(argv):
                 ret = 0
             else:
                 ret = 1167                      # ERROR_DEVICE_NOT_CONNECTED
+        elif name == 'GetKeyboardState':
+            mu.mem_write(args[0], bytes(vk))
+            ret = 1
+        elif name == 'XInputSetState':
+            shakes.append((args[0],) + struct.unpack('<HH', mu.mem_read(args[1], 4)))
         mu.reg_write(UC_X86_REG_EAX, ret)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
@@ -182,13 +200,13 @@ def main(argv):
     ret, popped = call(site(load_off), this, slot0, 0, 0, 0, got)
     assert ret == 0 and popped == 4 + 0x18, (hex(ret), popped)
     assert struct.unpack('<I', mu.mem_read(publish, 4))[0] == BASE + annex + 25
-    want0 = patcher.annex_records(0)
+    want0 = uctest.annex_records(0)
     assert struct.unpack('<I', mu.mem_read(got, 4))[0] == len(want0) == 13 * 2 + len(patcher.FIXED_ACTIONS) + len(patcher.FIXED_PADS)
     recs, count = load(slot0)
     assert recs == want0, [r.hex() for r in recs[:3]]
     assert disk['opened'] == [(CFG, 0x80000000, 3)], disk['opened']
     recs, count = load(slot1, 2)                # fewer wanted than held: that many
-    assert count == 2 and recs == patcher.annex_records(1)[:2]
+    assert count == 2 and recs == uctest.annex_records(1)[:2]
     mu.mem_write(SCRATCH + 0x18, b'2\0')
     ret, _p = call(site(load_off), this, SCRATCH + 0x18, 0, buf, 32, got)
     assert ret == 0x80070057, hex(ret)
@@ -196,19 +214,29 @@ def main(argv):
     ret, _p = call(site(load_off), this, slot0, SCRATCH + 0x1c, buf, 32, got)   # the exe's second, named load: nothing
     assert ret == 0 and struct.unpack('<I', mu.mem_read(got, 4))[0] == 0
 
-    # 2. a save: three records for 2P and a deadzone in the name; the text rewritten
-    handbrake_b = patcher.annex_records(1, [(0, None)] * 8 + [(0, 13)])[9]
-    three = b''.join(patcher.annex_records(1, [(0x11, None), (0x1f, None)])[:2]) + handbrake_b
-    mu.mem_write(buf, three)
+    # 2. a save: three records for 2P and a deadzone in the name; the text rewritten, without a [Network]
+    # section, since the file had none
+    handbrake_b = uctest.annex_records(1, [(0, None)] * 8 + [(0, 13)])[9]
+    three = b''.join(uctest.annex_records(1, [(0x11, None), (0x1f, None)])[:2]) + handbrake_b
     name = SCRATCH + 0x40
+    t2 = [(0x11, None), (0x1f, None)] + [(0, None)] * 6 + [(0, 13)] + [(0, None)] * 4
+    mu.mem_write(buf, three)
+    mu.mem_write(name, b'DZ12000\0')                                   # past the most: clamped as the parser clamps
+    ret, _p = call(site(save_off), this, slot1, name, buf, 3)
+    assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 9000), None), disk['text'].decode()
+    mu.mem_write(buf, three)
     mu.mem_write(name, b'DZ4000\0')
     ret, popped = call(site(save_off), this, slot1, name, buf, 3)
     assert ret == 0 and popped == 4 + 0x14, (hex(ret), popped)
-    assert disk['text'] is not None and disk['opened'][-1] == (CFG, 0xC0000000, 4) and disk['ended'] == 1
-    t2 = [(0x11, None), (0x1f, None)] + [(0, None)] * 6 + [(0, 13)] + [(0, None)] * 4
-    assert disk['text'] == patcher.annex_text([None, t2], (1000, 4000)), disk['text'].decode()
+    assert disk['text'] is not None and disk['opened'][-1] == (CFG, 0xC0000000, 4) and disk['ended'] == 2
+    assert disk['text'] == uctest.annex_text([None, t2], (1000, 4000), None), disk['text'].decode()
     recs, count = load(slot1)
-    assert recs == patcher.annex_records(1, t2), count
+    assert recs == uctest.annex_records(1, t2), count
+    # a [Network] section, once in the file, survives a save with its values as they stand
+    disk['text'] += b'\n[Network]\nStaging = 1\nLog = 1\n'
+    mu.mem_write(buf, three)
+    ret, _p = call(site(save_off), this, slot1, name, buf, 3)
+    assert ret == 0 and disk['text'] == uctest.annex_text([None, t2], (1000, 4000), ('1', '1')), disk['text'].decode()
     assert count == 13 + 1 + len(patcher.FIXED_ACTIONS) + len(patcher.FIXED_PADS)
 
     # 3. a fresh session parses that text back; 1P still the defaults
@@ -219,9 +247,9 @@ def main(argv):
     t3 = list(t2)                               # the menus' actions are not in the text: their defaults again
     for a in (2, 3, 10, 11, 12):
         t3[a] = (patcher.KEYS_2P[a], patcher.PAD_DEFAULT[a])
-    assert recs == patcher.annex_records(1, t3), count
+    assert recs == uctest.annex_records(1, t3), count
     ret, _p = call(site(save_off), this, slot0, 0, buf, 0)      # a save with no records: 1P's row emptied, no deadzone change
-    assert b'[1P Controller]\nDeadzone = 10\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
+    assert b'[1P Controller]\nDeadzone = 10\nVibration = 70\nSteeringLeft = -\n' in disk['text'] and b'[1P Keyboard]\nSteeringLeft = -\n' in disk['text']
     assert b'MenuUp' not in disk['text'] and b'Enter' not in disk['text']
 
     # 3b. an old file, the game's 100 binary bytes before the text: skipped
@@ -230,7 +258,7 @@ def main(argv):
     recs, count = load(slot0)
     t = [(patcher.KEYS_1P[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
     t[0] = (0x10, patcher.PAD_DEFAULT[0])
-    assert recs == patcher.annex_records(0, t), count
+    assert recs == uctest.annex_records(0, t), count
 
     # 4. a hand-written text: CRLF, blank lines, comments, no "=", unknown names dropped, sections in any order
     disk['text'] = (b'\r\n; mine\r\n[2P Keyboard]\r\nView NUM_ENTER\r\nSteeringLeft = -\r\n\r\n[1P Controller]\r\nDeadzone = 30\r\n'
@@ -241,12 +269,12 @@ def main(argv):
     t = [(patcher.KEYS_1P[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
     t[0] = (0x10, patcher.PAD_LB)
     t[4] = (patcher.KEYS_1P[4], patcher.PAD_LEFT)
-    assert recs == patcher.annex_records(0, t), count
+    assert recs == uctest.annex_records(0, t), count
     recs, count = load(slot1)
     t = [(patcher.KEYS_2P[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
     t[9] = (0x9c, 24)
     t[4] = (0, None)
-    assert recs == patcher.annex_records(1, t), count
+    assert recs == uctest.annex_records(1, t), count
 
     # 4. the pads: 1P's config update with a pad in slot 1 only
     cfg0, cfg1 = SCRATCH + 0x1000, SCRATCH + 0x2000
@@ -289,6 +317,7 @@ def main(argv):
     assert poll(0x300 + 24)[1] == (30000 - dz) * 10000 // (32767 - dz)   # right stick up
     assert poll(0x300 + 0x3f) == (0, 3000, 10000)
     assert poll(0x340 + 0x3f) == (0, 500, 10000)
+    assert poll(0x300 + 0x3e) == (0, 0x80, 0x80)                       # 1P holds a pad
     # menu-only inputs and keys answer outside a race and not in one; 1P's update reads the exe's car table
     mu.mem_write(keys + 0xcb, b'\x80')
     assert poll(0x300 + patcher.PAD_UP + patcher.MENU_ONLY) == (0, 0x80, 0x80)
@@ -302,6 +331,27 @@ def main(argv):
     assert poll(0x300 + patcher.PAD_UP) == (0, 0x80, 0x80)              # the bindable one still does
     assert poll(patcher.MENUKEY_BASE + 0xcb) == (0, 0, 0x80)
     assert poll(0x300 + 0x3f) == (0, 3000, 10000)                      # the deadzone read is not menu-only
+    # the held one is not menu-only either, and follows the device last used: a key going down or up in
+    # Windows' key state, or a pad input; a trigger and a stick barely moved leave it, past their
+    # thresholds take it; the mouse's buttons and DirectInput's own array do not count
+    assert poll(0x300 + 0x3e) == (0, 0x80, 0x80)
+    held, idle = pads[1], (0, 0, 0, 0, 0, 0, 0)
+
+    def used(pad, key=0, at=0x41):
+        pads[1] = pad
+        vk[at] = key
+        call(site(update_off), cfg0)
+        return poll(0x300 + 0x3e)[1]
+    assert used(idle) == 0x80, 'the pad let go: still the pad'
+    assert used(idle, 0x80) == 0 and used(idle, 0x80) == 0 and used(idle) == 0, 'a key, held, let go'
+    assert used((0, 30, 0, 0x4000, -0x4000, 0, 0)) == 0, 'a trigger and a stick under their thresholds'
+    assert used((0, 31, 0, 0, 0, 0, 0)) == 0x80 and used(idle, 0x80) == 0 and used(idle) == 0
+    assert used((0, 0, 0, 0, 0, 0, -0x4002)) == 0x80 and used(idle, 0x81, at=1) == 0x80, 'a mouse button'
+    assert used(idle, 0, at=1) == 0x80 and used(idle, 1) == 0x80, 'a toggle bit'
+    assert used(held, 0x80) == 0x80, 'both at once: the pad'
+    assert used(idle, 0x80) == 0x80, 'the key held as it was: still the pad'
+    assert used(idle) == 0 and used(held) == 0x80, 'the key let go, then the pad'
+    mu.mem_write(keys + 0xcb, b'\0')
     mu.mem_write(flag, struct.pack('<I', 0))
     call(site(update_off), cfg0)                        # no car: a menu again
     assert poll(0x300 + patcher.PAD_UP + patcher.MENU_ONLY) == (0, 0x80, 0x80)
@@ -310,6 +360,7 @@ def main(argv):
     assert poll(patcher.MENUKEY_BASE + 0xcb) == (0, 0, 0x80)
     mu.mem_write(kind, b'\x03')
     assert poll(0x340 + patcher.PAD_A) == (0, 0, 0x80)     # 2P holds no pad
+    assert poll(0x340 + 0x3e) == (0, 0, 0x80)
     # 2P's update looks for a pad and must not take 1P's
     ret, _p = call(site(update_off), cfg1)
     assert poll(0x340 + patcher.PAD_A) == (0, 0, 0x80)
@@ -317,12 +368,14 @@ def main(argv):
     for _ in range(61):
         call(site(update_off), cfg1)
     assert poll(0x340 + patcher.PAD_B) == (0, 0x80, 0x80)
+    assert poll(0x340 + 0x3e) == (0, 0x80, 0x80)
     assert poll(0x300 + patcher.PAD_B) == (0, 0, 0x80)
     # 1P's pad unplugged: its state clears, and the deadzone stays readable
     del pads[1]
     call(site(update_off), cfg0)
     assert poll(0x300 + patcher.PAD_A) == (0, 0, 0x80)
     assert poll(0x300 + patcher.PAD_RT) == (0, 0, 255)
+    assert poll(0x300 + 0x3e) == (0, 0, 0x80)
     # 2P keeps its pad meanwhile, and the replugged pad is 1P's again
     assert poll(0x340 + patcher.PAD_B) == (0, 0x80, 0x80)
     pads[1] = (0x1000, 0, 0, 0, 0, 0, 0)
@@ -357,9 +410,109 @@ def main(argv):
     assert popped == 4 + 0xc and struct.unpack('<I', mu.mem_read(value, 4))[0] == 0x80
     call(BASE + annex + 25, 0x300 + 0x3f, value, rng)
     assert struct.unpack('<I', mu.mem_read(value, 4))[0] == 3000
+    call(BASE + annex + 25, 0x340 + 0x3e, value, rng)
+    assert struct.unpack('<II', mu.mem_read(value, 4) + mu.mem_read(rng, 4)) == (0x80, 0x80)
     call(BASE + annex + 25, patcher.MENUKEY_BASE + 0x2d, value, rng)
     assert struct.unpack('<I', mu.mem_read(value, 4))[0] == 0
     assert 'xinput1_4.dll' in disk['loaded'] and 'xinput1_3.dll' in disk['loaded']
+
+    # 5. the rumble: a pulse when a car's hit counts go down or it lands, on the side's pad
+    game, car, car2 = SCRATCH + 0x7000, SCRATCH + 0x8000, SCRATCH + 0x9000
+    hit_at = patcher.CARHIT_OLD if australian else patcher.CARHIT
+    w = lambda a, v: mu.mem_write(a, struct.pack('<I', v))
+    padidx = BASE + annex + len(blob) - 260 - 32 - 4
+    pads.clear()
+    pads[1] = pads[2] = (0, 0, 0, 0, 0, 0, 0)
+    w(flag, 0)
+    w(game_at, game)
+    w(game + 0x38, 0)
+    w(game + 0x44, 0)
+    for _ in range(130):                        # both sides take a pad
+        call(site(update_off), cfg0)
+        call(site(update_off), cfg1)
+    slots = [b - 1 for b in mu.mem_read(padidx, 2)]
+    assert sorted(slots) == [1, 2], slots
+
+    FRAMES, KICK, FADE = {'hit': 36, 'land': 36}, 6, 20
+
+    def strength(side):                         # the setting through the page's poll
+        call(BASE + annex + 25, 0x300 + side * 0x40 + 0x3d, value, rng)
+        n, most = struct.unpack('<II', mu.mem_read(value, 4) + mu.mem_read(rng, 4))
+        assert most == 100 and 0 <= n <= 100, (n, most)
+        return n
+
+    def motors(kind, left, level=70):
+        """A pulse's (left, right) words with this many frames left."""
+        s = level * 0xffff // 100
+        if kind == 'hit':                       # level, the left motor doubled over the first frames
+            return (min(s * 3 // 4 * 2, 0xffff) if left >= FRAMES['hit'] - KICK else s * 3 // 4, s >> 1)
+        s = s * min(left, FADE) // FADE         # a landing fades
+        return (s * 3 >> 3, s >> 1)
+    assert strength(0) == 70 and motors('hit', 35) == (0xffff, 0x5999) and motors('hit', 29) == (0x8665, 0x5999) and motors('land', 35) == (0x4332, 0x5999)
+
+    def frame(c=car, hit=None, wall=None, air=0, cfg=cfg0):
+        frame.n += 1
+        w(c + hit_at, frame.n if hit is None else hit)
+        w(c + hit_at + 4, frame.n if wall is None else wall)
+        w(c + 0x270, air)
+        del shakes[:]
+        call(site(update_off), cfg)
+        return list(shakes)
+
+    def rest(kind, slot, level=70, start=None, **kw):
+        """The pulse's frames after its first: one send a frame, fading, then the motors off."""
+        for left in range(FRAMES[kind] - 2 if start is None else start, 0, -1):
+            got = frame(**kw)
+            assert got == [(slot,) + motors(kind, left, level)], (left, got)
+        assert frame(**kw) == [(slot, 0, 0)], 'the pulse over'
+        assert frame(**kw) == []
+    frame.n = 100
+    assert shakes == [], shakes                 # nothing outside a race
+    w(flag, car)
+    assert frame() == [] and frame() == []      # a car first seen, then its counts going up
+    assert frame(hit=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a hit of a car or an object'
+    rest('hit', slots[0])
+    assert frame(wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a hit of a wall'
+    assert frame(wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 2)], 'the count held, the game paused: no new pulse'
+    rest('hit', slots[0], start=FRAMES['hit'] - 3)
+    assert all(frame(air=1) == [] for _ in range(10))
+    assert frame() == [(slots[0],) + motors('land', FRAMES['land'] - 1)], 'a landing'
+    rest('land', slots[0])
+    assert all(frame(air=1) == [] for _ in range(9)) and frame() == [], 'a hop, too short'
+    assert all(frame(air=1) == [] for _ in range(12)) and frame(hit=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a landing on a hit: the hit'
+    assert frame() == [(slots[0],) + motors('hit', FRAMES['hit'] - 2)]
+    assert frame(wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)], 'a hit during a pulse: the pulse again'
+    rest('hit', slots[0])
+    w(game + 0x44, 4)                           # a replay: nothing, and nothing on the way back
+    assert frame(hit=0) == [] and frame(wall=0) == []
+    w(game + 0x44, 0)
+    assert frame(hit=0) == [] and frame() == []
+    assert frame(cfg=cfg1) == [] and frame(hit=0, cfg=cfg1) == [], 'side 1 outside split screen'
+    w(game + 0x38, 5)                           # split screen: side 1's car is slot 1
+    w(flag + 4, car2)
+    mu.mem_write(buf, three)                    # side 1's strength saved past the most: 100, full
+    mu.mem_write(name, b'VB0120\0')
+    ret, _p = call(site(save_off), this, slot1, name, buf, 3)
+    assert ret == 0 and [line for line in disk['text'].splitlines() if line.startswith(b'Vibration')] == [b'Vibration = 70', b'Vibration = 100'], disk['text'].decode()
+    assert strength(1) == 100 and motors('hit', 1, 100) == (0xbfff, 0x7fff)
+    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [(slots[1],) + motors('hit', FRAMES['hit'] - 1, 100)]
+    rest('hit', slots[1], 100, c=car2, cfg=cfg1)
+    disk['text'] = disk['text'].replace(b'Vibration = 100', b'Vibration = 0')     # read back at 0: no rumble
+    fresh()
+    load(slot0)
+    assert strength(1) == 0 and strength(0) == 70
+    assert frame(car2, cfg=cfg1) == [] and frame(car2, hit=0, cfg=cfg1) == [] and frame(car2, cfg=cfg1) == []
+    w(game + 0x38, 6)                           # a network race: this machine's slot, side 0 alone
+    w(netslot, 2)
+    w(flag + 8, car2)
+    assert frame(car2) == [] and frame(car2, cfg=cfg1) == []
+    assert frame(car, hit=0) == [] and frame(car2, wall=0, cfg=cfg1) == []
+    assert frame(car2, wall=0) == [(slots[0],) + motors('hit', FRAMES['hit'] - 1)]
+    w(flag, 0)                                  # the race over mid-pulse: the pulse still runs out
+    w(flag + 8, 0)
+    w(game + 0x38, 0)
+    rest('hit', slots[0])
+    w(netslot, 0)
     print('padinputtest: %s MGInput.dll OK' % build)
     return 0
 

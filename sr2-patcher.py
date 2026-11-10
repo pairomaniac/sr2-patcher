@@ -2,9 +2,11 @@
 """SEGA RALLY 2 (PC, 1999) patcher. See README.md.
 
     python3 sr2-patcher.py                          the window
-    python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab
+    python3 sr2-patcher.py --install SRC DIR [LANG] install from a .cue, .iso, disc folder or data1.cab, then patch with the defaults
     python3 sr2-patcher.py --patch DIR [KEYS]       patch an installed game: every patch, the ones KEYS names, or all but the ones it names with a minus (-music);
-                                                    the dgvoodoo add-on with them on Windows, named or -dgvoodoo elsewhere or not
+                                                    -borderless for the DLL's own window, the size of the picture, -windowed for the exclusive mode (32 bits; 16 with -depth32);
+                                                    the dgvoodoo add-on on Windows unless -dgvoodoo, elsewhere only when named;
+                                                    a diagnostic by name (voltrace, frametrace, gltrace, d3dtrace, d3dtrace2d, d3dinit, netlog), or logs for all of them
     python3 sr2-patcher.py --rip CUE DIR             rip the play disc's music into DIR/music
     python3 sr2-patcher.py --restore DIR            put the original files back
     python3 sr2-patcher.py --selfcheck              validate the patch tables and exit
@@ -44,14 +46,14 @@ CAB = 'data1.cab'
 IMAGE_BASE = 0x400000                   # the exe is never relocated
 
 # Builds. The exe's MD5 picks the row, and the row holds everything a
-# patch needs that moves between builds: the fingerprints of the six
-# Pentium III files and the three patched DLLs, the exe's patch sites
-# (file offsets), the import slots those sites name, and the addresses
-# the stubs in asm/ read (VAs). MGameD3D.dll is the same file in all
-# four. Everything else in the script is written against the European
-# row; the others map it.
+# patch needs that moves between builds: the fingerprints of fifteen
+# files (the six the Pentium III build replaces and the nine more the
+# patches touch), the exe's patch sites (file offsets), the import slots
+# those sites name, and the addresses the stubs in asm/ read (VAs).
+# MGameD3D.dll is the same file in all four. Everything else in the
+# script is written against the European row; the others map it.
 PATCHED = (EXE, 'MUSASHI\\MGameD3D.dll', 'MUSASHI\\MGameGL.dll', 'MUSASHI\\MGAudio.dll', 'MUSASHI\\MGSound.dll',
-           'MUSASHI\\MGInput.dll', 'MUSASHI\\MGNetWk.dll', 'Title.dll', 'Options.dll', 'ReplayGallery.dll')
+           'MUSASHI\\MGInput.dll', 'MUSASHI\\MGNetWk.dll', 'Title.dll', 'Options.dll', 'ReplayGallery.dll', 'Record.dll', 'AdvTelop.dll')
 
 BUILDS = {
     'European': {
@@ -70,17 +72,18 @@ BUILDS = {
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
             'ReplayGallery.dll': (792576, 'f0db027aa72f43d146859eaef51d74f0'),
+            'Record.dll': (1146880, '55c64552367b99ad246b7b3b3dbd5fa1'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7572e, 'activate': 0x25ff7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd07c0, 0x7e359), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
-                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0),   # MGInput.dll: the create, the type byte's first read, the two interface ids
+                  'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': 0x7e906, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'tabmenu': (0x37053, 0x36eac, 0x3ed13, 0x35002, 0x35629), 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
-                  'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European build only: the diagnostic was never sited elsewhere
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
+                  'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
                   'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcreplay': (0x523a3, 0x1c09a, 0x52405), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders
@@ -88,17 +91,17 @@ BUILDS = {
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
-        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4,
+        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4, 'lstrlenA': 0x4950e8,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0,
                   'GetPrivateProfileStringA': 0x4951b8, 'GetModuleFileNameA': 0x495074, 'GetTickCount': 0x495088},
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
-                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
+                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030, 'EXEC': 0x39c0},
         'addresses': {'BGMPLAY': 0x473d80, 'RACEBLOCK': 0x50b108, 'BGMFADE': 0x474040, 'BGMRESTART': 0x474200, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0, 'BMPFREE': 0x406f80, 'CHATOBJS': 0x4eae08, 'TABOBJS': 0x4eae18, 'ROOMFLAG': 0x4edcc0, 'POLLBASE': 0x50b120,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfd0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470ff0, 'HUDRESET': 0x46cec0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd80},
     },
     'American': {
@@ -117,30 +120,31 @@ BUILDS = {
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
             'ReplayGallery.dll': (792576, 'f0db027aa72f43d146859eaef51d74f0'),
+            'Record.dll': (1146880, '55c64552367b99ad246b7b3b3dbd5fa1'),
         },
         'sites': {'check': 0x26a80, 'loader': 0x75b5e, 'activate': 0x262a7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd0bc0, 0x7e779), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),
-                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0), 'nogeneric': 0x26d2,
+                  'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0), 'nogeneric': 0x26d2,
                   'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
-                  'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'replaypad': 0x4047a, 'pagepad': 0x7ed26, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
+                  'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'tabmenu': (0x37383, 0x371dc, 0x3f043, 0x35332, 0x35959), 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'erasekey': 0xceb7c, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
-                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd),
+                  'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x6600,
                   'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8, 'dcending': 0x2b137, 'dcreplay': (0x52723, 0x1c32a, 0x52785), 'dccourse': (0x2b1bd, 0x1bc62, 0x1e40b, 0x29a45, 0x29b9f), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
-        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x49519c, 'lstrcpyA': 0x4950f4,
+        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x49519c, 'lstrcpyA': 0x4950f4, 'lstrlenA': 0x4950e8,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0,
                   'GetPrivateProfileStringA': 0x4951b8, 'GetModuleFileNameA': 0x495074, 'GetTickCount': 0x495088},
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
-                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
+                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030, 'EXEC': 0x39c0},
         'addresses': {'BGMPLAY': 0x473fb0, 'RACEBLOCK': 0x50b208, 'BGMFADE': 0x474270, 'BGMRESTART': 0x474430, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0),
+                      'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc, 'IPSLOT': 0x4eaddc, 'TEAMSLOT': 0x4eae0c, 'LINEBUF': 0x4d3c0c, 'NETOBJ': 0x4eacfc, 'DRAW': 0x43624c, 'ROOMBG': 0x4eaed0, 'ROOMSIZE': 0x4eaf90, 'ROOMFONT': 0x4e85b4, 'RACESETUP': 0x438ef0, 'ROOMLOAD': 0x407000, 'BMPFREE': 0x406fe0, 'CHATOBJS': 0x4eaef8, 'TABOBJS': 0x4eaf08, 'ROOMFLAG': 0x4eddb0, 'POLLBASE': 0x50b220,
                       'RENDERER': 0x50b210, 'SETVIEWPORT': 0x46c1e0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429e50, 'TREEDRAW': 0x471220, 'HUDRESET': 0x46d0d0, 'LATEFLAG': 0x4e69ec, 'FADEDRAW': 0x46bf90},
     },
     'Australian': {
@@ -159,53 +163,46 @@ BUILDS = {
             'Options.dll': (798720, '0af388650bc11dcd6df2377d3d78a535'),
             'Title.dll': (637952, 'a8017ec64efb1eba81e3e80f8afb875b'),
             'ReplayGallery.dll': (793088, 'be260f94b8791b91cfc3588de5b3473f'),
+            'Record.dll': (1146880, 'ff0d4c30af4ff8e970d3e69e8056bbc8'),
         },
         'sites': {'check': 0x4b420, 'loader': 0xb4dbe, 'activate': 0x4abfd,
                   'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c, 0x5da8),   # Options.dll
-                  'noregistry': (0x115fd4, 0xbd959), 'xinput': (0x7940, 0x7a20, 0x6940, 0x81a8, 0x7e40),   # the latter MGInput.dll
-                  'dinput8': (0x2870, 0x39f9, 0x10678, 0x106b8), 'nogeneric': 0x2694,
+                  'noregistry': (0x115fd4, 0xbd959), 'xinput': (0x7940, 0x7a20, 0x6940, 0x81a8), 'kbdpoll': 0x7e40,   # the older MGInput.dll: the keyboard poll's address in the update's dispatch, hooked instead of the device's poll
+                  'dinput8': (0x2870, 0x8550, 0x39f9, '8b9660020000', 0x10678, 0x106b8), 'nogeneric': 0x2694,   # the older MGInput.dll: the type read is a six-byte load
                   'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'cardwarn': 0x4b263, 'cdlevel': 0xb2668,
                   'clearsize': 0x40b83,
-                  'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'replaypad': 0x6e99a, 'pagepad': 0xbdef8, 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
+                  'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'tabmenu': (0x60a63, 0x608bc, 0x6d603, 0x5ea22, 0x5f049), 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'erasekey': 0x1140d4, 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
-                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d),
+                  'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df), 'startpresent': (0x4c877, 0x4c8ff), 'startload': 0xfdf0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
                   'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8, 'dcending': 0x52227, 'dcreplay': (0x8cde3, 0x3960a, 0x8ce45), 'dccourse': (0x522a4, 0x38f52, 0x3b6eb, 0x50b45, 0x50c95), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x9173, 0x8e4e, 0x9395),
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
                       (0x69164, 'ff15'), (0x69c16, 'ff15')),
-        'slots': {'SetTextColor': 0x4d402c, 'GetLogicalDriveStringsA': 0x4d4198, 'lstrcpyA': 0x4d40fc,
+        'slots': {'SetTextColor': 0x4d402c, 'GetLogicalDriveStringsA': 0x4d4198, 'lstrcpyA': 0x4d40fc, 'lstrlenA': 0x4d40f0,
                   'LoadLibraryA': 0x4d4094, 'GetProcAddress': 0x4d40f8,
                   'GetPrivateProfileStringA': 0x4d41a8, 'GetModuleFileNameA': 0x4d4078, 'GetTickCount': 0x4d406c},
         'options': {'BINDPAGE': 0x10013df0, 'DRAW': 0x100138b0, 'PLAYSOUND': 0x10010670, 'INPUT': 0x100c1b1c,
                     'SOUNDOBJ': 0x100be46c, 'HANDLES': 0x100be470, 'TOPTABLE': 0x10006500,
-                    'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090, 'CHARMAP': 0x101052bc,
+                    'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090, 'CHARMAP': 0x101052bc, 'EXEC': 0x6130,
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
         'addresses': {'BGMPLAY': 0x4b3410, 'RACEBLOCK': 0x575ad8, 'BGMFADE': 0x4b36d0, 'BGMRESTART': 0x4b3890, 'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
-                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28),
+                      'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c, 'IPSLOT': 0x549e34, 'TEAMSLOT': 0x549e64, 'LINEBUF': 0x5245c4, 'NETOBJ': 0x549d54, 'DRAW': 0x45fb3c, 'ROOMBG': 0x549f28, 'ROOMSIZE': 0x549fe8, 'ROOMFONT': 0x545efc, 'RACESETUP': 0x464f40, 'ROOMLOAD': 0x4109f0, 'BMPFREE': 0x4109d0, 'CHATOBJS': 0x549f50, 'TABOBJS': 0x549f60, 'ROOMFLAG': 0x54ce08, 'POLLBASE': 0x575af0,
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
     },
-    # MediaKite's rerelease, MKW-166 (2 March 2001) - the only one of the
-    # four Japanese pressings the patcher has seen. The other three are
-    # builds of their own: Sega's HCJ-0145 of 1999, which Sega patched
-    # through UPDATE231 to UPDATE250, DigiCube's DWRPD-00081, and SPB-040,
-    # the disc I-O DATA bundled with a graphics card. This row is none of
-    # them and refuses all three. See docs/NOTES.md, *The Japanese
-    # releases*.
+    # DigiCube's DWRPD-00081 (2000) and MediaKite's MKW-166 (2001) reissues:
+    # one master, the install disc's data track the one Redump lists for
+    # DWRPD-00081. Sega's own 1999 disc is the Australian build.
     #
-    # This exe is the European build relinked five weeks later (29 Nov
-    # 1999), its .text sixteen bytes shorter. The missing sixteen fall
-    # between 0x4404b0, the error box, still where Europe has it, and
-    # 0x444bd0, the processor check, sixteen back from Europe's 0x444be0.
-    # So every site and code address past that - the screen change, the CD
-    # level, the loader's drive scan, the registry open, the five volume
-    # entries and RESUME - is the European one less 0x10, and everything
-    # before it, every data address and every import slot, is the European
-    # one unchanged. Only the exe differs from the European disc; the
-    # other twelve files are the same bytes.
-    'Japanese (MediaKite)': {
+    # The exe is the European one rebuilt on 29 Nov 1999 (2.0.0.9): the
+    # functions at 0x442180 and 0x443de0 were recompiled, net 0x10 shorter,
+    # so sites and code addresses past 0x444130 are the European ones less
+    # 0x10 and everything else - data, import slots, the other thirteen
+    # files - is the European. docs/GAME.md, *The DigiCube and MediaKite
+    # build*.
+    'Japanese (DigiCube, MediaKite)': {
         'files': {
             EXE: (1469952, '5c0242443ea289d3d461b15eddb63388'),
             'AdvTelop.dll': (636928, '977dd8801a281e987c4503c9fb2f8778'),
@@ -221,16 +218,17 @@ BUILDS = {
             'Options.dll': (767488, '25c523277608e7cf2491ee8c67dd7fce'),
             'Title.dll': (637952, 'b1c6ea70b15cc41752c630ae0fb0cf0c'),
             'ReplayGallery.dll': (792576, 'f0db027aa72f43d146859eaef51d74f0'),
+            'Record.dll': (1146880, '55c64552367b99ad246b7b3b3dbd5fa1'),
         },
         'sites': {'check': 0x267c0, 'loader': 0x7571e, 'activate': 0x25ff7,
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd07c0, 0x7e349), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
-                  'dinput8': (0x2940, 0x39ac, 0x10680, 0x106c0),   # MGInput.dll: the create, the type byte's first read, the two interface ids
+                  'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
                   'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
-                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'replaypad': 0x400ea, 'pagepad': 0x7e8f6, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
+                  'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'tabmenu': (0x37053, 0x36eac, 0x3ed13, 0x35002, 0x35629), 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
-                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d),
+                  'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
@@ -238,20 +236,30 @@ BUILDS = {
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
-        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4,
+        'slots': {'SetTextColor': 0x495028, 'GetLogicalDriveStringsA': 0x495198, 'lstrcpyA': 0x4950f4, 'lstrlenA': 0x4950e8,
                   'LoadLibraryA': 0x495090, 'GetProcAddress': 0x4950f0,
                   'GetPrivateProfileStringA': 0x4951b8, 'GetModuleFileNameA': 0x495074, 'GetTickCount': 0x495088},
         'options': {'BINDPAGE': 0x1000ed90, 'DRAW': 0x1000e850, 'PLAYSOUND': 0x1000b610, 'INPUT': 0x100b9464,
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
-                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030},
+                    'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030, 'EXEC': 0x39c0},
         'addresses': {'BGMPLAY': 0x473d70, 'RACEBLOCK': 0x50b108, 'BGMFADE': 0x474030, 'BGMRESTART': 0x4741f0, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
-                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0),
+                      'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0, 'BMPFREE': 0x406f80, 'CHATOBJS': 0x4eae08, 'TABOBJS': 0x4eae18, 'ROOMFLAG': 0x4edcc0, 'POLLBASE': 0x50b120,
                       'RENDERER': 0x50b110, 'SETVIEWPORT': 0x46bfc0, 'VPRECTS': 0x4b12f0, 'HUDDRAW': 0x429d70, 'TREEDRAW': 0x470fe0, 'HUDRESET': 0x46ceb0, 'LATEFLAG': 0x4e68fc, 'FADEDRAW': 0x46bd70},
     },
 }
+
+
+# What the window and the log call a row, where that is not its key. Sega's
+# own Japanese disc carries the Australian contents, so the two cannot be
+# told apart.
+BUILD_NAMES = {'Australian': 'Australian / Japanese (Sega)'}
+
+
+def build_name(build):
+    return BUILD_NAMES.get(build, build)
 
 
 # The DLL each import slot a row names comes from; kernel32 unless listed.
@@ -274,8 +282,10 @@ RESTORE_RELOCS = 10
 # Patch table: key -> (file, sites, transform). A site is (file offset,
 # original, replacement); a replacement of None means the bytes are only
 # verified, the transform writes them. The transform, if any, runs after
-# the sites and may grow the file. Applied in this order. Addresses are
-# the European build's; docs/NOTES.md has the account of each.
+# the sites and may grow the file. Applied in the order the keys are
+# given, which parse_keys and group_keys keep as this table's; devices
+# has to come before resolution (_next_section_rva). Addresses are the
+# European build's; docs/NOTES.md has the account of each.
 #
 #   nodisc      the disc check returns "found"; the loader takes the exe's directory
 #   nocardwarn  the video-card warning box skipped
@@ -285,22 +295,31 @@ RESTORE_RELOCS = 10
 #   texfmt      A1R5G5B5 first in the texture-format preference list
 #   surfmem     MGameD3D's video-memory offscreen surfaces made in system memory
 #   textcolor   the lobby's SetTextColor(-1) masked to RGB
-#   windowed    the fullscreen flag cleared; the .bg row copy expands to 32 bits (always on)
+#   windowed    the fullscreen flag cleared
+#   bgrow       the exe's .bg row copy expands to 32 bits, and composes at a wide size
 #   anydepth    the windowed path's 16-bit desktop check skipped
 #   anymode     the mode check before the window, EnumDisplayModes for 640x480x16, passes
+#   depth32     MGameD3D's depth is 32, not the 16 asked for: the exclusive mode's, and nothing in a window
 #   altenter    ALT+ENTER toggles a framed window
 #   hudlast     the race's HUD drawn after the water, so the gauge's plate blends over the lake
 #   loadhold    the stage loading screens held three seconds
 #   padmenu     the pad on the multiplayer screens straight from MGInput's annex, the directions the keyboard's way; Back is TAB, which opens the team room's MENU row
-#   pagepad     LB and RB as Page Up and Page Down: the Records pages, the car select's alternative colour
+#   tabmenu     the team room's TAB MENU button reads SEL MENU while a pad is the device last used; writes the pad's two bitmaps under BINDATA\chat
+#   pagepad     LB and RB as Page Up and Page Down: the Records pages, the car select's alternative colour; X as the name entry's erase
+#   erasekey    Backspace erases a letter in the name entry: the wrapper's key for bit 3, which had none
 #   sortpad     the pad's LB and RB step the Replay Gallery's sort (MODE, CAR, DATE), which F6-F8 set as accelerators
+#   padprompts  the Records pages' PAGE UP KEY and PAGE DOWN KEY labels as LB BUTTON and RB BUTTON while a pad is the device last used; also writes the lettering on Record.txr
+#   padtitle    the title's PRESS ENTER KEY as PRESS START BUTTON while a pad is the device last used; also writes the lettering on TITLE.TXR
+#   padattract  the attract screen's PRESS ENTER KEY likewise; also writes the lettering on ADV_TXT.TXR
+#   padgallery  the Replay Gallery's ESC lines and its sort box's F6-F8 as the pad's B, LB and RB; appends a sheet to the four RG files
+#   padoptions  the Options frame's Cursor keys line and the Device Settings page's hint lines as the pad's; appends a sheet to OPTIONS.TXR
 #   replaypad   the pad on the replay's camera controls, from MGInput's annex: RB/LB the camera, left stick turns, RT/LT zoom, Y the meter, X the 2P screen or watched car
 #   titlebg     Title.dll's own .bg row copy, the same stub
 #   texrange    the texture release checks its index; VendorLogo releases -128
 #   replayfree  the replay gallery frees only the replay it loaded, not a race's in MainMode's data
 #   borderless  the window covers its monitor, the present letterboxes (always on)
 #   mix         MGSound: every buffer's dB range remapped to -43..-8, the streams on the same curve
-#   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT
+#   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT; the shipped save's sliders too, while nothing has been saved to it
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
 #   dcmusic     the Dreamcast's extra tracks from music\track15.wav on: the replays' set (15, 11, 16, 17), the ten-year ending's track 18, the set as course choices 7 to 10; needs music
@@ -316,6 +335,7 @@ RESTORE_RELOCS = 10
 #   nogeneric   HID devices of no kind (LED controllers, spare collections) left out of MGInput's device list; needs dinput8
 #   lobby       the connection screen's rows INTERNET, DIRECT IP and LAN, and the art for them
 #   netplay     MGNetWk.dll replaced by the UDP build of net/, the directory for INTERNET
+#   starting    the team room says the race is starting while the setup gathers the players
 #   clearsize   the mode setter's clear given the height as well (Australian)
 #   win9x       the Windows 9x check returns "fine" (Australian)
 #   sfxlevel    the effects at 100% of their ceiling, as the other builds (Australian exe)
@@ -326,7 +346,8 @@ RESTORE_RELOCS = 10
 # calls on +debugstr, frametrace logs every drawn frame to logs\\frames.log,
 # gltrace MGameGL's viewports and angles, d3dtrace and d3dtrace2d
 # MGameD3D's draws (all, or the 2D lists, strips and fans), d3dinit
-# every step of MGameD3D's bring-up with its HRESULT to logs\\d3dinit.log.
+# every step of MGameD3D's bring-up with its HRESULT to logs\\d3dinit.log,
+# netlog the netplay DLL's journal to logs\\sr2-net.log (SR2.CFG Log = 1).
 
 # The first bytes of the five volume entry points voltrace hooks.
 VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec80000000'), bytes.fromhex('568b3185f6'),
@@ -334,13 +355,12 @@ VOLTRACE_HEADS = (bytes.fromhex('558bec83ec0c'), bytes.fromhex('558bec81ec800000
 
 
 # The DirectInput interface ids MGInput.dll's two QueryInterface calls
-# name, and DirectInput 8's in their place; the DirectInputCreateA thunk
-# the create site calls, per build (its RVA, for the site's call operand).
+# name, and DirectInput 8's in their place. The DirectInputCreateA thunk
+# the create site calls is in each build's row.
 IID_IDIRECTINPUT2A = bytes.fromhex('62e64459 8aaa cf11 bfc7 444553540000'.replace(' ', ''))
 IID_IDIRECTINPUT8A = bytes.fromhex('308079bf 3a48 a24d aa99 5d64ed369700'.replace(' ', ''))
 IID_IDIRECTINPUTDEVICE2A = bytes.fromhex('82e64459 2ec9 cf11 bfc7 444553540000'.replace(' ', ''))
 IID_IDIRECTINPUTDEVICE8A = bytes.fromhex('8010d454 15dc 3348 a41b 748f73a38179'.replace(' ', ''))
-DI_THUNK = {'European': 0x8a30, 'American': 0x8a30, 'Australian': 0x8550, 'Japanese (MediaKite)': 0x8a30}
 
 
 def devices_sites(offsets, tables):
@@ -383,16 +403,18 @@ RESOLUTION_RELOCS = {0x3416, 0x3427, 0x3703}   # the absolutes in the replaced i
 # picks by the system and the dgvoodoo add-on; the full list otherwise.
 RESOLUTION_TABLES = {
     'full': (((640, 480), (800, 600), (1024, 768), (1280, 960), (1600, 1200),
-              (1280, 800), (1440, 900), (1680, 1050), (1920, 1200), (2560, 1600),
-              (1280, 720), (1600, 900), (1920, 1080), (2560, 1440), (3840, 2160),
-              (2560, 1080), (3440, 1440), (3840, 1080), (5120, 1440)),
-             ((4, 3, 5), (16, 10, 5), (16, 9, 5), (21, 9, 2), (32, 9, 2))),
+              (1280, 800), (1440, 900), (1680, 1050), (1920, 1200), (2560, 1600), (2880, 1800), (3840, 2400),
+              (1280, 720), (1366, 768), (1600, 900), (1920, 1080), (2560, 1440), (3200, 1800), (3840, 2160),
+              (5120, 2880),
+              (2560, 1080), (3440, 1440), (3840, 1600), (5120, 2160),
+              (3840, 1080), (5120, 1440), (7680, 2160)),
+             ((4, 3, 5), (16, 10, 7), (16, 9, 8), (21, 9, 4), (32, 9, 3))),
     'capped': (((640, 480), (800, 600), (1024, 768), (1280, 960), (1600, 1200),
                 (1280, 800), (1440, 900), (1680, 1050), (1920, 1200),
-                (1280, 720), (1600, 900), (1920, 1080),
+                (1280, 720), (1366, 768), (1600, 900), (1920, 1080),
                 (1280, 540), (1720, 720),
                 (1920, 540)),
-               ((4, 3, 5), (16, 10, 4), (16, 9, 3), (21, 9, 2), (32, 9, 1))),
+               ((4, 3, 5), (16, 10, 4), (16, 9, 4), (21, 9, 2), (32, 9, 1))),
 }
 RESOLUTIONS, RESOLUTION_GROUPS = RESOLUTION_TABLES['full']   # (aspect, sizes), in the list's order; resolution.asm names the groups
 
@@ -405,12 +427,12 @@ def select_resolutions(which):
 
 def resolution_groups(table=None):
     """(first entry, entries) per aspect group; the sizes checked against
-    the aspect loosely (the 21:9 sizes are 64:27 and 43:18)."""
+    the aspect loosely (the 21:9 sizes are 64:27, 43:18 and 12:5)."""
     sizes, groups = table or (RESOLUTIONS, RESOLUTION_GROUPS)
     out, start = [], 0
     for w, h, n in groups:
         for rw, rh in sizes[start:start + n]:
-            if abs(rw / rh - w / h) > 0.06:
+            if abs(rw / rh - w / h) > 0.07:
                 raise ValueError('%dx%d is not %d:%d' % (rw, rh, w, h))
         out.append((start, n))
         start += n
@@ -430,13 +452,16 @@ TITLEROW_SITE, TITLEROW_LEN = 0x8ba, 22  # Title.dll, the row copy at 0x100014ba
 PRESENT_SITE = 0x4d7b                   # MGameD3D, the windowed present's first instruction
 SIZE_SITE = 0x26be                      # MGameD3D, `call [__imp__MoveWindow]` in the windowed init
 TEXRANGE_SITE = 0x4430                  # MGameD3D, the texture release's first ten bytes
+DEPTH_SITE = 0x2550                     # MGameD3D, the init struct's depth copied to `0x10012404`
 SURFMEM_SITE = 0x7cb2                   # MGameD3D, the offscreen surface create's video-memory caps
 # MGameD3D, every `mov [0x10011fc4], eax` (the last-HRESULT slot) in the
 # bring-up tree, by function: Init 0x10002090 and its 0x10001fd0, the
 # step list 0x10002160, the fullscreen extras 0x100022e0, the DirectDraw
 # object 0x10002d80/0x10002df0/0x100024b0/0x10002eb0, the cooperative
 # level and window 0x100025d0, the surfaces 0x10003320/0x10003500/
-# 0x10003520, the device 0x10003840, the textures 0x100071e0, 0x10005fe0.
+# 0x10003520, the device 0x10003840, the textures 0x100071e0. Not the
+# two in the viewport setter 0x10005fe0 (0x6114, 0x612f): it runs every
+# frame and filled the log's 4096 lines before anything else could.
 D3DINIT_SITES = (0x1a34, 0x1a8c, 0x1ac1, 0x1ada, 0x1af6, 0x1b12, 0x1b2e, 0x1b4f, 0x1b6c, 0x1b9a, 0x1be3, 0x3b6d, 0x3bc7,
                  0x20a3, 0x20c5, 0x20d5, 0x20e5, 0x20ef, 0x1ff5, 0x200b,
                  0x2175, 0x21be, 0x21e6, 0x2200, 0x2210, 0x2220, 0x2234, 0x2244, 0x225c,
@@ -445,10 +470,79 @@ D3DINIT_SITES = (0x1a34, 0x1a8c, 0x1ac1, 0x1ada, 0x1af6, 0x1b12, 0x1b2e, 0x1b4f,
                  0x25f9, 0x262d, 0x26de, 0x270d, 0x2725,
                  0x332d, 0x34ea, 0x3517, 0x3593, 0x35c9, 0x35fb, 0x3626, 0x366e, 0x36c7, 0x3701, 0x3718, 0x373b, 0x3757, 0x3772, 0x377b,
                  0x388c, 0x38a3, 0x38e3, 0x38fe, 0x3919, 0x393e,
-                 0x7222, 0x7253, 0x6038, 0x6114, 0x612f)
+                 0x7222, 0x7253, 0x6038)
 D3DINIT_STORE = bytes.fromhex('a3c41f0110')   # `mov [0x10011fc4], eax`
 REPLAYFREE_SITES = (0x2f65, 0x3b1f)     # ReplayGallery, the gallery's new and its End's free
 SORTPAD_SITE = 0x1b64                   # ReplayGallery, after the list's row update in its browse state; every build
+SORTPAD_EMPTY_SITE = 0x1c6a             # in the state that shows the empty notice, with no replay saved; every build
+# The pad's prompts, a key per screen DLL: the file, its Exec export and
+# the routine that names (an RVA, or None for the build's row's
+# `options` EXEC), and the sheet files the key's art goes on, under
+# BINDATA\\MISC: each stock sheet touched, by the MD5 of the stock sheet
+# or, where a release has it in another language, {MD5: language}. The
+# art's own sheets are appended. asm/padprompts.asm takes the export's
+# place.
+RECORD_SHEET9, RECORD_SHEET13 = '5a43c6275ef0e1e7f34498c5b4fd8824', 'dc0f26b213c47b8e75de246eed73dbe4'
+LINES_EN, LINES_JP = '3d4c6a2876c9622166387d2e9f615812', 'af23d8f91ffe30662edac35a56266ae3'     # the six hint lines, OPTIONS.TXR's sheet 4 and its copies
+GALLERY_SHEET3 = {'9585717f78407152791f14fcd05e8917': 'en', 'd3df886d2b4167d7693551aad5f9a9f1': 'jp'}
+GALLERY_SHEET7 = 'de1ba8875dcab0c3c693f6f845496d02'
+PROMPTS = {
+    'padprompts': ('Record.dll', b'_RecordModeExec@4', 0x3e00,
+                   {'Record.txr': {9: RECORD_SHEET9, 13: RECORD_SHEET13, 14: {LINES_EN: 'en', LINES_JP: 'jp'}},
+                    'Rank10.txr': {9: RECORD_SHEET9}, 'RankAC.txr': {9: RECORD_SHEET9}, 'RankTA.txr': {9: RECORD_SHEET9}}),
+    'padtitle': ('Title.dll', b'_TitleExec@4', 0x12c0, {'TITLE.TXR': {5: '9b6a5a7fba97c8c74046c69499385b33'}}),
+    'padattract': ('AdvTelop.dll', b'_AdvTelopExec@4', 0x11c0, {'ADV_TXT.TXR': {3: '7b13691ff7800403d380766c68602add'}}),
+    'padgallery': ('ReplayGallery.dll', b'_GalleryModeExec@4', 0x4660,
+                   {name: {3: GALLERY_SHEET3, 7: GALLERY_SHEET7, 8: {LINES_EN: 'en', LINES_JP: 'jp'}} for name in ('RG_10.txr', 'RG_AC.txr', 'RG_RG.txr', 'RG_TA.txr')}),
+    'padoptions': ('Options.dll', b'_OptionsModeExec@4', None, {'OPTIONS.TXR': {4: {LINES_EN: 'en', LINES_JP: 'jp'}}}),
+}
+PROMPT_DIR = 'BINDATA\\MISC'
+PROMPT_VARIANT = {}                     # key -> the language of the key's sheet files, as the last patch() read them
+# A bar line's two halves, as the stock bars' sprites hold them: two
+# quads about the sprite's centre, each a strip with HINT_MARGIN white
+# texels at each end; the stock's are 207 wide and overlap at the centre.
+BAR_STOCK_RECTS = ((-207.0, -20.0, 0.0, -3.0), (0.0, -20.0, 207.0, -3.0))
+BAR_STOCK_RECTS_RECORD = ((-206.0, -20.0, 1.0, -3.0), (-1.0, -20.0, 206.0, -3.0))   # Record.dll's overlap by two pixels: the right half covers the left's last two, and a letter there is cut
+# What the gallery's sort box draws from sheet 7 of its files, boxes in
+# texels of 128: the SORT header and the three plates with their keys.
+GALLERY_PLATES = ((2.0, 2.0, 73.1, 15.1), (2.0, 22.0, 73.1, 35.1), (2.0, 41.1, 73.1, 54.0), (2.0, 60.0, 73.1, 73.1))
+GALLERY_PLATE_ART = ((2, 236), (2, 220), (76, 220), (150, 220))               # where the pad's header and plates are on the appended sheet
+GALLERY_PLATE_SHEET, GALLERY_PAD_SHEET = 7, 9                                  # the stock plates' sheet, 128 a side, and the appended one
+GALLERY_HANDLES = 0xbe208                 # ReplayGallery.dll: the RG file's texture handles, a dword a sheet, that init writes over the pages' sheet numbers
+PROMPT_INDIRECT = 0x80000000              # a table row whose RVA has this bit: the values are RVAs of the dwords to copy
+GALLERY_BACK_BOXES = ((1.0, 20.2, 208.1, 37.1), (48.1, 58.1, 255.2, 75.0))      # sheet 3: the foot's line, halves
+GALLERY_POPUP_BOXES = (((1.0, 58.1, 208.1, 75.0), (48.1, 191.2, 255.2, 208.1)),  # sheet 8: the popups' two lines, halves: the ESC lines
+                       ((1.0, 77.1, 208.1, 94.2), (48.1, 210.2, 255.2, 227.1)))
+RECORD_BAR_BOXES = ((1.0, 1.0, 208.1, 18.2), (48.1, 134.1, 255.2, 151.0))       # Record.txr sheet 14: the Records page's line, halves
+OPTIONS_BAR_BOXES = ((1.0, 20.2, 208.1, 37.1), (48.1, 153.1, 255.2, 170.2))     # OPTIONS.TXR sheet 4: the frame's line, halves; two pages have them a fifth of a texel off
+REPLAY_BOX = (2.0, 190.2, 168.2, 213.2)                                        # sheet 9 of the Rank files and Record.txr: PRESS ENTER KEY for REPLAY
+PADPROMPTS_LABELS = (0xc46f4, 0xcfadc, 0xd4ebc, 0xda1e4, 0xdf5c4)
+PADPROMPTS_SHEET = 13
+PADPROMPTS_U = (0.075, 0.465)
+PADPROMPTS_KEYS = ((0.075, 0.137), (0.141, 0.204))     # v0 and v1: PAGE UP KEY, PAGE DOWN KEY
+PADPROMPTS_PAD = ((0.208, 0.270), (0.274, 0.337))      # LB BUTTON, RB BUTTON
+# Title.dll, RVAs: the prompt's sprite (its width and height at +0xc),
+# its two quads (a rectangle about the sprite's centre at +4) and their
+# UV entries (the box at +4), with what each holds: PRESS ENTER KEY,
+# 356 by 34 from two strips of sheet 5.
+PADTITLE_SPRITE = (0x973a0, (356.0, 34.0))
+PADTITLE_QUADS = ((0x97338, (-178.0, -17.0, 37.0, 17.0)), (0x9736c, (37.0, -17.0, 178.0, 17.0)))
+PADTITLE_UVS = ((0x971b0, (0.016, 0.012, 0.856, 0.145)), (0x971c4, (0.438, 0.165, 0.989, 0.297)))
+PADTITLE_ROW = 1                        # the art's first row, in the stock sprite's 34
+# AdvTelop.dll, RVAs: the attract screen's prompt, PRESS ENTER KEY: its
+# sprite (249 by 17 at +0xc), its one quad (a UV entry's index, then a
+# rectangle from the sprite's corner) and entry 18 of its page, which
+# the quad names, a box of sheet 0. The pad's lettering is on sheet 3,
+# so the quad is switched to entry 111, one of the page's three with no
+# texture and no quad, which the patcher fills in.
+PADATTRACT_SPRITE = (0x96358, (249.0, 17.0))
+PADATTRACT_QUAD = (0x96320, 18, (0.0, 0.0, 249.0, 17.0))
+PADATTRACT_SPARE = (0x95a8c, 111)
+ATTRACT_ON = 3                          # the sheet of ADV_TXT.TXR the pad's lettering goes on
+PADATTRACT_RELEASE = (0x112d, bytes.fromhex('6a5d50ff512c'))     # AdvTelopInit's release of sheet 3 (push 0x5d; push eax; call [ecx+0x2c]) for the telop types that do not draw it
+PADATTRACT_CENTRE = 124.5               # the stock lettering's middle, from the quad's left edge
+PADATTRACT_BOX = (1.1, 18.0)            # the art's rows the box takes, as the stock box takes rows 218.1 to 235.0 of the 217 to 235 its image has
+UV_INSET = 0.1                          # texels: a box starts this far into its first texel, as the stock ones do
 # HIGHLOW entries inside the replaced present (absolute addresses, now dead
 # code) and the one under the MoveWindow call.
 FULLWIN_RELOCS = {0x4d7d, 0x4d8a, 0x4d8f, 0x4d95, 0x4da3, 0x4db1, 0x4db6, 0x4dc4, 0x4dd3, 0x26c0}
@@ -480,20 +574,30 @@ def wide_sites(offsets, addresses, american):
 LOBBY_ROWS = (82, 134, 186)             # the three rows' y, at the stock pitch, centred in the panel (stock 54, 106, 158, 210)
 
 
-def lobby_sites(anchors, surfaces):
+def lobby_sites(anchors, surfaces, listopen):
     """The connection screen as three rows - INTERNET, DIRECT IP, LAN - in
     place of IPX, TCP/IP, MODEM, SERIAL: the drawer (0x43bd30) blits the
     rows at LOBBY_ROWS and not the fourth, the cursor wraps in 0..2, the
-    confirm never picks the modem screen, the latency after the connection
-    is the DLL's for every type, and SHOW TEAMS on row 2 searches at once
-    as row 0 does. The anchors are the drawer, the cursor wrap, the confirm,
-    the latency test and the SHOW TEAMS jump table, as file offsets, then
-    the table's stock and wanted entries; surfaces the two tables the
-    drawer indexes. Row 1's y does not fit the stock `push imm8`, so that
-    blit is re-encoded in place: its `add esi,4` dropped for a `push imm32`,
-    the next blit reading `[esi+8]`."""
+    confirm never picks the modem screen and instead sets the flag the
+    team list searches on when it opens (0x4edccc, which the IP entry set
+    for its search) for every row but DIRECT IP, the latency after the
+    connection is the DLL's for every type, and SEARCH (the SHOW TEAMS
+    button relettered) on row 2 searches as row 0 does; the IP entry's
+    OK goes through asm/ipcheck.asm and the entries are capped by
+    asm/entrycap.asm (apply_entries). The anchors are
+    the drawer, the cursor wrap, the confirm, the latency test and the
+    SHOW TEAMS jump table, as file offsets,
+    then the table's stock and wanted entries; surfaces the two tables the
+    drawer indexes; listopen the next-screen slot, the modem screen and
+    the flag. Row 1's y does not fit the stock `push imm8`, so that blit
+    is re-encoded in place: its `add esi,4` dropped for a `push imm32`, the
+    next blit reading `[esi+8]`."""
     drawer, wrap, confirm, latency, table, stock, wanted = anchors
     handles, surface = surfaces
+    nextscreen, modem, flag = listopen
+    # cmp eax,2; mov [next],modem; je +10 -> cmp eax,1; je +10; mov dword [flag],1
+    modemcheck = bytes.fromhex('83f802c705') + struct.pack('<II', nextscreen, modem) + bytes.fromhex('740a')
+    searchflag = bytes.fromhex('83f801740ac705') + struct.pack('<II', flag, 1)
     blit = (bytes.fromhex('8b4604') + bytes.fromhex('8b14c5') + struct.pack('<I', handles + 4)
             + bytes.fromhex('8b0cc5') + struct.pack('<I', handles) + bytes.fromhex('8b0485') + struct.pack('<I', surface))
     tail = bytes.fromhex('895424108d542404526a6a6a00894c24188b0850ff511c')
@@ -508,7 +612,7 @@ def lobby_sites(anchors, surfaces):
         (wrap + 0x8, b'\x03', b'\x02'),
         (wrap + 0x28, b'\x03', b'\x02'),
         (wrap + 0x36, b'\x03', b'\x02'),
-        (confirm + 0x12, bytes.fromhex('740a'), bytes.fromhex('9090')),
+        (confirm + 0x5, modemcheck, searchflag),
         (latency + 0x7, bytes.fromhex('7513'), bytes.fromhex('eb13')),
         (table + 8, struct.pack('<I', stock), struct.pack('<I', wanted)),
     )
@@ -547,6 +651,9 @@ def patches(build):
              bytes.fromhex('8d8608010000508d460450ff15') + slot('lstrcpyA') + bytes.fromhex('e9cf000000'))), None),
         'nocardwarn': (EXE, ((site['cardwarn'], b'\x6a\x05', b'\xeb\x27'),), None),
         'altab': (EXE, ((site['activate'], b'\xe8', None),), 'apply_activate'),
+        'starting': (EXE, tuple((off, b'\xe8', None) for off in site['starting'])
+                     + tuple((off, bytes.fromhex('50ff9180000000'), None) for off in site['startpresent'])
+                     + ((site['startload'], bytes.fromhex('83ec20538b5c2438'), None),), 'apply_starting'),
         'zdetach': ('MUSASHI\\MGameD3D.dll', tuple(
             (off, bytes.fromhex('ff5120'), bytes.fromhex('83c40c'))
             for off in (0x2930, 0x2b31, 0x2d11, 0x37f4)), None),
@@ -559,11 +666,12 @@ def patches(build):
         'textcolor': (EXE, tuple(
             (off, bytes.fromhex(op) + slot('SetTextColor'), None)
             for off, op in row['textcolor']), 'apply_textcolor'),
-        'windowed': (EXE, (
-            (site['flag'], b'\x01', b'\x00'),
-            (site['bgrow'], bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None)), 'apply_windowed'),
+        'windowed': (EXE, ((site['flag'], b'\x01', b'\x00'),), None),
+        'bgrow': (EXE, ((site['bgrow'], bytes.fromhex('8bc88be9c1e9028bf38bfaf3a58bcd83e103f3a4'), None),), 'apply_bgrow'),
         'anydepth': ('MUSASHI\\MGameD3D.dll', ((0x271e, b'\x74', b'\xeb'),), None),
         'anymode': ('MUSASHI\\MGameD3D.dll', ((0x2ef8, bytes.fromhex('05400080'), bytes(4)),), None),
+        'depth32': ('MUSASHI\\MGameD3D.dll', ((DEPTH_SITE, bytes.fromhex('8b460ca304240110'),
+                                                bytes.fromhex('6a2058a304240110')),), None),
         'altenter': (EXE, ((site['altenter'], b'\xe8', None),), 'apply_altenter'),
         'hudlast': (EXE, (
             (site['hudlast'][0], b'\xe8', None),
@@ -573,16 +681,27 @@ def patches(build):
             (site['loadhold'][0], b'\x89\x0d' + struct.pack('<I', row['addresses']['LOADPIC']), None),
             (site['loadhold'][1], b'\x8b\x0d' + struct.pack('<I', row['addresses']['LOADPIC']), None)), 'apply_loadhold'),
         'padmenu': (EXE, ((site['padmenu'], b'\x89\x0d' + struct.pack('<I', row['addresses']['PADLEVEL']), None),), 'apply_padmenu'),
+        'tabmenu': (EXE, ((site['tabmenu'][0], b'\x8b\x15' + struct.pack('<I', row['addresses']['ROOMFLAG']), None),
+                          (site['tabmenu'][1], b'\xbe' + struct.pack('<I', row['addresses']['CHATOBJS']), None),
+                          (site['tabmenu'][2], b'\xa1' + struct.pack('<I', row['addresses']['POLLBASE']), None),
+                          (site['tabmenu'][3], b'\xe8', None),
+                          (site['tabmenu'][4], b'\xbe' + struct.pack('<I', row['addresses']['ROOMBG']), None)), 'apply_tabmenu'),
         'replaypad': (EXE, ((site['replaypad'], bytes.fromhex('8b56088b06'), None),), 'apply_replaypad'),
-        'pagepad': (EXE, ((site['pagepad'], bytes.fromhex('8b4424103bc5' if build == 'Australian' else '8b44241085c0'), None),),
+        'pagepad': (EXE, ((site['pagepad'][0], bytes.fromhex(site['pagepad'][1]), None),),
                     'apply_pagepad'),
+        'erasekey': (EXE, ((site['erasekey'], struct.pack('<i', -1), struct.pack('<i', 0x0e)),), None),
         'titlebg': ('Title.dll', ((TITLEROW_SITE, bytes.fromhex('8bc88bf38be98bfac1e902f3a58bcd03d883e103f3a4'), None),),
                     'apply_titlebg'),
         'texrange': ('MUSASHI\\MGameD3D.dll', ((TEXRANGE_SITE, bytes.fromhex('a180250110568b742408'), None),), 'apply_texrange'),
         'd3dinit': ('MUSASHI\\MGameD3D.dll', tuple((off, D3DINIT_STORE, None) for off in D3DINIT_SITES), 'apply_d3dinit'),
         'replayfree': ('ReplayGallery.dll', ((REPLAYFREE_SITES[0], bytes.fromhex('e881820000'), None),
                                              (REPLAYFREE_SITES[1], bytes.fromhex('50e8bb760000'), None)), 'apply_replayfree'),
-        'sortpad': ('ReplayGallery.dll', ((SORTPAD_SITE, bytes.fromhex('8b4e5081e7ff000000'), None),), 'apply_sortpad'),
+        'sortpad': ('ReplayGallery.dll', ((SORTPAD_SITE, bytes.fromhex('8b4e5081e7ff000000'), None),
+                                          (SORTPAD_EMPTY_SITE, bytes.fromhex('6a008bf88b11'), None)), 'apply_sortpad'),
+        'padprompts': ('Record.dll', (), 'apply_padprompts'),
+        'padtitle': ('Title.dll', (), 'apply_padtitle'),
+        'padattract': ('AdvTelop.dll', (), 'apply_padattract'),
+        'padgallery': ('ReplayGallery.dll', (), 'apply_padgallery'),
         'borderless': ('MUSASHI\\MGameD3D.dll', (
             (PRESENT_SITE, bytes.fromhex('8b0df8230110'), None),
             (SIZE_SITE, bytes.fromhex('ff152cf10010'), None)), 'apply_fullwin'),
@@ -606,9 +725,6 @@ def patches(build):
             (WIDE2D_SITES[6], bytes.fromhex('83ec08568b74241457'), None),
             (WIDE2D_SITES[7], bytes.fromhex('a10c24011083ec10'), None),
             (WIDE2D_SITES[8], bytes.fromhex('33c0b91f0000008d7c2420f3ab'), None)), 'apply_wide2d'),
-        'gltrace': ('MUSASHI\\MGameGL.dll', (), 'apply_gltrace'),
-        'd3dtrace': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace'),
-        'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'widescreen3d': ('MUSASHI\\MGameGL.dll', (
             (WIDEGL_SITES[0], bytes.fromhex('558bec83ec2889742404'), None),
             (WIDEGL_SITES[1], bytes.fromhex('558bec83ec18891c24'), None),
@@ -616,14 +732,27 @@ def patches(build):
             (WIDEGL_SITES[3], bytes.fromhex('8b44240c8b4c2408'), None),
             (WIDEGL_SITES[4], bytes.fromhex('558bec81eca8000000'), None),
             (WIDEGL_SITES[5], bytes.fromhex('8b44240c8b4c2408'), None)), 'apply_widegl'),
+        # the three trace flags after the blobs that carry them: the table's order is the transforms'
+        'gltrace': ('MUSASHI\\MGameGL.dll', (), 'apply_gltrace'),
+        'd3dtrace': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace'),
+        'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'resolution': ('Options.dll', resolution_sites(row['addresses']['OPTSETTINGS']), 'apply_resolution'),
+        'padoptions': ('Options.dll', (), 'apply_padoptions'),          # after devices, whose page's bar it switches
         # after devices, which must place the first Options.dll annex
         'dcoptions': ('Options.dll', ((site['dcoptions'][0], bytes.fromhex('bb07000000'), None),
                                       (site['dcoptions'][1], b'\xe8', None), (site['dcoptions'][2], b'\xe8', None),
                                       (site['dcoptions'][3], bytes.fromhex('c746680d000000'), None),
                                       (site['dcoptions'][4], b'\xe8', None), (site['dcoptions'][5], b'\xe8', None)),
                       'apply_dcoptions'),
-        'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF']), None),
+        'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN'])
+                 + ((site['ipcheck'], bytes.fromhex('3935') + struct.pack('<I', row['addresses']['IPLEN']), None),
+                    (site['entries'][0], bytes.fromhex('8b4424048b4c2408'), None),
+                    (site['entries'][1], bytes.fromhex('3d000800000f83'), None),
+                    (site['entries'][2], bytes.fromhex('3d000800000f83'), None),
+                    (site['chatline'], bytes.fromhex('83c013'), bytes.fromhex('83c053')),
+                    (site['paste'][0], bytes.fromhex('ffd356ff15') + slot('lstrlenA'), None),
+                    (site['paste'][1], bytes.fromhex('ffd356ff15') + slot('lstrlenA'), None),
+                    (site['status'], bytes.fromhex('8d842420020000'), None)), 'apply_entries'),
         'netplay': ('MUSASHI\\MGNetWk.dll', (), 'apply_netplay'),
     }
     if 'clearsize' in site:
@@ -664,28 +793,26 @@ def patches(build):
     # by several routes, so the annex answers the inputs that keep the
     # menus navigable only while the exe's car table (CARS) is empty: the
     # cars exist from a race's setup to its teardown, whatever the mode.
-    # The European and American MGInput.dll hook the device's poll; the
-    # Australian, an older build with static polls, the keyboard poll's
-    # address in the record update's dispatch (a relocated immediate).
-    if len(site['xinput']) == 4:
-        load, save, update, poll = site['xinput']
+    # The device's poll is hooked, or on the older MGInput.dll with its
+    # static polls (a `kbdpoll` site in the row) the keyboard poll's
+    # address in the record update's dispatch, a relocated immediate.
+    load, save, update, poll = site['xinput']
+    if 'kbdpoll' in site:
+        hook = (poll, struct.pack('<I', 0x10000000 + site['kbdpoll']), None)
+        prologue = bytes.fromhex('81ec94020000')
+    else:
         hook = (poll, bytes.fromhex('8b4424048b480c85c9'), None)
         prologue = bytes.fromhex('538b5c240855')
-    else:
-        load, save, update, poll, kbdpoll = site['xinput']
-        hook = (poll, struct.pack('<I', 0x10000000 + kbdpoll), None)
-        prologue = bytes.fromhex('81ec94020000')
     table['xinput'] = ('MUSASHI\\MGInput.dll', (
         (load, bytes.fromhex('81ec0c020000'), None),
         (save, bytes.fromhex('81ec04010000'), None),
         (update, prologue, None),
         hook), 'apply_xinput')
-    # The kind site is the type byte's first read: a seven-byte cmp in the
-    # European and American MGInput.dll, a six-byte load in the Australian.
-    create, kind, iid_di, iid_dev = site['dinput8']
+    # The kind site is the type byte's first read; the row has its bytes.
+    create, thunk, kind, kindbytes, iid_di, iid_dev = site['dinput8']
     table['dinput8'] = ('MUSASHI\\MGInput.dll', (
-        (create, bytes.fromhex('8d4424106a00506800050000') + b'\x53\xe8' + struct.pack('<i', DI_THUNK[build] - (create + 18)), None),
-        (kind, bytes.fromhex('80be6002000003') if kind == 0x39ac else bytes.fromhex('8b9660020000'), None),
+        (create, bytes.fromhex('8d4424106a00506800050000') + b'\x53\xe8' + struct.pack('<i', thunk - (create + 18)), None),
+        (kind, bytes.fromhex(kindbytes), None),
         (iid_di, IID_IDIRECTINPUT2A, IID_IDIRECTINPUT8A),
         (iid_dev, IID_IDIRECTINPUTDEVICE2A, IID_IDIRECTINPUTDEVICE8A)), 'apply_dinput8')
     table['nogeneric'] = ('MUSASHI\\MGInput.dll', ((site['nogeneric'], bytes.fromhex('741c8b0e52'), None),), 'apply_nogeneric')
@@ -693,8 +820,11 @@ def patches(build):
 
 
 # Diagnostics: applied only by name (--patch DIR KEYS), never by default.
+# netlog is Log = 1 in SR2.CFG rather than a patch; the word logs is every
+# one of them but d3dtrace2d, which d3dtrace covers.
 DIAGNOSTIC = ('voltrace', 'frametrace', 'gltrace', 'd3dtrace', 'd3dtrace2d', 'd3dinit')
-BYNAME = DIAGNOSTIC
+BYNAME = DIAGNOSTIC + ('netlog',)
+LOGS = tuple(k for k in BYNAME if k != 'd3dtrace2d')
 
 # Every patch any build has, in table order.
 PATCH_KEYS = tuple(k for k in dict.fromkeys(k for b in BUILDS for k in patches(b)) if k not in BYNAME)
@@ -723,12 +853,12 @@ FEATURES = (
      '\tand stopped at "Failed to initialize. Error code\n'
      '\t80004005" without it.\n'
      'Desktop depth\tAny depth. The windowed path wanted a 16-bit desktop.\n'
-     'Windows version\tAny version. The Australian release wanted 98 or\n'
-     '\tolder.', ('nocardwarn', 'anymode', 'anydepth', 'win9x')),
+     'Windows version\tAny version. The Australian release wanted\n'
+     '\tWindows 9x.', ('nocardwarn', 'anymode', 'anydepth', 'win9x')),
 
     ('crashes', 'Crash fixes',
      'Three reads and frees past the end of something, each of which\n'
-     'Windows ends the process for.\n'
+     'ends the game.\n'
      '\n'
      'Starting up\tThe back buffer detached from its Z-buffer, which\n'
      '\tclosed the game before its window appeared under Proton.\n'
@@ -762,7 +892,7 @@ FEATURES = (
      'ALT+TAB\tEither mode, and the window comes back where it was.\n'
      'The picture\tFitted to the window: 4:3 with black bars until a\n'
      '\twidescreen size is picked.',
-     ('windowed', 'borderless', 'altenter', 'titlebg', 'clearsize')),
+     ('windowed', 'bgrow', 'depth32', 'borderless', 'altenter', 'titlebg', 'clearsize')),
 
     ('lettering', 'Text and panel fixes',
      'Text the game drew and the card did not show, and the panels behind\n'
@@ -778,8 +908,7 @@ FEATURES = (
 
     ('hud', 'Fix the HUD over the scenery',
      'The HUD drawn after the scene rather than in the middle of it. The\n'
-     'tachometer\'s plate blanked the lake behind it on Mountain, and the\n'
-     'ten-year championship\'s credits ran behind the replay\'s frame.',
+     'tachometer\'s plate blanked the lake behind it on Mountain.',
      ('hudlast',)),
 
     ('sound', 'Sound fixes',
@@ -798,7 +927,7 @@ FEATURES = (
      'is.', ('noregistry',)),
 
     ('widescreen', 'Native widescreen',
-     'The game renders at the size you pick, 640x480 to 3840x2160, in\n'
+     'The game renders at the size you pick, 640x480 to 7680x2160, in\n'
      'place of 640x480 stretched to the window.\n'
      '\n'
      'Aspect Ratio\tA row under Options - Graphic Settings: 4:3, 16:10,\n'
@@ -833,21 +962,16 @@ FEATURES = (
      ('dcmusic', 'dcoptions')),
 
     ('gamepad', 'XInput gamepad support',
-     'A modern pad wherever the game takes input, with every control\n'
-     'rebindable from inside it.\n'
+     'A modern pad wherever the game takes input: driving, the menus,\n'
+     'multiplayer and replays.\n'
      '\n'
      'Driving\tStick to steer, triggers for the pedals, Start to pause.\n'
-     'Menus\tD-pad or stick to move, A and Start to choose, B to go\n'
-     '\tback.\n'
-     'Device Settings\tA page of its own under Options: both players\'\n'
-     '\tcontrols, keyboard and pad side by side. Press a key or\n'
-     '\ta button to rebind it.\n'
-     'Multiplayer\tThe team room takes the pad as well, with Back where\n'
-     '\tTAB was.\n'
-     'Replays\tRB and LB change the camera, the left stick turns it,\n'
-     '\tRT and LT zoom, Y the meter, X the switch.\n'
-     'LB and RB\tThe Records pages and the Replay Gallery\'s sort; LB\n'
-     '\theld through choosing a car picks its other colour.', ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'sortpad')),
+     '\tThe pad rumbles on crashes and landings.\n'
+     'Menus\tD-pad or stick to move, A to choose, B to go back. The\n'
+     '\tprompts show the buttons of the device last used.\n'
+     'Device Settings\tA new page under Options that rebinds both players\'\n'
+     '\tkeys and buttons.',
+     ('xinput', 'devices', 'padmenu', 'replaypad', 'pagepad', 'erasekey', 'sortpad', 'padprompts', 'padtitle', 'padattract', 'padgallery', 'padoptions', 'tabmenu')),
 
     ('internet', 'Internet play',
      'Play over the internet, in place of the DirectPlay the game shipped\n'
@@ -855,11 +979,13 @@ FEATURES = (
      'car and course selection and the race are the game\'s own; up to four\n'
      'players, all on the same patcher version.\n'
      '\n'
-     'INTERNET\tSHOW TEAMS, the teams open anywhere.\n'
-     'DIRECT IP\tThe host\'s address, or host:port. The host forwards UDP\n'
-     '\t47626.\n'
+     'INTERNET\tthe teams open anywhere, listed as the screen opens; SEARCH asks again.\n'
+     'DIRECT IP\tSEARCH asks for the host\'s address, or address:port;\n'
+     '\tCREATE hosts. The host forwards UDP 47626.\n'
      'LAN\tThe local network, searched.\n'
-     'In place of\tIPX, TCP/IP, modem and serial.', ('netplay', 'lobby')),
+     'In place of\tIPX, TCP/IP, modem and serial.\n'
+     'START\tthe room says the race is starting while the players are\n'
+     '\tgathered, which can take a few seconds.', ('netplay', 'lobby', 'starting')),
 
     ('loading', 'Loading screens',
      'The stage\'s card - its artwork and its name - held for three\n'
@@ -868,49 +994,53 @@ FEATURES = (
 )
 
 
-# Display order. Essential fixes what is broken on a modern system and
-# has no trade-off, so it is applied without tick boxes; extra is taste,
-# and starts ticked.
+# Display order. None has a trade-off - widescreen stays 4:3 until a size
+# is picked, the pad patch keeps the keyboard - so the window applies
+# them all, without tick boxes; --patch takes a leading minus to leave
+# one out (parse_keys).
 ESSENTIAL = ('nodisc', 'start', 'crashes', 'altab', 'devicescan', 'window',
-             'lettering', 'hud', 'sound', 'settings')
-EXTRA = ('widescreen', 'music', 'dcmusic', 'gamepad', 'internet', 'loading')
+             'lettering', 'hud', 'sound', 'settings',
+             'widescreen', 'music', 'dcmusic', 'gamepad', 'internet', 'loading')
 
 BY_GROUP = {group: (label, tip, keys) for group, label, tip, keys in FEATURES}
 
-# The diagnostics, which are patches applied only by name or by their box
-# in the window. Each writes a log beside the game for a bug report; see
-# docs/DEVELOPING.md.
+# The diagnostics, applied only by name or by their box in the window,
+# for a bug report: a log in logs\ beside the game, or lines to the
+# debugger (OutputDebugString: DebugView on Windows, WINEDEBUG=+debugstr
+# under Wine). See docs/DEVELOPING.md.
 DIAGNOSTIC_INFO = {
     'voltrace': ('Volume calls', 'Reports every call into the five volume '
-                 'routines on +debugstr, for a slider that is not doing what '
-                 'it says. The European release only.'),
+                 'routines to the debugger, for a slider that is not doing '
+                 'what it says. The European and DigiCube/MediaKite '
+                 'releases; the box does nothing on the others.'),
     'frametrace': ('Frame pacing', 'Logs every drawn frame to '
                    'logs\\frames.log: when it started, how long it took and '
                    'what it waited for. For stutter and for a frame rate that '
                    'is not 60.'),
     'gltrace': ('MGameGL draws', 'Reports the 3D renderer\'s viewports, '
-                'angles and projections on +debugstr. For a picture that is '
-                'the wrong shape at a widescreen size.'),
-    'd3dtrace': ('MGameD3D draws', 'Reports every draw MGameD3D makes on '
-                 '+debugstr. The loudest of them; for something drawn in the '
-                 'wrong place.'),
+                'angles and projections to the debugger. For a picture that '
+                'is the wrong shape at a widescreen size.'),
+    'd3dtrace': ('MGameD3D draws', 'Logs every draw MGameD3D makes to '
+                 'logs\\d3dtrace.log. The loudest of them; for something '
+                 'drawn in the wrong place.'),
     'd3dtrace2d': ('MGameD3D 2D draws', 'The same for the 2D lists, strips '
                    'and fans only - the menus, the HUD and the text.'),
     'd3dinit': ('Direct3D bring-up', 'Logs every step of MGameD3D\'s '
                 'start-up with its HRESULT to logs\\d3dinit.log. This is '
                 'the one to send for "Failed to initialize. Error code '
                 '80004005".'),
+    'netlog': ('Network log', 'Logs the connections, joins, refusals and '
+               'drops of online play to logs\\sr2-net.log. For anything '
+               'online, from each machine. Unlike the others this stays as '
+               'set: the box shows what SR2.CFG says.'),
 }
 
 
-def group_keys(groups, extra=()):
-    """The patch keys for a set of feature groups, plus anything named in
-    extra - a diagnostic, the dgvoodoo add-on. Essential groups are in
-    whether they were asked for or not, and a key whose NEEDS is missing
-    goes out with it."""
-    wanted = set(ESSENTIAL) | set(groups)
-    keys = [k for k in PATCH_KEYS
-            if any(k in BY_GROUP[g][2] for g in wanted if g in BY_GROUP)]
+def group_keys(extra=()):
+    """Every feature group's patch keys, plus anything named in extra - a
+    diagnostic, the dgvoodoo add-on. A key whose NEEDS is missing goes
+    out with it."""
+    keys = [k for k in PATCH_KEYS if any(k in BY_GROUP[g][2] for g in ESSENTIAL)]
     keys += [k for k in extra if k not in keys]
     for _ in range(len(NEEDS)):             # a dropped need may drop another
         keys = [k for k in keys if all(need in keys
@@ -922,9 +1052,10 @@ def group_keys(groups, extra=()):
 MCI_CALL_SITES = 11
 MCI_LOAD_SITES = 1
 
-# The section each transform appends, one per patch so any one can be
-# left out. Code that keeps no data of its own is read-only.
-ANNEX = b'.sr2'                         # the one section the patches append to a file, each growing it
+# The one section the patches append to a file, the first transform that
+# needs it making it and the rest growing it, so any patch can be left
+# out. Code that keeps no data of its own is read-only.
+ANNEX = b'.sr2'
 CODE_SECTION = 0x60000020               # IMAGE_SCN_CNT_CODE | MEM_EXECUTE | MEM_READ
 
 
@@ -971,118 +1102,114 @@ ASM_MANIFEST_HEAD = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 MUSIC_BLOB = bytes.fromhex(
     'e991070000e9e8090000e917000000e956060000e95b070000e8000000005b81'
     'eb1e000000c353e8edffffff89de5bc3acaa84c075fa4fc331d2b90a000000f7'
-    'f10430aa88d00430aac3608dbb100c00008db392110000e8d4ffffff8b4508e8'
+    'f10430aa88d00430aac3608dbb140c00008db396110000e8d4ffffff8b4508e8'
     '9c000000c60720478b450ce890000000c60720478b4510e8840000008b751485'
-    'f6741583c6046a03c6072047ade86e000000ff0c2475f1588d83100c000050ff'
-    '93080c000061c3608dbb100c00008db397110000e877ffffff8b83a4110000e8'
-    '3c000000c60720478b83a8110000e82d000000c60720478b83ac110000e81e00'
-    '0000c60720478b835e0d0000e80f0000008d83100c000050ff93080c000061c3'
+    'f6741583c6046a03c6072047ade86e000000ff0c2475f1588d83140c000050ff'
+    '930c0c000061c3608dbb140c00008db39b110000e877ffffff8b83a8110000e8'
+    '3c000000c60720478b83ac110000e82d000000c60720478b83b0110000e81e00'
+    '0000c60720478b83620d0000e80f0000008d83140c000050ff930c0c000061c3'
     '53b90a00000031db31d2f7f1524385c075f6580430aa4b75f9c607005bc35152'
-    '506affffb34e0d0000ff9384100000588b4c24048983a4110000898ba8110000'
-    'ffb3460d0000ff93801000006affffb34a0d0000ff93841000008b83ac110000'
-    '50ffb34e0d0000ff938c100000585a59c389c1c1e9080fb6d16bd23cc1e9080f'
+    '506affffb3520d0000ff9388100000588b4c24048983a8110000898bac110000'
+    'ffb34a0d0000ff93841000006affffb34e0d0000ff93881000008b83b0110000'
+    '50ffb3520d0000ff9390100000585a59c389c1c1e9080fb6d16bd23cc1e9080f'
     'b6f101f269d2e8030000c1e9086bc928505289c831d2b903000000f7f15a01d0'
     '599125ff000000c35389cb31d2b9e8030000f7f16bd24b5089d031d2f7f189c1'
     '58c1e11831d251b93c000000f7f159c1e21009d1c1e00809c109d989c85bc331'
     'd2b94b000000f7f189d1c1e11031d251b93c000000f7f159c1e20809d009c8c3'
-    '8dbb4c0f000003bb040c0000e827feffff8db39f110000e814feffffc3e8f7fd'
-    'ffff6affffb3460d0000ff93841000008b83a411000083f801744783f802744e'
+    '8dbb500f000003bb080c0000e827feffff8db3a3110000e814feffffc3e8f7fd'
+    'ffff6affffb34a0d0000ff93881000008b83a811000083f801744783f802744e'
     '83f803745083f804745483f805745883f806745c83f807746083f808746231c0'
-    '8983ac11000083bb0c0c0000007405e833feffffffb34a0d0000ff9380100000'
+    '8983b011000083bb100c0000007405e833feffffffb34e0d0000ff9384100000'
     'eba0e82b020000e889000000ebd2e854020000ebcbe8a602000031c0ebc2e85c'
     '03000031c0ebb9e86c03000031c0ebb0e8fd01000031c0eba7e8a9020000eba0'
-    'e81203000031c0eb9783bb520d000000753a6a008d83520d0000506a00ff935c'
-    '10000089835e0d000085c075226a01ff9360100000508b83520d0000508b08ff'
-    '511889835e0d000085c0750331c0c3b815010000c3e8afffffff85c00f854301'
-    '00008b83a8110000e8d3feffff6a0068800000006a036a006a0168000000808d'
-    '834c0f000050ff936410000083f8ff0f84110100008983620d00006a0050ff93'
-    '6810000083e82c0f86f900000083e0fc8983660d000089838e0d00006a006a00'
-    '6a2cffb3620d0000ff937010000083f8ff0f84cf0000008d83aa0d0000898396'
-    '0d00006a008d83560d0000508d83860d0000508b83520d0000508b08ff510c89'
-    '835e0d000085c00f85990000006a008d83760d0000508d83720d0000508d836e'
-    '0d0000508d836a0d000050ffb3660d00006a008b83560d0000508b08ff512c89'
-    '835e0d000085c0755dffb36e0d0000ffb36a0d0000e857000000ffb3760d0000'
-    'ffb3720d0000e846000000ffb3760d0000ffb3720d0000ffb36e0d0000ffb36a'
-    '0d00008b83560d0000508b08ff514ce842000000e87e010000c7835a0d000000'
-    '00000031c0c3e847000000b815010000c38b44240885c0741a6a008d8b7a0d00'
-    '005150ff742410ffb3620d0000ff9374100000c208008b83620d000085c07411'
-    '50ff936c100000c783620d000000000000c3e8dfffffff8b83560d000085c074'
-    '1be88d0100008b83560d0000508b08ff5108c783560d000000000000c7835a0d'
-    '000000000000c383bb560d000000744a8b83a811000069c07203000031d2b905'
-    '000000f7f183e0fc3b83660d000072098b83660d000083e804508b83560d0000'
-    '508b08ff513489835e0d000085c0750ae8f200000085c07501c3b815010000c3'
-    '83bb560d000000741de8050100006a008b83560d0000508b08ff5134c7835a0d'
-    '000000000000c331c083bb560d000000746483bb5a0d000001752b8d837e0d00'
-    '00508b83560d0000508b08ff512485c07514f7837e0d00000100000075088b83'
-    '660d0000eb1f6a008d837e0d0000508b83560d0000508b08ff511085c075158b'
-    '837e0d0000b9c8000000f7e1b9d0890000f7f1c331c0c383bb560d000000740b'
-    'ffb3700c0000e801000000c3ff7424048b83560d0000508b08ff513cc2040083'
-    'bb5a0d000001750fe846000000c7835a0d000002000000c383bb5a0d00000275'
-    '05e801000000c3e8abffffff6a006a006a008b83560d0000508b08ff51308983'
-    '5e0d000085c0750ac7835a0d000001000000c368f0d8ffffe88fffffff8b8356'
+    'e81203000031c0eb9783bb560d000000753a6a008d83560d0000506a00ff9360'
+    '1000008983620d000085c075226a01ff9364100000508b83560d0000508b08ff'
+    '51188983620d000085c0750331c0c3b815010000c3e8afffffff85c00f854301'
+    '00008b83ac110000e8d3feffff6a0068800000006a036a006a0168000000808d'
+    '83500f000050ff936810000083f8ff0f84110100008983660d00006a0050ff93'
+    '6c10000083e82c0f86f900000083e0fc89836a0d00008983920d00006a006a00'
+    '6a2cffb3660d0000ff937410000083f8ff0f84cf0000008d83ae0d000089839a'
+    '0d00006a008d835a0d0000508d838a0d0000508b83560d0000508b08ff510c89'
+    '83620d000085c00f85990000006a008d837a0d0000508d83760d0000508d8372'
+    '0d0000508d836e0d000050ffb36a0d00006a008b835a0d0000508b08ff512c89'
+    '83620d000085c0755dffb3720d0000ffb36e0d0000e857000000ffb37a0d0000'
+    'ffb3760d0000e846000000ffb37a0d0000ffb3760d0000ffb3720d0000ffb36e'
+    '0d00008b835a0d0000508b08ff514ce842000000e87e010000c7835e0d000000'
+    '00000031c0c3e847000000b815010000c38b44240885c0741a6a008d8b7e0d00'
+    '005150ff742410ffb3660d0000ff9378100000c208008b83660d000085c07411'
+    '50ff9370100000c783660d000000000000c3e8dfffffff8b835a0d000085c074'
+    '1be88d0100008b835a0d0000508b08ff5108c7835a0d000000000000c7835e0d'
+    '000000000000c383bb5a0d000000744a8b83ac11000069c07203000031d2b905'
+    '000000f7f183e0fc3b836a0d000072098b836a0d000083e804508b835a0d0000'
+    '508b08ff51348983620d000085c0750ae8f200000085c07501c3b815010000c3'
+    '83bb5a0d000000741de8050100006a008b835a0d0000508b08ff5134c7835e0d'
+    '000000000000c331c083bb5a0d000000746483bb5e0d000001752b8d83820d00'
+    '00508b835a0d0000508b08ff512485c07514f783820d00000100000075088b83'
+    '6a0d0000eb1f6a008d83820d0000508b835a0d0000508b08ff511085c075158b'
+    '83820d0000b9c8000000f7e1b9d0890000f7f1c331c0c383bb5a0d000000740b'
+    'ffb3740c0000e801000000c3ff7424048b835a0d0000508b08ff513cc2040083'
+    'bb5e0d000001750fe846000000c7835e0d000002000000c383bb5e0d00000275'
+    '05e801000000c3e8abffffff6a006a006a008b835a0d0000508b08ff51308983'
+    '620d000085c0750ac7835e0d000001000000c368f0d8ffffe88fffffff8b835a'
     '0d0000508b08ff5148c353e8a9f9ffff8b44240c85c00f84f200000083780800'
     '0f84e80000008b400c3d102700007605b8102700008b542410f7c24000000075'
     '26f7c200000080741385c00f849500000031d2b984030000f7f1eb143d102700'
     '00743e89c1eb4c31d2b94c040000f7f183f8097605b809000000b9f0d8ffff85'
-    'c0740c69c05e0100008d88bef1ffff898b740c0000c783780c000000000000eb'
-    '54c783780c0000010000008b8b740c0000eb4283bb780c000000745289c831d2'
-    'b964000000f7f10fbf84437c0c00008b8b740c000001c181f9f0d8ffff7d16b9'
-    'f0d8ffffeb0fc783780c000000000000b9f0d8ffff898b700c000083bbf40b00'
+    'c0740c69c05e0100008d88bef1ffff898b780c0000c7837c0c000000000000eb'
+    '54c7837c0c0000010000008b8b780c0000eb4283bb7c0c000000745289c831d2'
+    'b964000000f7f10fbf8443800c00008b8b780c000001c181f9f0d8ffff7d16b9'
+    'f0d8ffffeb0fc7837c0c000000000000b9f0d8ffff898b740c000083bbf80b00'
     '0000740ab808000000e8b0f9ffff31c05bc20c008b44240885c07415c7400802'
     '000000c7400c10270000c740101027000031c0c20c005589e5535657e878f8ff'
-    'ff83bb0c0c0000007405e89bf8ffff8b450c3d03080000753e83bbf40b000000'
+    'ff83bb100c0000007405e89bf8ffff8b450c3d03080000753e83bbf80b000000'
     '0f84200200008b4d1081e10030000081f9003000000f850b0200008b5514817a'
     '08040200000f85fb010000c74204cefa0000e9e6010000817d08cefa00000f85'
     'e20100003d0408000074373d0608000074763d070800000f84f40000003d0808'
     '000074373d09080000743f3d5508000074473d140800000f8417010000e99b01'
-    '0000b806000000e889010000c783fc0b000000000000e982010000b803000000'
+    '0000b806000000e889010000c783000c000000000000e982010000b803000000'
     'e870010000e973010000b804000000e861010000e964010000b805000000e852'
-    '010000e9550100008b8b000c00008b83f80b0000f7451004000000740b8b5514'
-    '8b4204e8c9f8ffffc783000c00000000000085c074513b83f40b0000774983bc'
-    '83bc0d000000743f8983f80b0000c783fc0b0000000000005189c1b801000000'
-    'e839f8ffff5985c00f85f1000000c783fc0b000001000000b802000000e81cf8'
+    '010000e9550100008b8b040c00008b83fc0b0000f7451004000000740b8b5514'
+    '8b4204e8c9f8ffffc783040c00000000000085c074513b83f80b0000774983bc'
+    '83c00d000000743f8983fc0b0000c783000c0000000000005189c1b801000000'
+    'e839f8ffff5985c00f85f1000000c783000c000001000000b802000000e81cf8'
     'ffffe9d8000000b812010000e9ce000000f74510080000000f84bf0000008b55'
-    '148b4204e848f8ffff898b000c000083bbfc0b00000074113b83f80b000074b8'
-    '403b83f80b000074af8983f80b0000e9890000008b5514c7420400000000f745'
-    '100001000074768b420883f803740c83f801741283f8027432eb628b83f40b00'
-    '00894204eb57f7451010000000744e8b420c83f86377468b8483bc0d0000e83c'
-    'f8ffff8b5514894204eb3231c083bbfc0b000000740cb80700000031c9e85cf7'
-    'ffff8b8bf80b0000e8dbf7ffff8b5514894204eb0831c9e842f7ffffc331c05f'
-    '5e5b5dc210008b83e2e2e2e25f5e5b5dffe0837c2408010f85e201000060e816'
-    'f6ffff83bbf00b0000000f85ce010000c783f00b0000010000008db390100000'
-    '8dbb5c100000803e00743656ff93e3e3e3e385c00f84a401000089c5ac84c075'
-    'fb803e0074185655ff93e4e4e4e485c00f8488010000abac84c075fbebe346eb'
-    'c58d83671100005055ff93e4e4e4e48983080c000068040100008d834c0f0000'
-    '506a00ff93e5e5e5e585c00f844d0100008dbb4c0f000001c74f803f5c75fa47'
-    '578db386110000e884f5ffff6a0068800000006a036a006a0168000000808d83'
-    '4c0f000050ff936410000083f8ff741a50ff936c10000083bb080c000000740a'
-    'c7830c0c0000010000005f8db37a110000e83af5ffff29df81ef4c0f000089bb'
-    '040c0000bd0200000089e8e8f0f6ffff6a0068800000006a036a006a01680000'
-    '00808d834c0f000050ff936410000083f8ff742f89c76a0057ff936810000050'
-    '57ff936c1000005883e82c761631d2b930090000f7f18984abbc0d000089abf4'
-    '0b00004583fd6376a06a006a006a00ff938810000089834e0d000085c074556a'
-    '006a006a006a00ff937c1000008983460d00006a006a006a006a00ff937c1000'
-    '0089834a0d00006a006a006a008d831d020000506a006a00ff937810000085c0'
-    '741283bb460d000000740983bb4a0d000000750ac783f40b0000000000006153'
-    'e834f4ffff8d83e1e1e1e15bffe0909000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '00000000000000000000000000000000000000000000000000000000f0d860f0'
-    'baf21af414f5d6f574f6faf66ef7d4f730f883f8cef814f954f990f9c8f9fdf9'
-    '2ffa5efa8afab4faddfa03fb28fb4cfb6efb8ffbaefbcdfbeafb07fc22fc3dfc'
-    '57fc70fc89fca0fcb8fccefce4fcfafc0efd23fd37fd4afd5efd70fd82fd94fd'
-    'a6fdb7fdc8fdd9fde9fdf9fd08fe18fe27fe36fe44fe53fe61fe6ffe7cfe8afe'
-    '97fea4feb1febefecafed7fee3feeffefafe06ff12ff1dff28ff33ff3eff49ff'
-    '54ff5eff69ff73ff7dff87ff91ff9bffa4ffaeffb8ffc1ffcaffd3ffddffe6ff'
-    'eefff7ff00000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000002400000088800100000000000000000000000000000000000000'
-    '000000000000000000000100020044ac000010b1020004001000000000000000'
+    '148b4204e848f8ffff898b040c000083bb000c00000074113b83fc0b000074b8'
+    '403b83fc0b000074af8983fc0b0000e9890000008b5514c7420400000000f745'
+    '100001000074768b420883f803740c83f801741283f8027432eb628b83f80b00'
+    '00894204eb57f7451010000000744e8b420c83f86377468b8483c00d0000e83c'
+    'f8ffff8b5514894204eb3231c083bb000c000000740cb80700000031c9e85cf7'
+    'ffff8b8bfc0b0000e8dbf7ffff8b5514894204eb0831c9e842f7ffffc331c05f'
+    '5e5b5dc210008b83e2e2e2e25f5e5b5dffe0837c2408010f85e601000060e816'
+    'f6ffff83bbf40b0000000f85d2010000c783f40b0000010000008db394100000'
+    '8dbb60100000803e00743656ff93e3e3e3e385c00f84a801000089c5ac84c075'
+    'fb803e0074185655ff93e4e4e4e485c00f848c010000abac84c075fbebe346eb'
+    'c58d836b1100005055ff93e4e4e4e489830c0c000068040100008d83500f0000'
+    '506a00ff93e5e5e5e585c00f84510100008dbb500f000001c74f803f5c75fa47'
+    '578db38a110000e884f5ffff6a0068800000006a036a006a0168000000808d83'
+    '500f000050ff936810000083f8ff741a50ff937010000083bb0c0c000000740a'
+    'c783100c0000010000005f8db37e110000e83af5ffff29df81ef500f000089bb'
+    '080c0000bd0200000089e8e8f0f6ffff6a0068800000006a036a006a01680000'
+    '00808d83500f000050ff936810000083f8ff742f89c76a0057ff936c10000050'
+    '57ff93701000005883e82c761631d2b930090000f7f18984abc00d000089abf8'
+    '0b00004583fd6376a06a006a006a00ff938c1000008983520d000085c074596a'
+    '006a006a006a00ff938010000089834a0d00006a006a006a006a00ff93801000'
+    '0089834e0d000083bb4a0d000000742885c074246a006a006a008d831d020000'
+    '506a006a00ff937c10000085c0740950ff9370100000eb0ac783f80b00000000'
+    '00006153e830f4ffff8d83e1e1e1e15bffe09090000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
+    'f0d860f0baf21af414f5d6f574f6faf66ef7d4f730f883f8cef814f954f990f9'
+    'c8f9fdf92ffa5efa8afab4faddfa03fb28fb4cfb6efb8ffbaefbcdfbeafb07fc'
+    '22fc3dfc57fc70fc89fca0fcb8fccefce4fcfafc0efd23fd37fd4afd5efd70fd'
+    '82fd94fda6fdb7fdc8fdd9fde9fdf9fd08fe18fe27fe36fe44fe53fe61fe6ffe'
+    '7cfe8afe97fea4feb1febefecafed7fee3feeffefafe06ff12ff1dff28ff33ff'
+    '3eff49ff54ff5eff69ff73ff7dff87ff91ff9bffa4ffaeffb8ffc1ffcaffd3ff'
+    'ddffe6ffeefff7ff000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000024000000888001000000000000000000000000000000'
+    '00000000000000000000000000000100020044ac000010b10200040010000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -1101,16 +1228,20 @@ MUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000064736f756e642e646c6c004469726563'
-    '74536f756e6443726561746500007573657233322e646c6c004765744465736b'
-    '746f7057696e646f7700006b65726e656c33322e646c6c004372656174654669'
-    '6c65410047657446696c6553697a6500436c6f736548616e646c650053657446'
-    '696c65506f696e746572005265616446696c6500437265617465546872656164'
-    '004372656174654576656e7441005365744576656e740057616974466f725369'
-    '6e676c654f626a656374004372656174654d75746578410052656c656173654d'
-    '757465780000004f75747075744465627567537472696e6741006d757369635c'
-    '747261636b006d757369635c7472616365007372322000737232206f7020002e'
-    '77617600000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000064736f756e642e646c6c0044'
+    '6972656374536f756e6443726561746500007573657233322e646c6c00476574'
+    '4465736b746f7057696e646f7700006b65726e656c33322e646c6c0043726561'
+    '746546696c65410047657446696c6553697a6500436c6f736548616e646c6500'
+    '53657446696c65506f696e746572005265616446696c65004372656174655468'
+    '72656164004372656174654576656e7441005365744576656e74005761697446'
+    '6f7253696e676c654f626a656374004372656174654d75746578410052656c65'
+    '6173654d757465780000004f75747075744465627567537472696e6741006d75'
+    '7369635c747261636b006d757369635c7472616365007372322000737232206f'
+    '7020002e77617600000000000000000000000000'
 )
 ACTIVATE_BLOB = bytes.fromhex(
     '51a1eaeaeaea85c074068b1050ff52405968ebebebebc3'
@@ -1123,161 +1254,187 @@ TEXTCOLOR_BLOB = bytes.fromhex(
     '81642408ffffff00ff25f2f2f2f2'
 )
 BGROW_BLOB = bytes.fromhex(
-    'bef1f1f1f189c1d1e98b6c241c8b6d048b6d08394e0c0f8551060000396e080f'
-    '8548060000837e5420741589c189cdc1e90289de89d7f3a589e983e103f3a4c3'
-    '50535289c1d1e9741389de89d70fb70683c602e8d2050000ab4975f15a5b58c3'
-    'a1eaeaeaea85c00f842d0300008b008b88b40000002dd4f5000029c181f92051'
-    '00000f85120300006681384d5a0f85070300008b483c8b4c085001c183e9088d'
-    '9000700100813a4247424c7509817a044f434b00740c83c20439ca76e8e9d802'
-    '000083c2088995100100008b3285f60f84c50200008b45082b451cd1e80faf45'
-    '0031d2f7751c8985140100008b450c2b4520d1e80faf450431d2f77520898518'
-    '0100008b45082b451c0faf450031d28b4d08d1e1f7f183c0023b450076038b45'
-    '008985300100008b451cc1e01031d2f775088985340100008b45000385140100'
-    '0003851401000089851c0100003d800800000f87420200008b45040385180100'
-    '000385180100008985200100003d580200000f87220200008dbd90000000b91f'
-    '00000031c0f3abc785900000007c0000008b066a006a018d9590000000526a00'
-    '56ff506485c00f85ee0100008b85a00000008985240100008b85e40000008945'
-    '188b859c00000085c0740c39851c0100000f87b80100008b859800000085c074'
-    '0c3985200100000f87a20100008b851c0100000faf4518c1e8033b8524010000'
-    '0f87890100008b85180100000faf85240100000385b40000008985280100008b'
-    '4500c1e8067505b80100000089454cc7852c010000000000008b852c0100000f'
-    'af45008d1c00035d348bbd2801000083bd140100000074338b8d3001000031c0'
-    '578dbd40010000e88e0200005f538d9d400100008b853401000089454031c08b'
-    '8d14010000e8740300005bc745400000010031c08b4d00e86203000083bd1401'
-    '00000074368b8d300100008b450029c8578dbd40010000e83e0200005f538d9d'
-    '400100008b853401000089454031c08b8d14010000e8240300005b8b85240100'
-    '00018528010000ff852c0100008b852c0100003b45040f823dffffff8b8d1801'
-    '000085c9745d8b851c0100000faf4518c1e80389852c0100008bb5180100000f'
-    'afb52401000003b5b40000008bbdb4000000e8650000008bb518010000037504'
-    '4e0fafb52401000003b5b400000089f703bd24010000e8410000008bb5100100'
-    '008b368b066a0056ff90800000008b95100100008b851c01000089420c8b8520'
-    '010000894210c7420801000000f9c38b066a0056ff9080000000f8c351565751'
-    '56578b8d2c010000c1e902f3a55f5e5903bd240100004975e65f5e59c38b4508'
-    '2b451cd1e889453c85c00f84290100008b4500c1e01031d2f775088945408b45'
-    '00c1e8067505b80100000089454c8b453c03451c8945640faf4540894568c1e8'
-    '108b4d0029c181f9000200007605b900020000894d6c8b453c0faf4540c1e810'
-    '403d000200007605b800020000894570c74548000000008b450c2b4520d1e889'
-    '45308b75148b550c8b4548c1e8100faf45008d1c00035d34565231c08b4d708d'
-    'bd40010000e8900000008d9d4001000089f731c08b4d3ce8820100008b4548c1'
-    'e8100faf45008d1c00035d348b4568c1e8108b4d6c8dbd40010000e85a000000'
-    '8d9d400100008b7d64837d18207502d1e78d3c7e8b456825ffff00008b4d082b'
-    '4d64e8370100005a5e837d30007405ff4d30eb1b8b45280145488b4548c1e810'
-    '3b4504720a8b450448c1e0108945480375104a0f854fffffffc3518b45340fb7'
-    '00f366ab59c35652894d7489457889858800000001c149898d8c00000031c989'
-    '4d54894d58894d5c894d5089c689c203554c3b958c00000076068b958c000000'
-    '0fb70473e8770000004639d676f28b455431d2f775506bc066c1e808c1e00b89'
-    'c18b455831d2f775506bc066c1e808c1e00509c18b455c31d2f775506bc066c1'
-    'e80809c866ab8b45782b454c3b85880000007c090fb70443e8420000008b4578'
-    '03454c403b858c00000077090fb70443e80b000000ff4578ff4d7475915a5ec3'
-    '5289c2c1ea0b01555489c2c1ea0583e23f01555883e01f01455cff45505ac352'
-    '89c2c1ea0b29555489c2c1ea0583e23f29555883e01f29455cff4d505ac35652'
-    '89c689f0c1e8100fb70443837d1820750e515253e8110000005b5a59abeb0266'
-    'ab0375404975db5a5ec35589c389c281e300f8000081e2e007000083e01f89dd'
-    'c1e308c1e50381e50000070009eb89d5c1e205d1ed81e50003000009ea89c5c1'
-    'e003c1ed0209e809d809d05dc33b56240f853901000050535256575589e981ec'
-    '4005000089e5894d04895d3489c1d1e9894d008b460c8945088b460889450c8b'
-    '46108945108b46248945148b46548945188b45080faf45048b4d0c0faf4d0039'
-    'c8761289c831d2f7750489451c8b450c894520eb0e31d2f775008945208b4508'
-    '89451c8b4500c1e01031d2f7751c8945248b4504c1e01031d2f77520894528c7'
-    '452c00000000e855f9ffff0f82920000008b7d148b550c8b4d10c1e90231c057'
-    'f3ab5f037d104a75ee8b450c2b4520d1e80faf45100345148b4d082b4d1cd1e9'
-    '837d18207502d1e18d04488945388b45208945308b452cc1e8100faf45008d34'
-    '000375348b7d3831d28b4d1c52c1ea100fb70456837d1820740466abeb0851e8'
-    'a6feffff59ab5a0355244975df8b452801452c8b4510014538ff4d3075b6e81a'
-    'fcffff8da5400500005d5f5e5a5b58c3'
+    'bef1f1f1f189c1d1e98b6c241c8b6d048b6d08394e0c0f855f060000396e080f'
+    '8556060000837e5420741589c189cdc1e90289de89d7f3a589e983e103f3a4c3'
+    '50535289c1d1e9741389de89d70fb70683c602e8e0050000ab4975f15a5b58c3'
+    'a1eaeaeaea85c00f843b0300008b008b88b40000002dd4f5000029c181f92051'
+    '00000f85200300006681384d5a0f85150300008b483c8b4c085001c183e9088d'
+    '9000700100eb14813a4247424c7509817a044f434b00740c83c20439ca76e8e9'
+    'e402000083c2088995100100008b3285f60f84d10200008b45082b451cd1e80f'
+    'af450031d2f7751c8985140100008b450c2b4520d1e80faf450431d2f7752089'
+    '85180100008b45082b451c0faf450031d28b4d08d1e1f7f183c0023b45007603'
+    '8b45003d000200007605b8000200008985300100008b451cc1e01031d2f77508'
+    '8985340100008b450003851401000003851401000089851c0100003d80080000'
+    '0f87420200008b45040385180100000385180100008985200100003d58020000'
+    '0f87220200008dbd90000000b91f00000031c0f3abc785900000007c0000008b'
+    '066a006a018d9590000000526a0056ff506485c00f85ee0100008b85a0000000'
+    '8985240100008b85e40000008945188b859c00000085c0740c39851c0100000f'
+    '87b80100008b859800000085c0740c3985200100000f87a20100008b851c0100'
+    '000faf4518c1e8033b85240100000f87890100008b85180100000faf85240100'
+    '000385b40000008985280100008b4500c1e8067505b80100000089454cc7852c'
+    '010000000000008b852c0100000faf45008d1c00035d348bbd2801000083bd14'
+    '0100000074338b8d3001000031c0578dbd40010000e88e0200005f538d9d4001'
+    '00008b853401000089454031c08b8d14010000e8740300005bc7454000000100'
+    '31c08b4d00e86203000083bd140100000074368b8d300100008b450029c8578d'
+    'bd40010000e83e0200005f538d9d400100008b853401000089454031c08b8d14'
+    '010000e8240300005b8b8524010000018528010000ff852c0100008b852c0100'
+    '003b45040f823dffffff8b8d1801000085c9745d8b851c0100000faf4518c1e8'
+    '0389852c0100008bb5180100000fafb52401000003b5b40000008bbdb4000000'
+    'e8650000008bb5180100000375044e0fafb52401000003b5b400000089f703bd'
+    '24010000e8410000008bb5100100008b368b066a0056ff90800000008b951001'
+    '00008b851c01000089420c8b8520010000894210c7420801000000f9c38b066a'
+    '0056ff9080000000f8c35156575156578b8d2c010000c1e902f3a55f5e5903bd'
+    '240100004975e65f5e59c38b45082b451cd1e889453c85c00f84290100008b45'
+    '00c1e01031d2f775088945408b4500c1e8067505b80100000089454c8b453c03'
+    '451c8945640faf4540894568c1e8108b4d0029c181f9000200007605b9000200'
+    '00894d6c8b453c0faf4540c1e810403d000200007605b800020000894570c745'
+    '48000000008b450c2b4520d1e88945308b75148b550c8b4548c1e8100faf4500'
+    '8d1c00035d34565231c08b4d708dbd40010000e8900000008d9d4001000089f7'
+    '31c08b4d3ce8820100008b4548c1e8100faf45008d1c00035d348b4568c1e810'
+    '8b4d6c8dbd40010000e85a0000008d9d400100008b7d64837d18207502d1e78d'
+    '3c7e8b456825ffff00008b4d082b4d64e8370100005a5e837d30007405ff4d30'
+    'eb1b8b45280145488b4548c1e8103b4504720a8b450448c1e010894548037510'
+    '4a0f854fffffffc3518b45340fb700f366ab59c35652894d7489457889858800'
+    '000001c149898d8c00000031c9894d54894d58894d5c894d5089c689c203554c'
+    '3b958c00000076068b958c0000000fb70473e8770000004639d676f28b455431'
+    'd2f775506bc066c1e808c1e00b89c18b455831d2f775506bc066c1e808c1e005'
+    '09c18b455c31d2f775506bc066c1e80809c866ab8b45782b454c3b8588000000'
+    '7c090fb70443e8420000008b457803454c403b858c00000077090fb70443e80b'
+    '000000ff4578ff4d7475915a5ec35289c2c1ea0b01555489c2c1ea0583e23f01'
+    '555883e01f01455cff45505ac35289c2c1ea0b29555489c2c1ea0583e23f2955'
+    '5883e01f29455cff4d505ac3565289c689f0c1e8100fb70443837d1820750e51'
+    '5253e8110000005b5a59abeb0266ab0375404975db5a5ec35589c389c281e300'
+    'f8000081e2e007000083e01f89ddc1e308c1e50381e50000070009eb89d5c1e2'
+    '05d1ed81e50003000009ea89c5c1e003c1ed0209e809d809d05dc33b56240f85'
+    '3901000050535256575589e981ec4005000089e5894d04895d3489c1d1e9894d'
+    '008b460c8945088b460889450c8b46108945108b46248945148b46548945188b'
+    '45080faf45048b4d0c0faf4d0039c8761289c831d2f7750489451c8b450c8945'
+    '20eb0e31d2f775008945208b450889451c8b4500c1e01031d2f7751c8945248b'
+    '4504c1e01031d2f77520894528c7452c00000000e847f9ffff0f82920000008b'
+    '7d148b550c8b4d10c1e90231c057f3ab5f037d104a75ee8b450c2b4520d1e80f'
+    'af45100345148b4d082b4d1cd1e9837d18207502d1e18d04488945388b452089'
+    '45308b452cc1e8100faf45008d34000375348b7d3831d28b4d1c52c1ea100fb7'
+    '0456837d1820740466abeb0851e8a6feffff59ab5a0355244975df8b45280145'
+    '2c8b4510014538ff4d3075b6e81afcffff8da5400500005d5f5e5a5b58c3'
 )
 TITLEROW_BLOB = bytes.fromhex(
-    '8d74241c89c1d1e98b6c2414394e0c0f8542060000837e5420741789c189cdc1'
+    '8d74241c89c1d1e98b6c2414394e0c0f8550060000837e5420741789c189cdc1'
     'e90289de89d7f3a589e983e103f3a401c3c350535289c1d1e9741389de89d70f'
-    'b70683c602e8ca050000ab4975f15a5b5801c3c3a1eaeaeaea85c00f842d0300'
-    '008b008b88b40000002dd4f5000029c181f9205100000f85120300006681384d'
-    '5a0f85070300008b483c8b4c085001c183e9088d9000700100813a4247424c75'
-    '09817a044f434b00740c83c20439ca76e8e9d802000083c2088995100100008b'
-    '3285f60f84c50200008b45082b451cd1e80faf450031d2f7751c898514010000'
-    '8b450c2b4520d1e80faf450431d2f775208985180100008b45082b451c0faf45'
-    '0031d28b4d08d1e1f7f183c0023b450076038b45008985300100008b451cc1e0'
-    '1031d2f775088985340100008b450003851401000003851401000089851c0100'
-    '003d800800000f87420200008b45040385180100000385180100008985200100'
-    '003d580200000f87220200008dbd90000000b91f00000031c0f3abc785900000'
-    '007c0000008b066a006a018d9590000000526a0056ff506485c00f85ee010000'
-    '8b85a00000008985240100008b85e40000008945188b859c00000085c0740c39'
-    '851c0100000f87b80100008b859800000085c0740c3985200100000f87a20100'
-    '008b851c0100000faf4518c1e8033b85240100000f87890100008b8518010000'
-    '0faf85240100000385b40000008985280100008b4500c1e8067505b801000000'
-    '89454cc7852c010000000000008b852c0100000faf45008d1c00035d348bbd28'
-    '01000083bd140100000074338b8d3001000031c0578dbd40010000e88e020000'
-    '5f538d9d400100008b853401000089454031c08b8d14010000e86a0300005bc7'
-    '45400000010031c08b4d00e85803000083bd140100000074368b8d300100008b'
-    '450029c8578dbd40010000e83e0200005f538d9d400100008b85340100008945'
-    '4031c08b8d14010000e81a0300005b8b8524010000018528010000ff852c0100'
-    '008b852c0100003b45040f823dffffff8b8d1801000085c9745d8b851c010000'
-    '0faf4518c1e80389852c0100008bb5180100000fafb52401000003b5b4000000'
-    '8bbdb4000000e8650000008bb5180100000375044e0fafb52401000003b5b400'
-    '000089f703bd24010000e8410000008bb5100100008b368b066a0056ff908000'
-    '00008b95100100008b851c01000089420c8b8520010000894210c74208010000'
-    '00f9c38b066a0056ff9080000000f8c35156575156578b8d2c010000c1e902f3'
-    'a55f5e5903bd240100004975e65f5e59c38b45082b451cd1e889453c85c00f84'
-    '290100008b4500c1e01031d2f775088945408b4500c1e8067505b80100000089'
-    '454c8b453c03451c8945640faf4540894568c1e8108b4d0029c181f900020000'
-    '7605b900020000894d6c8b453c0faf4540c1e810403d000200007605b8000200'
-    '00894570c74548000000008b450c2b4520d1e88945308b75148b550c8b4548c1'
-    'e8100faf45008d1c00035d34565231c08b4d708dbd40010000e8900000008d9d'
-    '4001000089f731c08b4d3ce8780100008b4548c1e8100faf45008d1c00035d34'
-    '8b4568c1e8108b4d6c8dbd40010000e85a0000008d9d400100008b7d64837d18'
-    '207502d1e78d3c7e8b456825ffff00008b4d082b4d64e82d0100005a5e837d30'
-    '007405ff4d30eb1b8b45280145488b4548c1e8103b4504720a8b450448c1e010'
-    '8945480375104a0f854fffffffc3eb005652894d7489457889858800000001c1'
-    '49898d8c00000031c9894d54894d58894d5c894d5089c689c203554c3b958c00'
-    '000076068b958c0000000fb70473e8770000004639d676f28b455431d2f77550'
-    '6bc066c1e808c1e00b89c18b455831d2f775506bc066c1e808c1e00509c18b45'
-    '5c31d2f775506bc066c1e80809c866ab8b45782b454c3b85880000007c090fb7'
-    '0443e8420000008b457803454c403b858c00000077090fb70443e80b000000ff'
-    '4578ff4d7475915a5ec35289c2c1ea0b01555489c2c1ea0583e23f01555883e0'
-    '1f01455cff45505ac35289c2c1ea0b29555489c2c1ea0583e23f29555883e01f'
-    '29455cff4d505ac3565289c689f0c1e8100fb70443837d1820750e515253e811'
-    '0000005b5a59abeb0266ab0375404975db5a5ec35589c389c281e300f8000081'
-    'e2e007000083e01f89ddc1e308c1e50381e50000070009eb89d5c1e205d1ed81'
-    'e50003000009ea89c5c1e003c1ed0209e809d809d05dc33b56240f8539010000'
-    '50535256575589e981ec4005000089e5894d04895d3489c1d1e9894d008b460c'
-    '8945088b460889450c8b46108945108b46248945148b46548945188b45080faf'
-    '45048b4d0c0faf4d0039c8761289c831d2f7750489451c8b450c894520eb0e31'
-    'd2f775008945208b450889451c8b4500c1e01031d2f7751c8945248b4504c1e0'
-    '1031d2f77520894528c7452c00000000e85ff9ffff0f82920000008b7d148b55'
-    '0c8b4d10c1e90231c057f3ab5f037d104a75ee8b450c2b4520d1e80faf451003'
-    '45148b4d082b4d1cd1e9837d18207502d1e18d04488945388b45208945308b45'
-    '2cc1e8100faf45008d34000375348b7d3831d28b4d1c52c1ea100fb70456837d'
-    '1820740466abeb0851e8a6feffff59ab5a0355244975df8b452801452c8b4510'
-    '014538ff4d3075b6e824fcffff8da5400500005d5f5e5a5b5801c3c3'
+    'b70683c602e8d8050000ab4975f15a5b5801c3c3a1eaeaeaea85c00f843b0300'
+    '008b008b88b40000002dd4f5000029c181f9205100000f85200300006681384d'
+    '5a0f85150300008b483c8b4c085001c183e9088d9000700100eb14813a424742'
+    '4c7509817a044f434b00740c83c20439ca76e8e9e402000083c2088995100100'
+    '008b3285f60f84d10200008b45082b451cd1e80faf450031d2f7751c89851401'
+    '00008b450c2b4520d1e80faf450431d2f775208985180100008b45082b451c0f'
+    'af450031d28b4d08d1e1f7f183c0023b450076038b45003d000200007605b800'
+    '0200008985300100008b451cc1e01031d2f775088985340100008b4500038514'
+    '01000003851401000089851c0100003d800800000f87420200008b4504038518'
+    '0100000385180100008985200100003d580200000f87220200008dbd90000000'
+    'b91f00000031c0f3abc785900000007c0000008b066a006a018d959000000052'
+    '6a0056ff506485c00f85ee0100008b85a00000008985240100008b85e4000000'
+    '8945188b859c00000085c0740c39851c0100000f87b80100008b859800000085'
+    'c0740c3985200100000f87a20100008b851c0100000faf4518c1e8033b852401'
+    '00000f87890100008b85180100000faf85240100000385b40000008985280100'
+    '008b4500c1e8067505b80100000089454cc7852c010000000000008b852c0100'
+    '000faf45008d1c00035d348bbd2801000083bd140100000074338b8d30010000'
+    '31c0578dbd40010000e88e0200005f538d9d400100008b853401000089454031'
+    'c08b8d14010000e86a0300005bc745400000010031c08b4d00e85803000083bd'
+    '140100000074368b8d300100008b450029c8578dbd40010000e83e0200005f53'
+    '8d9d400100008b853401000089454031c08b8d14010000e81a0300005b8b8524'
+    '010000018528010000ff852c0100008b852c0100003b45040f823dffffff8b8d'
+    '1801000085c9745d8b851c0100000faf4518c1e80389852c0100008bb5180100'
+    '000fafb52401000003b5b40000008bbdb4000000e8650000008bb51801000003'
+    '75044e0fafb52401000003b5b400000089f703bd24010000e8410000008bb510'
+    '0100008b368b066a0056ff90800000008b95100100008b851c01000089420c8b'
+    '8520010000894210c7420801000000f9c38b066a0056ff9080000000f8c35156'
+    '575156578b8d2c010000c1e902f3a55f5e5903bd240100004975e65f5e59c38b'
+    '45082b451cd1e889453c85c00f84290100008b4500c1e01031d2f77508894540'
+    '8b4500c1e8067505b80100000089454c8b453c03451c8945640faf4540894568'
+    'c1e8108b4d0029c181f9000200007605b900020000894d6c8b453c0faf4540c1'
+    'e810403d000200007605b800020000894570c74548000000008b450c2b4520d1'
+    'e88945308b75148b550c8b4548c1e8100faf45008d1c00035d34565231c08b4d'
+    '708dbd40010000e8900000008d9d4001000089f731c08b4d3ce8780100008b45'
+    '48c1e8100faf45008d1c00035d348b4568c1e8108b4d6c8dbd40010000e85a00'
+    '00008d9d400100008b7d64837d18207502d1e78d3c7e8b456825ffff00008b4d'
+    '082b4d64e82d0100005a5e837d30007405ff4d30eb1b8b45280145488b4548c1'
+    'e8103b4504720a8b450448c1e0108945480375104a0f854fffffffc3eb005652'
+    '894d7489457889858800000001c149898d8c00000031c9894d54894d58894d5c'
+    '894d5089c689c203554c3b958c00000076068b958c0000000fb70473e8770000'
+    '004639d676f28b455431d2f775506bc066c1e808c1e00b89c18b455831d2f775'
+    '506bc066c1e808c1e00509c18b455c31d2f775506bc066c1e80809c866ab8b45'
+    '782b454c3b85880000007c090fb70443e8420000008b457803454c403b858c00'
+    '000077090fb70443e80b000000ff4578ff4d7475915a5ec35289c2c1ea0b0155'
+    '5489c2c1ea0583e23f01555883e01f01455cff45505ac35289c2c1ea0b295554'
+    '89c2c1ea0583e23f29555883e01f29455cff4d505ac3565289c689f0c1e8100f'
+    'b70443837d1820750e515253e8110000005b5a59abeb0266ab0375404975db5a'
+    '5ec35589c389c281e300f8000081e2e007000083e01f89ddc1e308c1e50381e5'
+    '0000070009eb89d5c1e205d1ed81e50003000009ea89c5c1e003c1ed0209e809'
+    'd809d05dc33b56240f853901000050535256575589e981ec4005000089e5894d'
+    '04895d3489c1d1e9894d008b460c8945088b460889450c8b46108945108b4624'
+    '8945148b46548945188b45080faf45048b4d0c0faf4d0039c8761289c831d2f7'
+    '750489451c8b450c894520eb0e31d2f775008945208b450889451c8b4500c1e0'
+    '1031d2f7751c8945248b4504c1e01031d2f77520894528c7452c00000000e851'
+    'f9ffff0f82920000008b7d148b550c8b4d10c1e90231c057f3ab5f037d104a75'
+    'ee8b450c2b4520d1e80faf45100345148b4d082b4d1cd1e9837d18207502d1e1'
+    '8d04488945388b45208945308b452cc1e8100faf45008d34000375348b7d3831'
+    'd28b4d1c52c1ea100fb70456837d1820740466abeb0851e8a6feffff59ab5a03'
+    '55244975df8b452801452c8b4510014538ff4d3075b6e824fcffff8da5400500'
+    '005d5f5e5a5b5801c3c3'
 )
 FULLWIN_BLOB = bytes.fromhex(
-    'e91a000000e91a020000e8000000005b81eb0f00000089de81ebe7e7e7e7c355'
-    '89e581ecb0000000535657e8daffffff83be64030000007505e8b20100008d45'
+    'e91a000000e94f040000e8000000005b81eb0f00000089de81ebe7e7e7e7c355'
+    '89e581ecc8000000535657e8daffffff83be50060000007505e8830300008d45'
     'f050ffb3f8230100ff9340f100008d45f050ffb3f8230100ff933cf100008d45'
-    'f850ffb3f8230100ff933cf100008b75f82b75f08b7dfc2b7df48b8b18240100'
-    '2b8b10240100894dc08b931c2401002b93142401008955bc89f00fafc289f90f'
-    'af4dc039c8720f897db489c831d2f775bc8945b8eb0b8975b831d2f775c08945'
-    'b489f02b45b8d1e80345f08945e00345b88945e889f82b45b4d1e80345f48945'
-    'e40345b48945ec8dbd50ffffff31c0b919000000f3abc78550ffffff64000000'
-    '8b45f08945d08b45f48945d48b45f88945d88b45e48945dce8a20000008b45ec'
-    '8945d48b45fc8945dce8910000008b45e48945d48b45e08945d88b45ec8945dc'
-    'e87a0000008b45e88945d08b45f88945d8e8690000008b83502501008b086a00'
-    '68000000018d931024010052ffb3542501008d55e05250ff51148983c41f0100'
-    'e885feffffe8180000008986680300008b83c41f01005f5e5b89ec5d83c410c2'
-    '04008b866403000083f8ff740f85c0740a83ec0854ffd05883c404c331c0c38b'
-    '45d83b45d07e288b45dc3b45d47e208b83502501008b088d9550ffffff526800'
-    '0400016a006a008d55d05250ff5114c3c78664030000ffffffff8d863f030000'
-    '50ff9314f1000085c074188d8e4c0300005150ff93acf0000085c07406898664'
-    '030000c35589e583ec40535657e8d8fdffff6af0ff7508ff9338f10000a90000'
-    '00800f84b50000008d860603000050ff9314f1000085c00f848800000089c78d'
-    '86110300005057ff93acf0000085c074748d4dd051ffd085c0746a8d861e0300'
-    '005057ff93acf0000085c074586a02ff75d4ff75d0ffd085c0744a8945cc8d86'
-    '2f0300005057ff93acf0000085c07435c745d8280000008d4dd851ff75ccffd0'
-    '85c074216a018b45e82b45e0508b45e42b45dc50ff75e0ff75dcff7508ff932c'
-    'f10000eb18ff751cff7518ff7514ff7510ff750cff7508ff932cf100005f5e5b'
-    '89ec5dc218007573657233322e646c6c00476574437572736f72506f73004d6f'
-    '6e69746f7246726f6d506f696e74004765744d6f6e69746f72496e666f41006b'
-    '65726e656c33322e646c6c005175657279506572666f726d616e6365436f756e'
-    '746572000000000000000000'
+    'f850ffb3f8230100ff933cf100008b45f82b45f08945b08b45fc2b45f48945ac'
+    '8b8b182401002b8b10240100894dc08b931c2401002b93142401008955bc85c9'
+    '0f84a502000085d20f849d0200008b45b00fafc28b4dac0faf4dc039c872128b'
+    '45ac8945b489c831d2f775bc8945b8eb0e8b4db0894db831d2f775c08945b48b'
+    '45b02b45b8d1e88945a00345f08945e00345b88945e88b45ac2b45b4d1e88945'
+    '9c0345f48945e40345b48945ec83be6c06000000742e8b45f00b45f40f881901'
+    '00006a00ff96580600003945f80f8f080100006a01ff96580600003945fc0f8f'
+    'f70000008b83502501003b8670060000751a31c98b448de03b848e7406000075'
+    '0b4183f90872ede98e0000008b835025010089867006000031c98b448de08984'
+    '8e740600004183f90872ef8dbd38ffffff31c0b919000000f3abc78538ffffff'
+    '640000008b45f08945d08b45f48945d48b45f88945d88b45e48945dce8ab0100'
+    '008b45ec8945d48b45fc8945dce89a0100008b45e48945d48b45e08945d88b45'
+    'ec8945dce8830100008b45e88945d08b45f88945d8e8720100008b8350250100'
+    '8b086a0068000000018d931024010052ffb3542501008d55e05250ff51148983'
+    'c41f010085c00f8402010000c7867006000000000000e9f3000000c786700600'
+    '00000000008b83542501008b088d55a85250ff514485c00f85e7feffffffb3f8'
+    '230100ff965c06000085c00f84a60000008945a46a0350ff966406000031c089'
+    '45d08945d48b45b08945d88b459c8945dce8070100008b459c0345b48945d48b'
+    '4dac29c1894ddce8f10000008b459c8945d48b45a08945d88b45b48945dce8da'
+    '0000008b45a00345b88945d08b4db029c1894dd8e8c4000000682000cc00ff75'
+    'bcff75c0ffb314240100ffb310240100ff75a8ff75b4ff75b8ff759cff75a0ff'
+    '75a4ff9668060000ff75a4ffb3f8230100ff96600600008b83542501008b08ff'
+    '75a850ff516831c08983c41f0100e81c0000008986540600008b83c41f01005f'
+    '5e5b89ec5d83c410c2040031c0ebf08b865006000083f8ff740f85c0740a83ec'
+    '0854ffd05883c404c331c0c38b45d83b45d07e288b45dc3b45d47e208b835025'
+    '01008b088d9538ffffff5268000400016a006a008d55d05250ff5114c3837dd8'
+    '007e1d837ddc007e176a42ff75dcff75d8ff75d4ff75d0ff75a4ff966c060000'
+    'c3c78650060000ffffffff8d86cd05000050ff9314f1000085c074188d8eda05'
+    '00005150ff93acf0000085c074068986500600008d867805000050ff9314f100'
+    '0085c0743689c731c9e82e000000742b4183f90372f38d868305000050ff9314'
+    'f1000085c0741489c7b903000000e80900000074064183f90672f3c3518b848e'
+    '3706000001f05057ff93acf000005989848e5806000085c0c35589e583ec4053'
+    '5657e8a3fbffffc78670060000000000006af0ff7508ff9338f10000a9000000'
+    '800f84e80000008d867805000050ff9314f1000085c00f84bb00000089c780be'
+    '4f0600000075428d868d0500005057ff93acf0000085c00f849a0000008d4dd0'
+    '51ffd085c00f848c0000008d869a0500005057ff93acf0000085c0747a6a02ff'
+    '75d4ff75d0ffd0eb198d86ab0500005057ff93acf0000085c0745c6a02ff7508'
+    'ffd085c074518945cc8d86bd0500005057ff93acf0000085c0743cc745d82800'
+    '00008d4dd851ff75ccffd085c074286a018b45e82b45e0508b45e42b45dc50ff'
+    '75e0ff75dcff7508ff932cf10000c6864f06000001eb18ff751cff7518ff7514'
+    'ff7510ff750cff7508ff932cf100005f5e5b89ec5dc218007573657233322e64'
+    '6c6c0067646933322e646c6c00476574437572736f72506f73004d6f6e69746f'
+    '7246726f6d506f696e74004d6f6e69746f7246726f6d57696e646f7700476574'
+    '4d6f6e69746f72496e666f41006b65726e656c33322e646c6c00517565727950'
+    '6572666f726d616e6365436f756e7465720047657453797374656d4d65747269'
+    '63730047657444430052656c6561736544430053657453747265746368426c74'
+    '4d6f64650053747265746368426c7400506174426c7400f20500000306000009'
+    '0600001306000025060000300600000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000'
 )
 TEXRANGE_BLOB = bytes.fromhex(
     'e8000000005a81ea0500000081eae7e7e7e78b4c24043b8a9025010073138b82'
@@ -1292,7 +1449,7 @@ REPLAYFREE_BLOB = bytes.fromhex(
 ALTENTER_BLOB = bytes.fromhex(
     '8b4424083d040100007521837c240c0d751a8b442410a900000020740fa90000'
     '00407505e81600000031c0c368ececececc3e8000000005b81eb37000000c353'
-    '56575589e583ec40e8e5ffffff83bbec01000000753f8d837a01000050ff15e3'
+    '56575589e583ec40e8e5ffffff83bbfc01000000753f8d837a01000050ff15e3'
     'e3e3e385c00f840801000089c631ff8b84bbd601000001d85056ff15e4e4e4e4'
     '85c00f84eb0000008984bbec0100004783ff0572da8b3dedededed6a0257ff93'
     'f801000085c00f84c7000000c745d8280000008d4dd85150ff93fc01000085c0'
@@ -1358,99 +1515,107 @@ FRAMETRACE_BLOB = bytes.fromhex(
 )
 DEVICES_BLOB = bytes.fromhex(
     'e918000000e9c0000000e8000000005b81eb0f00000081ebd1d1d1d1c35357e8'
-    'e6ffffff8dbbd1d1d1d1c787710b000000002044c787790b000000000000c787'
-    '7d0b000000000000c787810b000000000000c787850b000010000000c787890b'
-    '000000000000c787950b000000000000c787990b000000000000c787a90b0000'
-    '0000000083bf6d0b0000007523c7876d0b0000010000008d83d8d8d8d8508d83'
+    'e6ffffff8dbbd1d1d1d1c787740c000000002044c7877c0c000000000000c787'
+    '800c000000000000c787840c000000000000c787880c000010000000c7878c0c'
+    '000000000000c787980c000000000000c7879c0c000000000000c787ac0c0000'
+    '0000000083bf700c0000007523c787700c0000010000008d83d8d8d8d8508d83'
     'd9d9d9d9508d83d3d3d3d3ffd083c4088d83dededede80780f0074095589fde8'
-    '940900005dff46085f5b535755e838ffffff8dabd1d1d1d18dbbdadadada8b07'
-    '85c00f84c60100008b4f0c898d9d0b0000c785a10b00000000803fe875010000'
-    '734980f905724483bd950b000000740b80f9060f8454010000eb0980f9070f84'
-    '490100008b8d890b0000898da10b0000d9470cd8a5910b0000d88d890b0000d8'
-    '85910b0000d99d9d0b000083f8020f84a20000006a006a006a00e81601000073'
-    '5280f905734d80f901751983bd950b000000752b6a006a006800010000680001'
-    '0000eb3b31d280f90375068b95810b0000525268000100006800010000eb208b'
-    '95810b0000680001000052526800010000eb0cff7720ff771cff7718ff7714ff'
-    'b5a10b0000680000803f6a006a006a00ff7710ffb59d0b000050d94708d88571'
-    '0b0000d91c24ff77048d83d4d4d4d4ffd083c440eb77ff77108d83dcdcdcdc50'
-    'e870000000732480f904751f8b85810b0000d1f8058000000068000100006800'
-    '010000680001000050eb0cff7720ff771cff7718ff7714ffb5a10b0000680000'
-    '803f68000020416800002041ffb59d0b000050d94708d885710b0000d91c24ff'
+    '480a00005dff46085f5b535755e838ffffff8dabd1d1d1d18dbbdadadada8b07'
+    '85c00f84c60100008b4f0c898da00c0000c785a40c00000000803fe875010000'
+    '734980f905724483bd980c000000740b80f9060f8454010000eb0980f9070f84'
+    '490100008b8d8c0c0000898da40c0000d9470cd8a5940c0000d88d8c0c0000d8'
+    '85940c0000d99da00c000083f8020f84a20000006a006a006a00e81601000073'
+    '5280f905734d80f901751983bd980c000000752b6a006a006800010000680001'
+    '0000eb3b31d280f90375068b95840c0000525268000100006800010000eb208b'
+    '95840c0000680001000052526800010000eb0cff7720ff771cff7718ff7714ff'
+    'b5a40c0000680000803f6a006a006a00ff7710ffb5a00c000050d94708d88574'
+    '0c0000d91c24ff77048d83d4d4d4d4ffd083c440eb77ff77108d83dcdcdcdc50'
+    'e870000000732480f904751f8b85840c0000d1f8058000000068000100006800'
+    '010000680001000050eb0cff7720ff771cff7718ff7714ffb5a40c0000680000'
+    '803f68000020416800002041ffb5a00c000050d94708d885740c0000d91c24ff'
     '77048d83dbdbdbdbffd083c43483c728e969feffff508b4f2485c9742e0fb6c1'
-    '4839857d0b00007c220fb6c54839857d0b00007f16c1e91080f903750b0fb6c5'
-    '3985990b0000750358f9c358f8c38b85850b00000385810b00008985810b0000'
-    '3d000100007e14c785810b000000010000c785850b0000f0ffffff85c07914c7'
-    '85810b000000000000c785850b00001000000083bd790b000000757b8b85710b'
-    '000085c0742fd985710b0000d8a5750b0000d99d710b00008b85710b000085c0'
-    '0f8fa5020000c785710b000000000000e9960200008b85890b00003d0000803f'
-    '0f8398000000d985890b0000d8858d0b0000d99d890b000081bd890b00000000'
-    '803f0f8263020000c785890b00000000803fe9540200008b85890b000085c074'
-    '2fd985890b0000d8a58d0b0000d99d890b00008b85890b000085c00f8f2a0200'
-    '00c785890b000000000000e91b020000d985710b0000d8a5750b0000d99d710b'
-    '000081bd710b0000000020c40f82f9010000c7460801000000e9ed0100008b83'
-    'd6d6d6d68b480885c90f84dc0100008b116a01ff521489c783bd950b0000000f'
-    '8593010000f6c40474128b857d0b0000403ddddddddd7e1731c0eb13f6c40274'
-    '238b857d0b0000487905b8dddddddd89857d0b0000b80e000000e876010000e9'
-    '87010000f7c7020000000f854f0100008b857d0b00003ddddddddd755bf7c700'
-    '180000741683b5990b000001b80e000000e83f010000e950010000f7c7410000'
-    '000f8444010000b80f000000e82401000083bd990b0000010f840b0100008d83'
-    'dededede80780f000f841d010000e8e3040000e9130100008d83dededede8078'
-    '0f000f8403010000e84302000081fafe000000743c81faff000000745bf7c741'
-    '0000000f84e2000000e872020000c785950b000001000000c785a50b00000000'
-    '0000b80f000000e8a9000000e9ba000000f7c7411800000f84ae00000083b5a9'
-    '0b000001e82f050000b80e000000e882000000e993000000f7c7001800000f84'
-    '87000000508d04c5000000008d04c53f030000e861010000f7c700080000740b'
-    '2df4010000791531c0eb1105f40100003d282300007605b828230000e8980400'
-    '0058e812010000e8cc040000b80e000000e81f000000eb33e805020000eb2cb8'
-    '10000000e80c000000c785790b000001000000eb168b8bd7d7d7d76a006a006a'
-    '00508d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe08b83d6d6d6d68b40088b'
-    '4004c385c0740a50518b0850ff51085958c351526a0089c189e2e8d7ffffff52'
-    '51508b00ff5034585a59c356578bb0240100008b0639f0744f8b7808398f0c01'
-    '0000753d83bf38010000007434508b873c0100003d00010000721a2d00030000'
-    '3d80000000731ea9200000007517b801000000eb0231c039d058750589f85f5e'
-    'c38b00ebb058ebf931c05f5ec351525689d60fb68c0bdedededee873ffffff85'
-    'c074125089f2e880ffffff89c658e850ffffff89f05e5a59c3505152e851ffff'
-    'ff5a85c07410506a0152508b08ff513058e82dffffff5958c351526a008b0ddf'
-    'dfdfdf85c9740889e26a005250ffd1585a59c351526a006a00e8f8feffff8d54'
-    '2404526a006a03508b08ff51208b44240485c0741489e26a0052508b08ff5138'
-    '8b442404e8dafeffff5883c4045a59c38b85a90b00008b8d7d0b0000bafe0000'
-    '0085c97409490fb6940bdedededec3518d0cc5000000008d04cd000300005901'
-    'c8e873ffffff83f912720c3d881300000f97c00fb6c0c385c00f95c00fb6c0c3'
-    '50515657e86affffff8dbdc50b0000b94000000085c0740689c6f3a5eb0431c0'
-    'f3abe889ffffff31c950e8a0ffffff88840dc50c0000584183f91a72ec5f5e59'
-    '58c35156e82affffff85c0744889c6f6460180740e80bdc60b0000007505e987'
-    '000000b902000000f6040e80741680bc0dc50b000000751489c8e8ba000000e9'
-    '88000000c6840dc50b0000004181f90001000072d3e816ffffff31c983f90474'
-    '2650e828ffffff85c058741380bc0dc50c000000751189c8e8f4000000eb4dc6'
-    '840dc50c0000004183f91a72cfb904000000e8f8feffff85c07425ff85a50b00'
-    '0083bda50b00003c7236c785950b000000000000b810000000e825000000eb20'
-    'c785a50b000000000000eb14c785950b000000000000b80f000000e803000000'
+    '483985800c00007c220fb6c5483985800c00007f16c1e91080f903750b0fb6c5'
+    '39859c0c0000750358f9c358f8c38b85880c00000385840c00008985840c0000'
+    '3d000100007e14c785840c000000010000c785880c0000f0ffffff85c07914c7'
+    '85840c000000000000c785880c00001000000083bd7c0c000000757b8b85740c'
+    '000085c0742fd985740c0000d8a5780c0000d99d740c00008b85740c000085c0'
+    '0f8fed020000c785740c000000000000e9de0200008b858c0c00003d0000803f'
+    '0f8398000000d9858c0c0000d885900c0000d99d8c0c000081bd8c0c00000000'
+    '803f0f82ab020000c7858c0c00000000803fe99c0200008b858c0c000085c074'
+    '2fd9858c0c0000d8a5900c0000d99d8c0c00008b858c0c000085c00f8f720200'
+    '00c7858c0c000000000000e963020000d985740c0000d8a5780c0000d99d740c'
+    '000081bd740c0000000020c40f8241020000c7460801000000e9350200008b83'
+    'd6d6d6d68b480885c90f84240200008b116a01ff521489c783bd980c0000000f'
+    '85db010000f6c40474128b85800c0000403ddddddddd7e1731c0eb13f6c40274'
+    '238b85800c0000487905b8dddddddd8985800c0000b80e000000e8be010000e9'
+    'cf010000f7c7020000000f85970100008b85800c00003ddddddddd755bf7c700'
+    '180000741683b59c0c000001b80e000000e887010000e998010000f7c7410000'
+    '000f848c010000b80f000000e86c01000083bd9c0c0000010f84530100008d83'
+    'dededede80780f000f8465010000e843050000e95b0100008d83dededede8078'
+    '0f000f844b010000e89c02000081fafe000000744881faff000000746781fafd'
+    '0000000f84c0000000f7c7410000000f841e010000e8bf020000c785980c0000'
+    '01000000c785a80c000000000000b80f000000e8e5000000e9f6000000f7c741'
+    '1800000f84ea00000083b5ac0c000001e8d7050000b80e000000e8be000000e9'
+    'cf000000f7c7001800000f84c3000000508d04c5000000008d04c53f030000e8'
+    'aa010000f7c700080000740b2df4010000791531c0eb1105f40100003d941100'
+    '007605b894110000ba445a0000e83d05000058e853010000e86f050000b80e00'
+    '0000e856000000eb6af7c700180000746250e8e1040000f7c700080000740785'
+    'c0740948eb0683f80973014085c07404406bc00aba56420000e8f1040000ebb2'
+    'e816020000eb2cb810000000e80c000000c7857c0c000001000000eb168b8bd7'
+    'd7d7d76a006a006a00508d83d5d5d5d5ffd0c38d83d2d2d2d25d5f5bffe08b83'
+    'd6d6d6d68b400885c074038b4004c385c0740c5051528b0850ff51085a5958c3'
+    '51526a0089c189e2e8d1ffffff85c074085251508b00ff5034585a59c356578b'
+    'b0240100008b0639f0744f8b7808398f0c010000753d83bf3801000000743450'
+    '8b873c0100003d00010000721a2d000300003d80000000731ea9200000007517'
+    'b801000000eb0231c039d058750589f85f5ec38b00ebb058ebf931c05f5ec351'
+    '525689d60fb68c0bdedededee86fffffff85c074125089f2e880ffffff89c658'
+    'e84affffff89f05e5a59c3505152e84dffffff85c07413506a01ff742408508b'
+    '08ff513058e825ffffff5a5958c351526a008b0ddfdfdfdf85c9740889e26a00'
+    '5250ffd1585a59c351526a006a00e8ebfeffff85c0742b8d542404526a006a03'
+    '508b08ff51208b44240485c0741489e26a0052508b08ff51388b442404e8cdfe'
+    'ffff5883c4045a59c38b85ac0c00008b8d800c0000bafe00000085c97409490f'
+    'b6940bdedededec3518d0cc5000000008d04cd000300005901c8e86fffffff83'
+    'f912720c3d881300000f97c00fb6c0c385c00f95c00fb6c0c350515657e866ff'
+    'ffff8dbdc80c0000b94000000085c0740689c6f3a5eb0431c0f3abe889ffffff'
+    '31c950e8a0ffffff88840dc80d0000584183f91a72ec5f5e5958c35156e826ff'
+    'ffff85c0744f89c6f6460180740e80bdc90c000000750ce98e000000c685c90c'
+    '000000b902000000f6040e80741680bc0dc80c000000751489c8e8ba000000e9'
+    '88000000c6840dc80c0000004181f90001000072d3e80fffffff31c983f90474'
+    '2650e821ffffff85c058741380bc0dc80d000000751189c8e8f4000000eb4dc6'
+    '840dc80d0000004183f91a72cfb904000000e8f1feffff85c07425ff85a80c00'
+    '0083bda80c00003c7236c785980c000000000000b810000000e825000000eb20'
+    'c785a80c000000000000eb14c785980c000000000000b80f000000e803000000'
     '5e59c38b8bd7d7d7d76a006a006a00508d83d5d5d5d5ffd0c35152565789c6e8'
-    '6cfeffff31d2e8c2fdffff85c0745d89c78b873c0100008985b90b000031c031'
-    'c931d250e8a4fdffff85c0741839f8741439b03c010000750c8b95b90b000089'
-    '903c010000584183f90872d54083f80272cd89b73c01000031c031d2e898fdff'
-    'ff40e892fdffffe84c0100005f5e5a59c35152565789c6e8f4fdffff508d04c5'
-    '000000008d04c50003000001c658ba01000000e835fdffff85c0745589c78b87'
-    '3c0100008985b90b0000e8c1fdffff31c9ba0100000050e811fdffff85c07418'
-    '39f8741439b03c010000750c8b95b90b000089903c010000584183f90872d289'
-    'b73c01000031d2e80dfdffffe8c70000005f5e5a59c3505152565731c031c98d'
-    '34c50000000001ce8db4b3dededede83c61031d250e8b3fcffff85c074090fb7'
-    '1689903c0100008b0424ba01000000e899fcffff85c074188b1424c1e20681c2'
-    '000300000fb77e0201fa89903c010000584183f90872a850b8e8030000e81700'
-    '000058e891fcffff4083f802728fe8450000005f5e5a5958c35051568db5bd0b'
-    '000066c706445a83c602b9e803000031d2f7f104308806465289c831d2b90a00'
-    '0000f7f189c15885c975e4c606008d95bd0b00005e5958c350515256578b85a9'
-    '0b000031c950518d3c09c1e7048dbc3bdededede83c75031d2e8effbffff31f6'
-    '85c074070fb6b03c0100008d34768db4b3dededede81c690020000e8b9000000'
-    '8b4424048b0c24ba0100000083c710e8b9fbffff89c685c0741b8bb63c010000'
-    '83e63f8d34768db4b3dededede81c6900e0000eb0c8db3dededede81c6900200'
-    '00e87300000059584183f9080f8273ffffff8dbbdededede81c750010000508d'
-    '04c5000000008d04c53f030000e8a7fbffff31d2b964000000f7f1b90a000000'
-    '31d2f7f185c07405043088074780c2308817c6470100588dbbdededede81c770'
-    '0100008db5ad0b0000e80b00000004318847075f5e5a5958c3515657b9030000'
-    '00f3a5c707000000005f5e59c300000000000000000000204200000000000000'
-    '00000000000000000000000000cdcccc3d0080e1430000000000000000000000'
-    '00000000000000000000000000504c4159455220310000000000000000000000'
+    '65feffff31d2e8b4fdffff85c0745d89c78b873c0100008985bc0c000031c031'
+    'c931d250e896fdffff85c0741839f8741439b03c010000750c8b95bc0c000089'
+    '903c010000584183f90872d54083f80272cd89b73c01000031c031d2e88afdff'
+    'ff40e884fdffffe8a00100005f5e5a59c35152565789c6e8edfdffff508d04c5'
+    '000000008d04c50003000001c658ba01000000e827fdffff85c0745589c78b87'
+    '3c0100008985bc0c0000e8bafdffff31c9ba0100000050e803fdffff85c07418'
+    '39f8741439b03c010000750c8b95bc0c000089903c010000584183f90872d289'
+    'b73c01000031d2e8fffcffffe81b0100005f5e5a59c3505152565731c031c98d'
+    '34c50000000001ce8db4b3dededede83c61031d250e8a5fcffff85c074090fb7'
+    '1689903c0100008b0424ba01000000e88bfcffff85c074188b1424c1e20681c2'
+    '000300000fb77e0201fa89903c010000584183f90872a850b8e8030000ba445a'
+    '0000e86800000058e87efcffff50b846000000ba56420000e85200000058e868'
+    'fcffff4083f8020f8270ffffffe87a0000005f5e5a5958c351528d04c5000000'
+    '008d04c53d030000e861fcffff85c0741b31d2b90a000000f7f1487f05b80100'
+    '000083f8097605b8090000005a59c35051568db5c00c000066891683c602b9e8'
+    '03000031d2f7f104308806465289c831d2b90a000000f7f189c15885c975e4c6'
+    '06008d95c00c00005e5958c350515256578b85ac0c000031c950518d3c09c1e7'
+    '048dbc3bdededede83c75031d2e88dfbffff31f685c074070fb6b03c0100008d'
+    '34768db4b3dededede81c690020000e8080100008b4424048b0c24ba01000000'
+    '83c710e857fbffff89c685c0741b8bb63c01000083e63f8d34768db4b3dedede'
+    'de81c6900e0000eb0c8db3dededede81c690020000e8c200000059584183f908'
+    '0f8273ffffff508d04c5000000008d04c53f030000e854fbffff31d2b9f40100'
+    '00f7f1b90c000000ba0a000000e8390000005850e8bffeffffb90d000000ba0b'
+    '000000e823000000588dbbdededede81c7500100008db5b00c0000e85c000000'
+    '04318847075f5e5a5958c356578dbbdededede0fb63c0f8d3cbf8db3dadadada'
+    '8d3cfe89d6c1e60809d681ce0000040031c931d2c747240000000039c17508ba'
+    '0001000089772489571889571c89572083c7284183f90a72d95f5ec3515657b9'
+    '03000000f3a5c707000000005f5e59c300000000000000000000204200000000'
+    '00000000000000000000000000000000cdcccc3d0080e1430000000000000000'
+    '00000000000000000000000000000000504c4159455220310000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -1460,108 +1625,147 @@ DEVICES_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000'
+    '0000000000000000'
 )
 PADINPUT_BLOB = bytes.fromhex(
-    'e923000000e980000000e9e4070000e9cb080000e91e090000e963090000e800'
-    '0000005b83eb23c3535657e8eeffffffe8350200008b742414e834010000723f'
-    '31c9837c2418007524e8330100008b7c241c85ff74173b4c242076048b4c2420'
-    '516bc90d8db394290000f3a5598b54242485d27402890a31c05f5e5bc21800b8'
-    '570007805f5e5bc21800535657e88cffffffe8d30100008b742414e8d2000000'
-    '0f82c100000089c78b74241885f6742266813e445a751b83c602e85b0400003d'
-    '102700007605b8102700008984bb8c2100006bc7348d941824210000b90d0000'
-    '0066c702000066c74202ff0083c2044975ef8b74241c8b4c242085c9745c8b06'
-    '83f80d734f6bd7348d14828d9413242100008b46143d00010000730f85c07434'
-    '66833a00752e668902eb293d0003000072223d80030000731b66817a02ff0075'
-    '1383e03f83f83f740ba92000000075046689420283c63449eba0e8d903000031'
-    'c05f5e5bc21400b8570007805f5e5bc214000fb60683e83083f8017702f8c3f9'
-    'c35256575589c58dbb942900006bf0348db4332421000031c931d2520fb70651'
-    '89d1e88c00000059410fb746023dff000000740fe86b0000005189d1e8720000'
-    '0059415a83c6044283fa0d72ce6bf5088db433ec20000031d20fb70605000400'
-    '00510fb68c131f210000e844000000594183c6024283fa0472df8db3fc200000'
-    'ba0b0000000fb64601e816000000510fb60ee81c000000594183c6024a75e65d'
-    '5f5e5ac35189e9c1e10601c8050003000059c3515089c8ab31c083f902721383'
-    'f905770eb80a000000abb803000000abeb02abab31c0abb810270000ab58ab31'
-    'c0b907000000f3ab59c383bb780c0000000f859c00000060e882080000c78378'
-    '0c0000010000008d4319a3edededed8db3842000008dbb24210000b91a000000'
-    'f3a5c7838c210000e8030000c78390210000e80300006a036800000080e8c404'
-    '000083f8ff744b89c68d83942100006a008d8b880c00005168ff0700005056ff'
-    '93580c000056ff93640c00008b83880c0000c68418942100000031c081bb9421'
-    '0000646973707505b864000000e80200000061c38db41894210000c783800c00'
-    '00ffffffffe895010000750e803e000f844a010000e933010000803e5b756cc7'
-    '83800c0000ffffffff0fb6460183e83183f8010f8714010000807e02500f850a'
-    '0100008983840c000089fee84f0100000f84f7000000c783800c000001000000'
-    '803e430f84e4000000c783800c000000000000803e4b0f84d1000000c783800c'
-    '0000ffffffffe9c200000083bb800c0000ff0f84b500000083f9087544813e44'
-    '656164753c817e047a6f6e65753383bb800c0000010f859200000089fee8b400'
-    '00000f8485000000e82d010000e8bd0000008b93840c00008984938c210000eb'
-    '6c8d93b41f00006a0de8d7000000785d5089fee87e000000745083bb800c0000'
-    '01741d8d93b40d00006800010000e8b200000078355ae845000000668906eb2d'
-    'b8ff00000083f9017505803e2d740f8d93b41d00006a20e889000000780c5ae8'
-    '1c00000066894602eb0383c40489fe8a0684c0740a463c0a75f5e9a6feffffc3'
-    '508bb3840c00006bf6348d34968db4332421000058c3e824000000741183f901'
-    '750c803e3d750789fee811000000c36bc0643d282300007605b828230000c331'
-    'c98a063c2074083c0974043c0d750346ebef89f78a0784c074083c2076044741'
-    'ebf285c9c356575189d731c05657518a163a17750f46474975f5803f00750559'
-    '5f5eeb10595f5e83c710403b44241072db83c8ff595f5ec2040031c0803e2075'
-    '0346ebf80fb61683ea3083fa0977086bc00a01d046ebedc360e8c10500008dbb'
-    '942100008db3fd060000e87d01000031edc783800c000001000000b00aaab05b'
-    'aa8d4531aab050aab020aa8db36307000083bb800c00000174068db36e070000'
-    'e847010000b05daab00aaa83bb800c000001751a8db377070000e82d0100008b'
-    '84ab8c210000e82a010000b00aaa31d20fb68413122100003dff000000746b50'
-    'c1e0048db418b41f0000e8fd0000008db382070000e8f2000000586bf5348d34'
-    '868db4332421000083bb800c00000175210fb746023dff0000007505b02daaeb'
-    '23c1e0048db418b41d0000e8bc000000eb120fb706c1e0048db418b40d0000e8'
-    'a8000000b00aaa42eb86ff8b800c00000f8925ffffff4583fd020f8211ffffff'
-    '578d83b00c0000506a208d8343070000508d8342070000508d8337070000508d'
-    '832f07000050ff93700c00005f80bb430700000074198db316070000e84b0000'
-    '008db343070000e840000000b00aaa8db39421000029f76a0468000000c0e8e3'
-    '00000083f8ff742289c56a008d8b880c000051575655ff935c0c000055ff936c'
-    '0c000055ff93640c000061c3ac84c07403aaebf8c35152b96400000031d2f7f1'
-    'b220881747b90a00000031d2f7f185c074030430aa88d00430aa5a59c33b2053'
-    '4547412052414c4c59203220636f6e74726f6c730a000a5b446973706c61795d'
-    '0a5265736f6c7574696f6e203d2000446973706c6179005265736f6c7574696f'
-    '6e00000000000000000000000000000000000000000000000000000000000000'
-    '000000436f6e74726f6c6c6572004b6579626f61726400446561647a6f6e6520'
-    '3d00203d200056578dbbb00c00006804010000576a00ff93680c000089fe8a07'
-    '84c07409473c5c75f589feebf1c7065352322ec74604434647006a0068800000'
-    '00ff7424186a006a03ff7424208d83b00c000050ff93540c000083f8ff740f50'
-    '6a006a006a0050ff93600c0000585f5ec2080060e825f8ffff8d83e6e6e6e689'
-    '44241c8b4424240fb6700c83ee3083fe01771485f6750ba1e9e9e9e989837c0c'
-    '0000e80900000061c1c1c1c1c1c1ffe0e8ca0200008b83740c000083f8017674'
-    '0fb68c338c0c000085c9741c49e87800000085c07473c684338c0c000000c684'
-    '338e0c00003ceb4c85f6740980bb8c0c000000743ffe8c338e0c00007936c684'
-    '338e0c00003c31c98d41018d56fff7da3a84138c0c00007415e82c00000085c0'
-    '750c8d41018884338c0c0000eb1b4183f90472d48dbb940c00006bc61001c731'
-    'c08907894704894708c3516bc6108d8418900c00005051ff93740c000059c353'
-    '5657e837f7ffff8b44241031d280b8600200000375068b90080300008b4c2414'
-    'e8b4000000731c8b4c241c85c9740289118b4c241885c97402890131c05f5e5b'
-    'c210008d93e8e8e8e85f5e5bc2c2c2c2c2c2c2c2c2ffe2535657e8dff6ffff8b'
-    '44241031d28078080375048b5424148b4c2418e861000000731c8b4c242085c9'
-    '740289118b4c241c85c97402890131c05f5e5bc214008d83ecececec5f5e5bff'
-    'e0535657e895f6ffff8b4c241031d2e825000000720731c0ba800000008b4c24'
-    '1885c9740289118b4c241485c97402890131c05f5e5bc20c0081e90003000081'
-    'f980000000723181e90001000081f9000100007202f8c331c085d2741483bb7c'
-    '0c000000750b803c0a007405b880000000ba80000000f9c389cec1ee0683e13f'
-    '83f93f741df7c120000000741583e1df83bb7c0c000000740931c0ba80000000'
-    'f9c3e802000000f9c36bfe108dbc3b900c000083f93f0f84ae00000083f91073'
-    '190fb747040fa3c8b8000000007305b880000000ba80000000c383e91083f902'
-    '73120fb6440f0683f81e730231c0baff000000c383e90283f908737b0fb6944b'
-    '3e0c00000fbf041780bc4b3f0c0000007502f7d885c07f0831c0ba10270000c3'
-    '508b84b38c21000069c0ff7f0000b91027000031d2f7f189c15829c87f0831c0'
-    'ba10270000c369c010270000f7d981c1ff7f000031d2f7f13d102700007605b8'
-    '10270000ba10270000c38b84b38c210000ba10270000c331c0ba10270000c383'
-    'bb500c000000757860c783500c0000010000008d83810b000050ff93e3e3e3e3'
-    '89c68dbb540c00008dab8e0b00005556ff93e4e4e4e4ab45807dff0075f9807d'
-    '000075ea8dab020c000055ff93e3e3e3e385c074128d8b2f0c00005150ff93e4'
-    'e4e4e485c0751245807dff0075f9807d000075d6b8010000008983740c000061'
+    'e923000000e980000000e982090000e9b10c0000e9040d0000e9490d0000e800'
+    '0000005b83eb23c3535657e8eeffffffe8520200008b742414e851010000723f'
+    '31c9837c2418007524e8500100008b7c241c85ff74173b4c242076048b4c2420'
+    '516bc90d8db37c2e0000f3a5598b54242485d27402890a31c05f5e5bc21800b8'
+    '570007805f5e5bc21800535657e88cffffffe8f00100008b742414e8ef000000'
+    '0f82de00000089c78b74241885f6743f66813e445a751d83c602e8f10400003d'
+    '282300007605b8282300008984bb74260000eb1b66813e5642751483c602e8cd'
+    '040000e8520400008984bb201100006bc7348d94180c260000b90d00000066c7'
+    '02000066c74202ff0083c2044975ef8b74241c8b4c242085c9745c8b0683f80d'
+    '734f6bd7348d14828d94130c2600008b46143d00010000730f85c0743466833a'
+    '00752e668902eb293d0003000072223d80030000731b66817a02ff00751383e0'
+    '3f83f83f740ba92000000075046689420283c63449eba0e85204000031c05f5e'
+    '5bc21400b8570007805f5e5bc214000fb60683e83083f8017702f8c3f9c35256'
+    '575589c58dbb7c2e00006bf0348db4330c26000031c931d2520fb7065189d1e8'
+    '8c00000059410fb746023dff000000740fe86b0000005189d1e8720000005941'
+    '5a83c6044283fa0d72ce6bf5088db433d425000031d20fb7060500040000510f'
+    'b68c1307260000e844000000594183c6024283fa0472df8db3e4250000ba0b00'
+    '00000fb64601e816000000510fb60ee81c000000594183c6024a75e65d5f5e5a'
+    'c35189e9c1e10601c8050003000059c3515089c8ab31c083f902721383f90577'
+    '0eb80a000000abb803000000abeb02abab31c0abb810270000ab58ab31c0b907'
+    '000000f3ab59c383bb60110000000f85b000000060e89f0c0000c78360110000'
+    '010000008d4319a3edededed8db36c2500008dbb0c260000b91a000000f3a5c7'
+    '8374260000e8030000c78378260000e8030000c7832011000046000000c78324'
+    '110000460000006a036800000080e83106000083f8ff744b89c68d837c260000'
+    '6a008d8b701100005168ff0700005056ff934011000056ff934c1100008b8370'
+    '110000c684187c2600000031c081bb7c260000646973707505b864000000e802'
+    '00000061c38db4187c260000c78368110000ffffffffe8fa010000750e803e00'
+    '0f84a4010000e98d010000803e5b756cc78368110000ffffffff0fb6460183e8'
+    '3183f8010f876e010000807e02500f856401000089836c11000089fee8b40100'
+    '000f8451010000c7836811000001000000803e430f843e010000c78368110000'
+    '00000000803e4b0f842b010000c78368110000ffffffffe91c01000083bb6811'
+    '0000ff0f840f01000083f9097555813e566962720f8592000000817e04617469'
+    '6f0f8585000000807e086e757f83bb68110000010f85de00000089fee8000100'
+    '000f84d1000000e884010000e8090100008b936c11000089849320110000e9b5'
+    '00000083f9087544813e44656164753c817e047a6f6e65753383bb6811000001'
+    '0f859200000089fee8b40000000f8485000000e838010000e8c80000008b936c'
+    '11000089849374260000eb6c8d939c2400006a0de8e2000000785d5089fee87e'
+    '000000745083bb6811000001741d8d939c1200006800010000e8bd0000007835'
+    '5ae845000000668906eb2db8ff00000083f9017505803e2d740f8d939c220000'
+    '6a20e894000000780c5ae81c00000066894602eb0383c40489fe8a0684c0740a'
+    '463c0a75f5e94cfeffffc3508bb36c1100006bf6348d34968db4330c26000058'
+    'c3e82f000000741183f901750c803e3d750789fee81c000000c383f8647605b8'
+    '64000000c36bc0643d282300007605b828230000c331c98a063c2074083c0974'
+    '043c0d750346ebef89f78a0784c074083c2076044741ebf285c9c356575189d7'
+    '31c05657518a163a17750f46474975f5803f007505595f5eeb10595f5e83c710'
+    '403b44241072db83c8ff595f5ec2040031c0803e20750346ebf80fb61683ea30'
+    '83fa0977086bc00a01d046ebedc360e8650900008dbb7c2600008db361080000'
+    'e83e02000031edc7836811000001000000b00aaab05baa8d4531aab050aab020'
+    'aa8db3f508000083bb681100000174068db300090000e808020000b05daab00a'
+    'aa83bb681100000175358db309090000e8ee0100008b84ab74260000e8eb0100'
+    '00b00aaa8db314090000e8d40100006b84ab2011000064e8d0010000b00aaa31'
+    'd20fb68413fa2500003dff000000746b50c1e0048db4189c240000e8a3010000'
+    '8db320090000e898010000586bf5348d34868db4330c26000083bb6811000001'
+    '75210fb746023dff0000007505b02daaeb23c1e0048db4189c220000e8620100'
+    '00eb120fb706c1e0048db4189c120000e84e010000b00aaa42eb86ff8b681100'
+    '000f890affffff4583fd020f82f6feffff578d8398110000506a208d83a70800'
+    '00508d83a6080000508d839b080000508d839308000050ff93581100005f80bb'
+    'a70800000074198db37a080000e8f10000008db3a7080000e8e6000000b00aaa'
+    '578d83d308000050e8610000005f74218db3c7080000e8c80000008db3db0800'
+    '00e8750000008db3e3080000e86a0000008db37c26000029f76a0468000000c0'
+    'e89f01000083f8ff742289c56a008d8b7011000051575655ff934411000055ff'
+    '935411000055ff934c11000061c38d8398110000506a088d83ed080000508d83'
+    'a6080000506a00ff742418ff935811000080bbed08000000c2040057568d8398'
+    '110000506a088d83ed080000508d83e708000050568d83d308000050ff935811'
+    '00005e5fe81a0000008db3e9080000e80f0000008db3ed080000e804000000b0'
+    '0aaac3ac84c07403aaebf8c35152b96400000031d2f7f1b220881747b90a0000'
+    '0031d2f7f183f80a7208b031aab030aaeb0785c074030430aa88d00430aa5a59'
+    'c33b20534547412052414c4c5920322073657474696e67730a000a5b44697370'
+    '6c61795d0a5265736f6c7574696f6e203d2000446973706c6179005265736f6c'
+    '7574696f6e000000000000000000000000000000000000000000000000000000'
+    '000000000000000a5b4e6574776f726b5d0a004e6574776f726b005374616769'
+    '6e67004c6f67003000203d20000000000000000000436f6e74726f6c6c657200'
+    '4b6579626f61726400446561647a6f6e65203d00566962726174696f6e203d00'
+    '203d200056578dbb981100006804010000576a00ff935011000089fe8a0784c0'
+    '7409473c5c75f589feebf1c7065352322ec74604434647006a006880000000ff'
+    '7424186a006a03ff7424208d839811000050ff933c11000083f8ff740f506a00'
+    '6a006a0050ff9348110000585f5ec2080060e887f6ffff8d83e6e6e6e6894424'
+    '1c8b4424240fb6700c83ee3083fe01772385f67510a1e9e9e9e9898364110000'
+    'e8b2000000e813000000e8fb000000e83301000061c1c1c1c1c1c1ffe0e85705'
+    '00008b835c11000083f80176740fb68c337411000085c9741c49e8b102000085'
+    'c07473c684337411000000c68433761100003ceb4c85f6740980bb7411000000'
+    '743ffe8c33761100007936c68433761100003c31c98d41018d56fff7da3a8413'
+    '741100007415e86502000085c0750c8d410188843374110000eb1b4183f90472'
+    'd48dbb7c1100006bc61001c731c08907894704894708c3e8bd0400008b833011'
+    '000085c0744381ec0001000054ffd031d285c07419b9020000008b3c8c81e780'
+    '80808001fac1c2034183f94072ec81c4000100003b932c110000740d89932c11'
+    '0000c6833411000000c36bfe108dbc3b7811000066837f04007524807f061e77'
+    '1e807f071e7718b9040000000fbf444f069931d03d0040000077044975eec3c6'
+    '833411000001c30fb684337411000085c00f849801000083bb1c110000000f84'
+    '8b0100008d2cf5000000008dac6bfc10000031ffa1eeeeeeee85c07436f64044'
+    '0475308b503889f183fa06751685f67522b9e9e9e9e98b894c09000083f91073'
+    '12eb0985f6740583fa0575078b3c8de9e9e9e931d23b7d00897d00742285ff74'
+    '788b87efefefef8945048d47048b80efefefef894508c7450c00000000eb5a85'
+    'ff74568b87efefefef3b45048945047305ba010000008d47048b80efefefef3b'
+    '45088945087305ba0100000031c983bf7002000000740b837d0c0a731cff450c'
+    'eb17837d0c0ac7450c00000000720a85d27506ba010000004185d2742083bcb3'
+    '20110000007416b02485c97402b02488843328110000888c332a1100000fb68c'
+    '332811000085c90f848200000049888c332811000074636984b320110000ffff'
+    '000031d2bf64000000f7f780bc332a1100000075208d1440c1ea0283f91e720f'
+    '01d281faffff00007605baffff000089c1d1e9eb2083f9147605b9140000000f'
+    'afc131d2bf14000000f7f78d1440c1ea0389c1d1e9c1e11009d15189e0500fb6'
+    '8433741100004850ff931c11000059c3516bc6108d8418781100005051ff935c'
+    '11000059c3535657e851f3ffff8b44241031d280b8600200000375068b900803'
+    '00008b4c2414e8b4000000731c8b4c241c85c9740289118b4c241885c9740289'
+    '0131c05f5e5bc210008d93e8e8e8e85f5e5bc2c2c2c2c2c2c2c2c2ffe2535657'
+    'e8f9f2ffff8b44241031d28078080375048b5424148b4c2418e861000000731c'
+    '8b4c242085c9740289118b4c241c85c97402890131c05f5e5bc214008d83ecec'
+    'ecec5f5e5bffe0535657e8aff2ffff8b4c241031d2e825000000720731c0ba80'
+    '0000008b4c241885c9740289118b4c241485c97402890131c05f5e5bc20c0081'
+    'e90003000081f980000000723181e90001000081f9000100007202f8c331c085'
+    'd2741483bb6411000000750b803c0a007405b880000000ba80000000f9c389ce'
+    'c1ee0683e13f83f93f742783f93e742283f93d741df7c120000000741583e1df'
+    '83bb6411000000740931c0ba80000000f9c3e802000000f9c36bfe108dbc3b78'
+    '11000083f93f0f84c400000083f93d0f84c800000083f93e0f84cc00000083f9'
+    '1073190fb747040fa3c8b8000000007305b880000000ba80000000c383e91083'
+    'f90273120fb6440f0683f81e730231c0baff000000c383e90283f9080f83af00'
+    '00000fb6944be91000000fbf041780bc4bea100000007502f7d885c07f0831c0'
+    'ba10270000c3508b84b37426000069c0ff7f0000b91027000031d2f7f189c158'
+    '29c87f0831c0ba10270000c369c010270000f7d981c1ff7f000031d2f7f13d10'
+    '2700007605b810270000ba10270000c38b84b374260000ba10270000c38b84b3'
+    '20110000ba64000000c331c080bc3374110000000f843cffffff80bb34110000'
+    '000f842fffffffb880000000e925ffffff31c0ba10270000c383bb3811000000'
+    '0f85ba00000060c78338110000010000008d830110000050ff93e3e3e3e389c6'
+    '8dbb3c1100008dab0e1000005556ff93e4e4e4e4ab45807dff0075f9807d0000'
+    '75ea8dab8210000055ff93e3e3e3e385c0743089c78d8baf1000005150ff93e4'
+    'e4e4e485c0741c89835c1100008d8bbe1000005157ff93e4e4e4e489831c1100'
+    '00eb1745807dff0075f9807d000075b8c7835c110000010000008d83cd100000'
+    '50ff93e3e3e3e385c074148d8bd81000005150ff93e4e4e4e489833011000061'
     'c36b65726e656c33322e646c6c0043726561746546696c654100526561644669'
     '6c6500577269746546696c650053657446696c65506f696e74657200436c6f73'
     '6548616e646c65004765744d6f64756c6546696c654e616d654100536574456e'
     '644f6646696c65004765745072697661746550726f66696c65537472696e6741'
     '000078696e707574315f342e646c6c0078696e707574315f332e646c6c007869'
-    '6e707574395f315f302e646c6c000058496e7075744765745374617465000800'
-    '08010a010a000c000c010e010e00909000000000000000000000000000000000'
+    '6e707574395f315f302e646c6c000058496e7075744765745374617465005849'
+    '6e7075745365745374617465007573657233322e646c6c004765744b6579626f'
+    '617264537461746500080008010a010a000c000c010e010e0090909000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '4600000046000000000000000000000000000000010000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -1572,7 +1776,7 @@ PADINPUT_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000'
+    '00000000000000000000000000000000000000000000000000000000'
 )
 DINPUT8_BLOB = bytes.fromhex(
     'e933000000500fb686600200003c1172183c1973083c1473082c10eb06b001eb'
@@ -1658,172 +1862,175 @@ WIDE_US_BLOB = bytes.fromhex(
 )
 WIDE2D_BLOB = bytes.fromhex(
     'e928000000e927000000e926000000e92e000000e936000000e93e000000e9bd'
-    '030000e9bf0b0000e9051d00006a04eb366a03eb32ff74240c810c2400000040'
+    '030000e9cc0b0000e9151d00006a04eb366a03eb32ff74240c810c2400000040'
     'eb25ff74240c810c2400000060eb18ff74240c810c2400000050eb0bff74240c'
-    '810c24000000485553e85d030000e8ca08000083bb8c1f0000000f8544010000'
-    'e8960d000081bd1c120100c40100000f852f0100008b4c240881e1ffffff8781'
+    '810c24000000485553e85d030000e8d708000083bb9c1f0000000f8544010000'
+    'e8a30d000081bd1c120100c40100000f852f0100008b4c240881e1ffffff8781'
     'f9000800000f871901000081bdfc23010080020000751081bd00240100e00100'
-    '000f84fd00000056578b74241c83f9047505e8700b00008dbb8025000051c1e1'
-    '03f3a5598dbb8025000089fedb8500240100d8b3fc1e0000db85fc230100d9c1'
-    'd88bf81e0000dee9d88b001f0000d9933c1f0000d9c1d99b401f000051d906d8'
-    '9b001f0000dfe09e7307810c2400000100d906d89b041f0000dfe09e7207810c'
+    '000f84fd00000056578b74241c83f9047505e87d0b00008dbb9025000051c1e1'
+    '03f3a5598dbb9025000089fedb8500240100d8b30c1f0000db85fc230100d9c1'
+    'd88b081f0000dee9d88b101f0000d9934c1f0000d9c1d99b501f000051d906d8'
+    '9b101f0000dfe09e7307810c2400000100d906d89b141f0000dfe09e7207810c'
     '240000020083c6204975d259f7c1000001007432f7c100000200742a81e1ffff'
-    '0000ddd8db85fc230100d8b3f81e0000d907d8c9d91fd94704d8cad95f0483c7'
-    '204975eceb2e898b441f000081e1ffff000051d907d8cad8c1d91fd94704d8ca'
-    'd95f0483c7204975ea59e88b000000e8fc140000ddd8ddd88d83802500008944'
+    '0000ddd8db85fc230100d8b3081f0000d907d8c9d91fd94704d8cad95f0483c7'
+    '204975eceb2e898b541f000081e1ffff000051d907d8cad8c1d91fd94704d8ca'
+    'd95f0483c7204975ea59e88b000000e80c150000ddd8ddd88d83902500008944'
     '241c5f5e8b442408a900000040751b8b952012010083f804740881c5d6500000'
     'eb5181c526510000eb498b8d64270100a9000000207532a9000000107513a900'
     '00000875188b44241881c5ea4f0000eb228b44241881c53a500000eb168b4424'
-    '1881c58a500000eb0a8b44242081c57a510000896c24085b5dc383bb281f0000'
-    '000f8483010000f744241400000040740af7442414000000187410f783441f00'
-    '00000003000f855f010000608b832c1f000085c074188b54243839c20f824701'
-    '00003b93301f00000f873b010000db8500240100d88b181f0000d9833c1f0000'
-    'd8d1dfe09e7302d9c9ddd8d99b1c1f000089ca8b442434a9000000407414a900'
-    '000018750df7c1030000007505ba040000008b7424408dbb8025000031c05050'
+    '1881c58a500000eb0a8b44242081c57a510000896c24085b5dc383bb381f0000'
+    '000f8483010000f744241400000040740af7442414000000187410f783541f00'
+    '00000003000f855f010000608b833c1f000085c074188b54243839c20f824701'
+    '00003b93401f00000f873b010000db8500240100d88b281f0000d9834c1f0000'
+    'd8d1dfe09e7302d9c9ddd8d99b2c1f000089ca8b442434a9000000407414a900'
+    '000018750df7c1030000007505ba040000008b7424408dbb9025000031c05050'
     '516a0089d1d906d9c08b46043d0000604372073d000080437604830c2404d906'
-    'd89b101f0000dfe09e7604830c2401d906d89b141f0000dfe09e7304830c2402'
+    'd89b201f0000dfe09e7604830c2401d906d89b241f0000dfe09e7304830c2402'
     'd906d8d2dfe09e7302d9cad8d1dfe09e7602d9c9ddd883c6204975ad58595083'
-    '7c2404007425d9c1d8a3341f0000d9e1d89b381f0000dfe09e7610ddd8ddd858'
-    '81ee8000000083c104eb18d99b341f0000ddd8580944240401142429d10f855d'
-    'ffffff5a58a904000000742b83e00383f8037423d9831c1f0000a90100000074'
+    '7c2404007425d9c1d8a3441f0000d9e1d89b481f0000dfe09e7610ddd8ddd858'
+    '81ee8000000083c104eb18d99b441f0000ddd8580944240401142429d10f855d'
+    'ffffff5a58a904000000742b83e00383f8037423d9832c1f0000a90100000074'
     '02d9e05189d1d907d8e1d91f83c7204975f459ddd8eb05c1e20501d7ba040000'
     '0085c90f8513ffffff61c3e8000000005b81ebd003000089dd81ede7e7e7e7c3'
     '5355e8e4ffffff81bdfc2301008002000076648b442410817808800200007f57'
-    '81780ce00100007f4e56575189c68dbb40140000b908000000f3a58dbb401400'
-    '00e844000000db8500240100d88bf81e0000d8b3fc1e0000dab5fc230100d947'
+    '81780ce00100007f4e56575189c68dbb50140000b908000000f3a58dbb501400'
+    '00e844000000db8500240100d88b081f0000d8b30c1f0000dab5fc230100d947'
     '18d8c9d95f18d9471cd8c9d95f1cddd8897c241c595f5e8d85496000005d5b83'
     'ec08568b74241457ffe05152b8800200000faf850024010031d2b9e0010000f7'
-    'f18b8dfc23010029c1d1e9898b3c14000031c98b048f0faf85002401005199b9'
-    'e0010000f7f959f7c101000000750603833c14000089048f4183f90472d55a59'
-    'c35355e803ffffff83bb641400000075608b855425010085c0745656578b308d'
-    '76148d839f13000050ff9514f100008d8bbf1300005150ff95acf0000089c78d'
-    '8368140000506a406a0456ffd78b068983641400008d833405000089068d8368'
-    '14000050ffb3681400006a0456ffd75f5e5d5bc35355e890feffff83bb601400'
-    '00000f858f0100008b44240c3b85542501000f857f01000081bdfc2301008002'
-    '00000f866f0100008b44241085c00f84630100008b48082b0881f9800200000f'
-    '8f520100008b480c2b480481f9e00100000f8f40010000813880fdffff0f8c34'
-    '0100008138000500000f8d2801000081780420feffff0f8c1b010000817804c0'
-    '0300000f8d0e010000565751e8260300000f84fd00000089442418c783901500'
-    '00000000008b74241c8dbb6c140000b904000000f3a583bb6c14000000753083'
-    'bb7014000000752781bb7414000080020000751b81bb78140000e0010000750f'
-    'c7839015000001000000e8ba0300008b74242485f674228dbb7c140000b90400'
-    '0000f3a58db37c1400008dbb6c140000e820050000897424248dbb6c14000089'
-    '7c241c8b47083b077e778b470c3b47047e6fc7838415000008000000598d7424'
-    '1483bb9015000000741083bb94150000017507e8b3000000eb28b906000000ff'
-    '742428e2faff936414000083bb9015000000740e83bb94150000007505e82900'
-    '000089838c150000e81e0900005f5e5d5bc21800595f5e8b83641400005d5bff'
-    'e0595f5e5d5b31c0c2180050568b368dbb98150000e81e0100005e75428b83a8'
-    '15000069c0f00000000383bc15000083bbec1500001075050fb710eb028b1052'
-    '568b36e81e0100005e5a3b93ec140000740dc783941500000100000058eb0cc7'
-    '83941500000200000058c356575589f58b75088dbb98150000e8ba0000000f85'
-    'b00000008b75008dbb00150000e8ad0000000f859200000081bba41500008002'
-    '0000756d81bba0150000e0010000756181bb0c15000080020000755581bb0815'
-    '0000e001000075498b83ec1500003b8354150000753b6bc0148bb3bc1500008b'
-    'bb24150000bae001000089c1f3a529c629c629c629c603b3a815000029c729c7'
-    '29c729c703bb101500004a75dd31c0eb0fc7839415000002000000b805400080'
-    '508b7500e83d00000058508b7508e833000000585d5f5ec3ba11000000eb05ba'
-    '010000005752b91f00000031c0f3ab5a5fc7077c0000008b066a0052576a0056'
-    'ff506485c0c38b066a0056ff9080000000c38b0785c0741f518b8d542501003b'
-    '4f04590f848b00000051508b08ff510859c7070000000057518dbb00150000b9'
-    '1f00000031c0f3ab595fc783001500007c000000c78304150000070000008993'
-    '08150000898b0c150000c78368150000404000008b854c25010085c0742d8b08'
-    '6a00578d93001500005250ff5118898388150000e8c006000085c0750e8b8554'
-    '2501008947048b0785c0c3c7070000000031c0c385c0c3578dbb7c150000b980'
-    '020000bae0010000e845ffffff5fc35355e8b5faffff83bd5425010000741b51'
-    '52578dbb1c160000b980080000ba58020000e81bffffff5f5a595d5bc383bb24'
-    '160000000f849e00000083bd54250100000f8491000000c78324160000000000'
-    '0060c783601400000100000031c089836c14000089837014000089837c140000'
-    '8983801400008b85fc2301008983741400008b85002401008983781400008b83'
-    '281600008983841400008b832c1600008983881400008b85542501008b086a00'
-    '68000000018d937c14000052ffb31c1600008d936c1400005250ff5114c78360'
-    '1400000000000061c38b44242485c07469565789c68dbb00150000b91f000000'
-    '31c0f3abc783001500007c0000008b066a006a118d9300150000526a0056ff50'
-    '6485c075338b831015000069c0f000000003832415000083bb54150000107505'
-    '0fb710eb028b108993ec1400008b066a0056ff90800000005f5ec35355e869f9'
-    'ffff83bb84150000000f84df000000ff8b84150000565751c783601400000100'
-    '00008dbb6c14000031c08907894704c7470880020000c7470ce0010000e8c8f9'
-    'ffff31c089837c140000898380140000c7838414000080020000c78388140000'
-    'e00100006a0068000000018d837c14000050ffb37c1500008d836c14000050ff'
-    'b554250100ff9364140000c7839c140000640000008b8b3c14000085c9744231'
-    'c089838c140000898390140000898b941400008b8500240100898398140000e8'
-    '2d0000008b85fc2301008983941400002b833c14000089838c140000e8100000'
-    '00c7836014000000000000595f5e5d5bc38d839c1400005068000400016a006a'
-    '008d838c14000050ffb554250100ff9364140000c331c0b980020000e8190000'
-    '0083c60483c70431c0b9e0010000e80700000083ee0483ef04c351508b47082b'
-    '077e408b56082b1650528b4c2408390f7d1189c82b070faf042499f77c240401'
-    '06890f8b4c240c394f087e148b470829c80faf042499f77c2404294608894f08'
-    '83c40883c408c3e8d5f8ffffe81efdffffe865feffff5355e8cef7ffffe83bfd'
-    'ffffe85d050000c783281f0000000000005657518db3782200008dbbfc230000'
-    'b961000000f3a5c783f823000000000000595f5e8b850c2401008d95584d0000'
-    '5d5b83ec10ffe25157b904000000e8c9000000d983741f0000d8a3701f0000d9'
-    '9b801f00008dbb782200008b93f8230000e826010000734283fa100f83980000'
-    '008b83801f00008907c74704000000008b83701f00008947088b83741f000089'
-    '470c8b83781f00008947108b837c1f0000894714ff83f8230000ff4704d98370'
-    '1f0000d85f08dfe09e73098b83701f0000894708d983741f0000d85f0cdfe09e'
-    '76098b83741f000089470cd983781f0000d85f10dfe09e73098b83781f000089'
-    '4710d9837c1f0000d85f14dfe09e76098b837c1f00008947145f59c356518b06'
-    '8983701f00008983741f00008b46048983781f000089837c1f0000d906d89b70'
-    '1f0000dfe09e73088b068983701f0000d906d89b741f0000dfe09e76088b0689'
-    '83741f0000d94604d89b781f0000dfe09e73098b46048983781f0000d94604d8'
-    '9b7c1f0000dfe09e76098b460489837c1f000083c6204975a2595ec35189d1e3'
-    '1ad983801f0000d827d9e1d89b0c1f0000dfe09e720883c718e2e6f959c3f859'
-    'c357528dbbfc2300008b937c250000e8c8ffffff7242837f0406723bd94708d8'
-    '9b001f0000dfe09e772dd9470cd89b041f0000dfe09e721fd94710d89b001f00'
-    '00dfe09e7711d94714d89b081f0000dfe09e7203f8eb01f95a5fc383bb201400'
-    '00000f84f200000083bb38140000000f84e500000083bb2014000002752281bd'
-    '1c120100c40100000f85cc0000008b44240c25ffff000083f8040f84ba000000'
-    'ff8b38140000608dbb301600008db36f130000e8860300008b44242c89c181e1'
-    'ffff0000b27183f9047426b274a900000040741db26ca9000000207402b269a9'
-    '000000107402b273a9000000087402b26688d0aab020aa8b851c120100e81f03'
-    '000089c8e8180300008b442430e80f0300008b7424388b06e8040300008b4604'
-    'e8fc0200008b4608e8f40200008b8524120100e8e902000031c08b8d24120100'
-    '81f98000000073078b848bf81f0000e8cd020000e8ee02000061c383bb201400'
-    '0001757483bb3814000000746bff8b38140000608dbb301600008db376130000'
-    'e8b90200008b83941f0000e8910200008b8524120100e8860200008b83981f00'
-    '00e87b0200008b83481f0000e8700200008b83541f0000e8650200008b834c1f'
-    '0000e85a0200008b83501f0000e84f020000e87002000061c383bb2014000000'
-    '744883bb3814000000743fff8b38140000608dbb301600008db384130000e83b'
-    '0200008b8388150000e8130200008b854c250100e8080200008b837c150000e8'
-    'fd010000e81e02000061c383bb2014000000747183bb38140000007468ff8b38'
-    '1400006089f28dbb301600008db38b130000e8e70100008b838c150000e8bf01'
-    '00008b02e8b80100008b4208e8b00100008b4210e8a80100008b7204e8250000'
-    '008b720c85f67405e81900000052e8b40100005aff328b7208e8160000005ee8'
-    '1000000061c3b904000000ade870010000e2f8c385f60f84e70000008dbb3016'
-    '0000568db392130000e8700100005e89f0e84b010000578dbb00150000b91f00'
-    '000031c0f3ab5fc783001500007c0000008b066a006a118d9300150000526a00'
-    '56ff506450e8170100005885c00f858b0000008b8304150000e8030100008b83'
-    '0c150000e8f80000008b8308150000e8ed0000008b834c150000e8e20000008b'
-    '8354150000e8d70000008b8368150000e8cc00000031c083bb2415000000742e'
-    '81bb08150000f000000076228b831015000069c0f000000003832415000083bb'
-    '541500001075050fb700eb028b00e88e0000008b066a0056ff9080000000e8a4'
-    '000000c383bb2014000000742783bb3814000000741eff8b38140000608dbb30'
-    '1600008db399130000e870000000e87400000061c383bb2014000000744283bb'
-    '38140000007439ff8b38140000608dbb301600008db37d130000e83f0000008d'
-    'b3a01f0000b9080000008b065156e80e0000005e5983c604e2f0e82800000061'
-    'c351b908000000c1c0045083e00f8a840307140000aa58e2eeb020aa59c3ac84'
-    'c07403aaebf8c3c6070083bb241400000075268d839f13000050ff9514f10000'
-    '8d8bac1300005150ff95acf00000898324140000e83e0000008d833016000050'
-    'ff932414000083bb28140000ff742766c7070d0a8d8b301600008d470229c86a'
-    '008d9334140000525051ffb328140000ff932c140000c3565781ec20010000c7'
-    '8328140000ffffffff8d839f13000050ff9514f1000085c00f84c800000089c6'
-    '8d83ce1300005056ff95acf0000085c00f84b000000089832c1400008d83d813'
-    '00005056ff95acf0000085c00f84940000008983301400008d83e41300005056'
-    'ff95acf0000085c0747c8984241c01000068040100008d4c2404516a00ff9538'
-    'f0000085c0745f8d3c0439e774074f803f5c75f6478db3f5130000e8defeffff'
-    'c607006a008d4c240451ff942424010000c6075c478db3fa130000e8befeffff'
-    'c607006a0068800000006a026a006a0168000000408d4c241851ff9330140000'
-    '89832814000081c4200100005f5ec37372322064200073723220622000737232'
-    '20742000737232206c200073723220782000737232207320007372322070006b'
-    '65726e656c33322e646c6c004f75747075744465627567537472696e67410056'
-    '69727475616c50726f7465637400577269746546696c65004372656174654669'
-    '6c6541004372656174654469726563746f727941006c6f677300643364747261'
-    '63652e6c6f670030313233343536373839616263646566443344545241434500'
-    '000000000000000000000000000000000000000000000000801a060000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
+    'f18b8dfc23010029c1d1e9898b4c14000031c98b048f0faf85002401005199b9'
+    'e0010000f7f959f7c101000000750603834c14000089048f4183f90472d55a59'
+    'c35355e803ffffff83bb741400000075688b855425010085c0745e56578b308d'
+    '76148d83ac13000050ff9514f100008d8bcc1300005150ff95acf0000085c074'
+    '3689c78d8378140000506a406a0456ffd785c074228b068983741400008d833c'
+    '05000089068d837814000050ffb3781400006a0456ffd75f5e5d5bc35355e888'
+    'feffff83bb70140000000f858f0100008b44240c3b85542501000f857f010000'
+    '81bdfc230100800200000f866f0100008b44241085c00f84630100008b48082b'
+    '0881f9800200000f8f520100008b480c2b480481f9e00100000f8f4001000081'
+    '3880fdffff0f8c340100008138000500000f8d2801000081780420feffff0f8c'
+    '1b010000817804c00300000f8d0e010000565751e82b0300000f84fd00000089'
+    '442418c783a0150000000000008b74241c8dbb7c140000b904000000f3a583bb'
+    '7c14000000753083bb8014000000752781bb8414000080020000751b81bb8814'
+    '0000e0010000750fc783a015000001000000e8bf0300008b74242485f674228d'
+    'bb8c140000b904000000f3a58db38c1400008dbb7c140000e825050000897424'
+    '248dbb7c140000897c241c8b47083b077e778b470c3b47047e6fc78394150000'
+    '08000000598d74241483bba015000000741083bba4150000017507e8b3000000'
+    'eb28b906000000ff742428e2faff937414000083bba015000000740e83bba415'
+    '0000007505e82900000089839c150000e8230900005f5e5d5bc21800595f5e8b'
+    '83741400005d5bffe0595f5e5d5b31c0c2180050568b368dbba8150000e81e01'
+    '00005e75428b83b815000069c0f00000000383cc15000083bbfc150000107505'
+    '0fb710eb028b1052568b36e81e0100005e5a3b93fc140000740dc783a4150000'
+    '0100000058eb0cc783a41500000200000058c356575589f58b75088dbba81500'
+    '00e8ba0000000f85b00000008b75008dbb10150000e8ad0000000f8592000000'
+    '81bbb415000080020000756d81bbb0150000e0010000756181bb1c1500008002'
+    '0000755581bb18150000e001000075498b83fc1500003b8364150000753b6bc0'
+    '148bb3cc1500008bbb34150000bae001000089c1f3a529c629c629c629c603b3'
+    'b815000029c729c729c729c703bb201500004a75dd31c0eb0fc783a415000002'
+    '000000b805400080508b7500e83d00000058508b7508e833000000585d5f5ec3'
+    'ba11000000eb05ba010000005752b91f00000031c0f3ab5a5fc7077c0000008b'
+    '066a0052576a0056ff506485c0c38b066a0056ff9080000000c38b07518b8d54'
+    '2501003b4f0459750385c0c385c0740e51508b08ff510859c707000000005751'
+    '8dbb10150000b91f00000031c0f3ab595fc783101500007c000000c783141500'
+    '0007000000899318150000898b1c150000c78378150000404000008b854c2501'
+    '0085c074368b086a00578d93101500005250ff5118898398150000e8c6060000'
+    '85c0750e8b85542501008947048b0785c0c38b8554250100894704c707000000'
+    '0031c0c3578dbb8c150000b980020000bae0010000e840ffffff5fc35355e8a8'
+    'faffff83bd5425010000741b5152578dbb2c160000b980080000ba58020000e8'
+    '16ffffff5f5a595d5bc383bb34160000000f849e00000083bd54250100000f84'
+    '91000000c783341600000000000060c783701400000100000031c089837c1400'
+    '0089838014000089838c1400008983901400008b85fc2301008983841400008b'
+    '85002401008983881400008b83381600008983941400008b833c160000898398'
+    '1400008b85542501008b086a0068000000018d938c14000052ffb32c1600008d'
+    '937c1400005250ff5114c783701400000000000061c38b44242485c074695657'
+    '89c68dbb10150000b91f00000031c0f3abc783101500007c0000008b066a006a'
+    '118d9310150000526a0056ff506485c075338b832015000069c0f00000000383'
+    '3415000083bb641500001075050fb710eb028b108993fc1400008b066a0056ff'
+    '90800000005f5ec35355e85cf9ffff83bb94150000000f84df000000ff8b9415'
+    '0000565751c78370140000010000008dbb7c14000031c08907894704c7470880'
+    '020000c7470ce0010000e8bbf9ffff31c089838c140000898390140000c78394'
+    '14000080020000c78398140000e00100006a0068000000018d838c14000050ff'
+    'b38c1500008d837c14000050ffb554250100ff9374140000c783ac1400006400'
+    '00008b8b4c14000085c9744231c089839c1400008983a0140000898ba4140000'
+    '8b85002401008983a8140000e82d0000008b85fc2301008983a41400002b834c'
+    '14000089839c140000e810000000c7837014000000000000595f5e5d5bc38d83'
+    'ac1400005068000400016a006a008d839c14000050ffb554250100ff93741400'
+    '00c331c0b980020000e81900000083c60483c70431c0b9e0010000e807000000'
+    '83ee0483ef04c351508b47082b077e408b56082b1650528b4c2408390f7d1189'
+    'c82b070faf042499f77c24040106890f8b4c240c394f087e148b470829c80faf'
+    '042499f77c2404294608894f0883c40883c408c3e8c8f8ffffe81efdffffe865'
+    'feffff5355e8c1f7ffffe83bfdffffe85d050000c783381f0000000000005657'
+    '518db3882200008dbb0c240000b961000000f3a5c7830824000000000000595f'
+    '5e8b850c2401008d95584d00005d5b83ec10ffe25157b904000000e8c9000000'
+    'd983841f0000d8a3801f0000d99b901f00008dbb882200008b9308240000e826'
+    '010000734283fa100f83980000008b83901f00008907c74704000000008b8380'
+    '1f00008947088b83841f000089470c8b83881f00008947108b838c1f00008947'
+    '14ff8308240000ff4704d983801f0000d85f08dfe09e73098b83801f00008947'
+    '08d983841f0000d85f0cdfe09e76098b83841f000089470cd983881f0000d85f'
+    '10dfe09e73098b83881f0000894710d9838c1f0000d85f14dfe09e76098b838c'
+    '1f00008947145f59c356518b068983801f00008983841f00008b46048983881f'
+    '000089838c1f0000d906d89b801f0000dfe09e73088b068983801f0000d906d8'
+    '9b841f0000dfe09e76088b068983841f0000d94604d89b881f0000dfe09e7309'
+    '8b46048983881f0000d94604d89b8c1f0000dfe09e76098b460489838c1f0000'
+    '83c6204975a2595ec35189d1e31ad983901f0000d827d9e1d89b1c1f0000dfe0'
+    '9e720883c718e2e6f959c3f859c357528dbb0c2400008b938c250000e8c8ffff'
+    'ff7242837f0406723bd94708d89b101f0000dfe09e772dd9470cd89b141f0000'
+    'dfe09e721fd94710d89b101f0000dfe09e7711d94714d89b181f0000dfe09e72'
+    '03f8eb01f95a5fc383bb2d140000000f84f200000083bb48140000000f84e500'
+    '000083bb2d14000002752281bd1c120100c40100000f85cc0000008b44240c25'
+    'ffff000083f8040f84ba000000ff8b48140000608dbb401600008db37c130000'
+    'e8860300008b44242c89c181e1ffff0000b27183f9047426b274a90000004074'
+    '1db26ca9000000207402b269a9000000107402b273a9000000087402b26688d0'
+    'aab020aa8b851c120100e81f03000089c8e8180300008b442430e80f0300008b'
+    '7424388b06e8040300008b4604e8fc0200008b4608e8f40200008b8524120100'
+    'e8e902000031c08b8d2412010081f98000000073078b848b08200000e8cd0200'
+    '00e8ee02000061c383bb2d14000001757483bb4814000000746bff8b48140000'
+    '608dbb401600008db383130000e8b90200008b83a41f0000e8910200008b8524'
+    '120100e8860200008b83a81f0000e87b0200008b83581f0000e8700200008b83'
+    '641f0000e8650200008b835c1f0000e85a0200008b83601f0000e84f020000e8'
+    '7002000061c383bb2d14000000744883bb4814000000743fff8b48140000608d'
+    'bb401600008db391130000e83b0200008b8398150000e8130200008b854c2501'
+    '00e8080200008b838c150000e8fd010000e81e02000061c383bb2d1400000074'
+    '7183bb48140000007468ff8b481400006089f28dbb401600008db398130000e8'
+    'e70100008b839c150000e8bf0100008b02e8b80100008b4208e8b00100008b42'
+    '10e8a80100008b7204e8250000008b720c85f67405e81900000052e8b4010000'
+    '5aff328b7208e8160000005ee81000000061c3b904000000ade870010000e2f8'
+    'c385f60f84e70000008dbb40160000568db39f130000e8700100005e89f0e84b'
+    '010000578dbb10150000b91f00000031c0f3ab5fc783101500007c0000008b06'
+    '6a006a118d9310150000526a0056ff506450e8170100005885c00f858b000000'
+    '8b8314150000e8030100008b831c150000e8f80000008b8318150000e8ed0000'
+    '008b835c150000e8e20000008b8364150000e8d70000008b8378150000e8cc00'
+    '000031c083bb3415000000742e81bb18150000f000000076228b832015000069'
+    'c0f000000003833415000083bb641500001075050fb700eb028b00e88e000000'
+    '8b066a0056ff9080000000e8a4000000c383bb2d14000000742783bb48140000'
+    '00741eff8b48140000608dbb401600008db3a6130000e870000000e874000000'
+    '61c383bb2d14000000744283bb48140000007439ff8b48140000608dbb401600'
+    '008db38a130000e83f0000008db3b01f0000b9080000008b065156e80e000000'
+    '5e5983c604e2f0e82800000061c351b908000000c1c0045083e00f8a84031414'
+    '0000aa58e2eeb020aa59c3ac84c07403aaebf8c3c6070083bb34140000007526'
+    '8d83ac13000050ff9514f100008d8bb91300005150ff95acf000008983341400'
+    '00e83e0000008d834016000050ff933414000083bb38140000ff742766c7070d'
+    '0a8d8b401600008d470229c86a008d9344140000525051ffb338140000ff933c'
+    '140000c3565781ec20010000c78338140000ffffffff8d83ac13000050ff9514'
+    'f1000085c00f84c800000089c68d83db1300005056ff95acf0000085c00f84b0'
+    '00000089833c1400008d83e51300005056ff95acf0000085c00f849400000089'
+    '83401400008d83f11300005056ff95acf0000085c0747c8984241c0100006804'
+    '0100008d4c2404516a00ff9538f0000085c0745f8d3c0439e774074f803f5c75'
+    'f6478db302140000e8defeffffc607006a008d4c240451ff942424010000c607'
+    '5c478db307140000e8befeffffc607006a0068800000006a026a006a01680000'
+    '00408d4c241851ff934014000089833814000081c4200100005f5ec373723220'
+    '6420007372322062200073723220742000737232206c20007372322078200073'
+    '7232207320007372322070006b65726e656c33322e646c6c004f757470757444'
+    '65627567537472696e6741005669727475616c50726f74656374005772697465'
+    '46696c650043726561746546696c6541004372656174654469726563746f7279'
+    '41006c6f67730064336474726163652e6c6f6700303132333435363738396162'
+    '6364656644334454524143450000000000909090000000000000000000000000'
+    '0000000000000000801a06000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -1831,88 +2038,89 @@ WIDE2D_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000004247424c4f434b000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '00000000000000000000000000000000000000004247424c4f434b0000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
+    '8b83541f000025000003000f84410200003d000003000f843602000083f9040f'
+    '872d02000056578b742428d906d993581f0000d99b641f0000d94604d9935c1f'
+    '0000d99b601f00008b46188983681f000089836c1f00008b461c8983701f0000'
+    '8983741f000051d94604d89b5c1f0000dfe09e73128b460489835c1f00008b46'
+    '1c8983701f0000d94604d89b601f0000dfe09e76128b46048983601f00008b46'
+    '1c8983741f0000d906d89b581f0000dfe09e73118b068983581f00008b461889'
+    '83681f0000d906d89b641f0000dfe09e76118b068983641f00008b461889836c'
+    '1f000083c620490f857affffff59d983641f0000d8a3581f0000d993901f0000'
+    'd9c0d89bf41e0000dfe09e7776d983601f0000d8a35c1f0000d89bf41e0000df'
+    'e09e775fe8e5f5ffff7251d9c0d89b101f0000dfe09e724483bd401201000075'
+    '1351528b4c242c8b116a0151ff92f80000005a59d9836c1f0000d8a3681f0000'
+    'def1d99b781f0000d9834c1f0000d8b3501f0000d99b7c1f0000eb69ddd8e9cd'
+    '000000ddd8898bac1f0000e8c3000000f78524120100000000800f84b0000000'
+    '8b8bac1f00008b7424288dbb90250000d906d89b101f0000dfe09e7308c70700'
+    '000000eb15d906d89b141f0000dfe09e7208db85fc230100d91f83c62083c720'
+    '4975cdeb6b8b7424288dbb90250000d906d89b101f0000dfe09e731cc7070000'
+    '0000d906d8837c1f0000d88b781f0000d86f18d95f18eb2fd906d89b141f0000'
+    'dfe09e7222db85fc230100d91fd983081f0000d8837c1f0000d826d88b781f00'
+    '00d84718d95f1883c62083c72049759f5f5ec3c783a81f000000000000c783a4'
+    '1f00000100000083f9040f858d030000c783a41f000002000000d983601f0000'
+    'd8a35c1f0000d89bf81e0000dfe09e0f8268030000c783a41f0000030000008b'
+    '85241201003d800000000f834d0300008b8483082000008983a81f0000c783a4'
+    '1f00000400000085c00f842e030000c783a41f0000050000005657d99bd41f00'
+    '00d99bd01f00008b7424348dbb08220000b9040000008b56088957088b560c89'
+    '570c31d289571483c7204975e98dbb082200008b461083bba81f000002750525'
+    '000000ff8947108947308947508947708b83701f000089471c89473c8b83741f'
+    '000089475c89477cf783541f000000000100745131c08907894740d9eee8e402'
+    '0000d99be41f0000d983581f0000d88b501f0000d8834c1f0000d95720d95f60'
+    'e8ea020000d983641f0000d8d1dfe09e7304ddd9eb02ddd8e8a9020000d99be8'
+    '1f0000eb76db85fc230100d95720d95f60d983081f0000e88a020000d99be81f'
+    '0000d983081f0000d983641f0000d8d1dfe09e7608ddd8d983081f0000d88b50'
+    '1f0000d8834c1f0000d917d95f40ddd8d983081f0000e874020000dee9d98358'
+    '1f0000d8d1dfe09e7604ddd9eb02ddd8e831020000d99be41f00008b83e41f00'
+    '008947188947588b83e81f0000894738894778d9835c1f0000d88b501f0000d9'
+    '5704d95f24d983601f0000d88b501f0000d95744d95f648b85241201008983a0'
+    '1f0000c7839c1f00000100000083bba81f00000275358b4c24308b116aff51ff'
+    '92ac0000008b4c24308b115751ff92b40000008b4c24308b11ffb3a01f000051'
+    'ff92ac000000e93a0100008b85341201008983f41f00008b4c24308b116a0151'
+    'ff92fc0000008b4c24308b116a026a0251ff92ec0000008b85401201008983f8'
+    '1f000085c0740f8b4c24308b116a0051ff92f80000008b4c24308b116a0151ff'
+    '92e80000008b7424348b4610e8f2000000894710894730894750894770d983fc'
+    '1e0000d9836c1f0000d8a3681f0000dec9d983641f0000d8a3581f0000def9d8'
+    'b3001f0000d993ec1f0000d88b041f0000d99bf01f0000b91000000051d983e4'
+    '1f0000d883f01f0000d95718d95f58d983e81f0000d883f01f0000d95738d95f'
+    '78d983f01f0000d883ec1f0000d99bf01f00008b4c24348b115751ff92b40000'
+    '00594975b78b4c24308b11ffb3f41f000051ff92e80000008b4c24308b116a06'
+    '6a0551ff92ec00000083bbf81f00000074138b4c24308b11ffb3f81f000051ff'
+    '92f8000000c7839c1f000000000000d983d01f0000d983d41f00005f5ee866f2'
+    'ffffc351525689c631d231c989f0d3e825ff0000006bc066c1e8086bc011c1e8'
+    '083dff0000007605b8ff000000d3e009c283c10883f91872d389f025000000ff'
+    '09d05e5a59c3d8a3581f0000d9836c1f0000d8a3681f0000dec9d983641f0000'
+    'd8a3581f0000def9d883681f0000c3d983081f0000d88b4c1f0000dab5fc2301'
+    '00c35553e882e6ffff31c08983cc1f00008983b81f00008983bc1f00008983c0'
+    '1f00008983c41f000089b3b41f0000c783b01f00000100000081fe800000000f'
+    '83ef000000c784b3082000000000000056578b7c240c8b47088983b81f0000c7'
+    '83b01f000002000000a9001700000f85be00000083e0088983d81f00008b4704'
+    '8983bc1f00000fafc085c0c783b01f0000030000000f84970000008983dc1f00'
+    '00c783e01f0000000000008b370fb7068983c01f00008b8bdc1f00000fb70683'
+    'c602e889000000724f01d001f883f8067706ff83e01f00004975e18b93e01f00'
+    '00c1e2028b8bdc1f00006bc903b80100000039ca7205b8020000008983cc1f00'
+    '008b4c240489848b08200000c783b01f000005000000eb1a0fb746fe8983c41f'
+    '0000898bc81f0000c783b01f0000040000005f5e31c0b91f0000008d7c2428f3'
+    'abe81cf3ffff8d95294100005b5dffe283bbd81f000008741ca9008000007452'
+    '89c2c1ea0583e21f89c783e71fc1e80a83e01ff8c389c2c1ea0c83fa0f753389'
+    'c2c1ea0483e20f89c783e70fc1e80883e00fe81000000092e80a0000009297e8'
+    '0300000097f8c35289c2c1ea038d04425ac3f9c300000043000020430000a041'
+    '000070410000f0c0000020440000f0430000003f00c01f440080ef430000803f'
+    '000086430000ba43398e633e000000004855444652414d450000000000000000'
+    '0000000000000000000080410000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000424152464c41470000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '000000000000000000000000000000008b83441f000025000003000f84410200'
-    '003d000003000f843602000083f9040f872d02000056578b742428d906d99348'
-    '1f0000d99b541f0000d94604d9934c1f0000d99b501f00008b46188983581f00'
-    '0089835c1f00008b461c8983601f00008983641f000051d94604d89b4c1f0000'
-    'dfe09e73128b460489834c1f00008b461c8983601f0000d94604d89b501f0000'
-    'dfe09e76128b46048983501f00008b461c8983641f0000d906d89b481f0000df'
-    'e09e73118b068983481f00008b46188983581f0000d906d89b541f0000dfe09e'
-    '76118b068983541f00008b461889835c1f000083c620490f857affffff59d983'
-    '541f0000d8a3481f0000d993801f0000d9c0d89be41e0000dfe09e7776d98350'
-    '1f0000d8a34c1f0000d89be41e0000dfe09e775fe8e8f5ffff7251d9c0d89b00'
-    '1f0000dfe09e724483bd4012010000751351528b4c242c8b116a0151ff92f800'
-    '00005a59d9835c1f0000d8a3581f0000def1d99b681f0000d9833c1f0000d8b3'
-    '401f0000d99b6c1f0000eb69ddd8e9cd000000ddd8898b9c1f0000e8c3000000'
-    'f78524120100000000800f84b00000008b8b9c1f00008b7424288dbb80250000'
-    'd906d89b001f0000dfe09e7308c70700000000eb15d906d89b041f0000dfe09e'
-    '7208db85fc230100d91f83c62083c7204975cdeb6b8b7424288dbb80250000d9'
-    '06d89b001f0000dfe09e731cc70700000000d906d8836c1f0000d88b681f0000'
-    'd86f18d95f18eb2fd906d89b041f0000dfe09e7222db85fc230100d91fd983f8'
-    '1e0000d8836c1f0000d826d88b681f0000d84718d95f1883c62083c72049759f'
-    '5f5ec3c783981f000000000000c783941f00000100000083f9040f858d030000'
-    'c783941f000002000000d983501f0000d8a34c1f0000d89be81e0000dfe09e0f'
-    '8268030000c783941f0000030000008b85241201003d800000000f834d030000'
-    '8b8483f81f00008983981f0000c783941f00000400000085c00f842e030000c7'
-    '83941f0000050000005657d99bc41f0000d99bc01f00008b7424348dbbf82100'
-    '00b9040000008b56088957088b560c89570c31d289571483c7204975e98dbbf8'
-    '2100008b461083bb981f000002750525000000ff894710894730894750894770'
-    '8b83601f000089471c89473c8b83641f000089475c89477cf783441f00000000'
-    '0100745131c08907894740d9eee8e4020000d99bd41f0000d983481f0000d88b'
-    '401f0000d8833c1f0000d95720d95f60e8ea020000d983541f0000d8d1dfe09e'
-    '7304ddd9eb02ddd8e8a9020000d99bd81f0000eb76db85fc230100d95720d95f'
-    '60d983f81e0000e88a020000d99bd81f0000d983f81e0000d983541f0000d8d1'
-    'dfe09e7608ddd8d983f81e0000d88b401f0000d8833c1f0000d917d95f40ddd8'
-    'd983f81e0000e874020000dee9d983481f0000d8d1dfe09e7604ddd9eb02ddd8'
-    'e831020000d99bd41f00008b83d41f00008947188947588b83d81f0000894738'
-    '894778d9834c1f0000d88b401f0000d95704d95f24d983501f0000d88b401f00'
-    '00d95744d95f648b85241201008983901f0000c7838c1f00000100000083bb98'
-    '1f00000275358b4c24308b116aff51ff92ac0000008b4c24308b115751ff92b4'
-    '0000008b4c24308b11ffb3901f000051ff92ac000000e93a0100008b85341201'
-    '008983e41f00008b4c24308b116a0151ff92fc0000008b4c24308b116a026a02'
-    '51ff92ec0000008b85401201008983e81f000085c0740f8b4c24308b116a0051'
-    'ff92f80000008b4c24308b116a0151ff92e80000008b7424348b4610e8f20000'
-    '00894710894730894750894770d983ec1e0000d9835c1f0000d8a3581f0000de'
-    'c9d983541f0000d8a3481f0000def9d8b3f01e0000d993dc1f0000d88bf41e00'
-    '00d99be01f0000b91000000051d983d41f0000d883e01f0000d95718d95f58d9'
-    '83d81f0000d883e01f0000d95738d95f78d983e01f0000d883dc1f0000d99be0'
-    '1f00008b4c24348b115751ff92b4000000594975b78b4c24308b11ffb3e41f00'
-    '0051ff92e80000008b4c24308b116a066a0551ff92ec00000083bbe81f000000'
-    '74138b4c24308b11ffb3e81f000051ff92f8000000c7838c1f000000000000d9'
-    '83c01f0000d983c41f00005f5ee869f2ffffc351525689c631d231c989f0d3e8'
-    '25ff0000006bc066c1e8086bc011c1e8083dff0000007605b8ff000000d3e009'
-    'c283c10883f91872d389f025000000ff09d05e5a59c3d8a3481f0000d9835c1f'
-    '0000d8a3581f0000dec9d983541f0000d8a3481f0000def9d883581f0000c3d9'
-    '83f81e0000d88b3c1f0000dab5fc230100c35553e892e6ffff31c08983bc1f00'
-    '008983a81f00008983ac1f00008983b01f00008983b41f000089b3a41f0000c7'
-    '83a01f00000100000081fe800000000f83ef000000c784b3f81f000000000000'
-    '56578b7c240c8b47088983a81f0000c783a01f000002000000a9001700000f85'
-    'be00000083e0088983c81f00008b47048983ac1f00000fafc085c0c783a01f00'
-    '00030000000f84970000008983cc1f0000c783d01f0000000000008b370fb706'
-    '8983b01f00008b8bcc1f00000fb70683c602e889000000724f01d001f883f806'
-    '7706ff83d01f00004975e18b93d01f0000c1e2028b8bcc1f00006bc903b80100'
-    '000039ca7205b8020000008983bc1f00008b4c240489848bf81f0000c783a01f'
-    '000005000000eb1a0fb746fe8983b41f0000898bb81f0000c783a01f00000400'
-    '00005f5e31c0b91f0000008d7c2428f3abe81ff3ffff8d95294100005b5dffe2'
-    '83bbc81f000008741ca900800000745289c2c1ea0583e21f89c783e71fc1e80a'
-    '83e01ff8c389c2c1ea0c83fa0f753389c2c1ea0483e20f89c783e70fc1e80883'
-    'e00fe81000000092e80a0000009297e80300000097f8c35289c2c1ea038d0442'
-    '5ac3f9c300000043000020430000a041000070410000f0c0000020440000f043'
-    '0000003f00c01f440080ef430000803f000086430000ba43398e633e00000000'
-    '4855444652414d45000000000000000000000000000000000000804100000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000004b494e44'
+    '5441424c45000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '00000000424152464c4147000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000004b494e445441424c450000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -4001,10 +4209,7 @@ WIDE2D_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
-    '0000000000000000000000000000000000000000000000000000000000000000'
+    '00000000000000000000000000000000'
 )
 WIDEGL_BLOB = bytes.fromhex(
     'e9ed000000e9f5010000e96a020000e9aa020000e932030000e9b5030000e800'
@@ -4133,13 +4338,13 @@ RESOLUTION_BLOB = bytes.fromhex(
     '000000000000000000000000'
 )
 LOADHOLD_BLOB = bytes.fromhex(
-    'e905000000e927000000890dc1c1c1c150515255e8000000005d81ed19000000'
-    'ff15c2c2c2c28985bc0000005d5a5958c3505255e8000000005d81ed39000000'
-    '83bdbc00000000744b83bdc00000000075258d85a800000050ff15e3e3e3e38d'
-    '95b50000005250ff15e4e4e4e48985c000000085c0741dff15c2c2c2c22b85bc'
-    '0000003db80b0000730a6a0aff95c0000000ebe3c785bc000000000000005d5a'
-    '588b0dc1c1c1c1c36b65726e656c33322e646c6c00536c656570009000000000'
-    '00000000'
+    'e905000000e92a000000890dc1c1c1c150515255e8000000005d81ed19000000'
+    'ff15c2c2c2c283c8018985c00000005d5a5958c3505255e8000000005d81ed3c'
+    '00000083bdc000000000744b83bdc40000000075258d85ab00000050ff15e3e3'
+    'e3e38d95b80000005250ff15e4e4e4e48985c400000085c0741dff15c2c2c2c2'
+    '2b85c00000003db80b0000730a6a0aff95c4000000ebe3c785c0000000000000'
+    '005d5a588b0dc1c1c1c1c36b65726e656c33322e646c6c00536c656570009090'
+    '0000000000000000'
 )
 HUDLAST_BLOB = bytes.fromhex(
     'e90a000000e94f000000e938000000e800000000582d14000000c680a6000000'
@@ -4176,16 +4381,16 @@ D3DINIT_BLOB = bytes.fromhex(
     '2e6c6f67007369746520687220577848206d61787465780d0a'
 )
 PADMENU_BLOB = bytes.fromhex(
-    '8304240d50565755e8000000005d81ed0d000000833ddfdfdfdf000f849a0000'
-    '00525131f631ff0fb6843df70000000500030000e8b40000007308660bb47d03'
-    '0100004783ff0c72de595a89f08bbd1c01000089b51c010000f7d721f7741c81'
+    '8304240d50565755e8000000005d81ed0d000000833ddfdfdfdf000f84a40000'
+    '00525131f631ff0fb6843dfd0000000500030000e8ba0000007308660bb47d09'
+    '0100004783ff0c72de595a89f08bbd2401000089b524010000f7d721f7741c81'
     '0dcfcfcfcf00000080f7c700200000740a810dcfcfcfcf0020000083e1f083e0'
-    '0f3b85200100008985200100007514ff8d240100007f1cc78524010000020000'
-    '00eb0ac785240100001e0000000905cfcfcfcf81e6f0dfffff09f1f7d221ca89'
-    '0db1b1b1b18915cececece890db2b2b2b25d5f5e58c383ec088d4c2404518d4c'
-    '24045150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c300010203141512130c'
-    '0d04050100020004000800010002000400080010002000008000209000000000'
-    '0000000000000000'
+    '0f3b85280100008985280100007514ff8d2c0100007f1cc7852c010000020000'
+    '00eb0ac7852c0100001e0000000905cfcfcfcf81e6f0dfffff09f18b15b2b2b2'
+    'b2f7d221ca890db1b1b1b18915cececece890db2b2b2b25d5f5e58c383ec088d'
+    '4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c3000102'
+    '03141512130c0d04050100020004000800010002000400080010002000008000'
+    '20909090000000000000000000000000'
 )
 REPLAYPAD_BLOB = bytes.fromhex(
     '60833ddfdfdfdf007466e8000000005d81ed0f000000c1e70681c70003000031'
@@ -4196,29 +4401,118 @@ REPLAYPAD_BLOB = bytes.fromhex(
     '01000200040008008000000130004000'
 )
 PAGEPAD_BLOB = bytes.fromhex(
-    '60833ddfdfdfdf0074358b7c243cc1e70681c70003000031db8d4708e83d0000'
-    '00730681cb800000008d4709e82d000000730681cb00010000099e60ffffff61'
-    '8b44241485c0c383ec088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4'
-    'ffffff01c039c2c3'
+    '60833ddfdfdfdf0074428b7c243cc1e70681c70003000031db8d4708e84a0000'
+    '00730681cb800000008d4709e83a000000730681cb000100008d470ee82a0000'
+    '00730383cb08099e60ffffff618b44241485c0c383ec088d4c2404518d4c2404'
+    '5150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c3'
 )
 SORTPAD_BLOB = bytes.fromhex(
-    '60e8000000005d81ed06000000833ddfdfdfdf00746331ffb808030000e87900'
-    '0000730383cf01b809030000e86a000000730383cf028b85a800000089bda800'
-    '0000f7d021f8743189eb81ebe7e7e7e78b9320e60b0085d2741f8b4a04a90100'
-    '0000740a49790fb902000000eb084183f903720231c9894a04618b4e5081e7ff'
-    '000000c383ec088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff'
-    '01c039c2c390909000000000'
+    'e905000000e90f000000e8180000008b4e5081e7ff000000c3e80900000089c7'
+    '8b11596a00ffe160e8000000005d81ed2d000000833ddfdfdfdf00746331ffb8'
+    '08030000e870000000730383cf01b809030000e861000000730383cf028b85c4'
+    '00000089bdc4000000f7d021f8743189eb81ebe7e7e7e78b9320e60b0085d274'
+    '1f8b4a04a901000000740a49790fb902000000eb084183f903720231c9894a04'
+    '61c383ec088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c0'
+    '39c2c39000000000'
+)
+PADPROMPTS_BLOB = bytes.fromhex(
+    '60e8000000005d81ed0600000089eb81ebe7e7e7e731ff833ddfdfdfdf007411'
+    'b83e030000e84b0000007305bf040000008db580000000ad85c074158b143e79'
+    '0825ffffff7f8b141389140383c608ebe68d83e6e6e6e68944241c61ffe083ec'
+    '088d4c2404518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c390'
+)
+TABMENU_BLOB = bytes.fromhex(
+    'e999000000e9e8000000e964010000e9f7000000e9310100006a018d84f57c02'
+    '0000508dbcb56c020000578b84b55c02000001e8506a006a0cff35ededededb8'
+    'a1a1a1a1ffd083c41cc38b84b56c02000085c0741650b8a3a3a3a3ffd083c404'
+    'c784b56c02000000000000c38b859c02000085c07427bba6a6a6a689038b85a0'
+    '02000089430431f6e8bdffffff4683fe0272f5c7859c02000000000000c360e8'
+    '000000005d81eda4000000bba6a6a6a68b0389859c0200008b43048985a00200'
+    '0031f6e851ffffff8b0785c074168b08ff35a5a5a5a550ff51348b078b086a00'
+    '50ff51344683fe0272d9618b15a7a7a7a7c360e8000000005d81edf8000000e8'
+    '68ffffff61bea5a5a5a5c360e8000000005d81ed11010000b907000000ff7424'
+    '3c4975f9b8a1a1a1a1ffd083c41cbe02000000e8e1feffff4683fe0472f5c785'
+    'a40200000000000061c360e8000000005d81ed50010000e810ffffffbe020000'
+    '00e8e4feffff4683fe0472f561bebbbbbbbbc360e8000000005d81ed79010000'
+    '83bd6c02000000750d83bd74020000000f849d00000031ff833ddfdfdfdf0074'
+    '0db83e030000e8a600000083d70083bd6c02000000742883bd7002000000741f'
+    '8db59c02000085ff74068db56c020000bba6a6a6a68b0689038b460489430483'
+    'bd7402000000744b83bd780200000074423bbda4020000743a8b1dbbbbbbbb85'
+    'db743089bda40200008bb4bd740200008b0e5356ff51348b0e8d85a802000050'
+    '68c60100006a1256ff511c8b0e6a0056ff513461a1a8a8a8a8c383ec088d4c24'
+    '04518d4c24045150ff15dfdfdfdf585ac3e8e4ffffff01c039c2c390b8020000'
+    'c9020000db020000ed0200000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000062000000120000005441425f4d454e55'
+    '5f53454c2e424d50005441425f4d454e555f53454c322e424d50005441425f4d'
+    '454e555f4241434b2e424d50005441425f4d454e555f4241434b5f53454c2e42'
+    '4d5000'
+)
+IPCHECK_BLOB = bytes.fromhex(
+    '5356575152beb3b3b3b3e8200000005a595f5e5b85c07408833db4b4b4b400c3'
+    '586a006a006a006a1c68b5b5b5b5c331c983caff8a040e84c074093c3a750289'
+    'ca41ebf085c90f84c500000083f92f0f87bc00000089cf83faff743989d78d5a'
+    '0139cb0f83a800000031d20fb6041e83e83083f8090f87960000006bd20a01c2'
+    '81faffff00000f87850000004339cb72da85d2747c85ff747831db31d20fb604'
+    '1e3c2e74183c2d741483e83083f809760c8a041e0c202c613c197755424339fb'
+    '72db85d2754531db31c983caff0fb6041e3c2e750b83faff74374183caffeb1c'
+    '83e83083f809772983faff750231d26bd20a01c281faff00000077154339fb72'
+    'cc83faff740b83f9037506b801000000c331c0c3'
+)
+ENTRYCAP_BLOB = bytes.fromhex(
+    'e917000000e968000000e971000000e8000000005b81eb14000000c353e8edff'
+    'ffff8b542418b80008000081fab6b6b6b67507b82f000000eb2881fab7b7b7b7'
+    '7507b823000000eb1981fab8b8b8b87511b8ff000000837c241c1a7405b81400'
+    '00008983c10000005b8b4424088b4c240cc353e897ffffff3b83c10000005bc3'
+    '535657e887ffffff8b7c24108b7424148b8bc10000002b0db4b4b4b431c083f9'
+    '007e148a164684d2740d80fa2072f48814074039c872ecc60407005f5e5bc208'
+    '0000080000'
+)
+STATUS_BLOB = bytes.fromhex(
+    'a1b9b9b9b985c0742a8d4c2424680001000051508b10ff523885c07516807c24'
+    '2400740f58c744241c0100000068babababac38d842424020000c3'
+)
+STARTING_BLOB = bytes.fromhex(
+    'e90a000000e9f5010000e91b0200005356575583ec2489e6e8000000005d81ed'
+    '1d00000083bde002000000753f8d85fc02000050ff15e3e3e3e385c00f84af01'
+    '000089c331ff8b84bde402000001e85053ff15e4e4e4e485c00f849201000089'
+    '84bdcc0200004783ff0672daa1bbbbbbbb85c00f84780100008b108d0e5150ff'
+    '52288b1e85db0f8465010000ff35bdbdbdbd53ff95cc0200008d4604506a118d'
+    '85570300005053ff95dc0200008d460c506a1d8d85680300005053ff95dc0200'
+    '008b46043b460c73038b460c83c0388b4e08034e1083c122babcbcbcbc8b7a04'
+    '8b1229c2d1fa8995bc02000001c28995c402000089fa29cad1fa8995c0020000'
+    '01ca8995c80200008b85bc02000083c0028946148b85c002000083c002894618'
+    '8b85c402000083e80289461c8b85c802000083e8028946206a0253ff95d80200'
+    '0068ffffff0053ff95d40200008d85bc020000e82c010000680808080053ff95'
+    'd40200008d4614e8180100006a0153ff95d802000068ffffff0053ff95d00200'
+    '008bbdc002000083c70e8d8557030000b9110000008b5604e8fb000000037e08'
+    '83c7068d8568030000b91d0000008b560ce8e2000000a1bbbbbbbb8b105350ff'
+    '522cc785b802000001000000e883000000a1eaeaeaea85c074178b1050ff9280'
+    '000000a1eaeaeaea8b1050ff928800000083c4245d5f5e5bb8bfbfbfbfffe055'
+    'e8000000005d81ed0502000083bdb8020000007405e83a0000005da1eaeaeaea'
+    '8b0850ff9180000000c355e8000000005d81ed30020000c785b8020000000000'
+    '005d83ec20538b5c2438b8a1a1a1a183c008ffe0a1bbbbbbbb85c074268b106a'
+    '0050ff5234a1bbbbbbbb8b108d8dbc02000051ffb5c0020000ffb5bc02000050'
+    'ff521cc36a006a0050506a026a006a0053ff95e0020000c36a0051506a006a00'
+    '57b8bcbcbcbc8b0029d0d1f85053ff95e0020000c39090900000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000000603000013030000200300002b030000350300004b03000067646933'
+    '322e646c6c0053656c6563744f626a6563740053657454657874436f6c6f7200'
+    '536574426b436f6c6f7200536574426b4d6f6465004765745465787445787465'
+    '6e74506f696e7433324100457874546578744f757441005354415254494e4720'
+    '544845205241434557414954494e4720464f5220544845204f5448455220504c'
+    '415945525300'
 )
 DCMUSIC_BLOB = bytes.fromhex(
     'e91e000000e928000000e927000000e937000000e9e1000000e9e3000000e9ea'
-    '000000e831010000ba12000000e9a600000031c0eb7ca1b4b4b4b48b406485c0'
-    '0f84ad00000083e003eb67a1b4b4b4b48b503883fa02741383fa03740e83fa05'
+    '000000e831010000ba12000000e9a600000031c0eb7ca19b9b9b9b8b406485c0'
+    '0f84ad00000083e003eb67a19b9b9b9b8b503883fa02741383fa03740e83fa05'
     '740983fa060f8588000000f64044040f8485000000e8df000000a807747c5153'
     '89c383e00183e306d1e309c383cb0231c989dad1ea83d10085d275f70f3131d2'
     'f7f1b8ffffffff400fa3c373fa4a79f75b5989c2e8a0000000a807743d83fa01'
     '750ac744240409000000eb27720583c20eeb05ba0f00000083ea0f0fa3d0731a'
-    '83c20e8b01899030020000c74424040e000000b8b3b3b3b3ffe0e81a000000eb'
-    'f2e813000000b8b5b5b5b5ffe0e807000000b8b6b6b6b6ffe08b44240883e808'
+    '83c20e8b01899030020000c74424040e000000b89a9a9a9affe0e81a000000eb'
+    'f2e813000000b89c9c9c9cffe0e807000000b89d9d9d9dffe08b44240883e808'
     '83f8037733515289c2e82b00000083fa01741a72014a0fa3d0731283c20e8b01'
     '899030020000b80e000000eb05b809000000894424105a59c3555152e8000000'
     '005d81ed6101000080bd2c020000007505e80a0000008b85300200005a595dc3'
@@ -4320,10 +4614,28 @@ EXE_MAGICS = {
     'PADPREV': 0xB2B2B2B2,
     'MENUKEYS': 0xCFCFCFCF,
     'PADPOLL': 0xDFDFDFDF,
-    'BGMPLAY': 0xB3B3B3B3,
-    'RACEBLOCK': 0xB4B4B4B4,
-    'BGMFADE': 0xB5B5B5B5,
-    'BGMRESTART': 0xB6B6B6B6,
+    'IPEDIT': 0xB3B3B3B3,
+    'IPLEN': 0xB4B4B4B4,
+    'IPDENY': 0xB5B5B5B5,
+    'IPSLOT': 0xB6B6B6B6,
+    'TEAMSLOT': 0xB7B7B7B7,
+    'LINEBUF': 0xB8B8B8B8,
+    'NETOBJ': 0xB9B9B9B9,
+    'DRAW': 0xBABABABA,
+    'ROOMBG': 0xBBBBBBBB,
+    'ROOMSIZE': 0xBCBCBCBC,
+    'ROOMFONT': 0xBDBDBDBD,
+    'RACESETUP': 0xBFBFBFBF,
+    'ROOMLOAD': 0xA1A1A1A1,
+    'BMPFREE': 0xA3A3A3A3,
+    'CHATOBJS': 0xA5A5A5A5,
+    'TABOBJS': 0xA6A6A6A6,
+    'ROOMFLAG': 0xA7A7A7A7,
+    'POLLBASE': 0xA8A8A8A8,
+    'BGMPLAY': 0x9A9A9A9A,
+    'RACEBLOCK': 0x9B9B9B9B,
+    'BGMFADE': 0x9C9C9C9C,
+    'BGMRESTART': 0x9D9D9D9D,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 DEVICES_MAGICS = {
@@ -4351,6 +4663,8 @@ PADINPUT_MAGICS = {
     'CARS': 0xE9E9E9E9,
     'KBDPOLL': 0xECECECEC,
     'PUBLISH': 0xEDEDEDED,
+    'GAME': 0xEEEEEEEE,
+    'CARHIT': 0xEFEFEFEF,
 }
 RESOLUTION_MAGICS = {
     'SETTINGS': 0xD3D3D3D3,
@@ -4369,6 +4683,17 @@ DINPUT8_MAGICS = {
     'GETPROC': 0xE4E4E4E4,
     'CONT': 0xE6E6E6E6,
 }
+NOGENERIC_MAGICS = {
+    'CONT': 0xE6E6E6E6,
+    'SKIP': 0xE7E7E7E7,
+}
+SORTPAD_MAGICS = {
+    'PADPOLL': 0xDFDFDFDF,
+}
+PADPROMPTS_MAGICS = {
+    'PADPOLL': 0xDFDFDFDF,
+    'EXEC': 0xE6E6E6E6,
+}
 DCOPTIONS_MAGICS = {
     'TEXT': 0xDBDBDBDB,
     'PLAYSOUND': 0xD5D5D5D5,
@@ -4376,9 +4701,11 @@ DCOPTIONS_MAGICS = {
     'GETPROC': 0xE4E4E4E4,
     'GETMODFN': 0xE5E5E5E5,
 }
-NOGENERIC_MAGICS = {
-    'CONT': 0xE6E6E6E6,
-    'SKIP': 0xE7E7E7E7,
+SITE_MAGICS = (0xE7E7E7E1, 0xE7E7E7E2, 0xE7E7E7E3, 0xE7E7E7E4, 0xE7E7E7E5)
+BLOB_LABELS = {
+    'FULLWIN_BLOB': {'t_blt': 0x654},
+    'MIX_BLOB': {'stream': 0x33},
+    'RESOLUTION_BLOB': {'groups': 0x704, 'table': 0x72c},
 }
 # --- GENERATED by asm/build.py: END ---
 
@@ -4526,12 +4853,1477 @@ LOBBY_LABELS = {
 }
 # --- GENERATED by tools/labels.py: END ---
 
+# --- GENERATED by tools/prompts.py: BEGIN (do not edit) ---
+# The pad's prompts: key -> ((file, sheet, x, y, width, height, variant, texels), ...),
+# the file under BINDATA\\MISC, the variant '' for every release or the language
+# of the file it goes with, the texels 16-bit and zlib-compressed; see
+# tools/prompts.py.
+PROMPT_ART = {
+    'padtitle': (
+        ('TITLE.TXR', 5, 2, 77, 167, 32, '',
+         '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'),
+        ('TITLE.TXR', 5, 2, 110, 167, 32, '',
+         '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'
+         '20FQ+P18p/fbjHtGv18Ac3H53w=='),
+    ),
+    'padattract': (
+        ('ADV_TXT.TXR', 3, 2, 176, 238, 19, '',
+         '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'),
+    ),
+    'padprompts': (
+        ('Record.txr', 13, 31, 53, 81, 33, '',
+         'eNrtmIGRhCAMRUuwBEqwhC3BEizBEiiBEq4ES6AESqAESsglIQqoe+MKc3Mzh5lZEAWfJGD+wgD/20ZQjUYCMFk9HnYf/SUt'
+         'Ab7wbMbai9s9nju4OjxenfCXDuqjpG3gHvWEKyx4DqAzQoNtK5bTgZDu9Mhu8G6NvwHP6N6Ra7GPZkLAnq0II1mcsY1wYp8B'
+         'PrMkpHKV+SFzeEal3u9yeFWxB2zzOZxOcxiQ8h5haiPWkb1NZRvCLZZehziMsXmP0O4kixDO7P92XlbZM5KXyfOJMHw0hzPW'
+         'QtM4JD+XhHFmJol5tfe6F4cz/ga0p4QWn0amJA6XbKwtDjVHk5JVaneGK0J1WstxJcNjwu0Y95p7E4e0IwZem9tudEWY9kMj'
+         '8z3LSO5PfS3afVO6devWrVu3Vl+V9C0eq5SKz+qlUhk4r1Gc9fiK3CZm6inLNhdKZb5QKk6USq5aSqUycLaxVBAaUWKhWqms'
+         'kr2kDNHy1cDEtYRxrDqlshGWWbbi96URnxIG9k70Q51SSYSlUqF80mLrU0LHHl4PSsWfvOwLpfITYYyYfA419/yq8LLhd61V'
+         'Ku/jUPM7hQrCUcpPlMr0llCd1rIW7pqVsvKedVepwKVSSfF33A918Q9OVyq/Zt/O173j'),
+        ('Rank10.txr', 9, 2, 213, 166, 24, '',
+         'eNrtWDty4koU1RLEDhitQGU2oCprAQ6GnMTERCYlMyEpGTGRc7bgLbAFSv8PQmL66HDVzYDHvHrBezUl3yqr1Z/bfU+f+xHv'
+         'xXsvvfTSSy//mfiJE1FGsfRJD+Upfk50+3rsa/kRWQHFiV4z3T/qNLzlfxeSb7kV2JGbuMlQ2c6+18wKhjH62v4YeNgh2nYk'
+         'Lbcbvydc4yZe5mVuTER1/7Ddzwpes/+D/a/ZY/Iz9RPKWz422lrXILSCRfVx/jgvjoLlSFn80aCPsjpZwUuOlptagZeitTHG'
+         'b2VSDKNVLW+LygrtiKusy36bWrAUa6bZv7GUQsu+XnW7h/jOIzIInQh4SduJ6HVal5toxHgWMKfF4DQpVqcWw2RW4gleTgqi'
+         'paTkurZdsH/ToOWmmxbJSUlE0cNdcBu4B4Vvu9so1me9xfKfWEoLv1t1u8M8P1/+dtUoPnd/y2KamW+7iq3P0yBcFmzva5xf'
+         '4qKwsuVMME6pn9zzlK97GbEEppgh8+1QbuEl5yntEG+zI9qzI1chfhBv8lqNl+yZFDwD7nVfn89btY5eA/74ybMSX63X9hya'
+         'cboutXVim8ZgFANL2LQ98t0KDg1wcCK8T7N7WGLu54nocN00o27stq+nGQQ9+5q4Y9ahmedybtE0jLVnWiGzj3DPS5WnAsNa'
+         '4XThkmKVYtqqRuvi9wm0mcgSLaJqBWDmpiG6aJGhXspVVgArcNdA1Yk0w+hNGIU9nyfMgkW7itYRA23d+Qy/g05hF+6CKzC+'
+         'q255+VOdAogs1SryDDp5g/saa9clzyOzptk851lw9/PcT6gT90Yb+X8Y4SzIRoujGf2Ql+ixwr6FwT47BBsUslkXUbsWztpi'
+         'WRNRRs92r5hYjlMwB7eMJyzwEyKxbfcQe8CR7RFzwC4ILIJ16IOl+xr7wSYiy5nagzHye+WA+EcPxp0dGujc18sCOuVk+3pf'
+         'r0syFfx1IupEL5AU/yJGs9JkGOzfkEsl7Z6V2ufJvknRMa7G/UCXEVFL3kxrc6jxmx27jNWAPfRwnJi+SxtgD3oYSdGzq2jp'
+         'OKWvwzpiLxjAUmA/z6GRs4i0cHRZmFlCe7iOkNBP9Hg7HFmX2MNPBiE8geNgwLrE/UlceU7E/k1DG702njiRyT2MILu0WMfC'
+         'PniooITbRhWlI+rMwJK3wJ6XnE/mOWRx+DItJa+IIz2Ini6eB6yIJWxbFmwLBuKBsAn3squ0f5KziBj3chu8+dAguiCqMDIQ'
+         'RbKPkcZPphk4yF0RYeRsQBl6pE7Z1MQSsU5HvonBW42OzjyMtMwhUkUtWgwu0TZDRCDDhfdeKhlIPIMeTfvJQmEROMZRcIJx'
+         'gIhDaJWJwThlhWJmJzPSMa/+jiV2xs3BAtlN7gx76sxzaPyET+LJcewOT6bNiFzEhRYK91b1omoxboYRZy4qYsqs4mVmDtER'
+         'tctnqjpiZeSm9Hp1A+GHcWtSkTCLMkvSw5hxOQqfYn5itjEzD7ATP53n0o9cxaewZ5zeYyV2EP6au/EpUVdHH6mCxHvgEYjR'
+         '8ORNl5vtzl915BNvbCub0Ky87VCzT3KIjqiwTiogcBJ9Up1LVnMTwRIn3h5HMc8qMXF00Sr5l8jR18UOqUfMuol/sJBMFpyd'
+         '6Cssdd35XeU6iuH9fGOb/s8qTITZ6Dud7Rdhyq9A+hPlKb5ew7dh5KXq+zG1w8eq6kGI2nIQ6m/4xyr1R+t5/VuDKeb30p++'
+         'scA9+T1inOrfJBg39Ero0aveVbV/rYd7aiuf4nluzrrVZn7NIJqY33jX80SL/n1FZl/v8advxnsY3K7sf8PqpZdeeumll79H'
+         'fgF7oX9B'),
+        ('RankAC.txr', 9, 2, 213, 166, 24, '',
+         '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'
+         'fgF7oX9B'),
+        ('RankTA.txr', 9, 2, 213, 166, 24, '',
+         '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'
+         'fgF7oX9B'),
+        ('Record.txr', 9, 2, 213, 166, 24, '',
+         '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'
+         'fgF7oX9B'),
+        ('Record.txr', 15, 1, 2, 112, 17, 'en',
+         'eNrdluFto0AQRmnBLbgFWkgLtOAWaMEt0AItuAVaoAWEjTEGAz49fRrtLuD4EkWnU+BHDJmdnffN7AzP509caXe4VfPzH1zs'
+         'VE5fW7O/RHUx8isfovrj+vcr80Hr8PCe73CLau7d+ftqxE1U+3zVnPXvfH2Xr5yi+nj/Oh/3/vI9wiVf1lvsX+U7PbLerazm'
+         'fMgHP6ZqPt6j+nDDBg/lhMVre/Ghx+mxO0d12oVanR54ON5PD3sXRlCM+VBOIV85JW1UZ73eKIK1blt8+OFWFMVIRFEdN241'
+         'ttxJKw9acbhpJ9mHWTI+qb6/+DHojTwqlo+rnrJerKps/Dq+tHM2Fs/uvMznmo+/SZsPyov2ynq8KT6nXdKiN3b7i3aDiP8c'
+         '76G9z1fNZunzRXU+yKciiBuopAPqHW6qcMdXjOycduVUzZAf71gsT9iaj8ojc8V4elQz0ezOispfi5U7f9SmeSIK2cfNFt/z'
+         'GeZBfPguRhGVU9ajHHaKQHos16E8O1rka+W2+FQNcXO8Y0kfoecRn19VIZ/luRh9e3TZ4lMeTg+sqGn4+GtaEgOzQHx4dHnc'
+         '4lMvCGnWfOxCdbjK5gShKb+4/XyEfCjh+Mze18PxyUIexLPk02nSmVYE7/nUK7AI+XijzgeVVNBkUd059cLrMz4/b9v9BaXI'
+         'UdrxzpS1teqLVp/Oo1XK5/kLvwB0JvHC/9SL9JXAKrdLNaedmwCv+eyULO3D+eB3HtdR7YSgORPDTpPqWc9bfNaJtrRV/amj'
+         '7854I/K4STvTAjXjBl/+1MJqf4F/yQfJ2v6z+a7+mbR4glw7amLgA19xo3r1+bD7uFoPT1r12WXlZL3NN1VuNbMOWuvn8kyW'
+         '/ZnMKtRe8lWzpldo777Pknb5Dan+iT/NWE1cOpzyYc/L06VzSpSaFTBufxlRT/4z9Ro+r9ctbd7Zv76svzh/5tv8vNrL32fJ'
+         '8P9cxvdbr9/Ox6TXl+bPXn8AQAG7zw=='),
+        ('Record.txr', 15, 1, 22, 161, 17, 'en',
+         'eNrtmOuxokAQhU2BFEzBFEzBFEiBFEyBFEyBFEiBFCjxgSIPt7461dXDyLp3797a+2MXq8Rhus+cPtPTM/h8Ll/7e9qWw/Nb'
+         'r2pM2/39s95pm7Yfty6HtM27r2S/vayORf+9CpbD6rg5f9Z7dVwdPzJLhwf3vFsdf0fx/wp6psqqnqqxnv6c8eFhqknBoj88'
+         'DLeeDg9r1VPRVyPz5ytdvUVvT+iN56Acih4cns+9w7ENrehdwbjfnzrD5xO+1RgrKObu5VblsD4RZz0pImceRloOc65Fn3dL'
+         '2UUe89ldTcHNmbZiKIekoZU0jKPY9ERYuyu/4SN7Q5uvDBCFmt3kLV77u6zXJ/GO0ax/jhZ7wdkZmYLG3OZC46+OaGq/y8FX'
+         '8RxV60AImgWyls/2MtevnrDKO1hjCZukyW4WJTFlN7yzmxRkRBigeDXSzjspJLSkKXra4X4E6vokfbYXekHDO2kOD3ppwzpp'
+         'xCVGszzh4unhASf2m8MDTM9bUxCvvMOKnQKlNme+k8biyLt6MgXFJe/gQhsuxEgbzejfnIv+tcoxPloQByNhAS/uKErmViMj'
+         'gsPdGMCX8eWttqMJJVQQHFhVo3kx68Z2fXI0RetotH2/rCflia0/5sXmnrYUlJUiB8PiQRO38p3EuEhJm816Mm5ErJxh7ccr'
+         'gvmPdxKbO8ZIW5sJU9JqPblq2WOKrk+yD1eeobr+sCF2xiBa4gEN3Q0Nbpuz0EKO5GjS2KmLXNte0laVzbSRAmnLGGDRG66K'
+         'WEHLaPVIOa0Dcdbsr0/ZLVwNXKbBzxSEQdKIpSuonHZvaxNz0qxPfGIF4b+soLGOFaRtaCHHold9ElO4mZUrqHWqpzDGI4w9'
+         'VtC5YPmqIJbhjjDPQRDwITvnCio7WC/LCobr0HJw6XS1rKDNe5iDVm1D9KVLFcnWZ1iZPAfDE5HlICeJdzloXF4V1N5uNXxe'
+         'B40tPXMFrSrQu6Rg6M3dYi+H7BbvJK8KxlWUNughmkbd3x2tGrMbFY3Y6LXY825/Jwe8DlLHsCYeyzFTMlbQxvYI5gry7oIf'
+         '/XMFtRfvrnxjEa9i72VXjBWU9/bCt2Ychrur1aT3CspbFYyxVGvS1tDCfldQMWU3q47a3eBLxXdtVLvJGduxk8aqosWlXU1r'
+         '0McKK4kpyCjUEvDCM2ZYVVRHYwV1ShLftI0VVHUQf7XnaO8VdGubVZ2iPM5lNKtI24t2RXmtT1LZFKxGnfo0Umyl0114HrSx'
+         '1HpdxfL/WV1592bDuUE2H30P+733pLm1jfYrbrHXMrt3Vku475l/zRtgPCK7oHbRr30//3cunSX8Pe3/9Zn/8raX3fW7/8/5'
+         '+9cP9SYj9Q=='),
+        ('Record.txr', 15, 1, 42, 194, 17, 'jp',
+         'eNrtmNvRqkoQhUnBFEyBFEzBFEjBFEyBFEjBFEjBFCgVbyCyT321qqtnGPC4d+06D6f+mQcRhp6+rF7dw69fP+Nn/Ix47B7Z'
+         'af+cf5a32en4nn92fPOkGQ+vqi/u4ZP9s7jXw9/UsR72z3AeXtp5OuNdq77smjGWVHa8W3bFnWm/xV3rNtfspP2QZVNvNqNf'
+         '/9mo+qX30xgU9+1Nc3XOTna9vYUSmjE7oW898HZ2qnp/wltYGg957tM4vrG97PAy8g4v8zm+CScxL7v4HnN7SxHUjMe37Xx8'
+         'r86rcz1U/f6J3buHSRfSLAbrSyhVz6o+O60vy9qzD5LRH7nT54dXdmLv72KAD9E1nOgS+5A1ihjYcrwVd9Zursz1ZffQEzTA'
+         '5nT/4s467RB7mdhqSj8ke6yJwfZWdjaxQzEAH6tz6Edpap7cXJHMjvsnO3NFVh9eRA208q6kOhNgQd6m+u+feZvqP42WEBPz'
+         'xecYpPHGfmKQtzaRadf+PjbyPlN6GZexT4xU+RNJ68vmSvZJT2IKXpqRnFqd9RtaSFyxquxCvvIYkLX4Ealg0iPHe82ILkRt'
+         '91idN9eq397gU5MuTGg1OnkMNtd5/0l/pLHG9I/XxNp+EwPkeQ5sbxYD4cYyw64N30K75Ysj0+OTnUw7fMY1bCHP4TXerQfs'
+         'ifGwOuet2Bm+sBgscxFRW1/qwRBA1Qp5QXZglyyoessD/LcUg5jrbCfjANamHAQi8FTKxO7LmHksA8AFU9ic45Aww8N8I4OF'
+         '4rQuUDdNMzweyoUfsABbuZblHgPQxgzzIG+tpsJooY+kt+IiRkHbegD7ZQdzs+LwEgLrIa7J7OIV0evBXAzCPEzzpBnZO2/n'
+         'Ohs4zBnD2GN9iRlPyIhje3yrOsuqw2tzlfx6QFLZCe27B5kzl7vSDGvXl7BrwW7zhNfvMA/U+6DRZy5SBq7OcILl6+6BztIN'
+         '7pxmkFCDbHIDXTzTv4tBXK3mc/97LvI6JzzYP0nCe6xXDLDGPG29W9kZe8/vrQiYbZ5XwmA8iAE8ohw1zHgeeNfmeaAOBqyr'
+         'au2fHmuyM2/hD7GMejr7L6/DT0Q+rotIXaqp5peUb5Tv83nwKQYpz2qCOlkechF2TquNcfVcFYKL57o0z3rX33Cct/ij6plh'
+         'Hkx7N8Mp7EJe4u8pErg37WKENOGfeAhX3rOaTWEMju+YoeerAevEhJ868zQGfjqxGqWJTxzdFgP1vSGrgFqQmGId5pJPU1xg'
+         'AwiN73CPTkb+ZIZ5sMRFjkusS2NAH48kunk6o8MrPB9gkZ1A3Ovqhd2z2Bf3W0ueVt7/Xl/06ZxMRfMe3O65lVQL7+/Dbl71'
+         'TbVienq185OYgJqpiLlkOnm6TDhH3LJ8PkjzijNu2DvrfCDt9k+d2zwGqtbTrsLPWDCYUBbbIU+H1SyuFvO9zXIM2Ec7pYiV'
+         '/9O+yJBr1sUnGauNy8yorE3rSDNaZRK78vvv52Tp4ucUrxTK0OJup3Diil7Wm/oJS9g2a0w7O0VMkdSMdsaYw7TOCPNoX8oD'
+         'dYFzJ0Psi09mzgd5O4/yb75V2JehaeXDc3krT8hOdsY/5InNmCtYyVcI8RcnKGMQziO7R/w1QpLkWWqQYyjkMvYmouvL9rZk'
+         'C3hZwllxj7k2RJ+xYfr15nM1/+9GrIf+8X0mtmj6/3eH+WEq9ee77v9z/AMmbviA'),
+        ('Record.txr', 15, 1, 62, 186, 17, 'jp',
+         'eNrtmOuR4koMhUmBFEjBKTgFp+AUSIEUSIEUSIEUnIIL8IOnvVtfnVKpu20Ps3Xv/bN33D+GwXZLOjo6UvPr18/1c/3/ruPr'
+         '9Pb/6rEa0vu7e/jEf3FVQzXUo3zJWz659aI7PP8NG6f38TW3zNr+sX98vQNPhL7Fu+8fx9f3PKnH1Xl11k6nd9mX/eYaP7G7'
+         'r87bW4rQn8d8eOLz/nF4Tt/OmtWZ6NeX7W1zLXu/k7epdePBp7jAGJu7u57FxtwSUuBA5PtH0ZV9zDHDeXNdnZfi3z9W59Dv'
+         'Zb/AeXVeX/aPsofhihkvqgHOsfvxhTe7e9HlbZolxV/232EiHtsquvgeyBInfmDV88TTWZO3eZs1Rac75GZ1juvB+MFz3A2X'
+         'WHR6k4HDM17G82rAK/wIM2GMWF82V+VMUYgF1KAWVrmHn3m7zAfQDhfx4JPnLV1WAXwOOUfWlmouxhyV2j/ABDtlnzVafENU'
+         'LGVWOOh7Layad4cnd7LGsyPstjd8ITtlr7wQkeGX5oJl3FQUskDsYbWLb3nLfXbe3lQHwmh9ISPc4y9rWpceERkilqLbP1LF'
+         'robdfXtDa7a3osN7jy/GXCz9pIXCXJjZ80WHvyzznZU15gFvmP/CJGQMb5nVeqQSecdyj898Q44ti+x+evuiigxz4WcMxfK0'
+         'h5m2THseaM1p4PxFTZze+GyRz2k1d5cxx3dD6hPPqwGOplZMW0JMxQY0eV7XidM+ixVx7fE/KrS7ry/aQ8wPl2MOZs5t9nMW'
+         'ET0VqFrXLqFCmyJ9D3O0GfbUI/XICuvVn4IFrsFYjbWEbz711VDP3TtNJcKcyhM6cAA8pC7U4Vf6haLEOSt7qyl0we6QayqX'
+         'u+zOMrUCc++BPOGYlz16LQXMW9Ql7F96Ew8/884qKu1nHknWqJumfYWMgzD91Xn6qY8KReYI1wz8hTPCPOwM9aj9ji/L1ZJ6'
+         'CcHY+rRuVJ+bq1TFP1Hj5onXzXw8xD3NOzWBrbT6ly5T1rnZklixUI8oOzUQWsEjqlbshmmgSL0vzbCu55qV7C87SOGEX8oB'
+         'yzmT1bQnqeLTfMTaEO+TLvl0eG6u3h3iuq1HJmhp7+6eekG26Pwx5ktI2NRH7GmkpjpL1ZE1qn/lilkEb9YXzU1fY47+w2e+'
+         'UZyGuaINGSpdj6cWuyOGry9TvkiLYqZjlf7AhKccxmeiOGOhYuNd0TFFy146C2pGCt9ZRsIqG8zR8XoEf8sv+3hWw3OAkAmt'
+         '8CaRykYarWOet2WviKkKpvGwkwstR7YepdRM4seX9wBOBKY4NrPP6QBv+hkau2Tn+NIEap01ZtrhyZthj4d9iks9N+2hxrlw'
+         'pl9GwpgnxtmyCtN5ZK7v2b10+iCaaiCDc+riNrImrHs7w6TeoVzz04CdLLw7zk0HqgJTaZQFlJVxZmNN+NubI6UMx3O/5U9n'
+         'IqoTPQuZbvwPv1tCAp12nu7uMDA+957e25s6Nt06rmD65xRZ4uRU+ye/CdCrs2Z6bmYGY3KZV7fD8/MprBqoJO1wepNpmJq3'
+         'irAaxFmPixMBijPdh9Mbp8y5X1TInu35z5D4Oy8/MzliP6j8nddvpuqdkA=='),
+    ),
+    'padgallery': (
+        ('RG_10.txr', 9, 1, 2, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_10.txr', 9, 1, 20, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_10.txr', 9, 1, 38, 150, 17, 'jp',
+         'eNrtl+utozAQhdMCLdACLdACLaQFWqCFtEALaSEt0ALikQRCAll9OhrZBnL3/ljtQ1qPdOVrm/H4zMyZyfv9f/wfv3/USzVX'
+         '8/tdzZdXMRajv5fdipG9XzFOj6gtJ/sv7tKrNHP7vtTL5bUvX9tUL+fnnlxe2r+8Tg+bb0c1nx5IOZ2f9RLuldOhSa/vdzFG'
+         'bTEeGmfH+XloonZ9/v3Oh5/ZCu7ldHoUYz6YVdXstJ0ehya7aT1qD82eJP3ltb9zaI53fRl3e/dj975Gs//QlFM15wOxsIeH'
+         'SdSen2vNsju9np/O8/ie0+kVibvTw93kR4hDKL0mfdyt387J7Ba1rPNXM5ubF5H0Cgr2XznVi83xYdS6k7wA7PExdic9NiZ9'
+         '0rNDXJXTVsxr2e3QEBmyTzpCrOLu8jo/OYc3qjnu0M3rsENz3aVxvLMedwh6zStgwh1+tspCVsmt450TUZsPFsfFeLzvS72U'
+         'U3YjK4pRWBUjWGQ3dBKdCFglvXu1+VjxlfTOM7KfuN2KZQPniQGynLlFgY+VcpVzYGU+9r3s4kWe9LX7GsEx7ix68RFzO80d'
+         'cSe+MfT9mMDv1Wx4cJOyRpHHt7yV+7hnK9gvPJxN9eLnEntkvxP8YPYRHWa9MdAaK1iEuJI3tjkYYhG1cD0ahW+Y147zxSp+'
+         'XmMX/+dD3B3v8pF7aXrlC6JHbzWs8oEVXhViRdxx4vIi+vkrrOCCkE1CrJSXJuBjFuMPQ5lMDlnP5ysws1VY2rA6PQwxbgIp'
+         'IVZORFU+fKoaWOFjTS7q9nqJO2MJMKK2fcZKEU6+h1jBwbwcK4gATpg/P9UYvocLxAaake/aBQWbq+KssRI36v3cwUvwo2GF'
+         'VkOEHOGE5YDLt3BcXuhIen8XfWu+/E5cpVfih1jcw+p4zwc4xmGlDNnWGGOQYiT30KCZ6zQsMh1f7POVMMEOy0bDCgbbekpo'
+         'rWun46k1Unu3C6ukhwO+wkrvotpsseL8FitOYcXaun2es+rEDa7/WXOSj5V4GgsVLY6v+C6MCFY45+6xPDs9WOXLbcSxE96v'
+         'uFKWfcLKZ4ktVvbtGivtrrHijdRgcQ884veivl/RGq4rB8lZdQh0i1TqkNvJOb8TVS2mz3Hr9VKMdEuyIay2ITvGHWztOEI1'
+         'X7yVD+enjxV9tC9a87FCD/2Iw0osZhWbDIbBlSHmW3VI3Ln1qPRumdhxe9RmNx8P+WtdB6tZOFF31neou4q7bcfrc5aizvGC'
+         'MDIuq2ZVN9iGt+7Jd3oGotexquJcCOVDMRqXiqOzm/OcKhKr4W+6r0Y1u253jW7S70cNnfbnX1M+XsSVj5W6C6yrF/VSeA2s'
+         'XLcu4bWGFazuizGzotNZpV+Qiri4U2U1JFTLfR6hQn7l7T85VIVcLSLT7JXb36h0q+put3tU7u/duNb5dyLzr44fMYKlhw=='),
+        ('RG_10.txr', 9, 1, 56, 37, 17, 'jp',
+         'eNrNU1mRhDAUxAIWYiEWsBALWIgFLGABC1gYC7FAhRycA5nqepUajmXhYz82qQLqHU26+yWE/7/UUo71fJUtx3Js1mdI1ZRo'
+         '2YfQrK/3OZu2ib5DAgIz3DKT6LRFR+zJO+GxM5c5xPHGvkJUCzoyByRmhJd9MVAmYjODL2RpPzkbYaiFamMH+ALrTp9yxF/3'
+         '7LZKVRPF7nWqZ3AjJGYyB35qidlmBXo1ZS7R184eEcm7o4qJFj4E2f+UPSsEb8CB2/MEIC48ntEJ6imGYy1NgeyFJzWOaPVM'
+         'zm3ZyZ6ZvAPrbSXOjQjYcQs9joqoBVFuvxFmUFEM4L0/U9rS7EGJctxOzOtN2Nx+XQiBW1QKn3dnnTAHUdG923nHTDHsYzRf'
+         '3D69ib+vv0HZrw+X0Vap'),
+        ('RG_10.txr', 9, 1, 74, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_10.txr', 9, 1, 92, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_10.txr', 9, 1, 110, 184, 17, 'jp',
+         'eNrtmOuRqkAQhU2BFEjBFEiBFEyBFEyBFEyBFEiBFCxBEBFwb311qosZAR9be3/cB1O7yzrMTPfp06cbv77+X/+vv/863uNm'
+         'bS5pw+rdfYoxafm9uzCSNu10d7gxmw+bE/PHe9ZnfT5oFOP3rS5GVhdjPuyv+6s7Fzf76/d39v2PG9spKJexSNrNKe3e3zOq'
+         'N6fdZXludwnKdX/z4XBLu/01afOBZ9mnGPF+e96cDjfubG/D+3DbnKaxdq57cUbWzz/dnKL662t/DUpOmfDN+s0pKI/3OS7P'
+         'YzD3iMhhpe59vA+3pNXA16i2/+aWPiIqz32GrOF9vEf19hxWQemiBrbMcnLWByWDmOO3MM16MImbrOfTuEk7vHoH72Jk/3nU'
+         'QVV5GdVZr/N1hRXPRzUjrIx5sDAo3efe8Yhzdpd8CCt23Zz4G1bgr0jMB5x6jjYo8bOE+BxvnRrVuwt5EZRJe7hlvdhUjEQX'
+         'HA63uGFvGE5GuvbYSTD+Nd5EBV/lfzGG1fbMEKq6354nVnEqTGSA4fY84frIK1Y990hXPhA7niOCcEp458Px7g5y7jneSbu/'
+         '8lQ+7C5LGjTXE8tJ0AqrYjze88H1F0vgN8zCYzBBs11+f4I3TGCNnixGZY8yCHQ0jI2cEpRmo9b67AorQxIl4n7do6RFq+x5'
+         '6Ql8YY69klZZZEOfvdZHU6hP9Jt4y6aw2l2wJO3QL2kg2OYDWFtNdPU7rOImbp7VDVdNiNdcUSY98fEMSuonGHHio45PdZRZ'
+         'efDMI9hsEfPx1m6WRcqouVr9FN4goOpxvHMO66Vw4OAPqppO2Z6pK2Klfr9iA8zmGVWGqVKhXMI77Qx11QsyVUrNmrX90SU/'
+         'XksecU8uwg70IyjjhnVRrVn6rM/7k+/gjbfC0bWYbD7cyEeYe7xLS/S/BszGOj35Xu9EzWeVcgE0sNfw1hNmFew93q0HmLTD'
+         'v6h/ypvnHikyPG36ZQqm2HMnvOl6GcvnvYc3uSe8k/ZxH2ndEhuX6nY+qHqCi/KR9cYu4rHWobm76DxD3vBG0d1u0O26DJdH'
+         'v1RHfZ+WPRLj2B3fGNNJ0jp5NHmqmf017dawX8YbdlK1yaGlfIEhj+qLTWQidQb9ZvX+qr1Nv8lyLGG92KhefU1NtmcxB4xQ'
+         'ZmPtpN/46zNTCIjDvk9SZFbO0VjyCEwVBWb9k7AFH/iUfp3BriBHdfLPfs1v6t16b673lrDiPVK2q+NSHdRbGXXef98xTsha'
+         '2S4uLjGRnexsos564ujXS/TDfdvhTOna9DlaR98k1i+r7dwjnQoXsBFr3ZpgHfkjH9NOHlJLPtNvIb5Wc7JeJ5rC6z1LXTF9'
+         'JoO3L94X1A/SP022qfLgmSrcoyZITcwyuG75rneqeX9SjMKarmgpduww9XevPSKmZJNqpb494NyoRmn13iZG4qV9j4F1qL7y'
+         '+LN6mXZLNcS1EDaY0hGZrEdFXN2lJ5O31L0py+gRbHcsf7/CFyPZ6nf95sv2vLxTMabdmpdrHhE/9BFlnfpI3riYka5Rm1x/'
+         'wUD8WfOI7w2efavwE9/7EG9THXfvn9n9d18+PrLaR03fnjH+DI/+hesXX1M9tA=='),
+        ('RG_10.txr', 9, 1, 128, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_10.txr', 9, 1, 146, 206, 17, 'en',
+         'eNrtmeuN4kAQhEmBFEiBFEiBFEiBFEjBKZCCUyAFUrB4gzGY06dSqWeMYVd3txI/1kjntT3Tj6p+2fd4xFG16/vjy2NxmZ1W'
+         't8c3D1Z/R+rrY3aanR4/dqzvs9Pi8vjoY3Ub7wcbfl8hMT0ONmXzXblI7WOybN7zW7VFDadVO9gMtz/nd9kMNpPDJzNTtcMt'
+         'vOjf+fnnuRlu38cAmC2vP88NmVO1n8zN/DzYjHbEaVHDjq0tm+W1i6y44YlXVe3yGld4u7yaPXPDjliPlsnBkp+1UGkGm8UF'
+         '3OAGDREPyIe3PO+RX9SLi7RwzTrV09XN+9d37vuvqq3ayGDJ1f64H89Xt6J+jsp0l1eFZ6sbz8PPqO8pSrIlxTSO0U5RKp60'
+         'o2r7qxzcsH6wGe8l1zknvWLXlULcLK9p5VjftYL9oSWt+ouL7s3P4kb6tIKMCvk+JgdbNdqlVuJVSHs8whJZFjXNq0Y78Fnd'
+         'bJ/zlviV1Sl+yEu99yphNtzKdnZgIT+h633To3oqVoT29EhzJc2l8X55Bfk0quW17qMHufMzq7FH1bGo8RxchAD2RcRUrWzh'
+         'uf4qanbFCnU/Zg6wwQ5pjTjiOs0dcVM2tornSCYeQa5skOg8DMzNjeKlqJGDH11uOOM1cos6r9lFjfegzK7hNjDjPNzyRJUC'
+         'bYpo2Yk2YwiK3M0rgvx3PvIDJbSyD71pB8I6Itj3y4b1WIWPjsvlFcQlhR15D2OVIsusqYblWtxv8FNnJklxhL40n/ESfYoU'
+         'nRWToMJKzraIGiI7fSZrWIV8uOhyw31dR212ZnCtaoUUtC8u8CAGhLW7NHYiI7TbWrR3UUi5cUYiz7mET/IynwXsM3/NTty1'
+         'jykPrlj5HG1uQrOx6eNGNQU/5RVzhPWl3GCV5eCl4lv5Pzuxwjgsr6wDBaMUqMjv57xB/2g3P+eeIBV7VKlCq5lzPQKHyWF2'
+         'IhbJAGTJC7D1vi56tgedZTM/uxoZNXB8xQ33uR5upfs5y/q6Sc6NkA+m33OjOj3a8etyQxWxHDFgbqj6/NxxhIpmlOBGqErP'
+         'c79RpVIWpzOIupx2dyseO6KjywYqL1bapq+4UdWMPoNX5vwVao5QxVm3NuAdu5HMPfWK/rxhXdeqd3nT9z7SlzfipisZieM9'
+         'tSh9v8HryJuoaa5xnkfdj/IZEW146Oyj9uJVcJO/S3Tj/R03MUMrDvAKKzi7v6SosV/3jR1S8cXdzhjJJsvq7zeuw2nEveLG'
+         'WK3vnieDG1vlviON7oBls7gIHUW6sDE36tVhv/Ro2rc+5MFZoFq187OwEdd4neZBcGO7NOUjRV1TXrzjJn/31Bznmigbc9So'
+         'sM5u9kyPmkjQg+e65mnfDC0Ehlt1TbRIZqoF+UyJXW7EwuSQZnpa912dgxv55kpv2elEjmXpKqOt/IrZAIvRk0aqdrlvaNoL'
+         'K4Ib98l02pwenQfvuIlvNuw3RpoMhHiOgiZUSdF7gazGPs2x9sC5nE/iVav6G0hRhbvfBeL9JuVmfVfc55Wla1Vw07XI7xZ+'
+         's3TUlE0uV+9pzLXS7/ef6TGNIcse7zUjqCsxR+f9xmiOdtLrPhXWvuam/1vn66+fvFF3/07feb/+DpK+7/Rpeffl9Vm++k1q'
+         '1d98mclXPUvrl9K9+xqz/Mmnfy36X4dngd/jl5vf4/vHv/8/0ecdfwD5z3Wk'),
+        ('RG_10.txr', 9, 1, 164, 164, 17, 'en',
+         'eNrVmIuR4jAQREnBKZACKTgFUiAFUiAFp0AKToEUSMGFwYDBH65edXVJNiwse7d7d6a2WEmeX2umR+J287OqF6dNe/uhZ31d'
+         'nNbXr0hml9/1c3FanL4vsrSa7PLmp3Bc1ZPdqn5HIm/k3eI02WWX1/s02emTlItT0YeVomfumWzRZxdJbLvXlv4ujkW/7eLo'
+         'Xj9JOT++h2NSTvfTPVguz+/gmF0mO2X88jzZfQ3HvFlfia/o80a6tl3ebLvgBaO8WdXC3GOP1lfJh1GowU0bVq1V36zYhnXY'
+         'vucmu7RiRjjaT+dqkA84ppVRmR3GOKLRWWNLimLbzY9YKPpNOzuAiezgoyUU9baLo4tx1O5hddMyus9T/NNbmtV7lklKyWsn'
+         '/J7ql0rmM92z6romSiwQm5DQCFnhINQlixVwJD5rut00Sso4poAjHt7jKN/wIOQn3hc9+vlkF3mi3LT3ii1v+E/RjmtYOK6v'
+         'rLKGJWSkPey8bGANP/ESnVQOGrILtUDdYZlekpTsPnqSku4i72MceQ9r6EB/UmYXxqpjxS706EyKc1XjF2M0zI8BtxhHcob3'
+         '474CbkjgJ/iNcdy02F7VVAozykzeWV+J0F6ig3HwMuBIZI6Ub6pluJtoIE+Zx7pwVP5phhUiMp6blv1kFTlVxBBH9AsNSRE1'
+         '67GH4BL4kTfsp+uFrAz7HfqMc2iIIz6AEiw9xFGalNvMuJaw6SrVbjsvH/cZy+DJ8kx8MUsjqXjwJq4a7dniBLtgS5mWVu59'
+         '+JSUy7M8jHHEGnpB310k2HmEo/MdDcpcZXSobPWZtEor7MaaAm5mv9c4ijG9BwE/ckbsd4+jI0NmdsDrmAGGOCrjA45o5aMZ'
+         'rJvVkBSfhN16hKM9fg9HWZ3uhziqzsXTcc8ybor4szjqtKuo7e0zHJ2P0gebDk9x0uCdCTg+0rntxGOOIm/MKM/ykfmA2ysc'
+         'Q9SP+7UiC2f+j/PRDHWPo2363Vc4UsFgrw4LVw3Ze8gMaIi7ofaz6JdnvKan4JUyettp1uz5EY7MG8/P4egMXtWresiPzkd3'
+         'zpgfN63mkRBfqnfc48iM2RutRPsKR/jNLOyuNLx1aC6t3F9jHIlodnC/YhfSanmWL+pLy7N36yMcdcLRiSPGUfuH5BhHMaH6'
+         '+Ufn8DhW4Sg/JeG6M46spJXPLPOjMRcHm3We4ShGC30lrskQz+wgTsJmjGPR6yQ3P6p/+1yomsou8jStxufHGEetCJdhd5DN'
+         'exxdNzE7Dvu1zu8xjtO9skZZ6lOMT3qSdS4ol83uwuYZjrYSauPRDcr8P7w9PJbX7W/Il5+9C475UdLPbpnv3t9iX4Zex+P4'
+         'rXdvspZiN8axjPvon37Yd99a3vsd4199xCzjTvjdOIqJ9Pd+jv2LD79H3v9CuGkXp+/NE25yaQW7/09o/QJuwXkb'),
+        ('RG_10.txr', 9, 1, 182, 187, 17, 'jp',
+         'eNrtmImNq0wQhJ0CKZACKZACKTgFUnAKToEUSIEUSMEyl7E57KdPpRbD4WNX+570698ZaRczMNNdU13dw+Px237bb/t+y8e4'
+         '5e/+Qo/b401XScdoNuzOjJ/uaZ/22aCej99d7XTPR97Ox2w4XA9XdyxqDtfvz+y2uI0am8kr/HL7md35ePs3GON1NiTd8Xa4'
+         'xm02PB77y+68v+QjGATV7px0XHHPRT3pduepa+x1Y420X9/dncP68ThcvYJVJpTTfnf2itN9jc7rnVh7xP5hpa7nqCdd3Krj'
+         'a1jbr7WlP4F1WAeVX3qFix0IM8r6ae8VdPYf74Vs2oNM1KQ9d6PmeMO3T1DPR+b3iuV9sI0arsI67bW+ml/yfFjT/dJYCCO9'
+         'wn3uE49YZ3/JBr9k1t2Z/37JLmg/1h1mvY+gT/bmcDUbTnetHdb7S1jjR9wmXdqLWfnIbKCRdFED92E7MepaxV1j/3vU2Rs8'
+         'lgX56JdBRRe2ug6qyQtWhZV0kAyqCV3Wd7WIt157pJYN7CDPsY8wS6hnw+nuduLvPerC5T2/g8orzC+LUjDzy3w83bPB9Rp7'
+         '4Dosw2+QQctdrn8FdeKHd/RkPiqSFE1gpG6sYBWvMBv17txfvzQ80Saun3sUt6iXPS+FgTWMMVfcKqKs695rf9it/WW+W3Rw'
+         'nncibBmd7L0s88v9BXuON3RN2gjC2QDiljFdXffLqIkaZniHOlHCrq01ZlKYOapeQXbFC1Zc6vuUZRmVB688gtm2b3PUNZtF'
+         'lKJrrV/LpohZd9DdHnF5Aw7KLac7q6F0Uj7QmHdyntAOKrKOGKq/75gBy3lGGWPKY2iZUD/eDHvlkWwQ9knHO8/mR6nmu7bl'
+         'EdfEJRyBo14RNbwX1hqlFvtaDaN1qeuWPR/X9/TsnGlC07Wb+E46YkNRJHXRb3VYjo168r2VcIPco7g0TFBUQ11PmFUw+XQH'
+         'd622rmTEc+bAttceCSdFumVbKZoYwJVQNxy311vq9TzGPtd/aeAWM7dyezYot4KOIpT3jWnsyjML3Vm0nuFvqKP0bt04WQxC'
+         'W96h50vMn3nETMoT+EafVpL6yaPJU40crsfbsx0A90+yKbqwvLtkv6FObJKF0PWwJhvJEtN1dhp7eF/MVG3/TF+CSiwCKRTb'
+         'GDzpOl7PWSocxOe5J1Jq3lxjsuURyGovGJ2vhC34wF3qe7qyIt5Tj/585S7190vOoPJAtZmypE501ALzU5LxQzbLA/Fyi5XM'
+         'ZKyA47zPbs6zKYrinpFYU0o33Uf9qK0UAdsqvPZIq8IIbMRaN1dYBS/NdLkiD8kxP4972mtdqy50RlMVHbdU6pzxgopThipH'
+         'Kq3JQuUl/FP+W6qE9MUsh/emADqJrWuYfBTiVE7b1YNfTpXge4/YWSJLmVTfH1g3rPnuodOelAUv7UsI1pENFNN/o6U9zDAF'
+         'hAVpj67MqyI7oZAVp7gjn1u8Yv9XvvgQv/NTgvE1qLZnysfj7RPuuR6xiygmdeFUcXJOY0RKR85y/QUDsehffZt5hZM0Dwa7'
+         'bP5bbPhp6+cxKPV27+pbHP2/4dH/p/0BgrqmQg=='),
+        ('RG_10.txr', 9, 1, 200, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_AC.txr', 9, 1, 2, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_AC.txr', 9, 1, 20, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_AC.txr', 9, 1, 38, 150, 17, 'jp',
+         'eNrtl+utozAQhdMCLdACLdACLaQFWqCFtEALaSEt0ALikQRCAll9OhrZBnL3/ljtQ1qPdOVrm/H4zMyZyfv9f/wfv3/USzVX'
+         '8/tdzZdXMRajv5fdipG9XzFOj6gtJ/sv7tKrNHP7vtTL5bUvX9tUL+fnnlxe2r+8Tg+bb0c1nx5IOZ2f9RLuldOhSa/vdzFG'
+         'bTEeGmfH+XloonZ9/v3Oh5/ZCu7ldHoUYz6YVdXstJ0ehya7aT1qD82eJP3ltb9zaI53fRl3e/dj975Gs//QlFM15wOxsIeH'
+         'SdSen2vNsju9np/O8/ie0+kVibvTw93kR4hDKL0mfdyt387J7Ba1rPNXM5ubF5H0Cgr2XznVi83xYdS6k7wA7PExdic9NiZ9'
+         '0rNDXJXTVsxr2e3QEBmyTzpCrOLu8jo/OYc3qjnu0M3rsENz3aVxvLMedwh6zStgwh1+tspCVsmt450TUZsPFsfFeLzvS72U'
+         'U3YjK4pRWBUjWGQ3dBKdCFglvXu1+VjxlfTOM7KfuN2KZQPniQGynLlFgY+VcpVzYGU+9r3s4kWe9LX7GsEx7ix68RFzO80d'
+         'cSe+MfT9mMDv1Wx4cJOyRpHHt7yV+7hnK9gvPJxN9eLnEntkvxP8YPYRHWa9MdAaK1iEuJI3tjkYYhG1cD0ahW+Y147zxSp+'
+         'XmMX/+dD3B3v8pF7aXrlC6JHbzWs8oEVXhViRdxx4vIi+vkrrOCCkE1CrJSXJuBjFuMPQ5lMDlnP5ysws1VY2rA6PQwxbgIp'
+         'IVZORFU+fKoaWOFjTS7q9nqJO2MJMKK2fcZKEU6+h1jBwbwcK4gATpg/P9UYvocLxAaake/aBQWbq+KssRI36v3cwUvwo2GF'
+         'VkOEHOGE5YDLt3BcXuhIen8XfWu+/E5cpVfih1jcw+p4zwc4xmGlDNnWGGOQYiT30KCZ6zQsMh1f7POVMMEOy0bDCgbbekpo'
+         'rWun46k1Unu3C6ukhwO+wkrvotpsseL8FitOYcXaun2es+rEDa7/WXOSj5V4GgsVLY6v+C6MCFY45+6xPDs9WOXLbcSxE96v'
+         'uFKWfcLKZ4ktVvbtGivtrrHijdRgcQ884veivl/RGq4rB8lZdQh0i1TqkNvJOb8TVS2mz3Hr9VKMdEuyIay2ITvGHWztOEI1'
+         'X7yVD+enjxV9tC9a87FCD/2Iw0osZhWbDIbBlSHmW3VI3Ln1qPRumdhxe9RmNx8P+WtdB6tZOFF31neou4q7bcfrc5aizvGC'
+         'MDIuq2ZVN9iGt+7Jd3oGotexquJcCOVDMRqXiqOzm/OcKhKr4W+6r0Y1u253jW7S70cNnfbnX1M+XsSVj5W6C6yrF/VSeA2s'
+         'XLcu4bWGFazuizGzotNZpV+Qiri4U2U1JFTLfR6hQn7l7T85VIVcLSLT7JXb36h0q+put3tU7u/duNb5dyLzr44fMYKlhw=='),
+        ('RG_AC.txr', 9, 1, 56, 37, 17, 'jp',
+         'eNrNU1mRhDAUxAIWYiEWsBALWIgFLGABC1gYC7FAhRycA5nqepUajmXhYz82qQLqHU26+yWE/7/UUo71fJUtx3Js1mdI1ZRo'
+         '2YfQrK/3OZu2ib5DAgIz3DKT6LRFR+zJO+GxM5c5xPHGvkJUCzoyByRmhJd9MVAmYjODL2RpPzkbYaiFamMH+ALrTp9yxF/3'
+         '7LZKVRPF7nWqZ3AjJGYyB35qidlmBXo1ZS7R184eEcm7o4qJFj4E2f+UPSsEb8CB2/MEIC48ntEJ6imGYy1NgeyFJzWOaPVM'
+         'zm3ZyZ6ZvAPrbSXOjQjYcQs9joqoBVFuvxFmUFEM4L0/U9rS7EGJctxOzOtN2Nx+XQiBW1QKn3dnnTAHUdG923nHTDHsYzRf'
+         '3D69ib+vv0HZrw+X0Vap'),
+        ('RG_AC.txr', 9, 1, 74, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_AC.txr', 9, 1, 92, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_AC.txr', 9, 1, 110, 184, 17, 'jp',
+         'eNrtmOuRqkAQhU2BFEjBFEiBFEyBFEyBFEyBFEiBFCxBEBFwb311qosZAR9be3/cB1O7yzrMTPfp06cbv77+X/+vv/863uNm'
+         'bS5pw+rdfYoxafm9uzCSNu10d7gxmw+bE/PHe9ZnfT5oFOP3rS5GVhdjPuyv+6s7Fzf76/d39v2PG9spKJexSNrNKe3e3zOq'
+         'N6fdZXludwnKdX/z4XBLu/01afOBZ9mnGPF+e96cDjfubG/D+3DbnKaxdq57cUbWzz/dnKL662t/DUpOmfDN+s0pKI/3OS7P'
+         'YzD3iMhhpe59vA+3pNXA16i2/+aWPiIqz32GrOF9vEf19hxWQemiBrbMcnLWByWDmOO3MM16MImbrOfTuEk7vHoH72Jk/3nU'
+         'QVV5GdVZr/N1hRXPRzUjrIx5sDAo3efe8Yhzdpd8CCt23Zz4G1bgr0jMB5x6jjYo8bOE+BxvnRrVuwt5EZRJe7hlvdhUjEQX'
+         'HA63uGFvGE5GuvbYSTD+Nd5EBV/lfzGG1fbMEKq6354nVnEqTGSA4fY84frIK1Y990hXPhA7niOCcEp458Px7g5y7jneSbu/'
+         '8lQ+7C5LGjTXE8tJ0AqrYjze88H1F0vgN8zCYzBBs11+f4I3TGCNnixGZY8yCHQ0jI2cEpRmo9b67AorQxIl4n7do6RFq+x5'
+         '6Ql8YY69klZZZEOfvdZHU6hP9Jt4y6aw2l2wJO3QL2kg2OYDWFtNdPU7rOImbp7VDVdNiNdcUSY98fEMSuonGHHio45PdZRZ'
+         'efDMI9hsEfPx1m6WRcqouVr9FN4goOpxvHMO66Vw4OAPqppO2Z6pK2Klfr9iA8zmGVWGqVKhXMI77Qx11QsyVUrNmrX90SU/'
+         'XksecU8uwg70IyjjhnVRrVn6rM/7k+/gjbfC0bWYbD7cyEeYe7xLS/S/BszGOj35Xu9EzWeVcgE0sNfw1hNmFew93q0HmLTD'
+         'v6h/ypvnHikyPG36ZQqm2HMnvOl6GcvnvYc3uSe8k/ZxH2ndEhuX6nY+qHqCi/KR9cYu4rHWobm76DxD3vBG0d1u0O26DJdH'
+         'v1RHfZ+WPRLj2B3fGNNJ0jp5NHmqmf017dawX8YbdlK1yaGlfIEhj+qLTWQidQb9ZvX+qr1Nv8lyLGG92KhefU1NtmcxB4xQ'
+         'ZmPtpN/46zNTCIjDvk9SZFbO0VjyCEwVBWb9k7AFH/iUfp3BriBHdfLPfs1v6t16b673lrDiPVK2q+NSHdRbGXXef98xTsha'
+         '2S4uLjGRnexsos564ujXS/TDfdvhTOna9DlaR98k1i+r7dwjnQoXsBFr3ZpgHfkjH9NOHlJLPtNvIb5Wc7JeJ5rC6z1LXTF9'
+         'JoO3L94X1A/SP022qfLgmSrcoyZITcwyuG75rneqeX9SjMKarmgpduww9XevPSKmZJNqpb494NyoRmn13iZG4qV9j4F1qL7y'
+         '+LN6mXZLNcS1EDaY0hGZrEdFXN2lJ5O31L0py+gRbHcsf7/CFyPZ6nf95sv2vLxTMabdmpdrHhE/9BFlnfpI3riYka5Rm1x/'
+         'wUD8WfOI7w2efavwE9/7EG9THXfvn9n9d18+PrLaR03fnjH+DI/+hesXX1M9tA=='),
+        ('RG_AC.txr', 9, 1, 128, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_AC.txr', 9, 1, 146, 206, 17, 'en',
+         'eNrtmeuN4kAQhEmBFEiBFEiBFEiBFEjBKZCCUyAFUrB4gzGY06dSqWeMYVd3txI/1kjntT3Tj6p+2fd4xFG16/vjy2NxmZ1W'
+         't8c3D1Z/R+rrY3aanR4/dqzvs9Pi8vjoY3Ub7wcbfl8hMT0ONmXzXblI7WOybN7zW7VFDadVO9gMtz/nd9kMNpPDJzNTtcMt'
+         'vOjf+fnnuRlu38cAmC2vP88NmVO1n8zN/DzYjHbEaVHDjq0tm+W1i6y44YlXVe3yGld4u7yaPXPDjliPlsnBkp+1UGkGm8UF'
+         '3OAGDREPyIe3PO+RX9SLi7RwzTrV09XN+9d37vuvqq3ayGDJ1f64H89Xt6J+jsp0l1eFZ6sbz8PPqO8pSrIlxTSO0U5RKp60'
+         'o2r7qxzcsH6wGe8l1zknvWLXlULcLK9p5VjftYL9oSWt+ouL7s3P4kb6tIKMCvk+JgdbNdqlVuJVSHs8whJZFjXNq0Y78Fnd'
+         'bJ/zlviV1Sl+yEu99yphNtzKdnZgIT+h633To3oqVoT29EhzJc2l8X55Bfk0quW17qMHufMzq7FH1bGo8RxchAD2RcRUrWzh'
+         'uf4qanbFCnU/Zg6wwQ5pjTjiOs0dcVM2tornSCYeQa5skOg8DMzNjeKlqJGDH11uOOM1cos6r9lFjfegzK7hNjDjPNzyRJUC'
+         'bYpo2Yk2YwiK3M0rgvx3PvIDJbSyD71pB8I6Itj3y4b1WIWPjsvlFcQlhR15D2OVIsusqYblWtxv8FNnJklxhL40n/ESfYoU'
+         'nRWToMJKzraIGiI7fSZrWIV8uOhyw31dR212ZnCtaoUUtC8u8CAGhLW7NHYiI7TbWrR3UUi5cUYiz7mET/IynwXsM3/NTty1'
+         'jykPrlj5HG1uQrOx6eNGNQU/5RVzhPWl3GCV5eCl4lv5Pzuxwjgsr6wDBaMUqMjv57xB/2g3P+eeIBV7VKlCq5lzPQKHyWF2'
+         'IhbJAGTJC7D1vi56tgedZTM/uxoZNXB8xQ33uR5upfs5y/q6Sc6NkA+m33OjOj3a8etyQxWxHDFgbqj6/NxxhIpmlOBGqErP'
+         'c79RpVIWpzOIupx2dyseO6KjywYqL1bapq+4UdWMPoNX5vwVao5QxVm3NuAdu5HMPfWK/rxhXdeqd3nT9z7SlzfipisZieM9'
+         'tSh9v8HryJuoaa5xnkfdj/IZEW146Oyj9uJVcJO/S3Tj/R03MUMrDvAKKzi7v6SosV/3jR1S8cXdzhjJJsvq7zeuw2nEveLG'
+         'WK3vnieDG1vlviON7oBls7gIHUW6sDE36tVhv/Ro2rc+5MFZoFq187OwEdd4neZBcGO7NOUjRV1TXrzjJn/31Bznmigbc9So'
+         'sM5u9kyPmkjQg+e65mnfDC0Ehlt1TbRIZqoF+UyJXW7EwuSQZnpa912dgxv55kpv2elEjmXpKqOt/IrZAIvRk0aqdrlvaNoL'
+         'K4Ib98l02pwenQfvuIlvNuw3RpoMhHiOgiZUSdF7gazGPs2x9sC5nE/iVav6G0hRhbvfBeL9JuVmfVfc55Wla1Vw07XI7xZ+'
+         's3TUlE0uV+9pzLXS7/ef6TGNIcse7zUjqCsxR+f9xmiOdtLrPhXWvuam/1vn66+fvFF3/07feb/+DpK+7/Rpeffl9Vm++k1q'
+         '1d98mclXPUvrl9K9+xqz/Mmnfy36X4dngd/jl5vf4/vHv/8/0ecdfwD5z3Wk'),
+        ('RG_AC.txr', 9, 1, 164, 164, 17, 'en',
+         'eNrVmIuR4jAQREnBKZACKTgFUiAFUiAFp0AKToEUSMGFwYDBH65edXVJNiwse7d7d6a2WEmeX2umR+J287OqF6dNe/uhZ31d'
+         'nNbXr0hml9/1c3FanL4vsrSa7PLmp3Bc1ZPdqn5HIm/k3eI02WWX1/s02emTlItT0YeVomfumWzRZxdJbLvXlv4ujkW/7eLo'
+         'Xj9JOT++h2NSTvfTPVguz+/gmF0mO2X88jzZfQ3HvFlfia/o80a6tl3ebLvgBaO8WdXC3GOP1lfJh1GowU0bVq1V36zYhnXY'
+         'vucmu7RiRjjaT+dqkA84ppVRmR3GOKLRWWNLimLbzY9YKPpNOzuAiezgoyUU9baLo4tx1O5hddMyus9T/NNbmtV7lklKyWsn'
+         '/J7ql0rmM92z6romSiwQm5DQCFnhINQlixVwJD5rut00Sso4poAjHt7jKN/wIOQn3hc9+vlkF3mi3LT3ii1v+E/RjmtYOK6v'
+         'rLKGJWSkPey8bGANP/ESnVQOGrILtUDdYZlekpTsPnqSku4i72MceQ9r6EB/UmYXxqpjxS706EyKc1XjF2M0zI8BtxhHcob3'
+         '474CbkjgJ/iNcdy02F7VVAozykzeWV+J0F6ig3HwMuBIZI6Ub6pluJtoIE+Zx7pwVP5phhUiMp6blv1kFTlVxBBH9AsNSRE1'
+         '67GH4BL4kTfsp+uFrAz7HfqMc2iIIz6AEiw9xFGalNvMuJaw6SrVbjsvH/cZy+DJ8kx8MUsjqXjwJq4a7dniBLtgS5mWVu59'
+         '+JSUy7M8jHHEGnpB310k2HmEo/MdDcpcZXSobPWZtEor7MaaAm5mv9c4ijG9BwE/ckbsd4+jI0NmdsDrmAGGOCrjA45o5aMZ'
+         'rJvVkBSfhN16hKM9fg9HWZ3uhziqzsXTcc8ybor4szjqtKuo7e0zHJ2P0gebDk9x0uCdCTg+0rntxGOOIm/MKM/ykfmA2ysc'
+         'Q9SP+7UiC2f+j/PRDHWPo2363Vc4UsFgrw4LVw3Ze8gMaIi7ofaz6JdnvKan4JUyettp1uz5EY7MG8/P4egMXtWresiPzkd3'
+         'zpgfN63mkRBfqnfc48iM2RutRPsKR/jNLOyuNLx1aC6t3F9jHIlodnC/YhfSanmWL+pLy7N36yMcdcLRiSPGUfuH5BhHMaH6'
+         '+Ufn8DhW4Sg/JeG6M46spJXPLPOjMRcHm3We4ShGC30lrskQz+wgTsJmjGPR6yQ3P6p/+1yomsou8jStxufHGEetCJdhd5DN'
+         'exxdNzE7Dvu1zu8xjtO9skZZ6lOMT3qSdS4ol83uwuYZjrYSauPRDcr8P7w9PJbX7W/Il5+9C475UdLPbpnv3t9iX4Zex+P4'
+         'rXdvspZiN8axjPvon37Yd99a3vsd4199xCzjTvjdOIqJ9Pd+jv2LD79H3v9CuGkXp+/NE25yaQW7/09o/QJuwXkb'),
+        ('RG_AC.txr', 9, 1, 182, 187, 17, 'jp',
+         'eNrtmImNq0wQhJ0CKZACKZACKTgFUnAKToEUSIEUSMEyl7E57KdPpRbD4WNX+570698ZaRczMNNdU13dw+Px237bb/t+y8e4'
+         '5e/+Qo/b401XScdoNuzOjJ/uaZ/22aCej99d7XTPR97Ox2w4XA9XdyxqDtfvz+y2uI0am8kr/HL7md35ePs3GON1NiTd8Xa4'
+         'xm02PB77y+68v+QjGATV7px0XHHPRT3pduepa+x1Y420X9/dncP68ThcvYJVJpTTfnf2itN9jc7rnVh7xP5hpa7nqCdd3Krj'
+         'a1jbr7WlP4F1WAeVX3qFix0IM8r6ae8VdPYf74Vs2oNM1KQ9d6PmeMO3T1DPR+b3iuV9sI0arsI67bW+ml/yfFjT/dJYCCO9'
+         'wn3uE49YZ3/JBr9k1t2Z/37JLmg/1h1mvY+gT/bmcDUbTnetHdb7S1jjR9wmXdqLWfnIbKCRdFED92E7MepaxV1j/3vU2Rs8'
+         'lgX56JdBRRe2ug6qyQtWhZV0kAyqCV3Wd7WIt157pJYN7CDPsY8wS6hnw+nuduLvPerC5T2/g8orzC+LUjDzy3w83bPB9Rp7'
+         '4Dosw2+QQctdrn8FdeKHd/RkPiqSFE1gpG6sYBWvMBv17txfvzQ80Saun3sUt6iXPS+FgTWMMVfcKqKs695rf9it/WW+W3Rw'
+         'nncibBmd7L0s88v9BXuON3RN2gjC2QDiljFdXffLqIkaZniHOlHCrq01ZlKYOapeQXbFC1Zc6vuUZRmVB688gtm2b3PUNZtF'
+         'lKJrrV/LpohZd9DdHnF5Aw7KLac7q6F0Uj7QmHdyntAOKrKOGKq/75gBy3lGGWPKY2iZUD/eDHvlkWwQ9knHO8/mR6nmu7bl'
+         'EdfEJRyBo14RNbwX1hqlFvtaDaN1qeuWPR/X9/TsnGlC07Wb+E46YkNRJHXRb3VYjo168r2VcIPco7g0TFBUQ11PmFUw+XQH'
+         'd622rmTEc+bAttceCSdFumVbKZoYwJVQNxy311vq9TzGPtd/aeAWM7dyezYot4KOIpT3jWnsyjML3Vm0nuFvqKP0bt04WQxC'
+         'W96h50vMn3nETMoT+EafVpL6yaPJU40crsfbsx0A90+yKbqwvLtkv6FObJKF0PWwJhvJEtN1dhp7eF/MVG3/TF+CSiwCKRTb'
+         'GDzpOl7PWSocxOe5J1Jq3lxjsuURyGovGJ2vhC34wF3qe7qyIt5Tj/585S7190vOoPJAtZmypE501ALzU5LxQzbLA/Fyi5XM'
+         'ZKyA47zPbs6zKYrinpFYU0o33Uf9qK0UAdsqvPZIq8IIbMRaN1dYBS/NdLkiD8kxP4972mtdqy50RlMVHbdU6pzxgopThipH'
+         'Kq3JQuUl/FP+W6qE9MUsh/emADqJrWuYfBTiVE7b1YNfTpXge4/YWSJLmVTfH1g3rPnuodOelAUv7UsI1pENFNN/o6U9zDAF'
+         'hAVpj67MqyI7oZAVp7gjn1u8Yv9XvvgQv/NTgvE1qLZnysfj7RPuuR6xiygmdeFUcXJOY0RKR85y/QUDsehffZt5hZM0Dwa7'
+         'bP5bbPhp6+cxKPV27+pbHP2/4dH/p/0BgrqmQg=='),
+        ('RG_AC.txr', 9, 1, 200, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_RG.txr', 9, 1, 2, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_RG.txr', 9, 1, 20, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_RG.txr', 9, 1, 38, 150, 17, 'jp',
+         'eNrtl+utozAQhdMCLdACLdACLaQFWqCFtEALaSEt0ALikQRCAll9OhrZBnL3/ljtQ1qPdOVrm/H4zMyZyfv9f/wfv3/USzVX'
+         '8/tdzZdXMRajv5fdipG9XzFOj6gtJ/sv7tKrNHP7vtTL5bUvX9tUL+fnnlxe2r+8Tg+bb0c1nx5IOZ2f9RLuldOhSa/vdzFG'
+         'bTEeGmfH+XloonZ9/v3Oh5/ZCu7ldHoUYz6YVdXstJ0ehya7aT1qD82eJP3ltb9zaI53fRl3e/dj975Gs//QlFM15wOxsIeH'
+         'SdSen2vNsju9np/O8/ie0+kVibvTw93kR4hDKL0mfdyt387J7Ba1rPNXM5ubF5H0Cgr2XznVi83xYdS6k7wA7PExdic9NiZ9'
+         '0rNDXJXTVsxr2e3QEBmyTzpCrOLu8jo/OYc3qjnu0M3rsENz3aVxvLMedwh6zStgwh1+tspCVsmt450TUZsPFsfFeLzvS72U'
+         'U3YjK4pRWBUjWGQ3dBKdCFglvXu1+VjxlfTOM7KfuN2KZQPniQGynLlFgY+VcpVzYGU+9r3s4kWe9LX7GsEx7ix68RFzO80d'
+         'cSe+MfT9mMDv1Wx4cJOyRpHHt7yV+7hnK9gvPJxN9eLnEntkvxP8YPYRHWa9MdAaK1iEuJI3tjkYYhG1cD0ahW+Y147zxSp+'
+         'XmMX/+dD3B3v8pF7aXrlC6JHbzWs8oEVXhViRdxx4vIi+vkrrOCCkE1CrJSXJuBjFuMPQ5lMDlnP5ysws1VY2rA6PQwxbgIp'
+         'IVZORFU+fKoaWOFjTS7q9nqJO2MJMKK2fcZKEU6+h1jBwbwcK4gATpg/P9UYvocLxAaake/aBQWbq+KssRI36v3cwUvwo2GF'
+         'VkOEHOGE5YDLt3BcXuhIen8XfWu+/E5cpVfih1jcw+p4zwc4xmGlDNnWGGOQYiT30KCZ6zQsMh1f7POVMMEOy0bDCgbbekpo'
+         'rWun46k1Unu3C6ukhwO+wkrvotpsseL8FitOYcXaun2es+rEDa7/WXOSj5V4GgsVLY6v+C6MCFY45+6xPDs9WOXLbcSxE96v'
+         'uFKWfcLKZ4ktVvbtGivtrrHijdRgcQ884veivl/RGq4rB8lZdQh0i1TqkNvJOb8TVS2mz3Hr9VKMdEuyIay2ITvGHWztOEI1'
+         'X7yVD+enjxV9tC9a87FCD/2Iw0osZhWbDIbBlSHmW3VI3Ln1qPRumdhxe9RmNx8P+WtdB6tZOFF31neou4q7bcfrc5aizvGC'
+         'MDIuq2ZVN9iGt+7Jd3oGotexquJcCOVDMRqXiqOzm/OcKhKr4W+6r0Y1u253jW7S70cNnfbnX1M+XsSVj5W6C6yrF/VSeA2s'
+         'XLcu4bWGFazuizGzotNZpV+Qiri4U2U1JFTLfR6hQn7l7T85VIVcLSLT7JXb36h0q+put3tU7u/duNb5dyLzr44fMYKlhw=='),
+        ('RG_RG.txr', 9, 1, 56, 37, 17, 'jp',
+         'eNrNU1mRhDAUxAIWYiEWsBALWIgFLGABC1gYC7FAhRycA5nqepUajmXhYz82qQLqHU26+yWE/7/UUo71fJUtx3Js1mdI1ZRo'
+         '2YfQrK/3OZu2ib5DAgIz3DKT6LRFR+zJO+GxM5c5xPHGvkJUCzoyByRmhJd9MVAmYjODL2RpPzkbYaiFamMH+ALrTp9yxF/3'
+         '7LZKVRPF7nWqZ3AjJGYyB35qidlmBXo1ZS7R184eEcm7o4qJFj4E2f+UPSsEb8CB2/MEIC48ntEJ6imGYy1NgeyFJzWOaPVM'
+         'zm3ZyZ6ZvAPrbSXOjQjYcQs9joqoBVFuvxFmUFEM4L0/U9rS7EGJctxOzOtN2Nx+XQiBW1QKn3dnnTAHUdG923nHTDHsYzRf'
+         '3D69ib+vv0HZrw+X0Vap'),
+        ('RG_RG.txr', 9, 1, 74, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_RG.txr', 9, 1, 92, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_RG.txr', 9, 1, 110, 184, 17, 'jp',
+         'eNrtmOuRqkAQhU2BFEjBFEiBFEyBFEyBFEyBFEiBFCxBEBFwb311qosZAR9be3/cB1O7yzrMTPfp06cbv77+X/+vv/863uNm'
+         'bS5pw+rdfYoxafm9uzCSNu10d7gxmw+bE/PHe9ZnfT5oFOP3rS5GVhdjPuyv+6s7Fzf76/d39v2PG9spKJexSNrNKe3e3zOq'
+         'N6fdZXludwnKdX/z4XBLu/01afOBZ9mnGPF+e96cDjfubG/D+3DbnKaxdq57cUbWzz/dnKL662t/DUpOmfDN+s0pKI/3OS7P'
+         'YzD3iMhhpe59vA+3pNXA16i2/+aWPiIqz32GrOF9vEf19hxWQemiBrbMcnLWByWDmOO3MM16MImbrOfTuEk7vHoH72Jk/3nU'
+         'QVV5GdVZr/N1hRXPRzUjrIx5sDAo3efe8Yhzdpd8CCt23Zz4G1bgr0jMB5x6jjYo8bOE+BxvnRrVuwt5EZRJe7hlvdhUjEQX'
+         'HA63uGFvGE5GuvbYSTD+Nd5EBV/lfzGG1fbMEKq6354nVnEqTGSA4fY84frIK1Y990hXPhA7niOCcEp458Px7g5y7jneSbu/'
+         '8lQ+7C5LGjTXE8tJ0AqrYjze88H1F0vgN8zCYzBBs11+f4I3TGCNnixGZY8yCHQ0jI2cEpRmo9b67AorQxIl4n7do6RFq+x5'
+         '6Ql8YY69klZZZEOfvdZHU6hP9Jt4y6aw2l2wJO3QL2kg2OYDWFtNdPU7rOImbp7VDVdNiNdcUSY98fEMSuonGHHio45PdZRZ'
+         'efDMI9hsEfPx1m6WRcqouVr9FN4goOpxvHMO66Vw4OAPqppO2Z6pK2Klfr9iA8zmGVWGqVKhXMI77Qx11QsyVUrNmrX90SU/'
+         'XksecU8uwg70IyjjhnVRrVn6rM/7k+/gjbfC0bWYbD7cyEeYe7xLS/S/BszGOj35Xu9EzWeVcgE0sNfw1hNmFew93q0HmLTD'
+         'v6h/ypvnHikyPG36ZQqm2HMnvOl6GcvnvYc3uSe8k/ZxH2ndEhuX6nY+qHqCi/KR9cYu4rHWobm76DxD3vBG0d1u0O26DJdH'
+         'v1RHfZ+WPRLj2B3fGNNJ0jp5NHmqmf017dawX8YbdlK1yaGlfIEhj+qLTWQidQb9ZvX+qr1Nv8lyLGG92KhefU1NtmcxB4xQ'
+         'ZmPtpN/46zNTCIjDvk9SZFbO0VjyCEwVBWb9k7AFH/iUfp3BriBHdfLPfs1v6t16b673lrDiPVK2q+NSHdRbGXXef98xTsha'
+         '2S4uLjGRnexsos564ujXS/TDfdvhTOna9DlaR98k1i+r7dwjnQoXsBFr3ZpgHfkjH9NOHlJLPtNvIb5Wc7JeJ5rC6z1LXTF9'
+         'JoO3L94X1A/SP022qfLgmSrcoyZITcwyuG75rneqeX9SjMKarmgpduww9XevPSKmZJNqpb494NyoRmn13iZG4qV9j4F1qL7y'
+         '+LN6mXZLNcS1EDaY0hGZrEdFXN2lJ5O31L0py+gRbHcsf7/CFyPZ6nf95sv2vLxTMabdmpdrHhE/9BFlnfpI3riYka5Rm1x/'
+         'wUD8WfOI7w2efavwE9/7EG9THXfvn9n9d18+PrLaR03fnjH+DI/+hesXX1M9tA=='),
+        ('RG_RG.txr', 9, 1, 128, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_RG.txr', 9, 1, 146, 206, 17, 'en',
+         'eNrtmeuN4kAQhEmBFEiBFEiBFEiBFEjBKZCCUyAFUrB4gzGY06dSqWeMYVd3txI/1kjntT3Tj6p+2fd4xFG16/vjy2NxmZ1W'
+         't8c3D1Z/R+rrY3aanR4/dqzvs9Pi8vjoY3Ub7wcbfl8hMT0ONmXzXblI7WOybN7zW7VFDadVO9gMtz/nd9kMNpPDJzNTtcMt'
+         'vOjf+fnnuRlu38cAmC2vP88NmVO1n8zN/DzYjHbEaVHDjq0tm+W1i6y44YlXVe3yGld4u7yaPXPDjliPlsnBkp+1UGkGm8UF'
+         '3OAGDREPyIe3PO+RX9SLi7RwzTrV09XN+9d37vuvqq3ayGDJ1f64H89Xt6J+jsp0l1eFZ6sbz8PPqO8pSrIlxTSO0U5RKp60'
+         'o2r7qxzcsH6wGe8l1zknvWLXlULcLK9p5VjftYL9oSWt+ouL7s3P4kb6tIKMCvk+JgdbNdqlVuJVSHs8whJZFjXNq0Y78Fnd'
+         'bJ/zlviV1Sl+yEu99yphNtzKdnZgIT+h633To3oqVoT29EhzJc2l8X55Bfk0quW17qMHufMzq7FH1bGo8RxchAD2RcRUrWzh'
+         'uf4qanbFCnU/Zg6wwQ5pjTjiOs0dcVM2tornSCYeQa5skOg8DMzNjeKlqJGDH11uOOM1cos6r9lFjfegzK7hNjDjPNzyRJUC'
+         'bYpo2Yk2YwiK3M0rgvx3PvIDJbSyD71pB8I6Itj3y4b1WIWPjsvlFcQlhR15D2OVIsusqYblWtxv8FNnJklxhL40n/ESfYoU'
+         'nRWToMJKzraIGiI7fSZrWIV8uOhyw31dR212ZnCtaoUUtC8u8CAGhLW7NHYiI7TbWrR3UUi5cUYiz7mET/IynwXsM3/NTty1'
+         'jykPrlj5HG1uQrOx6eNGNQU/5RVzhPWl3GCV5eCl4lv5Pzuxwjgsr6wDBaMUqMjv57xB/2g3P+eeIBV7VKlCq5lzPQKHyWF2'
+         'IhbJAGTJC7D1vi56tgedZTM/uxoZNXB8xQ33uR5upfs5y/q6Sc6NkA+m33OjOj3a8etyQxWxHDFgbqj6/NxxhIpmlOBGqErP'
+         'c79RpVIWpzOIupx2dyseO6KjywYqL1bapq+4UdWMPoNX5vwVao5QxVm3NuAdu5HMPfWK/rxhXdeqd3nT9z7SlzfipisZieM9'
+         'tSh9v8HryJuoaa5xnkfdj/IZEW146Oyj9uJVcJO/S3Tj/R03MUMrDvAKKzi7v6SosV/3jR1S8cXdzhjJJsvq7zeuw2nEveLG'
+         'WK3vnieDG1vlviON7oBls7gIHUW6sDE36tVhv/Ro2rc+5MFZoFq187OwEdd4neZBcGO7NOUjRV1TXrzjJn/31Bznmigbc9So'
+         'sM5u9kyPmkjQg+e65mnfDC0Ehlt1TbRIZqoF+UyJXW7EwuSQZnpa912dgxv55kpv2elEjmXpKqOt/IrZAIvRk0aqdrlvaNoL'
+         'K4Ib98l02pwenQfvuIlvNuw3RpoMhHiOgiZUSdF7gazGPs2x9sC5nE/iVav6G0hRhbvfBeL9JuVmfVfc55Wla1Vw07XI7xZ+'
+         's3TUlE0uV+9pzLXS7/ef6TGNIcse7zUjqCsxR+f9xmiOdtLrPhXWvuam/1vn66+fvFF3/07feb/+DpK+7/Rpeffl9Vm++k1q'
+         '1d98mclXPUvrl9K9+xqz/Mmnfy36X4dngd/jl5vf4/vHv/8/0ecdfwD5z3Wk'),
+        ('RG_RG.txr', 9, 1, 164, 164, 17, 'en',
+         'eNrVmIuR4jAQREnBKZACKTgFUiAFUiAFp0AKToEUSMGFwYDBH65edXVJNiwse7d7d6a2WEmeX2umR+J287OqF6dNe/uhZ31d'
+         'nNbXr0hml9/1c3FanL4vsrSa7PLmp3Bc1ZPdqn5HIm/k3eI02WWX1/s02emTlItT0YeVomfumWzRZxdJbLvXlv4ujkW/7eLo'
+         'Xj9JOT++h2NSTvfTPVguz+/gmF0mO2X88jzZfQ3HvFlfia/o80a6tl3ebLvgBaO8WdXC3GOP1lfJh1GowU0bVq1V36zYhnXY'
+         'vucmu7RiRjjaT+dqkA84ppVRmR3GOKLRWWNLimLbzY9YKPpNOzuAiezgoyUU9baLo4tx1O5hddMyus9T/NNbmtV7lklKyWsn'
+         '/J7ql0rmM92z6romSiwQm5DQCFnhINQlixVwJD5rut00Sso4poAjHt7jKN/wIOQn3hc9+vlkF3mi3LT3ii1v+E/RjmtYOK6v'
+         'rLKGJWSkPey8bGANP/ESnVQOGrILtUDdYZlekpTsPnqSku4i72MceQ9r6EB/UmYXxqpjxS706EyKc1XjF2M0zI8BtxhHcob3'
+         '474CbkjgJ/iNcdy02F7VVAozykzeWV+J0F6ig3HwMuBIZI6Ub6pluJtoIE+Zx7pwVP5phhUiMp6blv1kFTlVxBBH9AsNSRE1'
+         '67GH4BL4kTfsp+uFrAz7HfqMc2iIIz6AEiw9xFGalNvMuJaw6SrVbjsvH/cZy+DJ8kx8MUsjqXjwJq4a7dniBLtgS5mWVu59'
+         '+JSUy7M8jHHEGnpB310k2HmEo/MdDcpcZXSobPWZtEor7MaaAm5mv9c4ijG9BwE/ckbsd4+jI0NmdsDrmAGGOCrjA45o5aMZ'
+         'rJvVkBSfhN16hKM9fg9HWZ3uhziqzsXTcc8ybor4szjqtKuo7e0zHJ2P0gebDk9x0uCdCTg+0rntxGOOIm/MKM/ykfmA2ysc'
+         'Q9SP+7UiC2f+j/PRDHWPo2363Vc4UsFgrw4LVw3Ze8gMaIi7ofaz6JdnvKan4JUyettp1uz5EY7MG8/P4egMXtWresiPzkd3'
+         'zpgfN63mkRBfqnfc48iM2RutRPsKR/jNLOyuNLx1aC6t3F9jHIlodnC/YhfSanmWL+pLy7N36yMcdcLRiSPGUfuH5BhHMaH6'
+         '+Ufn8DhW4Sg/JeG6M46spJXPLPOjMRcHm3We4ShGC30lrskQz+wgTsJmjGPR6yQ3P6p/+1yomsou8jStxufHGEetCJdhd5DN'
+         'exxdNzE7Dvu1zu8xjtO9skZZ6lOMT3qSdS4ol83uwuYZjrYSauPRDcr8P7w9PJbX7W/Il5+9C475UdLPbpnv3t9iX4Zex+P4'
+         'rXdvspZiN8axjPvon37Yd99a3vsd4199xCzjTvjdOIqJ9Pd+jv2LD79H3v9CuGkXp+/NE25yaQW7/09o/QJuwXkb'),
+        ('RG_RG.txr', 9, 1, 182, 187, 17, 'jp',
+         'eNrtmImNq0wQhJ0CKZACKZACKTgFUnAKToEUSIEUSMEyl7E57KdPpRbD4WNX+570698ZaRczMNNdU13dw+Px237bb/t+y8e4'
+         '5e/+Qo/b401XScdoNuzOjJ/uaZ/22aCej99d7XTPR97Ox2w4XA9XdyxqDtfvz+y2uI0am8kr/HL7md35ePs3GON1NiTd8Xa4'
+         'xm02PB77y+68v+QjGATV7px0XHHPRT3pduepa+x1Y420X9/dncP68ThcvYJVJpTTfnf2itN9jc7rnVh7xP5hpa7nqCdd3Krj'
+         'a1jbr7WlP4F1WAeVX3qFix0IM8r6ae8VdPYf74Vs2oNM1KQ9d6PmeMO3T1DPR+b3iuV9sI0arsI67bW+ml/yfFjT/dJYCCO9'
+         'wn3uE49YZ3/JBr9k1t2Z/37JLmg/1h1mvY+gT/bmcDUbTnetHdb7S1jjR9wmXdqLWfnIbKCRdFED92E7MepaxV1j/3vU2Rs8'
+         'lgX56JdBRRe2ug6qyQtWhZV0kAyqCV3Wd7WIt157pJYN7CDPsY8wS6hnw+nuduLvPerC5T2/g8orzC+LUjDzy3w83bPB9Rp7'
+         '4Dosw2+QQctdrn8FdeKHd/RkPiqSFE1gpG6sYBWvMBv17txfvzQ80Saun3sUt6iXPS+FgTWMMVfcKqKs695rf9it/WW+W3Rw'
+         'nncibBmd7L0s88v9BXuON3RN2gjC2QDiljFdXffLqIkaZniHOlHCrq01ZlKYOapeQXbFC1Zc6vuUZRmVB688gtm2b3PUNZtF'
+         'lKJrrV/LpohZd9DdHnF5Aw7KLac7q6F0Uj7QmHdyntAOKrKOGKq/75gBy3lGGWPKY2iZUD/eDHvlkWwQ9knHO8/mR6nmu7bl'
+         'EdfEJRyBo14RNbwX1hqlFvtaDaN1qeuWPR/X9/TsnGlC07Wb+E46YkNRJHXRb3VYjo168r2VcIPco7g0TFBUQ11PmFUw+XQH'
+         'd622rmTEc+bAttceCSdFumVbKZoYwJVQNxy311vq9TzGPtd/aeAWM7dyezYot4KOIpT3jWnsyjML3Vm0nuFvqKP0bt04WQxC'
+         'W96h50vMn3nETMoT+EafVpL6yaPJU40crsfbsx0A90+yKbqwvLtkv6FObJKF0PWwJhvJEtN1dhp7eF/MVG3/TF+CSiwCKRTb'
+         'GDzpOl7PWSocxOe5J1Jq3lxjsuURyGovGJ2vhC34wF3qe7qyIt5Tj/585S7190vOoPJAtZmypE501ALzU5LxQzbLA/Fyi5XM'
+         'ZKyA47zPbs6zKYrinpFYU0o33Uf9qK0UAdsqvPZIq8IIbMRaN1dYBS/NdLkiD8kxP4972mtdqy50RlMVHbdU6pzxgopThipH'
+         'Kq3JQuUl/FP+W6qE9MUsh/emADqJrWuYfBTiVE7b1YNfTpXge4/YWSJLmVTfH1g3rPnuodOelAUv7UsI1pENFNN/o6U9zDAF'
+         'hAVpj67MqyI7oZAVp7gjn1u8Yv9XvvgQv/NTgvE1qLZnysfj7RPuuR6xiygmdeFUcXJOY0RKR85y/QUDsehffZt5hZM0Dwa7'
+         'bP5bbPhp6+cxKPV27+pbHP2/4dH/p/0BgrqmQg=='),
+        ('RG_RG.txr', 9, 1, 200, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_TA.txr', 9, 1, 2, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_TA.txr', 9, 1, 20, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_TA.txr', 9, 1, 38, 150, 17, 'jp',
+         'eNrtl+utozAQhdMCLdACLdACLaQFWqCFtEALaSEt0ALikQRCAll9OhrZBnL3/ljtQ1qPdOVrm/H4zMyZyfv9f/wfv3/USzVX'
+         '8/tdzZdXMRajv5fdipG9XzFOj6gtJ/sv7tKrNHP7vtTL5bUvX9tUL+fnnlxe2r+8Tg+bb0c1nx5IOZ2f9RLuldOhSa/vdzFG'
+         'bTEeGmfH+XloonZ9/v3Oh5/ZCu7ldHoUYz6YVdXstJ0ehya7aT1qD82eJP3ltb9zaI53fRl3e/dj975Gs//QlFM15wOxsIeH'
+         'SdSen2vNsju9np/O8/ie0+kVibvTw93kR4hDKL0mfdyt387J7Ba1rPNXM5ubF5H0Cgr2XznVi83xYdS6k7wA7PExdic9NiZ9'
+         '0rNDXJXTVsxr2e3QEBmyTzpCrOLu8jo/OYc3qjnu0M3rsENz3aVxvLMedwh6zStgwh1+tspCVsmt450TUZsPFsfFeLzvS72U'
+         'U3YjK4pRWBUjWGQ3dBKdCFglvXu1+VjxlfTOM7KfuN2KZQPniQGynLlFgY+VcpVzYGU+9r3s4kWe9LX7GsEx7ix68RFzO80d'
+         'cSe+MfT9mMDv1Wx4cJOyRpHHt7yV+7hnK9gvPJxN9eLnEntkvxP8YPYRHWa9MdAaK1iEuJI3tjkYYhG1cD0ahW+Y147zxSp+'
+         'XmMX/+dD3B3v8pF7aXrlC6JHbzWs8oEVXhViRdxx4vIi+vkrrOCCkE1CrJSXJuBjFuMPQ5lMDlnP5ysws1VY2rA6PQwxbgIp'
+         'IVZORFU+fKoaWOFjTS7q9nqJO2MJMKK2fcZKEU6+h1jBwbwcK4gATpg/P9UYvocLxAaake/aBQWbq+KssRI36v3cwUvwo2GF'
+         'VkOEHOGE5YDLt3BcXuhIen8XfWu+/E5cpVfih1jcw+p4zwc4xmGlDNnWGGOQYiT30KCZ6zQsMh1f7POVMMEOy0bDCgbbekpo'
+         'rWun46k1Unu3C6ukhwO+wkrvotpsseL8FitOYcXaun2es+rEDa7/WXOSj5V4GgsVLY6v+C6MCFY45+6xPDs9WOXLbcSxE96v'
+         'uFKWfcLKZ4ktVvbtGivtrrHijdRgcQ884veivl/RGq4rB8lZdQh0i1TqkNvJOb8TVS2mz3Hr9VKMdEuyIay2ITvGHWztOEI1'
+         'X7yVD+enjxV9tC9a87FCD/2Iw0osZhWbDIbBlSHmW3VI3Ln1qPRumdhxe9RmNx8P+WtdB6tZOFF31neou4q7bcfrc5aizvGC'
+         'MDIuq2ZVN9iGt+7Jd3oGotexquJcCOVDMRqXiqOzm/OcKhKr4W+6r0Y1u253jW7S70cNnfbnX1M+XsSVj5W6C6yrF/VSeA2s'
+         'XLcu4bWGFazuizGzotNZpV+Qiri4U2U1JFTLfR6hQn7l7T85VIVcLSLT7JXb36h0q+put3tU7u/duNb5dyLzr44fMYKlhw=='),
+        ('RG_TA.txr', 9, 1, 56, 37, 17, 'jp',
+         'eNrNU1mRhDAUxAIWYiEWsBALWIgFLGABC1gYC7FAhRycA5nqepUajmXhYz82qQLqHU26+yWE/7/UUo71fJUtx3Js1mdI1ZRo'
+         '2YfQrK/3OZu2ib5DAgIz3DKT6LRFR+zJO+GxM5c5xPHGvkJUCzoyByRmhJd9MVAmYjODL2RpPzkbYaiFamMH+ALrTp9yxF/3'
+         '7LZKVRPF7nWqZ3AjJGYyB35qidlmBXo1ZS7R184eEcm7o4qJFj4E2f+UPSsEb8CB2/MEIC48ntEJ6imGYy1NgeyFJzWOaPVM'
+         'zm3ZyZ6ZvAPrbSXOjQjYcQs9joqoBVFuvxFmUFEM4L0/U9rS7EGJctxOzOtN2Nx+XQiBW1QKn3dnnTAHUdG923nHTDHsYzRf'
+         '3D69ib+vv0HZrw+X0Vap'),
+        ('RG_TA.txr', 9, 1, 74, 177, 17, 'en',
+         'eNrtmOuR4jAQhEnBKTgFp0AKmwIpkAIpkAIpkAIpkILLD5Y35uqrri5JNnjhaq/uru7kH4ut0Tx6WqPR3u+PxuY62y9P99Ex'
+         'P8z2ZXf/6fGKjd8/3ovymXTRTqr1hV/L06Sa7e/39WVSfXwKh9U5lV6etjf+5s2k0q+xMdtPKj15szjGM6uzbTwb25szsL7I'
+         'v9fH6ry5fgfCRPk6ws+khwiX3fYmyekub1LmTSrF/TrCWZ03WQ3Kcba+Rnh+sL9FO929g0vZTar54c9GeH2BA5trVmd14E/Z'
+         'EfX8ALJCeHUOqJUdb6kFEBZ3Pz6lO0UYDWIbNtEbbMsv3idV0dqL9WV5Mj+3N+bZZ3Guy444Pj6tF6+GXNCqzTVEh1yf+cMo'
+         '9Rai3FyDP0a4v+eeVwlW8Fgf8zzIMMdKM3F7E0/zJsY4ILw4DhG2fjw0p9klRcvu0Ry+8GS19pTeZJN860tWxzFLBt5vb7aR'
+         '1ihFAn8UXdk9luOrZuS7vXGUroLaMUJY+e0jvDiCO/IxwshmdTiPtjfime1BRLaJUT7C0cVRHE8RhvNiZL9KsIJ12OojvL4Q'
+         '/fJUduQmb1iLP0W7OmMbTjCDfkkGDmN1ukNC2oVnzGM0zA/MynutWJ7Q1Jcr2rCeKJYnUMAevmb16uxVYjx5S/eMmOgnRph6'
+         'ltZhPAl1mKj5C+JY0QrwGZ50KYPNYXs5RFgaiZ4vqsNEhk3vB/4y098fIKI8O3awjJkim3grG5YLey4gTKZseXUm59ZvPi2O'
+         'yifSYtqwDnMa6Tx6B2F8wvbmis+s1cmWyufNdFe0Kc8CooryNYSNA/4ZWSJ0desjbCQDFq7lqQ37MMyVozTy7KjZHsSQSvM2'
+         'rKpf1+F3ESZLPI/qsLk67CXk07sIIwMeaB9DWN44FwFhaVTlJE751tfks8txgBURBoTjymeE+33+dyAcfBx2a94zaXZBlCj7'
+         'HO7zK0bYFclrv0I4eAWHw97tZzHlcHyOxBymZxAetmcOu7tFGg1xnfwuhM0v+rk4qwFhncIph4me79jwX7AYIqwvjkjn5zjC'
+         'endO0nPW9Vddh7GJ622MMO/CyNl35+maYlTE+IDnawjzJTBP8VtbjDBWuBkMewnV+NBjxb0EN5rAN/dewlPnRqjx8iurdXpi'
+         '+xnCOkWZwd+8AZGUKcRctPKK6NSvIBf3ffIhq/1dnqgDKdrgmVeNdWvPbs3SFnoPZd39cIxw2Qmd6a7fD7ufTe/s2unq+fRd'
+         'nV/gsN7xTN2OkVCH5D39COGyg/+B99hI7xKbq/LnfWJP8yZlH/PSoJ3r36oHWEbC/riq93u+8eH7c/D++Vq0v3svTW9j6fpg'
+         'O/was//Yy7EVAeExudgv/Y5lX8fyXxrsCm7M/erxf3zXCNXrz/8P6t86uIdxT/7Vdn4At5ACPw=='),
+        ('RG_TA.txr', 9, 1, 92, 150, 17, 'en',
+         'eNrtmOuN4jAUhWkhLdACLdACLaQFWqAFWkgLaYEW0gIiPAIkJFl9Ojqy4+GhlXa0o9WaHxPb93nuw/aM4++Pqs+bzW38tlF2'
+         'eVO0448eRVv17zHa3vfDOO4es8Py/H12bG6zw/r6k5Gq+tlhe//kA2h+N1b7oeqJyU8d+2F9nR3yRpm1H4o2zbKqX55nh6Ld'
+         'D8Kq6ot29/Du7lG0ZTeVuXuU3X7Y3DY3ec4cLs3KbnsXf9WzHjjCfCp3P2idv9aMlFSvuKxHVMFWeNkPfgY61k0nW+BM41a0'
+         'swO/vIEqqzWLu8bq4jWwmh9FIzu398AdxuIEHeuLE3OwZg5PkDaOREk1h0zQ9Zwd8WMvNqKh7JzXSOS3uqT5z29+lJemomr2'
+         'g2zPar5lXVYrMtamXoz14kxrSFmzuuAHX3RvpMSxQfLmVvVgBa040InuskN6nIvMF6eyAwGiJc2rCxHzDjbbd+SCqrFintVF'
+         'Cx/zFCvRS2/IcBCHK2/kNVyLE9GUN0IRu6HIG3aQSg/CC7yEDq1ZLfzSPs6qkccD+RrnN1Lcr9Cr/JI16EZr3PHgJ2/IIdbt'
+         's3ThB9buHtYIP/vGyvkW64mx8pyaDTFV5oSKtfa8oW8IK3llf7IaemOGdqzGWmxU53mOlWLuqot9j7GCgkigBenzI7ZMq9Dx'
+         'ts9BK5KX57wxmuzsHqzihbGyfmP5LK/Q7H4Y8koZoVxLsw6e8LW65I0qHysXJ3lhjNwtPmPlLH6GFbY6gqrW+ZFffNa7Ju27'
+         'tTu/xeGOtb07+2N6dtGDf1/7lTtT3CvYd79FG1KnWKlqJFU20Nnw1jYZK/jeYeWMf59XKVbTrv41r+JIfdWP96wpRu/yiloP'
+         'WLEnjNPbTtm5m7qTVL1uIsZKeRUwtpUen7CCVngjI43IK6yciWW3ucX0WInEuNKElauyaDkrrNPdzFjxF2/ByP0JPXAz536P'
+         'PtaDl1W/vqKNDgGVq8OYBay8sr6CdIiEbHqHlbqOuiA2Qas4x74vz9xPplhxDqInxRb6rNbtwCeLsFKnoVO4eqD1rrGqeuSq'
+         'n9j7+BzHO6re95Bwp6Zb+SQhkrJC1RKwksfs+DS3tk9Y6VYlLtmzOE3PSt2iuEFOsQodYvpKxH8hpfWAFbLUgT3X2Szcwv2q'
+         'aCXXXZAoMnMNap6+iCQbmiAPSxXHgJVvefZT2rJa9fwOK70twvezV8bzVccz3VO/esUTa3v/9or5U2mv3kMp1ytd6c7fel2l'
+         'p/X/8R+rP/O/Fb/F/43xC2J8Ifg='),
+        ('RG_TA.txr', 9, 1, 110, 184, 17, 'jp',
+         'eNrtmOuRqkAQhU2BFEjBFEiBFEyBFEyBFEyBFEiBFCxBEBFwb311qosZAR9be3/cB1O7yzrMTPfp06cbv77+X/+vv/863uNm'
+         'bS5pw+rdfYoxafm9uzCSNu10d7gxmw+bE/PHe9ZnfT5oFOP3rS5GVhdjPuyv+6s7Fzf76/d39v2PG9spKJexSNrNKe3e3zOq'
+         'N6fdZXludwnKdX/z4XBLu/01afOBZ9mnGPF+e96cDjfubG/D+3DbnKaxdq57cUbWzz/dnKL662t/DUpOmfDN+s0pKI/3OS7P'
+         'YzD3iMhhpe59vA+3pNXA16i2/+aWPiIqz32GrOF9vEf19hxWQemiBrbMcnLWByWDmOO3MM16MImbrOfTuEk7vHoH72Jk/3nU'
+         'QVV5GdVZr/N1hRXPRzUjrIx5sDAo3efe8Yhzdpd8CCt23Zz4G1bgr0jMB5x6jjYo8bOE+BxvnRrVuwt5EZRJe7hlvdhUjEQX'
+         'HA63uGFvGE5GuvbYSTD+Nd5EBV/lfzGG1fbMEKq6354nVnEqTGSA4fY84frIK1Y990hXPhA7niOCcEp458Px7g5y7jneSbu/'
+         '8lQ+7C5LGjTXE8tJ0AqrYjze88H1F0vgN8zCYzBBs11+f4I3TGCNnixGZY8yCHQ0jI2cEpRmo9b67AorQxIl4n7do6RFq+x5'
+         '6Ql8YY69klZZZEOfvdZHU6hP9Jt4y6aw2l2wJO3QL2kg2OYDWFtNdPU7rOImbp7VDVdNiNdcUSY98fEMSuonGHHio45PdZRZ'
+         'efDMI9hsEfPx1m6WRcqouVr9FN4goOpxvHMO66Vw4OAPqppO2Z6pK2Klfr9iA8zmGVWGqVKhXMI77Qx11QsyVUrNmrX90SU/'
+         'XksecU8uwg70IyjjhnVRrVn6rM/7k+/gjbfC0bWYbD7cyEeYe7xLS/S/BszGOj35Xu9EzWeVcgE0sNfw1hNmFew93q0HmLTD'
+         'v6h/ypvnHikyPG36ZQqm2HMnvOl6GcvnvYc3uSe8k/ZxH2ndEhuX6nY+qHqCi/KR9cYu4rHWobm76DxD3vBG0d1u0O26DJdH'
+         'v1RHfZ+WPRLj2B3fGNNJ0jp5NHmqmf017dawX8YbdlK1yaGlfIEhj+qLTWQidQb9ZvX+qr1Nv8lyLGG92KhefU1NtmcxB4xQ'
+         'ZmPtpN/46zNTCIjDvk9SZFbO0VjyCEwVBWb9k7AFH/iUfp3BriBHdfLPfs1v6t16b673lrDiPVK2q+NSHdRbGXXef98xTsha'
+         '2S4uLjGRnexsos564ujXS/TDfdvhTOna9DlaR98k1i+r7dwjnQoXsBFr3ZpgHfkjH9NOHlJLPtNvIb5Wc7JeJ5rC6z1LXTF9'
+         'JoO3L94X1A/SP022qfLgmSrcoyZITcwyuG75rneqeX9SjMKarmgpduww9XevPSKmZJNqpb494NyoRmn13iZG4qV9j4F1qL7y'
+         '+LN6mXZLNcS1EDaY0hGZrEdFXN2lJ5O31L0py+gRbHcsf7/CFyPZ6nf95sv2vLxTMabdmpdrHhE/9BFlnfpI3riYka5Rm1x/'
+         'wUD8WfOI7w2efavwE9/7EG9THXfvn9n9d18+PrLaR03fnjH+DI/+hesXX1M9tA=='),
+        ('RG_TA.txr', 9, 1, 128, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_TA.txr', 9, 1, 146, 206, 17, 'en',
+         'eNrtmeuN4kAQhEmBFEiBFEiBFEiBFEjBKZCCUyAFUrB4gzGY06dSqWeMYVd3txI/1kjntT3Tj6p+2fd4xFG16/vjy2NxmZ1W'
+         't8c3D1Z/R+rrY3aanR4/dqzvs9Pi8vjoY3Ub7wcbfl8hMT0ONmXzXblI7WOybN7zW7VFDadVO9gMtz/nd9kMNpPDJzNTtcMt'
+         'vOjf+fnnuRlu38cAmC2vP88NmVO1n8zN/DzYjHbEaVHDjq0tm+W1i6y44YlXVe3yGld4u7yaPXPDjliPlsnBkp+1UGkGm8UF'
+         '3OAGDREPyIe3PO+RX9SLi7RwzTrV09XN+9d37vuvqq3ayGDJ1f64H89Xt6J+jsp0l1eFZ6sbz8PPqO8pSrIlxTSO0U5RKp60'
+         'o2r7qxzcsH6wGe8l1zknvWLXlULcLK9p5VjftYL9oSWt+ouL7s3P4kb6tIKMCvk+JgdbNdqlVuJVSHs8whJZFjXNq0Y78Fnd'
+         'bJ/zlviV1Sl+yEu99yphNtzKdnZgIT+h633To3oqVoT29EhzJc2l8X55Bfk0quW17qMHufMzq7FH1bGo8RxchAD2RcRUrWzh'
+         'uf4qanbFCnU/Zg6wwQ5pjTjiOs0dcVM2tornSCYeQa5skOg8DMzNjeKlqJGDH11uOOM1cos6r9lFjfegzK7hNjDjPNzyRJUC'
+         'bYpo2Yk2YwiK3M0rgvx3PvIDJbSyD71pB8I6Itj3y4b1WIWPjsvlFcQlhR15D2OVIsusqYblWtxv8FNnJklxhL40n/ESfYoU'
+         'nRWToMJKzraIGiI7fSZrWIV8uOhyw31dR212ZnCtaoUUtC8u8CAGhLW7NHYiI7TbWrR3UUi5cUYiz7mET/IynwXsM3/NTty1'
+         'jykPrlj5HG1uQrOx6eNGNQU/5RVzhPWl3GCV5eCl4lv5Pzuxwjgsr6wDBaMUqMjv57xB/2g3P+eeIBV7VKlCq5lzPQKHyWF2'
+         'IhbJAGTJC7D1vi56tgedZTM/uxoZNXB8xQ33uR5upfs5y/q6Sc6NkA+m33OjOj3a8etyQxWxHDFgbqj6/NxxhIpmlOBGqErP'
+         'c79RpVIWpzOIupx2dyseO6KjywYqL1bapq+4UdWMPoNX5vwVao5QxVm3NuAdu5HMPfWK/rxhXdeqd3nT9z7SlzfipisZieM9'
+         'tSh9v8HryJuoaa5xnkfdj/IZEW146Oyj9uJVcJO/S3Tj/R03MUMrDvAKKzi7v6SosV/3jR1S8cXdzhjJJsvq7zeuw2nEveLG'
+         'WK3vnieDG1vlviON7oBls7gIHUW6sDE36tVhv/Ro2rc+5MFZoFq187OwEdd4neZBcGO7NOUjRV1TXrzjJn/31Bznmigbc9So'
+         'sM5u9kyPmkjQg+e65mnfDC0Ehlt1TbRIZqoF+UyJXW7EwuSQZnpa912dgxv55kpv2elEjmXpKqOt/IrZAIvRk0aqdrlvaNoL'
+         'K4Ib98l02pwenQfvuIlvNuw3RpoMhHiOgiZUSdF7gazGPs2x9sC5nE/iVav6G0hRhbvfBeL9JuVmfVfc55Wla1Vw07XI7xZ+'
+         's3TUlE0uV+9pzLXS7/ef6TGNIcse7zUjqCsxR+f9xmiOdtLrPhXWvuam/1vn66+fvFF3/07feb/+DpK+7/Rpeffl9Vm++k1q'
+         '1d98mclXPUvrl9K9+xqz/Mmnfy36X4dngd/jl5vf4/vHv/8/0ecdfwD5z3Wk'),
+        ('RG_TA.txr', 9, 1, 164, 164, 17, 'en',
+         'eNrVmIuR4jAQREnBKZACKTgFUiAFUiAFp0AKToEUSMGFwYDBH65edXVJNiwse7d7d6a2WEmeX2umR+J287OqF6dNe/uhZ31d'
+         'nNbXr0hml9/1c3FanL4vsrSa7PLmp3Bc1ZPdqn5HIm/k3eI02WWX1/s02emTlItT0YeVomfumWzRZxdJbLvXlv4ujkW/7eLo'
+         'Xj9JOT++h2NSTvfTPVguz+/gmF0mO2X88jzZfQ3HvFlfia/o80a6tl3ebLvgBaO8WdXC3GOP1lfJh1GowU0bVq1V36zYhnXY'
+         'vucmu7RiRjjaT+dqkA84ppVRmR3GOKLRWWNLimLbzY9YKPpNOzuAiezgoyUU9baLo4tx1O5hddMyus9T/NNbmtV7lklKyWsn'
+         '/J7ql0rmM92z6romSiwQm5DQCFnhINQlixVwJD5rut00Sso4poAjHt7jKN/wIOQn3hc9+vlkF3mi3LT3ii1v+E/RjmtYOK6v'
+         'rLKGJWSkPey8bGANP/ESnVQOGrILtUDdYZlekpTsPnqSku4i72MceQ9r6EB/UmYXxqpjxS706EyKc1XjF2M0zI8BtxhHcob3'
+         '474CbkjgJ/iNcdy02F7VVAozykzeWV+J0F6ig3HwMuBIZI6Ub6pluJtoIE+Zx7pwVP5phhUiMp6blv1kFTlVxBBH9AsNSRE1'
+         '67GH4BL4kTfsp+uFrAz7HfqMc2iIIz6AEiw9xFGalNvMuJaw6SrVbjsvH/cZy+DJ8kx8MUsjqXjwJq4a7dniBLtgS5mWVu59'
+         '+JSUy7M8jHHEGnpB310k2HmEo/MdDcpcZXSobPWZtEor7MaaAm5mv9c4ijG9BwE/ckbsd4+jI0NmdsDrmAGGOCrjA45o5aMZ'
+         'rJvVkBSfhN16hKM9fg9HWZ3uhziqzsXTcc8ybor4szjqtKuo7e0zHJ2P0gebDk9x0uCdCTg+0rntxGOOIm/MKM/ykfmA2ysc'
+         'Q9SP+7UiC2f+j/PRDHWPo2363Vc4UsFgrw4LVw3Ze8gMaIi7ofaz6JdnvKan4JUyettp1uz5EY7MG8/P4egMXtWresiPzkd3'
+         'zpgfN63mkRBfqnfc48iM2RutRPsKR/jNLOyuNLx1aC6t3F9jHIlodnC/YhfSanmWL+pLy7N36yMcdcLRiSPGUfuH5BhHMaH6'
+         '+Ufn8DhW4Sg/JeG6M46spJXPLPOjMRcHm3We4ShGC30lrskQz+wgTsJmjGPR6yQ3P6p/+1yomsou8jStxufHGEetCJdhd5DN'
+         'exxdNzE7Dvu1zu8xjtO9skZZ6lOMT3qSdS4ol83uwuYZjrYSauPRDcr8P7w9PJbX7W/Il5+9C475UdLPbpnv3t9iX4Zex+P4'
+         'rXdvspZiN8axjPvon37Yd99a3vsd4199xCzjTvjdOIqJ9Pd+jv2LD79H3v9CuGkXp+/NE25yaQW7/09o/QJuwXkb'),
+        ('RG_TA.txr', 9, 1, 182, 187, 17, 'jp',
+         'eNrtmImNq0wQhJ0CKZACKZACKTgFUnAKToEUSIEUSMEyl7E57KdPpRbD4WNX+570698ZaRczMNNdU13dw+Px237bb/t+y8e4'
+         '5e/+Qo/b401XScdoNuzOjJ/uaZ/22aCej99d7XTPR97Ox2w4XA9XdyxqDtfvz+y2uI0am8kr/HL7md35ePs3GON1NiTd8Xa4'
+         'xm02PB77y+68v+QjGATV7px0XHHPRT3pduepa+x1Y420X9/dncP68ThcvYJVJpTTfnf2itN9jc7rnVh7xP5hpa7nqCdd3Krj'
+         'a1jbr7WlP4F1WAeVX3qFix0IM8r6ae8VdPYf74Vs2oNM1KQ9d6PmeMO3T1DPR+b3iuV9sI0arsI67bW+ml/yfFjT/dJYCCO9'
+         'wn3uE49YZ3/JBr9k1t2Z/37JLmg/1h1mvY+gT/bmcDUbTnetHdb7S1jjR9wmXdqLWfnIbKCRdFED92E7MepaxV1j/3vU2Rs8'
+         'lgX56JdBRRe2ug6qyQtWhZV0kAyqCV3Wd7WIt157pJYN7CDPsY8wS6hnw+nuduLvPerC5T2/g8orzC+LUjDzy3w83bPB9Rp7'
+         '4Dosw2+QQctdrn8FdeKHd/RkPiqSFE1gpG6sYBWvMBv17txfvzQ80Saun3sUt6iXPS+FgTWMMVfcKqKs695rf9it/WW+W3Rw'
+         'nncibBmd7L0s88v9BXuON3RN2gjC2QDiljFdXffLqIkaZniHOlHCrq01ZlKYOapeQXbFC1Zc6vuUZRmVB688gtm2b3PUNZtF'
+         'lKJrrV/LpohZd9DdHnF5Aw7KLac7q6F0Uj7QmHdyntAOKrKOGKq/75gBy3lGGWPKY2iZUD/eDHvlkWwQ9knHO8/mR6nmu7bl'
+         'EdfEJRyBo14RNbwX1hqlFvtaDaN1qeuWPR/X9/TsnGlC07Wb+E46YkNRJHXRb3VYjo168r2VcIPco7g0TFBUQ11PmFUw+XQH'
+         'd622rmTEc+bAttceCSdFumVbKZoYwJVQNxy311vq9TzGPtd/aeAWM7dyezYot4KOIpT3jWnsyjML3Vm0nuFvqKP0bt04WQxC'
+         'W96h50vMn3nETMoT+EafVpL6yaPJU40crsfbsx0A90+yKbqwvLtkv6FObJKF0PWwJhvJEtN1dhp7eF/MVG3/TF+CSiwCKRTb'
+         'GDzpOl7PWSocxOe5J1Jq3lxjsuURyGovGJ2vhC34wF3qe7qyIt5Tj/585S7190vOoPJAtZmypE501ALzU5LxQzbLA/Fyi5XM'
+         'ZKyA47zPbs6zKYrinpFYU0o33Uf9qK0UAdsqvPZIq8IIbMRaN1dYBS/NdLkiD8kxP4972mtdqy50RlMVHbdU6pzxgopThipH'
+         'Kq3JQuUl/FP+W6qE9MUsh/emADqJrWuYfBTiVE7b1YNfTpXge4/YWSJLmVTfH1g3rPnuodOelAUv7UsI1pENFNN/o6U9zDAF'
+         'hAVpj67MqyI7oZAVp7gjn1u8Yv9XvvgQv/NTgvE1qLZnysfj7RPuuR6xiygmdeFUcXJOY0RKR85y/QUDsehffZt5hZM0Dwa7'
+         'bP5bbPhp6+cxKPV27+pbHP2/4dH/p/0BgrqmQg=='),
+        ('RG_TA.txr', 9, 1, 200, 188, 17, 'jp',
+         'eNrtmIutqlwQhWnBFmzBFmiBFmjBFmyBFmyBFmyBFgwqoIh4br6sTPYLjudP/uTmJmfvxAcb9sysWfPYfH39jt/xO9LRzM18'
+         'fn991dPplXf8slFPRX98/j9Szu+8291s92rcXg8PXUf+0mTl9Fqe38s6veppaTrp1fj9DtzhIxHuXo319DOrj092qsbjs5nj'
+         'td0ta9Fpc9nft9dycCt5l7X7e3x/PQmx7zDGcmQeHu7ecshaw3p7zVqhV41ZuzyPz6JfW8OK/X1zWcYPi5am0Dq/s3Z7RXLR'
+         'l0PoQ8Ma/YyTqU+y1kfpu8E+Nos+XANdpFcjWjg5xyd37255B1OLXiv4J2vDuNA4PLiPVX9i4em1uTCzVt+6h28kihH4iLvt'
+         'XzU2cz3Zb3QsereGdLwCksendJSWYiQ+Pz7DaXxvZvZiR98b5rHNZXuV34SZeEfkayKFNUn8xED2ODywEZvJHeWwu2lyBVnM'
+         'vHPZR9c1xT/zByu7m/OQLNrfwRLby0G+wXasauZyWJ7wtejRjMhAHt/NvL/DqPPbMMPWw8P+STLXkCt+aJr+sfeZxtF6Qk/Z'
+         'A3dhhuMOyOYd69ixv/tRCVO2V/FHuKTZIMVduOFnWRtzj7m7Geo8YbtKUz/D8ZTFOFkDv6tKMGAiV/CzkHCshqtkITyv/fEh'
+         'mJsmaIpNYubSFMvQ188QfgSy5tcDfGO4C0Njqst4MV5WfeJqiK6f8A753sxwdXMJ97I84+PK/UVPjl7O80i336Ds4kRe4j8Z'
+         '6fDYXNgDXW1SvUEMzvi4o2XRn14h7nnHflwnnqqRT2STpY0l6VC8+dPhrrjytXdVAjYT98oz2iXsDWTDf8HdpntG3Ypwb2br'
+         'XVT1ykGZhqwKC9eqOziEfqN+aieiVivYSn5gbQ13pCr+fNyLHoRBg3UyvnDX2jru1A6mMgzT8iSyXF3kDod7OZC/lXvzjkzj'
+         '93N6Eg3WPZ7izhOHh8sf7II3hbtyidAlr4q55q+1vkt2hb1mGj8/4zuxsbvhxxR3rrOvw524oM4t8wEvKsO4X6eX7pUsX9u0'
+         'V7baEQ5iA8uw4ue4a3c0wWp9k3GQwW5gGDPIMmw5pFo0s+Ix9kkYuQ73T3yn5q/hTo1W/+LjLks2Fz8X+Fqnnan6Aromyxww'
+         '2+Xd87sclF+QEtuMlvQeIe7k3LVu3+FOhYHXXJF0w106+ExVng+7GVsR0zeX9AShvBQyXnVT9qzh7uMT425Ph3lGfEijHhup'
+         'TnR/uis8N4Uc8b0GFkXPOUYy4z5RnZr/DKipu1zDPe/KQXqQZ+jWnSzrlhy657cyN516PbmaUE8wwk4C6anCnVvobg19xbZO'
+         'QvQ27OfjHp9HY9zRFcQd7vIG+qqrJeeQl5FonX09qRdWbY/PdupO/S7D+VB1OK6rwkj+d//1RMy0uK7ubn4OsHNOmo91Pa3b'
+         'im91GOvnVUWDy6PgznsIy5B0Sg73pfm5j8QmMHNVSJbwFEiLY9WorpcM5tASp8JTiDFG5yZyApnUZ7zFgX8N3/I+Y6kerI/9'
+         'neqdnnrpmOholt9dHJ+fZTQzEWU7CHdYpNotu61/90+pmvIJCHI28Sd7yG6ixvTQWx79O73gFvflnbhBXQlZyvmE7JNqzXmS'
+         '0+jSGxg8aHuGvcXaG4u/PTgr6T2XdUzujQRxkFqoa+kaWW+ZDzGCMTc+vU37Hf/y+APGIhvu'),
+        ('RG_10.txr', 9, 2, 236, 71, 13, '',
+         'eNrNlFuVwyAQhiVEAhKQEAlIQEIkREIkIAEJSIiESBgJ7NwYIE23L3tON5wmhYGfby5Ql/o/m6/rrR/w9x2WXOm5dP+1nlWe'
+         'UxkP7V814pxqvbb+tP8bW6CWwReHfa97kGYwRcBRd2OJOJ7ZnrEXeNaBugm/wDxiy9iraE9MSyueaQo2ei82VtTjxBqABKJY'
+         'eGym2XkPogqsDJa1VVVprVfSXVeMmZ1pmkq3bkrTZkRTBLTONKtGw3O9zLSk4WwtRXH7SJNRoat4jkWnEd8PjZR4N7eglRLN'
+         '+9aE47D4i/LvNPIkU0jml+TmGirxiUaIgKtNqqe1YrEBtnjz7z0NVXriL41cnDmhAaZ0ShNQo9yUSLvTLxylYIS9buJQmZ/r'
+         'psU4mCWrRhpi3uiXWzayZoOqCLQv3vgpX/sbGsBdEmrLmZLTtzLDMdA0pvGUwu2MO70LTs1DvxtaZponp+7xStPmb3arRLtp'
+         'RhqHsQL1rPKJCg9V415uob+4ibfh1vl+2x49f9N+AEVmzIc='),
+        ('RG_10.txr', 9, 2, 220, 71, 13, '',
+         'eNrdlMsRhCAMhmmBFmzBFmjBFmjBFmzBFmyBFmzBFhxQxAc+dv7JZNbT7oX1sDk4BiP5SP5wXf9k7d7u/flkPmGFbba7ZyLe'
+         'q0U6eMLqQET5CE865SneRPqOiJQ0xUReOTONDsLmY7XUq/LCKk800ulQTKCsFqJRXgcd+DQpaLA7nT4b8G4iVokABrJ6BU02'
+         'wO+ObMAfoMF62k5xNuyO6piIZ7tzTH9S9ZjmuuoV3aV4E03sjnQ05aw8KqFDPiKPieC7q1e6fLzTgKNa3rpB39LRNJuw3SEd'
+         'dMK1IS1/qw0002xpa9OfmBQQEU13QMNcnWKiqXtGN+VMGdENosF8Q906lDPmmmaOZkr5384UaNArnJNpsIIKgIlV8fv75rP1'
+         '55M38bP2ArShhNk='),
+        ('RG_10.txr', 9, 76, 220, 71, 13, '',
+         'eNrVlF0NhDAQhGuhFrCABSzUAhZqAQtYwAIWsIAF0gKllL+7TDYbkuN5E24fCN2SzNedKZ/Pv1d3dMdwvYGkWrVXTjntbby7'
+         '2ZiN/G4j9pXLxmaTZSkX5fKpWutUzMqZQN12hzprg8YEE0DdHZIOKVfMvKqTjeQXlLXnHdD0JzFWqxwNdJ6n7U/lygVTA8NN'
+         '02zK1UnWp2d6od7umFu58LqY4aT2klmvVuj+dpEPpJjVQYOeCTQrqYIn+UTnHS4bkZs6gQWzyCdyBjRw6U6Y5HS0LxcbMQvc'
+         'KTDQDIZLe9xzyg2ekhmmajbogwlaSAvfc8pVu3OK8Z3kDecarnf8iaXrCz9rwfM='),
+        ('RG_10.txr', 9, 150, 220, 71, 13, '',
+         'eNrtlN0NhCAMx1nBFVjBFVjBFVjBFVjBFVjBFVzBFQwiIorKpWmI3MfbBV/u2gcaStJfyr8N4W/fW7cTBU41t/1x3TNTjMMJ'
+         'UevxBVHMNGuMhctFU07clhNRxRh5+uOq2O3cUk0Ut8IBDTPcctv6XDT1ApHciKpmvK0X6BbV8RW3REGngCYPxytNCNAfOIez'
+         'GJkR7qqc0gjX+tbjL+akSWs2K/wWM+8ZdLnd1RvUEGiFKFRSSlMvcpNbqvicuoEZopoZZoAKc3fq5nmmqpmobscs1TjnKU3u'
+         'mcJ9U83AAmopp5gFJTfrJ93k2Te/Zw9xia1Z'),
+        ('RG_AC.txr', 9, 2, 236, 71, 13, '',
+         'eNrNlFuVwyAQhiVEAhKQEAlIQEIkREIkIAEJSIiESBgJ7NwYIE23L3tON5wmhYGfby5Ql/o/m6/rrR/w9x2WXOm5dP+1nlWe'
+         'UxkP7V814pxqvbb+tP8bW6CWwReHfa97kGYwRcBRd2OJOJ7ZnrEXeNaBugm/wDxiy9iraE9MSyueaQo2ei82VtTjxBqABKJY'
+         'eGym2XkPogqsDJa1VVVprVfSXVeMmZ1pmkq3bkrTZkRTBLTONKtGw3O9zLSk4WwtRXH7SJNRoat4jkWnEd8PjZR4N7eglRLN'
+         '+9aE47D4i/LvNPIkU0jml+TmGirxiUaIgKtNqqe1YrEBtnjz7z0NVXriL41cnDmhAaZ0ShNQo9yUSLvTLxylYIS9buJQmZ/r'
+         'psU4mCWrRhpi3uiXWzayZoOqCLQv3vgpX/sbGsBdEmrLmZLTtzLDMdA0pvGUwu2MO70LTs1DvxtaZponp+7xStPmb3arRLtp'
+         'RhqHsQL1rPKJCg9V415uob+4ibfh1vl+2x49f9N+AEVmzIc='),
+        ('RG_AC.txr', 9, 2, 220, 71, 13, '',
+         'eNrdlMsRhCAMhmmBFmzBFmjBFmjBFmzBFmyBFmzBFhxQxAc+dv7JZNbT7oX1sDk4BiP5SP5wXf9k7d7u/flkPmGFbba7ZyLe'
+         'q0U6eMLqQET5CE865SneRPqOiJQ0xUReOTONDsLmY7XUq/LCKk800ulQTKCsFqJRXgcd+DQpaLA7nT4b8G4iVokABrJ6BU02'
+         'wO+ObMAfoMF62k5xNuyO6piIZ7tzTH9S9ZjmuuoV3aV4E03sjnQ05aw8KqFDPiKPieC7q1e6fLzTgKNa3rpB39LRNJuw3SEd'
+         'dMK1IS1/qw0002xpa9OfmBQQEU13QMNcnWKiqXtGN+VMGdENosF8Q906lDPmmmaOZkr5384UaNArnJNpsIIKgIlV8fv75rP1'
+         '55M38bP2ArShhNk='),
+        ('RG_AC.txr', 9, 76, 220, 71, 13, '',
+         'eNrVlF0NhDAQhGuhFrCABSzUAhZqAQtYwAIWsIAF0gKllL+7TDYbkuN5E24fCN2SzNedKZ/Pv1d3dMdwvYGkWrVXTjntbby7'
+         '2ZiN/G4j9pXLxmaTZSkX5fKpWutUzMqZQN12hzprg8YEE0DdHZIOKVfMvKqTjeQXlLXnHdD0JzFWqxwNdJ6n7U/lygVTA8NN'
+         '02zK1UnWp2d6od7umFu58LqY4aT2klmvVuj+dpEPpJjVQYOeCTQrqYIn+UTnHS4bkZs6gQWzyCdyBjRw6U6Y5HS0LxcbMQvc'
+         'KTDQDIZLe9xzyg2ekhmmajbogwlaSAvfc8pVu3OK8Z3kDecarnf8iaXrCz9rwfM='),
+        ('RG_AC.txr', 9, 150, 220, 71, 13, '',
+         'eNrtlN0NhCAMx1nBFVjBFVjBFVjBFVjBFVjBFVzBFQwiIorKpWmI3MfbBV/u2gcaStJfyr8N4W/fW7cTBU41t/1x3TNTjMMJ'
+         'UevxBVHMNGuMhctFU07clhNRxRh5+uOq2O3cUk0Ut8IBDTPcctv6XDT1ApHciKpmvK0X6BbV8RW3REGngCYPxytNCNAfOIez'
+         'GJkR7qqc0gjX+tbjL+akSWs2K/wWM+8ZdLnd1RvUEGiFKFRSSlMvcpNbqvicuoEZopoZZoAKc3fq5nmmqpmobscs1TjnKU3u'
+         'mcJ9U83AAmopp5gFJTfrJ93k2Te/Zw9xia1Z'),
+        ('RG_RG.txr', 9, 2, 236, 71, 13, '',
+         'eNrNlFuVwyAQhiVEAhKQEAlIQEIkREIkIAEJSIiESBgJ7NwYIE23L3tON5wmhYGfby5Ql/o/m6/rrR/w9x2WXOm5dP+1nlWe'
+         'UxkP7V814pxqvbb+tP8bW6CWwReHfa97kGYwRcBRd2OJOJ7ZnrEXeNaBugm/wDxiy9iraE9MSyueaQo2ei82VtTjxBqABKJY'
+         'eGym2XkPogqsDJa1VVVprVfSXVeMmZ1pmkq3bkrTZkRTBLTONKtGw3O9zLSk4WwtRXH7SJNRoat4jkWnEd8PjZR4N7eglRLN'
+         '+9aE47D4i/LvNPIkU0jml+TmGirxiUaIgKtNqqe1YrEBtnjz7z0NVXriL41cnDmhAaZ0ShNQo9yUSLvTLxylYIS9buJQmZ/r'
+         'psU4mCWrRhpi3uiXWzayZoOqCLQv3vgpX/sbGsBdEmrLmZLTtzLDMdA0pvGUwu2MO70LTs1DvxtaZponp+7xStPmb3arRLtp'
+         'RhqHsQL1rPKJCg9V415uob+4ibfh1vl+2x49f9N+AEVmzIc='),
+        ('RG_RG.txr', 9, 2, 220, 71, 13, '',
+         'eNrdlMsRhCAMhmmBFmzBFmjBFmjBFmzBFmyBFmzBFhxQxAc+dv7JZNbT7oX1sDk4BiP5SP5wXf9k7d7u/flkPmGFbba7ZyLe'
+         'q0U6eMLqQET5CE865SneRPqOiJQ0xUReOTONDsLmY7XUq/LCKk800ulQTKCsFqJRXgcd+DQpaLA7nT4b8G4iVokABrJ6BU02'
+         'wO+ObMAfoMF62k5xNuyO6piIZ7tzTH9S9ZjmuuoV3aV4E03sjnQ05aw8KqFDPiKPieC7q1e6fLzTgKNa3rpB39LRNJuw3SEd'
+         'dMK1IS1/qw0002xpa9OfmBQQEU13QMNcnWKiqXtGN+VMGdENosF8Q906lDPmmmaOZkr5384UaNArnJNpsIIKgIlV8fv75rP1'
+         '55M38bP2ArShhNk='),
+        ('RG_RG.txr', 9, 76, 220, 71, 13, '',
+         'eNrVlF0NhDAQhGuhFrCABSzUAhZqAQtYwAIWsIAF0gKllL+7TDYbkuN5E24fCN2SzNedKZ/Pv1d3dMdwvYGkWrVXTjntbby7'
+         '2ZiN/G4j9pXLxmaTZSkX5fKpWutUzMqZQN12hzprg8YEE0DdHZIOKVfMvKqTjeQXlLXnHdD0JzFWqxwNdJ6n7U/lygVTA8NN'
+         '02zK1UnWp2d6od7umFu58LqY4aT2klmvVuj+dpEPpJjVQYOeCTQrqYIn+UTnHS4bkZs6gQWzyCdyBjRw6U6Y5HS0LxcbMQvc'
+         'KTDQDIZLe9xzyg2ekhmmajbogwlaSAvfc8pVu3OK8Z3kDecarnf8iaXrCz9rwfM='),
+        ('RG_RG.txr', 9, 150, 220, 71, 13, '',
+         'eNrtlN0NhCAMx1nBFVjBFVjBFVjBFVjBFVjBFVzBFQwiIorKpWmI3MfbBV/u2gcaStJfyr8N4W/fW7cTBU41t/1x3TNTjMMJ'
+         'UevxBVHMNGuMhctFU07clhNRxRh5+uOq2O3cUk0Ut8IBDTPcctv6XDT1ApHciKpmvK0X6BbV8RW3REGngCYPxytNCNAfOIez'
+         'GJkR7qqc0gjX+tbjL+akSWs2K/wWM+8ZdLnd1RvUEGiFKFRSSlMvcpNbqvicuoEZopoZZoAKc3fq5nmmqpmobscs1TjnKU3u'
+         'mcJ9U83AAmopp5gFJTfrJ93k2Te/Zw9xia1Z'),
+        ('RG_TA.txr', 9, 2, 236, 71, 13, '',
+         'eNrNlFuVwyAQhiVEAhKQEAlIQEIkREIkIAEJSIiESBgJ7NwYIE23L3tON5wmhYGfby5Ql/o/m6/rrR/w9x2WXOm5dP+1nlWe'
+         'UxkP7V814pxqvbb+tP8bW6CWwReHfa97kGYwRcBRd2OJOJ7ZnrEXeNaBugm/wDxiy9iraE9MSyueaQo2ei82VtTjxBqABKJY'
+         'eGym2XkPogqsDJa1VVVprVfSXVeMmZ1pmkq3bkrTZkRTBLTONKtGw3O9zLSk4WwtRXH7SJNRoat4jkWnEd8PjZR4N7eglRLN'
+         '+9aE47D4i/LvNPIkU0jml+TmGirxiUaIgKtNqqe1YrEBtnjz7z0NVXriL41cnDmhAaZ0ShNQo9yUSLvTLxylYIS9buJQmZ/r'
+         'psU4mCWrRhpi3uiXWzayZoOqCLQv3vgpX/sbGsBdEmrLmZLTtzLDMdA0pvGUwu2MO70LTs1DvxtaZponp+7xStPmb3arRLtp'
+         'RhqHsQL1rPKJCg9V415uob+4ibfh1vl+2x49f9N+AEVmzIc='),
+        ('RG_TA.txr', 9, 2, 220, 71, 13, '',
+         'eNrdlMsRhCAMhmmBFmzBFmjBFmjBFmzBFmyBFmzBFhxQxAc+dv7JZNbT7oX1sDk4BiP5SP5wXf9k7d7u/flkPmGFbba7ZyLe'
+         'q0U6eMLqQET5CE865SneRPqOiJQ0xUReOTONDsLmY7XUq/LCKk800ulQTKCsFqJRXgcd+DQpaLA7nT4b8G4iVokABrJ6BU02'
+         'wO+ObMAfoMF62k5xNuyO6piIZ7tzTH9S9ZjmuuoV3aV4E03sjnQ05aw8KqFDPiKPieC7q1e6fLzTgKNa3rpB39LRNJuw3SEd'
+         'dMK1IS1/qw0002xpa9OfmBQQEU13QMNcnWKiqXtGN+VMGdENosF8Q906lDPmmmaOZkr5384UaNArnJNpsIIKgIlV8fv75rP1'
+         '55M38bP2ArShhNk='),
+        ('RG_TA.txr', 9, 76, 220, 71, 13, '',
+         'eNrVlF0NhDAQhGuhFrCABSzUAhZqAQtYwAIWsIAF0gKllL+7TDYbkuN5E24fCN2SzNedKZ/Pv1d3dMdwvYGkWrVXTjntbby7'
+         '2ZiN/G4j9pXLxmaTZSkX5fKpWutUzMqZQN12hzprg8YEE0DdHZIOKVfMvKqTjeQXlLXnHdD0JzFWqxwNdJ6n7U/lygVTA8NN'
+         '02zK1UnWp2d6od7umFu58LqY4aT2klmvVuj+dpEPpJjVQYOeCTQrqYIn+UTnHS4bkZs6gQWzyCdyBjRw6U6Y5HS0LxcbMQvc'
+         'KTDQDIZLe9xzyg2ekhmmajbogwlaSAvfc8pVu3OK8Z3kDecarnf8iaXrCz9rwfM='),
+        ('RG_TA.txr', 9, 150, 220, 71, 13, '',
+         'eNrtlN0NhCAMx1nBFVjBFVjBFVjBFVjBFVjBFVzBFQwiIorKpWmI3MfbBV/u2gcaStJfyr8N4W/fW7cTBU41t/1x3TNTjMMJ'
+         'UevxBVHMNGuMhctFU07clhNRxRh5+uOq2O3cUk0Ut8IBDTPcctv6XDT1ApHciKpmvK0X6BbV8RW3REGngCYPxytNCNAfOIez'
+         'GJkR7qqc0gjX+tbjL+akSWs2K/wWM+8ZdLnd1RvUEGiFKFRSSlMvcpNbqvicuoEZopoZZoAKc3fq5nmmqpmobscs1TjnKU3u'
+         'mcJ9U83AAmopp5gFJTfrJ93k2Te/Zw9xia1Z'),
+    ),
+    'padoptions': (
+        ('OPTIONS.TXR', 13, 1, 2, 112, 17, 'en',
+         'eNrdluFto0AQRmnBLbgFWkgLtOAWaMEt0AItuAVaoAWEjTEGAz49fRrtLuD4EkWnU+BHDJmdnffN7AzP509caXe4VfPzH1zs'
+         'VE5fW7O/RHUx8isfovrj+vcr80Hr8PCe73CLau7d+ftqxE1U+3zVnPXvfH2Xr5yi+nj/Oh/3/vI9wiVf1lvsX+U7PbLerazm'
+         'fMgHP6ZqPt6j+nDDBg/lhMVre/Ghx+mxO0d12oVanR54ON5PD3sXRlCM+VBOIV85JW1UZ73eKIK1blt8+OFWFMVIRFEdN241'
+         'ttxJKw9acbhpJ9mHWTI+qb6/+DHojTwqlo+rnrJerKps/Dq+tHM2Fs/uvMznmo+/SZsPyov2ynq8KT6nXdKiN3b7i3aDiP8c'
+         '76G9z1fNZunzRXU+yKciiBuopAPqHW6qcMdXjOycduVUzZAf71gsT9iaj8ojc8V4elQz0ezOispfi5U7f9SmeSIK2cfNFt/z'
+         'GeZBfPguRhGVU9ajHHaKQHos16E8O1rka+W2+FQNcXO8Y0kfoecRn19VIZ/luRh9e3TZ4lMeTg+sqGn4+GtaEgOzQHx4dHnc'
+         '4lMvCGnWfOxCdbjK5gShKb+4/XyEfCjh+Mze18PxyUIexLPk02nSmVYE7/nUK7AI+XijzgeVVNBkUd059cLrMz4/b9v9BaXI'
+         'UdrxzpS1teqLVp/Oo1XK5/kLvwB0JvHC/9SL9JXAKrdLNaedmwCv+eyULO3D+eB3HtdR7YSgORPDTpPqWc9bfNaJtrRV/amj'
+         '7854I/K4STvTAjXjBl/+1MJqf4F/yQfJ2v6z+a7+mbR4glw7amLgA19xo3r1+bD7uFoPT1r12WXlZL3NN1VuNbMOWuvn8kyW'
+         '/ZnMKtRe8lWzpldo777Pknb5Dan+iT/NWE1cOpzyYc/L06VzSpSaFTBufxlRT/4z9Ro+r9ctbd7Zv76svzh/5tv8vNrL32fJ'
+         '8P9cxvdbr9/Ox6TXl+bPXn8AQAG7zw=='),
+        ('OPTIONS.TXR', 13, 1, 22, 161, 17, 'en',
+         'eNrtmOuxokAQhU2BFEzBFEzBFEiBFEyBFEyBFEiBFCjxgSIPt7461dXDyLp3797a+2MXq8Rhus+cPtPTM/h8Ll/7e9qWw/Nb'
+         'r2pM2/39s95pm7Yfty6HtM27r2S/vayORf+9CpbD6rg5f9Z7dVwdPzJLhwf3vFsdf0fx/wp6psqqnqqxnv6c8eFhqknBoj88'
+         'DLeeDg9r1VPRVyPz5ytdvUVvT+iN56Acih4cns+9w7ENrehdwbjfnzrD5xO+1RgrKObu5VblsD4RZz0pImceRloOc65Fn3dL'
+         '2UUe89ldTcHNmbZiKIekoZU0jKPY9ERYuyu/4SN7Q5uvDBCFmt3kLV77u6zXJ/GO0ax/jhZ7wdkZmYLG3OZC46+OaGq/y8FX'
+         '8RxV60AImgWyls/2MtevnrDKO1hjCZukyW4WJTFlN7yzmxRkRBigeDXSzjspJLSkKXra4X4E6vokfbYXekHDO2kOD3ppwzpp'
+         'xCVGszzh4unhASf2m8MDTM9bUxCvvMOKnQKlNme+k8biyLt6MgXFJe/gQhsuxEgbzejfnIv+tcoxPloQByNhAS/uKErmViMj'
+         'gsPdGMCX8eWttqMJJVQQHFhVo3kx68Z2fXI0RetotH2/rCflia0/5sXmnrYUlJUiB8PiQRO38p3EuEhJm816Mm5ErJxh7ccr'
+         'gvmPdxKbO8ZIW5sJU9JqPblq2WOKrk+yD1eeobr+sCF2xiBa4gEN3Q0Nbpuz0EKO5GjS2KmLXNte0laVzbSRAmnLGGDRG66K'
+         'WEHLaPVIOa0Dcdbsr0/ZLVwNXKbBzxSEQdKIpSuonHZvaxNz0qxPfGIF4b+soLGOFaRtaCHHold9ElO4mZUrqHWqpzDGI4w9'
+         'VtC5YPmqIJbhjjDPQRDwITvnCio7WC/LCobr0HJw6XS1rKDNe5iDVm1D9KVLFcnWZ1iZPAfDE5HlICeJdzloXF4V1N5uNXxe'
+         'B40tPXMFrSrQu6Rg6M3dYi+H7BbvJK8KxlWUNughmkbd3x2tGrMbFY3Y6LXY825/Jwe8DlLHsCYeyzFTMlbQxvYI5gry7oIf'
+         '/XMFtRfvrnxjEa9i72VXjBWU9/bCt2Ychrur1aT3CspbFYyxVGvS1tDCfldQMWU3q47a3eBLxXdtVLvJGduxk8aqosWlXU1r'
+         '0McKK4kpyCjUEvDCM2ZYVVRHYwV1ShLftI0VVHUQf7XnaO8VdGubVZ2iPM5lNKtI24t2RXmtT1LZFKxGnfo0Umyl0114HrSx'
+         '1HpdxfL/WV1592bDuUE2H30P+733pLm1jfYrbrHXMrt3Vku475l/zRtgPCK7oHbRr30//3cunSX8Pe3/9Zn/8raX3fW7/8/5'
+         '+9cP9SYj9Q=='),
+        ('OPTIONS.TXR', 13, 1, 122, 205, 17, 'jp',
+         'eNrtmOuNo0oQhZ2CU3AKTsEpkIJTIAVScAqkQApOgRSQXxgMhl19OipVN2CPZ3d/3CsNLc0Ymq6uOqdeza9fP9fP9XP9+ZU2'
+         'q1PWLs9tr6tTOSzPlQMz1Vj0ebe/hzNZu78fn/9Sx8Njez08/qXEcsjacCAdW6YjtuP4PDymlhU9a4t+f2ccHmmjX3ova1en'
+         'omc/SdOoxj9jZn9Pao31eXWy30kd6lSNq9PqhK6sXp3yzmdYhTbxlbXzZ1OrQWiJU3aY6sj+SyO0uhqPTzwHyax3PqbrNxdm'
+         '59LW5ylWeVeN4Kx9qhHvPTyKHqnr8+5m0oWIMRPv95mXzZkB2fU5HsiLkTWt8RPT0zHb3RibS9popuh5mjavWME+G9vrNE7n'
+         'zGStdmAPcLW73U1z26t0jrGXFtJPsbg6ebzDDLHpw5lB3uYSyjQdywF88k4o7W77u37BIJGE5vqfNshM6r9hBiviC8kws73a'
+         'EIYavj7vsGZzYcgOs4B9iECXaXHGGhBCZtrsbkiIuZkzE2vmEWs7rc/ba1KDEmgdHnknv6pG5JNPQMgHEmAm1A8kjJm0SWr0'
+         '21z297Qhtt0Xi54YEvJJvbvB0/6etbJLkYeWnt/+hpm0CeMFG8UMeHsU2W+LBfmkxRaSYyaYtWxFHuQ3Pmey9YS9YoSwxuMi'
+         '5kHeGOawcrA70Mc2MqWiRM/gnf/K+spRX2czOIUF0z9EjawGEsScMNrfpzHzGTOOcJy7LFpgnSHPWspC0xys3MCuqhVL9YYq'
+         'aJbAA3KluyqXJKqGhVhjjWsZ26XsubnMrcVP4ANNqAFiNGTGY9uYISZ8hDZKB+2Vd7Ck2EsbBhVNPo7/UZPFYFhndjeqterS'
+         'a2a2V2klvSz/bC7ba2wbcuKIKgf1AtK66Hc36XB8Iom8IS6ly/LuyimbC+jDEP9ZZ++za9gJfJXNLLfG3UNYh71/CZlR/2Xv'
+         'vctmZhX2ip+kVs+lO69gNuRtsEXVE8vmX3HUf57NvAKCWlLbnWxDM94XM2BmeJIZtN4q5XLvLF6slphfhpXR8trndaboWROv'
+         'UkWZvs8+dGuvYsZ7Ud6QbpZxrToltUe0nlVjNZIzQImaaffW06BLOfD3s455mZlX/Si4sZviyrReik7TaSlqheH6bJhxx9kI'
+         '26W1/HCazb7qAKqR3DvlYKqBd4GglHeMMGbirtSzGacWZWDzzHifuJ+QnOOTfsA6J84YYY3RefB7zNh5SFaE5yPFrDA1rXm2'
+         'Poc40kHiffMey3JB2Bdjk3o99a+KqDgPfq83C/3DPcA9hv6GnGy9JZp+lc0cKeydM0N3xvmPeWpC3oUnTSon/qyotNy/ubzn'
+         '5nvfAOgMrUp7R+nWy2KhTDV0THRuVbaOOyk9p+qUgzKoGOVeAx1B00a4/jUz0h+Ws1YaElfWg+QdfXXWpg1dP/u9O8/MY9C0'
+         'KAf1Mt6j5h1P9KaYQZLm8Dp+6YT6nptlZnRaBrP5WrEy782kO8/nSFl3Bb7zcyZ9EJaqVlgl1wnoVV79hBmY8Ho8j168QbGj'
+         '/v1912wRZyc1dQA6MfEmPNsXBmq+4gjtlLHdD52buOP6LGYMpaU19H7h+TLM4nFEfP51RnjR/YR3yyPMUO+YERaHByjFz/Dw'
+         'rJWmdCxkMZjZ3TyXU8tj78s7WU5FT2rJ3F7ROGunXx1ATv4LKv6loejZ2fL2u++LMLsUU+VgPfl/+0LPz/sdX7V0F+dJsPu+'
+         '5GnFRkIs5f+A6s8VX78B2dEqtg=='),
+        ('OPTIONS.TXR', 13, 1, 142, 165, 17, 'jp',
+         'eNrtmIutm0oQhmnBLdCCW3ALbsEt0AIt0IJboAVaoAUL4wdgwI4+/RrtLqx9kpNI0dUNoxzhXXYe/zw3r9e/59/zX3iyLm3L'
+         'Mb5XDGlbDN/hmjRp6/+upuMjTtqv52qq59+xoxhOz3Dl9CxHn2c9L784PrJuufb9Z3dNmmqK7x3uSWO2rh+sL8diyPu856ty'
+         '3F6MkiZp3K9qyjpW1rQ5O0mH+3stT896LsfjA2lZt9YJ/ttLiMrxwZq9533a7m/hqf0tafwoQsqvI3t8HO7Q5pw0+5veRa9X'
+         '3sf3iM/DfXdNW3Z84pRDEoTsr5BEx2qCyhH79O7iECSyLubL7SVtl/gvEcEPSeOy5/QEj2JImt0VW4QqWLKODkiu57zni6zj'
+         '3xJ7/d7fvs6UT1Gy1l20u75eIJS2u+vhjkfBsBjQzLiSL9haz/wtBsMHLddkEYA2eR/PGEkTWof78RHm7OnJN5uzH1sg5Eh1'
+         'JutMR3FaRwKxIBt9jJZee19dYhbg09MTpI4PvRu5anN6gjf6V9PhLrzgtr+hT9aBpOx3/gYHrNxeqJCc/wpJw8xJW+6zvr2E'
+         'kUMs7W/kDZVgGVXliL/RjWjkG9NiieTpCY+fq9+gFa+SIBF2jfABEWxHOu/UMdmEbcVglQ9dQQAkiS5l/e66u6Klj+Sn3mbS'
+         'ljqq/sQrq/KrHDdnvtqcY9ZgpcvnJZLvq05Mmt8ZIDunvMK3RiFHF1HUIkUL/RPZaZv3aM4q1chiknoEwmlLVPgxyeonJMF/'
+         'HRucsp617gNCpRx3V7THd7Hc8yVXU1gnhe2nePI9LfzwWto6JMNKIwplsBL3jniBVda5OPo9JOG5XsVyYjLWbz9xBFXrSeoN'
+         'VrHMM+VoPH8mv7HZeIRZDo5wcNiFWfBegqqffKK+ZbWNzk4vZ9V6uptblvMW885SWqwKkbvrOun0q+diWO45W6qJzu5nm1lF'
+         'FXLZgGZ8+24iBD3j4SMphFX13iPJiXCCOz3V1/nHlMEvv7aBJHjGZlS4OeyEj48ASMfwsp6zOYc42zxD1C0jE8vedWRhQqxb'
+         'jB3uVCk04i1WM4k7zVfrmNScJ91FIa6u2sPfeZ1I4mZh9SDsEdWkKTTk40/W8LEpPrRVeLGa90s85cHN2fcPVR7pWMlEpsle'
+         '1gonphKdZtr1URYZZpKmuAXPWA3fnOvZugl6qjK7WfRznUSG7jLmA26Eea/pw+oPGhQDM3jeY52tI0tziM7KL47Wvq9nO7/O'
+         'cs2UrpKofsovPl+zzCZK2/OnK+0t70vMS/glFgXcOejAZHJIpql6sEgxE6v5ukM4f4ISkUlsCWk8xh64MlWDtt2SnI+rSav0'
+         'vHe3V87GZxLi0t0261l3Nb1nnc0efuxxe4KY+sMo5w4U9xVV6zs3cndzcRn/1Yn1N/IY52P2/7n/P/hznP6ehP/f8wNwgvrh'),
+        ('OPTIONS.TXR', 13, 1, 42, 136, 17, 'en',
+         'eNrtl+uRqkAQhUnBFEjBFEzBFEiBFEzBFEyBFEiBFChABZWHt7461TXDOLq3bu3W/bPjD2XsPt19+jHD82mrXqq5Xp7RdXpk'
+         'fTE+//PK+qz/ftRizPrjfb1XL/tr0vDZnqs55knShDpx3srp+z0+3uUT/v0EetKEPOdD0mza/XXTJs3u8q981EvS5MN3+1tO'
+         'SXN68KuaY7n6CT6256ShH6oZXrRXzaeH9YjPRzGeHs4vpORtvRxuIK8rpJwcSjUXY72gH/ZlvYDidp1WNWM7H7BYjIYkefOi'
+         'nNg3Pz5bZ8f0QCnGGB9pJz7QsspX/+yvaz52F+1Luhity4jT19CCIT6qOVCkn3Y+I+VEXZIJWcdDQ7Lf1J31SzVL3uqGbArX'
+         'tx1apwcktWllHT18eeWD6ZF2x7vzEovFiD6RGx94t7sQ+fZsPB5uSB1u1QzK/urPXaEgRdWAgiS7fi7RywfVgboOa8pRNYOu'
+         'qjM+tEO0ioy40o54k8bvKFm32hc7+cAusZDxtDs9eA75sAwRD4j0LKwSOT4aH3hOJHhE7YGI1O5yuMmiPz+oR7RMm28s8428'
+         'm/BkAlvYxE/yfHrsLqYl9sQHfDkeiJRvJO05bh3vwFdXOy/g8fXcquZ8ICPKvLjLemXcYaoys14ZN8/9+lzPU1AlHXrm81Ev'
+         'x3vWwzH+4p+PEvJBFlSdvlfUj1Xz2rqxZd7ZvEAa3Nj8cOclNssJmU2bdnxCPmxfk+gTH/VC1SH7mQ9Y37Ti+ms+XLdaho0P'
+         'cPz6WFs3qz4fmsMhH1ZZ1pucAOtIfT6cRaSIgM6hfkM+7H+/X1750Lxw/WL1bKix+qBLFb9fH2s+QusxPuL1IY9ArBd1gtks'
+         'p3zw56mbq4cb91mdzmY55MMis4qN82Eo1t+gkX9Dc2ebzQ/yzpSzOR3nI7Qe8mHzG63Y+YIXqjA7i/ZXLMKh+UQONy1PMSks'
+         'pZ2LlMi45enM000i1i9Y1V1w03JHcM9ESf9sz+Db+QLO9kx+1Tfv68O3HvLhYnnl4/W+Xk6arsq3y5FOtbTTrauaJSU83Qv8'
+         '+63mjc403hPifNhJqHMUT3XaSYZa1b7xUS+6R5ivcT5C6yEfVgWx+oi/z8Xf75B7JxX+Z//Wy7s3RdPT//699xPq14h/Z/39'
+         'G+zv+l2/6+v1B4Y2cr4='),
+        ('OPTIONS.TXR', 13, 1, 62, 155, 17, 'en',
+         'eNrtl+1xozAQhmnBLdCCW6CFtEALacEtuAW3QAu04BYYjAmxzdfNM+/sScKAuZtM7n6EzAQjpHd3H61WYhztytq0OT1+P455'
+         'lzbH+7h6pU3aFMP44jre0yZrx39ynfu0OdzcczGkzfvnq5jWnsPrcItKX+/0iEr1zzufpt6de+67S1S+ppY2UbnOP2uN6umR'
+         'd39CpRiO9zUP8i4qk9qnGJVxtaY4jSkqo3LZ0pRaMZx79Urq/TWcP6PwVdR2l7cPU/Yz4/V1vEelZnAbNWys9X+Oyfpj6XlG'
+         'RY28Uq9iyFp+ZS2z41ZYMbx/koW8k4XTw+WinkKSopa11n7us5Zf3FEhq5M674oBH9JGvknJIsw7xky1z31SR6XTfbYtarwx'
+         '1azVL+4ousgU+5Sa1oEsPWcbHu+v5OPuYrGwQlGxLLWVy5+90xhby+q9v/rqUIsr2uOKdss9LB5u5JfemTJ5d+41wrIUK/gd'
+         'Zg5K/DFrzK689zMCanElrxS9VmgxcJcNZTe5xOj5FWqWpmuGGMg2lNAxarTHlest6m8f+ICFuEJxd9FaRpdc9NeZ3p8eKKMT'
+         'UqM+w5l5fvswZdkgkt2FGKC2u6Dsr8islbeW94ebtEJqRIUyvH1q9KRddY7x6jdHLe+cpSk1dLVKHDXshHUN311dM3pUQdHj'
+         'Ps0IKqYph9RkSXXNWhQTvmsFihpjuPv7Mc9WR+RlmCtQM5+IPqQmn+lPO/2U+XO7AZbm65rRIoat1CwT8k6W2anDfcooqX5t'
+         'oaZ1ZWNpMZ/JBX9HN2pkpTRCrm43kK8+Na0PtS9R30KNjPh7aloNVIu48kcQuVWe7dSkYKv9FTWb83Vq7IfL1Hy630dt6Szk'
+         '5xrK9mxEXuWarcztueaic/y/P9dCFq7ah9TsmbOJHxmRo8g4LOjkolHz1CwzxpEajPIaNdqNs6uIfl0rBqtvS9RUXdTvK6jJ'
+         'D//Lye2qU2rEtL9Swf3zsnZt/Wft6IShEwuMmGf2R2WMlLUXSs/3eUoNW0mNqs4m/Pe/gERB7TrRzFPT/CS1ziJz1JylLdTU'
+         'P5w/LNFnSq0YxCKpp+c17ejSUy/2DVksBnwlFp0xqS/FIKtxpb1+iZpOWXA+93O2tfKkj9IytayVbfrOUXOWtn8Dh2diMnr5'
+         'y3D+Gytsn463Z195zcq87tTPZXvzSuu9liL7uX6un+v/un4B3Lmc+A=='),
+        ('OPTIONS.TXR', 13, 1, 82, 158, 17, 'en',
+         'eNrtmP2NozAQxWmBFmghLaSFtEALaWFbSAtpgRbSAi0gIAnZhACnn55Gtgkfyep0988arbw24zczzzP2kGGYaqdn2hzuw2Lb'
+         '39Km6IeVdnykTdYO/6XlXdrsb25c9OF43ae0WfNxc45K+Xe4R2XaDEPWRuXuKhaPj1D6cM87+qSOSv23bE1Ufn0vSWStcXt8'
+         'rOP5regP9yXP8i4qN2dfPirjagkRn3zEuNJ4XtMrd0Wfd5LdXpI6jMioVET+Le6SWruEp2uxPo7pqDw93+eOmWWLx9yZPJqm'
+         's2eKu6zFqtMzruLKrSp6uNjfQBR3x4eLy6JnFO6PuMtam8+7rGW19Vi1OZ+eQk4b2Sok8/P0zFosCrHzbneFbX9FqFvcYaMx'
+         'LK/Us8J5Rn7l3Zg7NI81vZuzYPEYHu95kOEdKy27844Ij8qk9rXDiFA0z5jo+vpmD8ginriCQ0OWDzyKw+0lKvkLowgkk8la'
+         '6fb3Wdyx97xhh13O0st2nX/SLtnXnDVNU/kDCrGRtWkTcgdXceUyKe/wIW3YPfxLauGij735+lZchh6CgDS6Q+403pzZc5B3'
+         'V3wHaXfVPoHMm7iSJpejpyeYLgf2N+1TyB3W4hWs+9wxw7zGWs94irvTE4akaYo79/jcoS0878B35x27SY9H6NGKcXSACBMg'
+         'jrlzt5K9cSe0MkXcwTu9f3Mx1sliVrLSeai4K3pFt3rHndns5k3u9a5A0/x5F1dJndTIfsIddsoDf4/9u8zuChDhdJ07eWwz'
+         'yJjlYE9xR8YJI/TR3RWyNeTOzcO9k/ucu+nz7lPu4J8n5E4n0rvcuSgymTXuLKbHkRlyx+0wzZ3Z9r+4m6ud/LjbXtz43biz'
+         'XF2LO7B9T4w7P5eX4s7J/XvunH37m+8f/oMEVyDb+ccq405+u0oQJBDNrjXu3LkW+q5coFZ159kUd3bOmfw8d3yZYP273DHj'
+         '8HQvwt6YO91mxklYSaQNVuC3qgFVHMix59yhYjepQdZ9yU2hfZvjDontxdjdXvBDMezqeGyy+TnuxIDWh/W+f2ttL1QD4+xa'
+         '+iZjlY8ne6y+87krejGyvYzru90VG8wrV3GIY91UqsNDrUmtimSOO+0DsZp38jvUrTtA+Fg6z53qw815/K1k3JmmV+7WvqjD'
+         'ap3Ynv/CnP7qC9eMEe2dL7WkZVrfnG6Hv4y0LGXoVKrDb/tRSxudzr/t87a7jn9X+m0/aX8AsUfxxA=='),
+        ('OPTIONS.TXR', 13, 1, 102, 164, 17, 'en',
+         'eNrtmOuRqkAQhUmBFEjBFEjBFEjBFEzBFEiBFEyBFChARQRhb506dWp6BnT1em/tn8XaB0zPdPc3/Rj8+nrn2vdZV06Pxw+3'
+         'rDve3X0+ZF0xhlLlVM1fP3Id71l3uH22RjVnXdZ9tsbmFNWWU3hlXVTng7vfXaN634cS+GxOWAfj7pO02g3cSU8+OIn0jF3c'
+         'Xuys9Gx36DmlYozq7eVTjlEdN9L2dxHxKUcQipvtJWlB8hFHctI8y5HUHnPc91H9zLN/wRH8mJOPtZVTPuSDxorxeD/eLRdy'
+         'hIy1LR/E1nGs5nwoxpBjeuY491R6QNXuTtxYPuBI30HBWW7/V9bCPtnv++JzLKdiJAvYaaXgjSoX/C+nfR/GOJ5DG71ZktTO'
+         'xw3k4GvSxg1j2HHEj7ysZt5F9e5qOVYz2GD+Okd44p76HMsJq0NzyNGXXHJUnKIiI1ZogdUkjrAaUsc792xz4kqwTytwrzlO'
+         '7/y8ttr8vMccdBJSgjzssHkA/UnLbIR9+C895wNmwj9xhBebE+uc5YjxuNn3fq/yOWLWvoeVfOY40kLNXXIsRowfbsg7jB5u'
+         '4GJ7AjlCA1fE+OGmrMHz9AwZ1Bz6j76keuhzpLbQF+rgfIxXM9fxqyE4Isq1nyIAPrBEHBV3oGE5lhP3Vx1jjSMJkqY4Yu92'
+         'V6wKCx9x5Ep4hn0EP/C0DOBjekaUQUpE8Fd1V9ZjXNHi2+f6jLSFZxrtHeeR43qfgcZidBLwGnPFUZqX/bqad1fl/Hp9ZCU5'
+         '3lU7bJ9JWif3jKP2NZRihZWf0BE3OMWwx8G79Jx1ske8wNVl7yscWQdIy8m/xhGZYjliJ7Gmz9FmoGyzHJmRqtM2HsMc/Y4j'
+         'uwNzK+TIeARHrI0P4hyz44b3sM1ydJ31O46KKRuPzzk6XxTL4ii5MB7zQXfKoZAjqxE8Uc1VfSRhZ/czjk7vMh43J+gGZayo'
+         's9baqU5Roir2GkfsDlZVTXmFozTIMnHUPcYdR8YvLbK2WY6Or1i4PoO4cJ3zEUfkATsGuVlS7DPqBIpW1Bpr9eG271UfEU+2'
+         'u4Uc197u4Nv2gt+IrVc4wt6kZRdWPsEinbfX+jV8gGXr50dnM3tCeH50s9Y40gP5zkpn9YfnHli4OWF/IMX1VS2pIWn97ma5'
+         'SNvyFM4OsL3YbvaMo8iwntjzIyRJ0vpRzTp18b0w5KicsPaG50editc48tQIC4qRvvhvwuKoeq7zLz3W+5W6GfSDYtzYM6Lj'
+         '4rStvdG8+8ZYzevfXDxaCfL/73sKZOl7vtgZvjfk9WwVf+7vtX4t8/H3+uX4c9c73zP+AcNKrTU='),
+        ('OPTIONS.TXR', 13, 1, 42, 164, 17, 'jp',
+         'eNrtmOuRo0AMhJ0CKTgFUnAKTsEpOAWnQApOgRRIwSlQBvzCYO7qqy6VZgB7vbu3VfdjmR+LeWikVrck9s+f3+P3+F+P7XVx'
+         '3N3m76XN4nh4zN87PLhTDnm3v28u4Z3dbXMp+n/pY9HvbuHKO+08XvGu+3vWlkNsKWt5N2s3F5b93Vz03Oq0OGo/bNn6Ko6b'
+         'y/qslVSLo52vz6HFclgc2bPoeXtx3N/9Dm/hbXwo+lfH4YH/WQtS2Ms7w434wkXesja+xlqfpywoh8PDdj48kiqpin5/392I'
+         'e3s162KL4bisQ6vPmPQRjuDAfuHCXowDzwh1cux531x4dnViLevtVXfyjqvb63T/zYXntEOMFPnRkn9Y9nyB4/qctbaIQziS'
+         '46QKsZCn4ii+YZkddzd25gx15R3I7+9Fz7uy+kqRH+O4rKfRCse0sYV/du7v4yfvs4SNecE+MWOECZaW9eqECoQgeYH75QC3'
+         'k0p/Q5TJDThmbah9xxH1gAVW4Zyjz3vlgC8gv70m1eq0v6/P1CazrrzqaXz6Do7s4Fxcnw1H5c8YaufGM7HOeOsMcYwXR6sO'
+         'xM05ylP0RM67RU/0cU6TKm1UrdCe4fhc1yC/rIveMKCKuyd5pziISxHs78ZHcvg+jo5HrGJjIvlhiSNzegzV4kqTHsSmaZ2k'
+         'F1icoBbaRWvkk1xwLu8dR1jLCvmYNtYnqA4hjvJb2EqdeFv0cDBrqcQ8kXdiUdHHfYZdvEO8wjFt5JXUZ0pc1mkTx40HMVsP'
+         'D3UceZZ3q5P2KXosZa1Yt73C4NVpfvdywONlHXZTfLdovCeFfFRPxqPXupYSkor6YLrZXvFZvlGHxkxW5rENR/HFFfdVXXvt'
+         'Vl7slxQJAjwvHPHI0LIZIWutms3PDEJx7J/6//gARzQprVjenY8+TTgfQWtZwzlV8d3N84VK0oaKK8Vq1rDfQg6tk725PvEZ'
+         'HKd1R4vsy/tQ1/ga8sIVPr1utYl3xxhPFcSEqIykDTHt76yQj+OZwviIUtEHmI2zybXxdCC2iIdgKm74PARHPo+jT6BWd7WI'
+         'y1lmOHKNnhr2E1WzKeeoAsJlqhX4AFPiK1yjwwoTVsjHZ7o23aj+TXFkgsQSkzodO+/C+ZGIbELVFwZnq9N4pv/O9wxV2mc0'
+         'u+aeUj19/gunPdVs1c45j5iRpSr6gFB3y0x6TDDoVzp9Pj9O+V0OZkdzmeZHebe7aTZ3HNWBwk6p2v+s2r/CkcrBDnPdShhO'
+         '+7UxyDyMv2as3j+v2oeH6tmYQeVglVpdnr8ff8/IF59jvXJKKZuLfS2RG/yyuYdnvD4pGiEZf/++x0dNGHH/dh/j6du1lTbz'
+         'bHvnu9C+pMfeEn3aKDflwBzAzsQIX22JnyH6fPGpFjCPK1P0H+bw+MtPljSDU5OdB14XqEmvlE0e5jhCv3uv4//8EfuhX3w3'
+         'x3GNf3/2MBzGVn//l/Wzx19dNnIl'),
+        ('OPTIONS.TXR', 13, 1, 62, 160, 17, 'jp',
+         'eNrtmIuNo0oQRUnBKZCCU3AKpOAUnAIpkAIpkIJTIAULg8F8bM/q6KpUzcfjWem9p7fSdmtHmO6uunW7fuzX19/xd/wJo3yW'
+         'z8vr66uYzo/DjScbxZS0+fhP6cmG3bWYQumHm/3OhmzYOnN5SX8+RlXSamcxhRg/2cb+94iy4fdkbe3fN1EFpt31dI/rY+cr'
+         'h1tUne7L/cWU9t9rurzOj2LKx2xIe/bC1OEW11G1b3jKx9P9/MiGqBI7l1dUxTX2JO2xOz9cUtJGFcwaf6CMqvIZ6iqf54d0'
+         'ne5LZJzDAhCtcSLr5/yBJarWtsMS0rMB7I4N3WbxvklarciCuZ9qpD37WA0nvMj6Y3e48Q+LYMX5K5+ss6LpHsPK7ooXij/O'
+         '6IbTft/E9ZY2wx7X7OC8dgnxsUtaJlbJEs3PPO6u8gD9Onb7RhMp6GIebo5c7zXRb5Gcj6zsG2daEQUruytMHzshy4Z8hIvz'
+         'A7/m/k73pI3rtJ/zV0yc1C/eGgvCyXvjD8akF21xzY2c7qaNDGTo0Sefj+ukdc80Rs0qs/ATf2CEM/P+pEWK3Y09G7vlE+kW'
+         'u7LPZZ0fnLKMdXnBCGcMA0zxhhjVjchbdE+wOuePJ48M9hkPl1cxFROZB4bKJ3FqcbDUtjXQpDVDZ6eIaDT9NHp1j9zaUpfF'
+         'b8gPkpOWHLadB8unSwG/+63Y5jeRnva7KzLyUXeHv5Ct5vzhj+5zlvMM9XqG+e/8mGv3WrWM39BGxZBH9eehXGm2GVLwi7/y'
+         'abUWf8JXFcFJi53koG253Mgcm25KvCStVorpdEcP0YYXrfnzusV54w/e53NZP1zbPNqIXvP5w40I9lPcLPcKovfVeRm9cY0/'
+         'Oeeghkvxpxg1H7e8pBzh9mx59RL/2p+Ro1yvvANzS/7cnznvEumuwukZyHe/5wCr1h2E6pXufr363ktswgZ+r1wMIuyFC/VY'
+         'c03MY7f2P9my5jaMP4/2cC79Lx/h1H3DGaKz+T5+32U/vEuRu2/WvYsii7/h2XxM+60+RzkZ3MSDug/eCLPxJ+TheeXBefW1'
+         'FXnevCO23MP7OY7w/tKeehD2f0v2PcNcXqf7fIIm5E/alijUv1DtpXPJoUeWn1T3q3w9H/I1fyaC6fa8f5Z0KmOInJ1wTfZy'
+         'zcfOdFtPuNWRc9JvE1nUUa+HsjzEStbgpHUo24N4na+rb0RbyIVkE790ZXOmFBO8tX5DPsYOcvZW9PrbsPewfnfptdRN3q+z'
+         'g/hH3raniwmrm8aVEKhH1heJ6onzZx4a9pWKm+/jd0ub/G93VYeMDdkQdnh8p6517Rt20r3+/Jv0dKdrXp+4vOg0tv0AL/1c'
+         '9YlRlyD+9PUh/tS7ugY6zmO3jEP7WvC5rL+GNxvCCqv8RwdjHjBHTAyl/fydstW++fkX3X/5fxTGjPWx4Zfi7ww6hX/Pwv8j'
+         'd3/m+AXdtmZ/'),
+        ('OPTIONS.TXR', 13, 1, 82, 192, 17, 'jp',
+         'eNrtmOuRqkAQhU3BFEyBFEyBFEiBFEzBFEjBFEyBFCyVl+Lr1lenunqAgd29f27VrWVq1YWZ7p7Tpx/D5/N7/V6/l67Tu3yd'
+         '3p/P8Xl8ps3hET7Z1vs7z35yHZ/7+/E5vpt3qzN30eKjfNma4/Onerg2120d/p82abNkheniO6lkUfna3cyO71z7+zwmaA0R'
+         '/M4FMrvb57OtkyptNtfhk6Qazy9fWbuEFauKHq8eHj5P+Jev1TkchhZYFP0SR47Pw6Po9/fdLe9ALWu39bZendcXvvOOJ/jD'
+         '7JcV5Svv0mZ3czuwQHMM/93N7ZjTprvm89VZkqZe299X56z9O/yPz22NXrd0fcFW9pdUSWVPsHtzjTEmqdaXzZVVNmxW0acN'
+         'Wop+dSam+Az3jcwpb4g/ZA59tjrv76zYXPNuW6cN9mteiL/02dowSrJW+zX8wRM7l7T57ljF/vnMO+4fHkQdg/WGGPtbjiIw'
+         'ZQhl/d5czcunt2RpoM38Wr74f30JPSWOwDWtytq8290sTk9v5zt/hwef+CLEP5Yt0ENUwnZ+513RK6qydnPd30EEb+bdGH8k'
+         'EhvkVn4biooAolo6Q8bOa+Pa3UB4W4MXcywykMBs4x7fDHlnHn9WaGi1hmnDAmON8HN8tCOPWazy3zDZ87pYAEfAAOTn8k8M'
+         'f5czjrnyBV+EmNAc4g9HjE2KOl+5v5M7FHNkf6s989qGNUf5hww7tpaYXsZ9Pv8M9wZHDD2kDuvc6Z135in8b35jpsbmWvT4'
+         'wnD1/K/MM80/8WoZenV4L2vJJOsLTJziD6uM857zw1iM8WBeG7Lla+0O+SEmZC/J+j7+5AiQBH++bSVcTSqxPKmKHl1zVV2M'
+         '1k7hGfoPD7PF+ymwSip0pQ38ylplIefUfA8CZmFfYNbnHbFO7Z3ij3ZjCPjzVLLwWziUE7/Spopv+Zq6k7VhxwCbshYuTjuW'
+         'uV5JvDX8Q5QluXw5jnEZQlz5U/WafMmOWBPuXzkSXTHeLeOPpcP4g6NWl5Rrp/w3xC2fhP12OMI6NKdt2GW4Z8POVxGMRd/r'
+         '+rEenC3/YMfU79pjUk3RgUlhXSYWqLiswG9hTlNdVv5RFFgsxPH3rm/MX/f87ubj+JzWX98LmtxKWT2ff2LabL/W3YUdrfM/'
+         'qcTXYUWInxaYKa2e/8eoKaepQg+72tPbertxlyVp5JbhEzt/0Y+wQ+Tp3DfFn70MmcBzj6dpHscfZCHHP+Qzlro/i57M5WOc'
+         'f2LajPd0u2Lk+jLeedYKEY8dcoq60lhMmwbHn3rrWumQwAHWOvqcaCwrUaFjcRj2eibP8DeGDf3J3jjVnd5WO1yGVxlqbdjT'
+         'po31MY7cEH+s/aomhnVoTpv0CUfsE9bjLCXEvFLS4ysXzvUWVLDpbrFA96csUJ1Ad/y8qm4YHDRP1qgXmsdfdcTG+jK2B4uM'
+         'd2GV5NSDnrAeO/Yxpsq+5f5nqs3Pnep5ieGkCuVaXIT3QJGzUaxe2L6JDk4pU89s63jPQ5Zfel/CWVenOboEzSQq/Gw3xV+W'
+         '4DX60jlrDw+yaYg//Yv144qbkOl0LGNpflr1U2u8vwi12XsXqkocF7Ic7w/GOSnOpn/xjm+4t5+88ZrzhmSYbJj2N+/wyHlL'
+         'Z4/f63+7/gAIigNL'),
+        ('OPTIONS.TXR', 13, 1, 102, 181, 17, 'jp',
+         'eNrtmO2N4jAQhmmBFtJCWkgLtEALtJAWaIEWaCEt0AKCJED4zOnRq9HYScyyq7sfJ20s3WWT2DN+PPN6TN//Xr/X7/WTa3Nb'
+         'XeJWPfQmb+bHvt+/qkfY9i/e6anuv3+tLrPD5jb9rnrMDkUbP/vE2vq6vqa+qB7r6/b+qXe75/q6upTd7ollxvVmXm9uPqJ/'
+         's7nRp++397iXni7Ps0NWh81GE+n1dXYI2/qq0bnXCNPX/rV7bu94VHarS8zg+6TT1mzkrJ4dxGn8HXNYnj/jvL3PjzbXssOb'
+         'sGW1bHAPHffO2urS90Ub99JcIb26hCug3psbvm9uZYeXfKV/9b7vGWHKz6LNG3rGjdlXD8uavIGm/SUy+5eYTZFOWbN4yGpG'
+         'hIPNFU8WJzU84l3R0sruPWk4L89EZVZv73Ag6+HKneIYJqLjpHnH89lheyfCxG955s5jen4Mm7LDGC1OrC1jEJtfk2a0vFmc'
+         'lmcsZXXZmX/D7LCmtxbn3yVddrAsWghh1dRP1phPVvOO/2lah3Qm0sv0M55VuLpwsDxRH8UJtMyCvvJeqZje3vnS1mlKPULb'
+         'oWZ4xkIMDclq/OAJ6rd7Kje4w7Mx6awmf6Dm85+yFl6mHu6B6y5zeE84HierY82PSaMdeeM+haRhZlkzRXoc07FOm3rA5T1p'
+         'J85IWCe+84bVZyT1dp1m3DFpa6ESpqwRsXlj6kH0hhmxf5lmfkq6ekin50ffXWLSzIPRFIlGGkY8mR9tpUPSaAiekOFhU3++'
+         'hBHfixKx4aS1O6QqGsut6pHVqhs+J120xLvvbe+sLc/oMFFBP/Qj3Gu1y2A5bz6tPfavspPi25rFpCG2urAPaI7hjshcY41x'
+         '9Ztq1B92B4uxepBB70hL18cVgNQSKlJN7r7W6a+s2bzGVR40mHta59/NwOqdkHRcaeCVabvm5z6EpE0piWKtR/WgcqgePJfy'
+         '0Z8d3P5NkV6ew3ni5+I0Jk2VoPjzu5+Qdmv7F3uvMr7shqzxI2+kILFyp6pvKjuv5MaklR/KfaySr6bTsHWVGuq0rTqxK7qm'
+         'T3Zy2T2pzeGg+6m5WyaFVXFsB3+pnmL1oILSbL5DOrTGfBan1UX5Pj8OM2l51ir4mOwhqv2maye+VeU0pR5SW/cDWkZavad0'
+         '2klzCpOvrnIi7SsZ6p9GZxwqTu0EcW0EOVafPeCrMyIryEpTmaBbrtN2Ik1Z442IQUBUh+u0vnrm6G/1GHpsMW2ngcVpvCPG'
+         'VaCyNKw98MJyOVYPjatVX1+VZYsTmUXlnSatHJjeCdznYTSlSHv1PmzmddqaTiWiz4qxtqElcQufcQrcPcmd1Omdtz/9pSE1'
+         'ouKO7EMbICr9UF3pSjsmDUmdz4o2VokwVlGH8S8OQ9K75/C3F2v+Vcoa2cDeUrRTv2xQsxXtMApU2aa8/jfX1G8Jylk7HRsz'
+         'TqZ/z+rfHO33+l+uPwqVrD0='),
+    ),
+    'lobby': (
+        ('showteam', 0, 0, 0, 102, 16, '',
+         'eNrtVW3ZhSAMJQIRFsEIRDCCEYhABCMQgQhEMAIRjHAHjgPqvX/lfd7H7YcTNjjHfajUK/9MJlYttlYEbULYrx76cgYpgwiN'
+         'XXqYx6YS685WlpmtQ1OHflcWb9kjx0SJyLKWtZ2fx5uT9f1RNl7ur5mZGeNVFsYZOy5REAdZsbxPkrGRXCIj7eUbF88+CXVT'
+         'PQwyl9juZRQXx8joxGWTbmkdlHl4cK5cFnkSI9YXLqucsT/cMbnWPe5s/VIryBTMC/tUj8RVtSIbU9dZ7cSq9PAcI8aZ0Pvx'
+         'hixy9lZUWeaSs2kxPe5cxtRY6wn3g8tW5kPLw+FhwE3fEI/nYr9yaV/dycSrHgGIg+yM5hKYw8J3J7k1V9AqejDw6JvtxGVC'
+         'TLZC4ToP5TIXDA53EtuH1jy1P6ItVUWYaAtmMZVp4PA9zCnilVf+nHwAe2qDMQ=='),
+    ),
+    'tabmenu': (
+        ('tab_menu', 0, 9, 3, 26, 12, '',
+         'eNqdkGERgCAMhReBCEQgghGMYAQjLIIRiGAEIhCBCETwKRsqnh7n3g/GeB/Hg+goB5nSYrVVOtEzLUeREpTR7TWiK0riWIgb'
+         'xmNWWCNMaBxPJtB02/cwDI+9MVHSmFdmn2W80FZG8/gPhuD3SOy633b+Bf9g5m5mhXfCNEmiEd0iUibIfqiZ+bjJ1mwsmi+O'
+         'Ikc/awO+ejkR'),
+    ),
+}
+# The Device Settings page's hint lines, the same way: each line's two
+# halves, strips for the sheet the patcher appends to OPTIONS.TXR.
+HINT_ART = (
+    ('OPTIONS.TXR', 12, 1, 130, 136, 17, 'en',
+     'eNrtl+uRqkAQhUnBFEjBFEzBFEiBFEzBFEyBFEiBFChABZWHt7461TXDOLq3bu3W/bPjD2XsPt19+jHD82mrXqq5Xp7RdXpk'
+     'fTE+//PK+qz/ftRizPrjfb1XL/tr0vDZnqs55knShDpx3srp+z0+3uUT/v0EetKEPOdD0mza/XXTJs3u8q981EvS5MN3+1tO'
+     'SXN68KuaY7n6CT6256ShH6oZXrRXzaeH9YjPRzGeHs4vpORtvRxuIK8rpJwcSjUXY72gH/ZlvYDidp1WNWM7H7BYjIYkefOi'
+     'nNg3Pz5bZ8f0QCnGGB9pJz7QsspX/+yvaz52F+1Luhity4jT19CCIT6qOVCkn3Y+I+VEXZIJWcdDQ7Lf1J31SzVL3uqGbArX'
+     'tx1apwcktWllHT18eeWD6ZF2x7vzEovFiD6RGx94t7sQ+fZsPB5uSB1u1QzK/urPXaEgRdWAgiS7fi7RywfVgboOa2iRS9BV'
+     'dcaHdohWkRFX2hFv0vgdJetW+2InH9glFjKedqcHzyEfliHiAZGehVUix0fjA8+JBI+oPRCR2l0ON1n05wf1iJZp841lvpF3'
+     'E55MYAub+EmeT4/dxbTEnviAL8cDkfKNpD3HreMd+Opq5wU8vp5b1ZwPZESZF3dZr4w7TFVm1ivj5rlfn+t5CqqkQ898Purl'
+     'eM96OMZf/PNRQj7IgqrT94r6sWpeWze2zDubF0iDG5sf7rzEZjkhs2nTjk/Ih+1rEn3io16oOmQ/8wHrm1Zcf82H61bLsPEB'
+     'jl8fa+tmlRiND83hkA+rLOtNToB1pD4fziJSREDnUL8hH/a/3y+vfGheuH6xejbUWH3QpYrfr481H6H1GB/x+pBHINaLOsFs'
+     'llM++PPUzdXDjfusTmezHPJhkVnFxvkwFOtv0Mi/obmzzeYHeWfK2ZyO8xFaD/mw+Y1W7HzBC1WYnUX7q2a884kcblqeYlIw'
+     'nXYuUixzy9OZp5tErF+wqrvgpuWO4J6Jkv7ZnsG38wWc7Zn8qm/e14dvPeTDxfLKx+t9vZw0XZVvlyOdammnW1c1S0p4uhf4'
+     '91vNG51pvCfE+bCTUOconuq0kwy1qn3jo150jzBf43yE1kM+rApi9RF/n4u/3yH3Tir8z/6tl3dviqan//177yfUrxH/zvr7'
+     'N9jf9bt+19frD/QpcwY='),
+    ('OPTIONS.TXR', 12, 1, 150, 135, 17, 'en',
+     'eNrlmIFx4jAQRd2CW6AFWqCFtOAWaIEWaIEW3AIt0ILHBuIABvvmzZ89rWRMSHK5y8yJGbCllXb3aXelZBislV3Rbi6/X4ft'
+     'tWjX5+FhK9qirfrhnbY+F23ZDX+4rU5Fu7vFWrbXafnUv83lkVWrU1Yv37x0VhetuPhVNCY78iar36dRtFn9Htd71j/ybRgW'
+     'x6z2Ei+vWZ3a+ci/5VtWr07SNKaSSlf97iZPF8f5wUvububdd9LIG+3FszSCvc/RCPJ58/J6X5o40L5XfdnxVHZ5M9sHelUP'
+     'VUWpaGwuYU/0FltlNLbXstMIWrTi7mYxwJNFftWvz1m9OJq3Zbe5pJECDfpNG/N50i8jZgU2lV1Kw/SRA0GTpzE/ZHVW541J'
+     'sTt4zMdnEB8b0xzLKUnPD56HaBBReUM/ntqc7RVppFjHmCOrdfBFGmJfRGO2p39x9JmCNsYYRVvVS4rvcaaYptl+TAN5ZpFP'
+     'RoP+2T5E+u6GrpdXLMf32R798pOR1SlkpKfBGNZWfd7kTdnhY4gvfvMmRJh8Qp7VeELOV03RWJ/pZ2c9Dfygn3ezn/cxDUX6'
+     '/JBWHMWGfqFgNKAX1w3mh7phVMhCqOCL7Vegga3qY13ylAhhFUbIlnhOqOHsDt6yimcMDeZbv6fB+r7f9NyrombPmIZRYPRZ'
+     'Guwr+7y9Khc4dePI025ZxddeFS3eYB1UVid9j2lAVllq9sV1I1RHT4OVrN8ycOpMmaaB9OdpsL94ysfPMBrSiR7qMh/0sf7i'
+     'iC++knkayiB4eavtTDFKngbWeRom9zdpIJlWI6OhPCbv0z0mF6ATqkacKXBEx1RsYE0aGykNL/d1GrGPoUrGNOydyuSrkuwz'
+     'a8pOFYIzT9Gg2IktCjaaN1YnPA2ssP4pGvSb3NdpKHP9DTycMikNNM8Pqd74hOVMQYNVRzuz4/sZzPKGVazO2LnlaVClmEvM'
+     'TdEgw7hfpWe00QianqEhvf7OqVsFMikNuxssjuP7RthF7nNIWdUU7/j+o1uCYlIe+xugxYx81DpTNIzb1JniNT3X0jsvt9op'
+     'WXb/YytC4541Qce0vo9ruz8+/JC2u7Gbj/8m+X+a7s0/Z3f+bVu+fcd/Pz7XfgEY91/+'),
+    ('OPTIONS.TXR', 12, 1, 170, 142, 17, 'en',
+     'eNrtl+1tgzAQhlmBFVghK2SFrMAKWSErZIWswApZgRUQkIQ0IUD16NXJNg0fkSr1T40qanO+j8fnszMM79r5lTbHxzDb9ve0'
+     'KfphoZ2eaZO1w5+0vEub/d31iz7sr4lpc4lK+X98RGXaDEPWRuXuJkqnZzj/+Mg73kkdlfpv3lpUHr7mJLLW2J2ey/r8VvTH'
+     'x9zq5F1Ubi6+fFTG1ZxGYlpiU/R5J5ntNanDjIpKZdRvsUnq7dUiWcrVcU5G5fm1ng0j8x6vY5O1WD2/4iqu3J4oemLd37Eg'
+     'Nqeny6uipxfqFpustfG8y1pm25v4NpfzS5rTRr5Lk8VxfmUtHoW68253g6Y/I7QtNvhoBBWV3sxwkbE/8m4NG9tTyPKYPN95'
+     'kOEbM2335V1c0UtqXzsRS4vG6ZMdhy8Yk+U8cQUj0ywfeZRH22tU8hdmAZpMJmtl219HsWFt+cIKuj3FW76r/si6ZH+yYW2z'
+     'Nm1CNrCIK5fpeYePaQN9/E9qeYg+VvHwpbwKI0AD0uytkI36mwtrhubdjdjQtLtpHdDMl7iSJbeHzi90uhze37UOIRu8JSqo'
+     '+mwYYVx9zaf/jo17fDZoC+sN8129YTV44zHMNWO8umgkUjSO2WBJ9ca+SJPRZgQ2cOXtnwz0tfPNy7AGKm+KXtmpt2NjPrtx'
+     'kxuziaukTmpkP2GDH3hI7XBr5J8FVovRCLNlNorIRpCRBdl+x4YdoX1tkuNaLF9DNm4ctk5ubb35lA18eUI2qghr2bgsMJkl'
+     'NpaT48wK2VB9/4bN1N3BzxsYWH9t3theWsob6XCRGBt5z36Yzxsn9/tsnP393fef+NAECzTbm1k/2egmhCZiNr+W2Li6Esam'
+     'XOau5urJOzZWZ0x+PRtGnLzOFeiM2eg0sJjDkzZt8Jq4dFrqREaONeMMErWkRrPOGyqx1mWKDRLbq9HbXolDe8vdU/HJxqfY'
+     'iIDmj++zc78ZsO/Ly57db3w2Ra+It9fx/WZ3g4x57U5kMdRJYPcj32pS68SeYiPO5FreKa7QtuqI9OPpNBvdjzaXdXd9/5YQ'
+     'Zhm5N/0L5/3vm3DOWKN986XmrLy3N2Xb6Z/X9Nlvuf/23/7b5+0bVXgQTQ=='),
+    ('OPTIONS.TXR', 12, 1, 190, 152, 17, 'en',
+     'eNrtmN2xokAQhU2BFEjBFEzBFEjBFEyBFEjBFEjBFChARUXEra9Odc0MoItX92V34UFlZvrndPfpxsfDrqRJmqJ/fHRtL0mz'
+     'v4e/827++aL3T9uT963K2qTZ3T7zJe+SJr0+X4+qRYllRZ9ef4rb8rAofXxWx0Upu7PWf170i9Ldy4N2xDW/osqsLPr1STuS'
+     'ZuhL1r6yY3NelNvLZ3hl7aJcn55r298VW/b9NDZDvCw79vfQ/jFeRU+8VkcQNhlIA78xYqujMP6TeLnMXh3jeir/QGl/J6bp'
+     'dVgXhmnWZq1l3+6WdyH2wos9TmbRF/32gsdOpvAaRnN15Jv0I5092MSact/0RlVcW0x3t/Q6jK/hhX5pxSq3q+idH0XPnt1t'
+     'ewml8Jy45Z2vbViPaOKeio7sJuLIwee4jqqoCvFSVsh31aOdU3ZP45VebR18xacuqzbnzdnhpYwTglax0hfitb9jHbuIF/fm'
+     'rKir8uOaNeKi34vSj73Vo69tjFfe4e/mPM4vVQwMLuvkc1w7FIRXXAtzJAgv5ez65MdXO3RjSd6p6lw1c3aapcA2rslBfIpr'
+     'MZ/PzcLLMhU2iKrdDeuwCg82ZzAEP+VxejW/hnihzXHqmO8dR4cXch3TkAWOaXy8kMwnMkzWkE9C/tKKZQr+m6xpHsV/8Zch'
+     '4rLT4cWadrFKpoIQu83TqGJd+WWojvFSHT3vj8/wEgfxjWjm3bimHN9j6+/ximvdFrusFdvrzBy8TB/Z6XcAYxVJ5tfykDRI'
+     'p66VyUkjLgEv5VVYdd/AS/UvT5Djx+N9vKa7Emewk083WUzjpcgJL98nw0s48AvO5ja8LFbCS7n5Xbwsq/38+h5eeQc/W93j'
+     'p2pKq+vT8uAYNcwv5BtX+HglDXZyykV6SrfpGz5/F6+iJ2d9j8I6/y5e6giWx3xTB3DzRIiXPICjkeu4wud7e2qzCjMD1llW'
+     'bs42t9BFjcfexQvLV8esHfKf0CDSsuIdvLDc8dSQ79GrLhXXmkbE+OoA43nVGIhuzjpMFHYemyeEhDqUdoG6+AzpSJVmZtJQ'
+     'i4+XtE3jpWiatpA3NKesT3pvmo8Xk9B4/vLxot6FTFRZJj5/H1JfcKeG/d7ymfN8MuE6/hdHgpnNX8sDnmkeG78PyYrpCd6f'
+     'GNPrOA9/8vY7/SY93fnmvm+7p/MkDy03Hx1/vZIyz2s68OOvv9w88em1Pr3+F+A/Xv/ixf9c8//L+AUrJ3Ac'),
+    ('OPTIONS.TXR', 12, 1, 130, 120, 17, 'jp',
+     'eNrtl+uNo0AQhJ0CKTgFUiAFp0AKpEAKpEAKToEUnAIy5o0Bnz6VWjN+sLZX9++O1gpsPD1d3dXVs7fb/+tfuMr10G69S/r9'
+     '5XuP+ZQOvp2W2+20HK+PxvfuSodsfIws6cuVKOIOy0bd00HvgyqsueOrmM3eRRc1u3PcvX4Xd0G1laXTUsz5lI3pkPTs4lDu'
+     'L7uzb/l0ux3a++8wi1v+dmdyW64u5nzancO6XPHJevNuNRDe0+L7fFefuHveextvuUZNWO8vQfWMiLzJFC+oXQWJN+mz0Uzx'
+     'C1VQgcF5c3xLelZFTVCxYzbqDiZqypPuYS2veHqHNqz19wrxM17lMGriDnxBlfT5dLzCunJl50NLhfxciHPg8/mbDrZjMR9a'
+     '5erQxl3Sp4PPSTgeNftLPvEOJuZT1JwWIpbxbdRYxX/Gi3dYU8x0xyd8tpjBtL+cFtCF9fFq31Eb7nGnbrIe+5nPyhTeDKWP'
+     'OR2oa1Clgyq9v+DZ6stun+K1Ltnq8u3+pSKgRNHiTrv4eMVRWOrwUj8zn1Hl6thMh8JZ/ORT0ic9ulbM+Cpm7WrRuv4NqkOL'
+     've/f3+E1dVGs+aT1Pt5DKw326/uaz2gCWUH7THOk6dIW+veRGWIaOKMGPvPEn+32t/HCJeOQu4RTcb+qb9SoChhvhBdU+EK3'
+     'iFy9oUzgkZlEVvcXJidZg/XGiKBiPd2zPWU+w0uOhVdT8BHZI3OYG4qBeoAb8+urLjRz9cU/OQLTfX6p4avOz0aYrlwSf9Lf'
+     '967L2ad4y5X16AP7PWsZ+b3Pp6oTNbCb2MMae6/PtltQlSu/f8TLdGfShDWqSj2LWflXLsFtE567zb5v64u2bs9mVoGKmard'
+     'OXnoiYrRg+kQ1qb72/PX8cVYxFnGzV/0kKwRY7nq2cdL5vkslWSldGAL8Xb/CvHWuuNVPfQ8sZJepwOtF6p35yt8qedZI20Q'
+     'Nk0gJqcMFYBDxB018MTOJ/weFTfEqvY3epWNz6p0j5maPZ9hokYeTwsdQTeJbe6Uy698vGSJs1tYg8dOXlFDraVu9+c5aYWm'
+     'l7EBpTeWpMOWejn2vH77/f8L9/706XEXPv/Gt6/d5nl773/5+gN5C492'),
+    ('OPTIONS.TXR', 12, 1, 150, 182, 17, 'jp',
+     'eNrtmP2No0AMxdNCWqAFWkgLtEALaSEtpIW0QAu0QAsogZAvCHv66cnyDCHZ5O50uj92rNUSmBnbz55nw9fXz/gZP+PPRj0W'
+     '/e729/bbXpeHovffRb862u/tdXudt0EW7G6LfdZpZtHX47s6qzvzn1u0vb63VzkwV4JF9ehruebe7uZz9DRchX9apT2qe2zn'
+     'Yr88/F6UyoE4ba+by+YiVFfHpFns05ar3W19xo7FXkjW42KfNPiedfmpHHynrFvssdKwrsflYbEP7azH6l4O0rU+oy0crFuf'
+     'ZdGjnez1Htb5abE3wdJy4Eraih6/vr7S1ucg5bC5hL/lpwt2xbaA2frsGfh8bC6rY9qyJhQsE1L5aXXkDy0g6FgT1azjicR1'
+     'Kd5kt7BmTX6StrRNmjlthnHSMIP1miVU81PWIcSc+/xHXmMO1uSIxLDGMscapHY39lyfuapHsE5bXyWsd7eiVxTws+i31/U5'
+     '60JPphnzOEBweUhbUJUXnBX2K4ekwUesyLqkQVOINdaygl/cNcTMSywV1qCrrEZb0hC99dm0Fb1lb3VHn85S0mSdZ7yhnzRc'
+     '8VTyPdaKsXGKLOaeYR3mp2UfdoVn0GMuNPTfJG03l6KP2eUZN5q9rMc3eEK6lIXKNSIQY82VR5N5hhk1A+3MWB2rO1whW+px'
+     'qm1uoEnPzDpbBaug6T1WBOuswxZVC7BWJKv7a6zT1leFWMM4WLa7ga+f3DAyZMijxDVP0YRbN5flQXUjP7E7eQi7xlhjk+ey'
+     'cfSUJ13CyMvruTo85ZCQsXXW3fNP+Jp90ErWKAKvsDZxDslPwsJOqLNl0sAoPCUKMbvPM4xOvXRlnTwsejgfPesz2fmItZ9Q'
+     '1hvWxCiWaW10beEoehjEztLqCIv4KrKAHMCi7+uQaQEBhH3AmuwAM7x5jjWMiYBDiF7SCBnOxeaiOuYCGvUIGz9K6C2r4qpf'
+     '9DAiVognQXmKtUeL9b5fdY8F70KsX+NFzsX13muxOP/x6bt8DdY6w5/xtTow1VXZ75J122s5vN/ThhxgvsWMM83r3Q38Pecc'
+     'zflzFGL9jK3JWrFH2j72e9xX7Q/Xwp1zveFzrA2rT2sjGaMo04UI3/A8v//OQtRim8kg5xtqXdhfTyPl9lEfYlE9mmqbZrZ6'
+     'Proeq/CPJ23aX7I3HDX3/gYOcJEkxFrd33OslwdbRXU2rDkPsR9hP/vJUFe/OnqWgDX9hPcF2jv0i1r8WDOmgzyKnyuz0Bbi'
+     'pr1VtzQjjkd1j88+/Q8zqDGvayNoOdbKju9rI1aHfQjaY03hnp+8N5pthiu+6w1C96xWOtaW+WkbImnZ95xD5rQpr8kovVkQ'
+     '17CDLgc7+eFOaat+9/Pc+lvfRNL293TDE/nJfBHWqrbCWrXYfa3unOApF9hbnsu0DzE74b3wPnxN12e1L643+Yn+IL6nfjtt'
+     '369M/+egs4nfeMrhnfejua9An3x7+jy3fr45/vvxCwJH4w8='),
+    ('OPTIONS.TXR', 12, 1, 170, 192, 17, 'jp',
+     'eNrtmOuxokAQhUmBFEzBFEjBFEyBFEyBFEzBFEyBFChQFFFht7461TUPwMfP3ZKp2r17YXq6T58+3bN//vye3/N7eI7Poi+H'
+     'b3cdHodHNS69rcZywGY5HJ+72+7mv9tcdrfvz1t6VqesDa1vLi6u43M+Yv1+fU5qfiqH7zwq+qJfip1TD49vIthek7rov40b'
+     '3/f3pbf7e1KDy+6WNrtbUrvoDo+kTpup93n3GgEyenzu70W/u+UdqG2vWZu1WOPvvOMN+VidzCIelkPekXF3Yjkktb4x/PHQ'
+     'smanHZ+Hh3+afms5T2pZmvpc9Em9vX6DJDs2l8Oj6LfX0IvXvDNUiTBkuFCWrawljnCfEMva1cnyDlZpM81nNWbt+rw6pU1S'
+     '+4sv+X3eZe3mwm6+Sxsf/80lqcm/dvhVAuPw2PC3WHRafJZjJ+9WJ3aRQf7MO0VL1bHYzzvFF6MSx7a/727bq+zZeod7NaI8'
+     '8Js8593hUQ5pkzZSG7xjCWX9vD67eiRyYmAR5/rscMai7zG7qlGxZi1sZ2/e7e9Svu2V/GENBuVdjD9xkelyqEZ+djVOBXCy'
+     '8PcZK683l+lpPLsbCGctnvONVQYW+BpfeGcRKjvLuu/jTv0en8uK7jM7XIcH/OMsZULLPGIZr6lzZcrw8XWP3KxOLlaplH2N'
+     't6sTWB6fymg5kFvLs9jp4w8HzJ7poeFPx2M/3qP+Fnl82nLtmyaGb7BlVfH+Ibt+/fn6TdecLqlN0au2hej2CktDTXf6E+Kb'
+     'NvRjviTCuA+4Lihu+H0MPvLvvFudYL4syiZMnOIPByy/TvOtpuIVemunxbgr16pJ7PuqZjX8Of5uZgDN/Z1OZZHN+Uh8jrtg'
+     'Bc7ULhYUK1bKwfAnU67LgL4Q29+xsOQnOhYiAmbyrBpXJ7GGXOQdtQ4jpvjjseUX/M37aiRv/sL7+dNiBqHv6hD0ne3V71ji'
+     'InGaqr5TcuYJMPc7jvSBXjy3YjYZ/vt72oAB6KCphj+MMJSpdEWvk5zWxLqIjfU5rqdwzsQ2WMsSOZjy3/FFehJOx26hTj7+'
+     'fB2fFs9+U9/JIrz4pItO9Z85UQi9f5zGkW10qBrlDz6QD8OfjhBrm1VX2szNyZpYQvRj/OY0kq4Q91+3gw7lpsK56vbx96sl'
+     'ZCzKJ7b6E61DZX2WBoUdYem2wFwM5tLvb+48yrQicTWIB2K103/NhmHXsfktrNNqLHrxeXOZ+subcK4OdZx8UIEOfz97YObu'
+     'YlS9v2L90WlTL+A90668hLExr5QbF281po2m0k+n+c/uC+szGnN4hOwuh81FUTr84Yx/+1L32t/931cjk53NTPN3QU280nrh'
+     'Av6bi80xLpIQf+aFdz1xOi1oyqOzO+5ynnCE48I6VinmYb9zF7120PleYYrF5dtsyDpOgGtzc4N81/wZvxFOyt3c+aA7rWrf'
+     'rvHO75LcejjN78dhH4+Zap6/mn+mpxn/df9iciMe367VRXiHoZ+inq8n+90taz/Dn2rWrJ932+scXuWgKWGq7kw98+xmIn/N'
+     'EItHs47Dn6nA5nFl0Wc6E0vso7utulvrHI/4Eu32veS2ym1wrnOhclkbR6F57/v/3/kXHpsX7B4E097fIOfv9J9k//f8L89f'
+     'kBA7Hw=='),
+    ('OPTIONS.TXR', 12, 1, 190, 149, 17, 'jp',
+     'eNrtl+mNo0AQhUmBFEiBFEiBFEiBFEiBFEiBFEhhUrC4b3tXn0qlbg7bzO5KMytN1w8w0F2vXp3+9etn/azvuT7u2Zwv//bM'
+     '28MpvfrZ26B1ymLdoyjWj/trnOn0HGc6pdPtcQVbNvOtiJ6XzfEQD/bpxZqM8bA9M52cMuz+jONizZd0SsZkzOa/YyrqnTLq'
+     'X1volPHA2fu9LLdyymtMebVTqqDx9vAb/e03cgZoRNzKaPu4Y1WxplM8BO17bVEftF4NMlvESvyAoMmt5D4eklH5k9PPmIoH'
+     '4eGcIa/2Gyx0K9Gr9oQdErRBy3OuyGsbOCfqsxkBBZq9Ol+yOWglYnjiVsmYL/Eg3GVzMmK3bfH7PMQDXh204BSOiGKx3PaX'
+     'Eb+RnRpnz5hSRveRiya8w/6wM8wrd14terki75myMwA0djSTD9svJGJVwg57X1cKRS5Ibg90wmyxRr3EA7H2cUfAzbVYz5kK'
+     'u6hH1DPPmbJjS74wCNS2YgXLtZrBl9QkRDXDldqOHrfa7knGdCrW24NcSSf7TbHiub3Eg81kMgryfOHqlLyDqW2d4u6MKRXV'
+     'C94tBlNHiZpt9tkRmc3q8c/XKUGoeIKWc7FFER+x4ON8ScawI2OF1zOxEaJR6w45rTF1jalslthT647e0pUv5J4wRdaTf8Zj'
+     'twfsUWOuVA7FHXbie6ND2CIjzpgqVioV7NhsgLdYNTtsCTs7ptQnexRSK0zduFannjNlrDmr+eQ5dfh5R3hXpwwbxCZd/Bif'
+     '2/4VD9ILri527+ua8CL+N3dXmbLxM/WYe3ob+vzmiJDnYSdW2vuT8dyaPVNMTqZXJSNRamq8oKCDkwXyzWdYYtH5dP4wHUz8'
+     'amcf89t7pjjNcJMvxg8yJcSDdNojW/miOWGyLx68OurJynOm/EbmCfiQPNAZAJ0SVX4T9bzb9pktzqtzJ9a4FVPCPraOk6fd'
+     'D+06pTvJHr/hF91EurF5g8VkHxYeZxk50a4tUm2pLK8rOnuKVSu67BLv6Fdht40FqtjrCfmcK51u9xFyZMrMweddQni3a4E9'
+     'HbiVzJY8TSd7YlI7hWWjjS+ptVf/fR3/SzHhHLsptf/1NPNskeVHPEemdHo/iqKhi9A7sXLLPHWKOUHZ2+InR6guW1SSY9fm'
+     'hq9dOrV/3fofWPpu6zf8emEi'),
+)
+# --- GENERATED by tools/prompts.py: END ---
+
 # --- GENERATED by net/build.py: BEGIN (do not edit) ---
 # MUSASHI\MGNetWk.dll, built from net/ and carried beside the patcher
 # rather than inside it; MGNETWK_SRC the sources' hash, MGNETWK_SHA the
 # file's.
-MGNETWK_SRC = '56125eacbce87563fab6dd5caa904347c71eaa2932693fb08e3a3aed3f6b88e2'
-MGNETWK_SHA = 'c9bc4e2eaf5614588bbeae2247728598dd9d9a823c6934823ec99baeca5a5951'
+MGNETWK_SRC = 'e8d802dbbaa4bbfae23d63190e2f417a1abc925ac063576becf14f814b31f117'
+MGNETWK_SHA = 'd950761cc4d1bd666e36fec6d45f4da2a42e02b9bd37690a7223af50de43f90d'
 # --- GENERATED by net/build.py: END ---
 
 MGNETWK_NAME = 'MGNetWk.dll'
@@ -4539,7 +6331,8 @@ MGNETWK_NAME = 'MGNetWk.dll'
 
 def netplay_dll():
     """The DLL's bytes, read from the file that ships with the patcher:
-    a checkout's net/, or beside the script, where the release puts it.
+    net/ beside the script, in a checkout and in both releases, or
+    beside the script itself.
 
     A whole DLL written out as a blob in the middle of the script is
     what a scanner calls a dropper, and it cost the patcher a string of
@@ -4547,9 +6340,6 @@ def netplay_dll():
     here = os.path.dirname(os.path.abspath(__file__))
     paths = [os.path.join(here, 'net', MGNETWK_NAME),
              os.path.join(here, MGNETWK_NAME)]
-    if getattr(sys, 'frozen', False):
-        paths.insert(0, os.path.join(getattr(sys, '_MEIPASS', here),
-                                     MGNETWK_NAME))
     for path in paths:
         try:
             with open(path, 'rb') as fh:
@@ -4623,23 +6413,22 @@ def parse_cue(path):
     with open(path, 'r', encoding='utf-8-sig', errors='replace') as fh:
         for line in fh:
             line = line.strip()
-            up = line.upper()
-            if up.startswith('FILE'):
+            parts = line.split()
+            word = parts[0].upper() if parts else ''
+            if word == 'FILE':
                 curbin = _cue_file(base, line)
-            elif up.startswith('TRACK'):
-                parts = line.split()
-                if len(parts) < 3:
+            elif word == 'TRACK':
+                if len(parts) < 3 or not parts[1].isdigit():
                     raise DiscError('%s: %r is not a TRACK line.' % (os.path.basename(path), line))
                 cur = {'no': int(parts[1]), 'mode': parts[2].upper(), 'bin': curbin,
                        'start': 0, 'pregap': None}
                 tracks.append(cur)
-            elif up.startswith('INDEX') and cur is not None:
-                parts = line.split()
-                if len(parts) < 3:
+            elif word == 'INDEX' and cur is not None:
+                if len(parts) < 3 or not parts[1].isdigit():
                     raise DiscError('%s: %r is not an INDEX line.' % (os.path.basename(path), line))
-                if parts[1] == '00':
+                if int(parts[1]) == 0:
                     cur['pregap'] = _msf_to_sectors(parts[2])
-                elif parts[1] == '01':
+                elif int(parts[1]) == 1:
                     cur['start'] = _msf_to_sectors(parts[2])
     if not tracks:
         raise DiscError('No TRACK entries in %s.' % os.path.basename(path))
@@ -4900,8 +6689,9 @@ class Cabinet:
         sig, self.version, _vol, desc_off, desc_size = struct.unpack('<5I', self.fh.read(0x14))
         if sig != IS_SIGNATURE:
             raise ValueError('not an InstallShield cabinet')
-        # 0x01000004 (the European disc) stores a compressed file as one
-        # deflate stream; the later engine (0x01005100 on the other two)
+        # 0x01000004 (the European and the DigiCube/MediaKite discs) stores
+        # a compressed file as one deflate stream; the later engine
+        # (0x01005100 on the American and Australian)
         # as chunks, each a u16 length and a stream of its own.
         self.chunked = self.version != IS_UNCHUNKED
         self.fh.seek(desc_off)
@@ -4973,14 +6763,14 @@ def install_groups(lang):
 
 
 def write_manifests(dest):
-    with open(os.path.join(dest, EXE + '.manifest'), 'w', newline='\n') as fh:
+    with open(os.path.join(dest, EXE + '.manifest'), 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(APP_MANIFEST)
     lines = [ASM_MANIFEST_HEAD]
     for dll, clsid in MUSASHI:
         lines.append('  <file name="%s">\n    <comClass clsid="{%s}" threadingModel="Both"/>\n'
                      '  </file>\n' % (dll, clsid))
     lines.append('</assembly>\n')
-    with open(os.path.join(dest, 'MUSASHI', 'MUSASHI.manifest'), 'w', newline='\n') as fh:
+    with open(os.path.join(dest, 'MUSASHI', 'MUSASHI.manifest'), 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(''.join(lines))
 
 
@@ -5000,15 +6790,20 @@ def install(src, dest, lang='English', log=print, progress=None):
         if missing:
             raise ValueError('this disc has no %s' % ', '.join(missing))
         total = sum(e.size for g in groups for e in cab.groups[g])
-        log('install: %d MB to %s' % (total // 1000000, dest))
+        log('install: %d MB to %s' % (total >> 20, dest))
         done = 0
         for g in groups:
             for e in cab.groups[g]:
-                out = os.path.join(dest, *e.path.split('\\'))
+                parts = e.path.split('\\')
+                if any(p in ('', '.', '..') or ':' in p for p in parts):
+                    raise ValueError('%s: a path the cabinet should not hold' % e.path)
+                out = os.path.join(dest, *parts)
                 data = cab.read(e)              # decoded first: opening the file truncates it
                 os.makedirs(os.path.dirname(out), exist_ok=True)
                 with open(out, 'wb') as dst:
                     dst.write(data)
+                if os.path.isfile(out + '.bak'):    # a patched install's backup of the file: stale now, the stock is this one
+                    os.remove(out + '.bak')
                 done += e.size
                 written += 1
                 if progress:
@@ -5090,6 +6885,12 @@ def _rva_to_off(buf, rva):
     raise ValueError('rva 0x%x is in no section' % rva)
 
 
+def _cstr(buf, off):
+    """The NUL-terminated string at off, as latin-1."""
+    end = buf.find(b'\0', off)
+    return buf[off:len(buf) if end < 0 else end].decode('latin-1')
+
+
 def _iat_slot(buf, dll, func):
     """RVA of the import slot for dll!func."""
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
@@ -5100,7 +6901,7 @@ def _iat_slot(buf, dll, func):
         oft, _t, _f, name_rva, ft = struct.unpack_from('<IIIII', buf, off)
         if not ft:
             break
-        name = buf[_rva_to_off(buf, name_rva):].split(b'\0')[0].decode('latin-1').lower()
+        name = _cstr(buf, _rva_to_off(buf, name_rva)).lower()
         if name == dll:
             i = 0
             while True:
@@ -5108,7 +6909,7 @@ def _iat_slot(buf, dll, func):
                 if not thunk:
                     break
                 if not thunk & 0x80000000:
-                    fname = buf[_rva_to_off(buf, thunk) + 2:].split(b'\0')[0].decode('latin-1')
+                    fname = _cstr(buf, _rva_to_off(buf, thunk) + 2)
                     if fname == func:
                         return ft + i * 4
                 i += 1
@@ -5164,8 +6965,7 @@ def apply_music(buf, build):
     if len(sites) != MCI_CALL_SITES or len(loads) != MCI_LOAD_SITES:
         raise ValueError('expected %d calls and %d loads of mciSendCommandA, found %d and %d'
                          % (MCI_CALL_SITES, MCI_LOAD_SITES, len(sites), len(loads)))
-    text_off = _rva_to_off(buf, 0x1000)                 # .text is the first section
-    site_rvas = {0x1000 + off - text_off for off in sites + loads}
+    site_rvas = {_off_to_rva(buf, off) for off in sites + loads}
     if _drop_relocations(buf, {r + 2 for r in site_rvas}) != len(site_rvas):
         raise ValueError('relocation entries for the sites not all found')
     out, rva = append_section(buf, MUSIC_BLOB)
@@ -5178,9 +6978,7 @@ def apply_music(buf, build):
     start = _rva_to_off(out, rva)
     out[start:start + len(blob)] = blob
     for off, thunk in [(o, 0) for o in sites] + [(o, 10) for o in loads]:
-        site_rva = 0x1000 + off - text_off
-        rel = rva + thunk - (site_rva + 5)
-        out[off:off + 6] = b'\xe8' + struct.pack('<i', rel) + b'\x90'
+        _branch(out, off, rva + thunk, 6)
     _branch(out, BUILDS[build]['sites']['volume'], rva + 15, 6, op=b'\xe9')
     _branch(out, BUILDS[build]['sites']['getvolume'], rva + 20, 6, op=b'\xe9')
     struct.pack_into('<I', out, opt + 16, rva + 5)
@@ -5206,7 +7004,7 @@ def _branch(buf, off, target_rva, length=5, op=b'\xe8'):
     """A near call (or jump, op e9) at file offset off to target_rva, padded
     with nops to the length of what it replaces. The site's own RVA comes
     from the section table, since .text need not start at its file offset."""
-    site_rva = 0x1000 + off - _rva_to_off(buf, 0x1000)
+    site_rva = _off_to_rva(buf, off)
     buf[off:off + length] = (op + struct.pack('<i', target_rva - (site_rva + 5))).ljust(length, b'\x90')
 
 
@@ -5231,13 +7029,35 @@ def _image_base(buf):
 
 def _call_target(buf, off):
     """The VA a `call rel32` at a file offset in .text goes to."""
-    rva = 0x1000 + off - _rva_to_off(buf, 0x1000) + 5 + struct.unpack_from('<i', buf, off + 1)[0]
+    rva = _off_to_rva(buf, off) + 5 + struct.unpack_from('<i', buf, off + 1)[0]
     return rva + _image_base(buf)
 
 
 def _check_call(buf, off, target, what):
     if _call_target(buf, off) != target:
         raise ValueError('the call at 0x%x does not go to %s' % (off, what))
+
+
+def apply_starting(buf, build):
+    """starting.asm: its first entry in place of the two calls into the
+    race setup (the host's START and the guest's on the host's word), its
+    second in place of the frame gate's present call (two on the
+    Australian build, whose gate has two paths), its third over the first
+    eight bytes of the lobby's surface loader, which every lobby screen's
+    init calls. The annex keeps the gdi32 entry points it resolves, the
+    flag and the box's rectangle, so it is writable."""
+    row = BUILDS[build]
+    for off in row['sites']['starting']:
+        _check_call(buf, off, row['addresses']['RACESETUP'], 'the race setup')
+    if _off_to_rva(buf, row['sites']['startload']) + _image_base(buf) != row['addresses']['ROOMLOAD']:
+        raise ValueError("the surface loader's site is not at ROOMLOAD")
+    out, rva = append_section(buf, exe_blob(STARTING_BLOB, build))
+    for off in row['sites']['starting']:
+        _branch(out, off, rva)
+    for off in row['sites']['startpresent']:
+        _branch(out, off, rva + 5, 7)
+    _branch(out, row['sites']['startload'], rva + 10, 8, b'\xe9')
+    return out
 
 
 def apply_activate(buf, build):
@@ -5249,11 +7069,33 @@ def apply_activate(buf, build):
     return out
 
 
+def apply_entries(buf, build):
+    """The lobby's text entries in the exe: the IP entry popup's address
+    check, called in place of the OK press's length compare; the entry's
+    cap by field, in place of the init's first loads and the character
+    handler's two `cmp eax, 0x800` (it keeps the cap, so its section is
+    writable); and the team room's status line asked of the DLL, in
+    place of the `lea` that starts the exe's own lookup."""
+    row = BUILDS[build]
+    out, rva = append_section(buf, exe_blob(IPCHECK_BLOB, build), chars=CODE_SECTION)
+    _branch(out, row['sites']['ipcheck'], rva, 6)
+    out, rva = append_section(out, exe_blob(ENTRYCAP_BLOB, build))
+    init, first, second = row['sites']['entries']
+    _branch(out, init, rva, 8)
+    _branch(out, first, rva + 5)
+    _branch(out, second, rva + 5)
+    for off in row['sites']['paste']:
+        _branch(out, off, rva + 10, 9)
+    out, rva = append_section(out, exe_blob(STATUS_BLOB, build), chars=CODE_SECTION)
+    _branch(out, row['sites']['status'], rva, 7)
+    return out
+
+
 def apply_textcolor(buf, build):
     """The SetTextColor stub in the exe; the eight calls and two loads of
     the import slot become a call to it and a load of its address."""
     out, rva = append_section(buf, exe_blob(TEXTCOLOR_BLOB, build), chars=CODE_SECTION)
-    base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
+    base = _image_base(out)
     for off, op in BUILDS[build]['textcolor']:
         if op == 'ff15':
             _branch(out, off, rva, 6)
@@ -5262,7 +7104,7 @@ def apply_textcolor(buf, build):
     return out
 
 
-def apply_windowed(buf, build):
+def apply_bgrow(buf, build):
     """The .bg row copy in the exe through bgrow.asm."""
     out, rva = append_section(buf, exe_blob(BGROW_BLOB, build), chars=CODE_SECTION)
     _branch(out, BUILDS[build]['sites']['bgrow'], rva, BGROW_LEN)
@@ -5291,7 +7133,7 @@ def apply_clearsize(buf, build):
              + b'\x50'                                            # push eax, the return back on top
              + b'\xe9' + b'\0' * 4)                               # jmp the clear
     out, rva = append_section(buf, thunk, chars=CODE_SECTION)
-    base = struct.unpack_from('<I', out, struct.unpack_from('<I', out, 0x3c)[0] + 24 + 28)[0]
+    base = _image_base(out)
     struct.pack_into('<i', out, _rva_to_off(out, rva) + 15, row['CLEAR'] - (base + rva + len(thunk)))
     _branch(out, site, rva, CLEARSIZE_LEN)
     return out
@@ -5310,65 +7152,36 @@ def apply_loadhold(buf, build):
     return out
 
 
-def apply_dcmusic(buf, build):
-    """dcmusic.asm: nine calls of the sound bank become calls into the
-    blob - the ten-year ending's play (slot 9, track 11), a championship
-    replay's first race, its later races, the other modes' scene music,
-    and the course music's play, three fades and restart - which plays
-    tracks 15 to 18 in slot 14 when their files are there and leaves
-    through the routine called either way. The annex keeps what it found
-    and the path, so it is writable."""
-    row = BUILDS[build]
-    addr = row['addresses']
-    course = row['sites']['dccourse']
-    sites = ((row['sites']['dcending'], 0, addr['BGMPLAY']),) + tuple(
-        (site, 5 + 5 * i, addr['BGMPLAY']) for i, site in enumerate(row['sites']['dcreplay'])) + (
-        (course[0], 20, addr['BGMPLAY']),) + tuple((site, 25, addr['BGMFADE']) for site in course[1:4]) + (
-        (course[4], 30, addr['BGMRESTART']),)
-    for site, _entry, target in sites:
-        _check_call(buf, site, target, 'the sound bank')
-    out, rva = append_section(buf, exe_blob(DCMUSIC_BLOB, build))
-    for site, entry, _target in sites:
-        _branch(out, site, rva + entry)
-    return out
-
-
-def apply_dcoptions(buf, build):
-    """dcmusic.asm built for Options.dll: the BGM page's count of choices
-    (`mov ebx, 7`), its rows' call of the text routine and its preview's
-    call of the play, and the same three of the sound page's BGM TEST
-    (`mov dword [esi+0x68], 13`, its name's call of the text routine, its
-    play), become calls into the blob, which finds the image base from its
-    own RVA. The annex is writable for the path it builds."""
-    opt = BUILDS[build]['options']
-    init, name, preview, count, title, listen = BUILDS[build]['sites']['dcoptions']
-    for site in (name, title):
-        _check_call(buf, site, opt['TEXT'], 'the text routine')
-    for site in (preview, listen):
-        _check_call(buf, site, opt['PLAYSOUND'], 'the page bank\'s play')
-    base = _image_base(buf)
-    blob = bytes(DCOPTIONS_BLOB)
-    for key, magic in DCOPTIONS_MAGICS.items():
-        blob = blob.replace(struct.pack('<I', magic), struct.pack('<I', opt[key] - base))
-    out, rva = _self_section(buf, blob)
-    _branch(out, init, rva)
-    _branch(out, name, rva + 5)
-    _branch(out, preview, rva + 10)
-    _branch(out, count, rva + 15, 7)
-    _branch(out, title, rva + 20)
-    _branch(out, listen, rva + 25)
-    return out
-
-
 def apply_padmenu(buf, build):
     """padmenu.asm: the six-byte store of the pad poll's level word becomes
     a call into the blob, which puts the annex's buttons into the level,
-    makes the edge and the three stores, and puts its directions, a press
+    makes the edge again and the three stores, and puts its directions, a press
     of Back as TAB and any press as a key into the keyboard's menu word.
     The annex keeps what was down and the repeat's count, so it is
     writable."""
     out, rva = append_section(buf, exe_blob(PADMENU_BLOB, build))
     _branch(out, BUILDS[build]['sites']['padmenu'], rva, 6)
+    return out
+
+
+def apply_tabmenu(buf, build):
+    """tabmenu.asm: five calls into the blob. The room constructor's call
+    that loads the backdrop goes through the blob, which loads the
+    backdrop box's two files after it; after the menu layer's first draw
+    has loaded its bitmaps, the blob loads the pad's two button files
+    beside them; in the multiplayer pad poll, every frame, it points the
+    array's two TAB entries at the pad's or the stock's and, when the pad
+    comes or goes, blits the backdrop's box as SEL or as stock; at the
+    menu's release loop it puts the stock's back and frees the buttons;
+    at the room destructor's release loop it frees whatever is left."""
+    out, rva = append_section(buf, exe_blob(TABMENU_BLOB, build))
+    init, free, frame, room, roomfree = BUILDS[build]['sites']['tabmenu']
+    _check_call(buf, room, BUILDS[build]['addresses']['ROOMLOAD'], 'the lobby surface loader')
+    _branch(out, init, rva, 6)
+    _branch(out, free, rva + 5, 5)
+    _branch(out, frame, rva + 10, 5)
+    _branch(out, room, rva + 15, 5)
+    _branch(out, roomfree, rva + 20, 5)
     return out
 
 
@@ -5389,7 +7202,7 @@ def apply_pagepad(buf, build):
     RB into the player's level word as Page Up and Page Down, then makes
     them."""
     out, rva = append_section(buf, exe_blob(PAGEPAD_BLOB, build))
-    _branch(out, BUILDS[build]['sites']['pagepad'], rva, 6)
+    _branch(out, BUILDS[build]['sites']['pagepad'][0], rva, 6)
     return out
 
 
@@ -5449,7 +7262,7 @@ PAD_DEFAULT = {0: PAD_RT, 1: PAD_LT, 2: PAD_UP, 3: PAD_DOWN, 4: PAD_LS_LEFT, 5: 
 # are menu-only - a scancode at MENUKEY_BASE, a pad input with MENU_ONLY
 # set - answered only outside a race; up and down are nobody else's and
 # stay plain, for the pause menu. The exe's own screens take their
-# confirm, back and Enter from actions 10, 11 and 12 (NOTES.md, *The
+# confirm, back and Enter from actions 10, 11 and 12 (GAMEPAD.md, *The
 # menus' directions*), so A, B and Start sit on those as well, menu-only.
 MENU_ONLY, MENUKEY_BASE = 0x20, 0x400
 MENU_CONFIRM, MENU_BACK, MENU_ENTER = 10, 11, 12
@@ -5463,6 +7276,7 @@ ANNEX_NAME = 16
 # working area follows at ANNEX_TABLES and ends at ANNEX_END.
 T_PADNAMES, T_ACTNAMES, T_DEFAULTS, T_FIXKEYS, T_FIXPADS, T_ORDER, T_FIXACTS = 4096, 4608, 4816, 4920, 4936, 4958, 4971
 ANNEX_TABLES, ANNEX_END = 4976, 9280
+CARHIT, CARHIT_OLD = 0x6d8, 0x6d0       # a car's frames since its last hit of a car or an object, the wall's four on; the Australian build's
 
 
 def annex_tables():
@@ -5487,83 +7301,46 @@ def annex_tables():
     return bytes(out)
 
 
-def annex_records(player, table=None):
-    """The records the annex generates for a player from a table of
-    (key, pad input or None) per action - the defaults when none - in the
-    order it lays them out."""
-    if table is None:
-        keys = (KEYS_1P, KEYS_2P)[player]
-        table = [(keys[a], PAD_DEFAULT[a]) for a in range(13)]
-
-    def record(action, source):
-        delay, rate = (10, 3) if 2 <= action <= 5 else (0, 0)
-        return struct.pack('<13I', action, delay, rate, 0, 10000, source, 0, 0, 0, 0, 0, 0, 0)
-    out = []
-    for action, (key, pad) in enumerate(table):
-        out.append(record(action, key))
-        if pad is not None:
-            out.append(record(action, PAD_BASE + player * PAD_PLAYER + pad))
-    for action, key in zip(FIXED_ACTIONS, FIXED_KEYS[player]):
-        out.append(record(action, MENUKEY_BASE + key))
-    for action, pad in FIXED_PADS:
-        out.append(record(action, PAD_BASE + player * PAD_PLAYER + pad))
-    return out
-
-
-def annex_text(tables=None, deadzones=(PAD_DEADZONE, PAD_DEADZONE)):
-    """The text the annex writes, as it lays it out: for the defaults, or
-    for a (key, pad input or None) per action per player."""
-    defaults = [[(keys[a], PAD_DEFAULT[a]) for a in range(13)] for keys in (KEYS_1P, KEYS_2P)]
-    tables = [t or defaults[i] for i, t in enumerate(tables or (None, None))]
-    lines = ['; SEGA RALLY 2 controls']
-    for player, table in enumerate(tables):
-        for device in ('Controller', 'Keyboard'):
-            lines += ['', '[%dP %s]' % (player + 1, device)]
-            if device == 'Controller':
-                lines.append('Deadzone = %d' % (deadzones[player] // 100))
-            for action in TEXT_ORDER:
-                key, pad = table[action]
-                name = KEY_NAMES[key] if device == 'Keyboard' else ('-' if pad is None else PAD_NAMES[pad])
-                lines.append('%s = %s' % (ACTION_NAMES[action], name.replace(' ', '_')))
-    return ''.join(line + '\n' for line in lines).encode('ascii')
-
-
 def apply_xinput(buf, build):
     """padinput.asm in MGInput.dll, its tables and working area after the
     code: the registry helper's load and save and the config's update each
     jump to it, their displaced bytes copied into its replay slots; the
-    device's poll too on the European and American build, while on the
-    Australian the keyboard poll's address in the record update's dispatch
-    is pointed at the annex's five-argument entry."""
-    sites = BUILDS[build]['sites']['xinput']
-    load, save, update, poll = sites[:4]
+    device's poll too, or on the older MGInput.dll (a `kbdpoll` site) the
+    keyboard poll's address in the record update's dispatch is pointed at
+    the annex's five-argument entry."""
+    site = BUILDS[build]['sites']
+    load, save, update, poll = site['xinput']
+    static = 'kbdpoll' in site
     blob = PADINPUT_BLOB + annex_tables() + b'\0' * (ANNEX_END - ANNEX_TABLES)
     out, rva = append_section(buf, blob, chars=CODE_SECTION | 0x80000000)
     values = {
         'LOADLIB': _iat_slot(buf, 'kernel32.dll', 'LoadLibraryA'),
         'GETPROC': _iat_slot(buf, 'kernel32.dll', 'GetProcAddress'),
         'UPDATE': _off_to_rva(buf, update + 6),
-        'POLL': _off_to_rva(buf, poll + 9) if len(sites) == 4 else 0,
-        'KBDPOLL': sites[4] if len(sites) == 5 else 0,
+        'POLL': 0 if static else _off_to_rva(buf, poll + 9),
+        'KBDPOLL': site['kbdpoll'] if static else 0,
     }
     code = bytearray(PADINPUT_BLOB)
     for name, magic in PADINPUT_MAGICS.items():
-        if name in ('CARS', 'PUBLISH'):
-            code = code.replace(struct.pack('<I', magic), struct.pack('<I', BUILDS[build]['addresses'][{'CARS': 'CARS', 'PUBLISH': 'PADPOLL'}[name]]))
+        if name in ('CARS', 'PUBLISH', 'GAME', 'CARHIT'):
+            addresses = BUILDS[build]['addresses']
+            value = {'CARS': addresses['CARS'], 'PUBLISH': addresses['PADPOLL'], 'GAME': addresses['GAMED3D'] - 0x10,
+                     'CARHIT': CARHIT_OLD if static else CARHIT}[name]
+            code = code.replace(struct.pack('<I', magic), struct.pack('<I', value))
         else:
             code = code.replace(struct.pack('<I', magic), struct.pack('<i', values[name] - rva))
-    for marker, site, length in ((b'\xc1' * 6, update, 6), (b'\xc2' * 9, poll if len(sites) == 4 else None, 9)):
+    for marker, at, length in ((b'\xc1' * 6, update, 6), (b'\xc2' * 9, None if static else poll, 9)):
         if code.count(marker) != 1:
             raise ValueError('padinput.asm: the replay slot %s is not there once' % marker.hex())
-        code = code.replace(marker, bytes(buf[site:site + length]) if site is not None else b'\x90' * length)
+        code = code.replace(marker, bytes(buf[at:at + length]) if at is not None else b'\x90' * length)
     start = _rva_to_off(out, rva)
     out[start:start + len(code)] = code
     for off, entry, length in ((load, 0, 6), (save, 5, 6), (update, 10, 6)):
         _branch(out, off, rva + entry, length, op=b'\xe9')
-    if len(sites) == 4:
-        _branch(out, poll, rva + 15, 9, op=b'\xe9')
-    else:
+    if static:
         struct.pack_into('<I', out, poll, 0x10000000 + rva + 20)
+    else:
+        _branch(out, poll, rva + 15, 9, op=b'\xe9')
     return out
 
 
@@ -5582,14 +7359,14 @@ def apply_dinput8(buf, build):
     """dinput8.asm in MGInput.dll: the DirectInputCreateA call becomes a
     jump to its create, the first read of the device's type byte a call
     to its translation; the interface ids were rewritten as sites."""
-    create, kind, _iid_di, _iid_dev = BUILDS[build]['sites']['dinput8']
+    create, _thunk, kind, kindbytes, _iid_di, _iid_dev = BUILDS[build]['sites']['dinput8']
     out, rva = append_section(buf, DINPUT8_BLOB, chars=CODE_SECTION | 0x80000000)
     _fill_relative(out, rva, DINPUT8_BLOB, DINPUT8_MAGICS, {
         'LOADLIB': _iat_slot(buf, 'kernel32.dll', 'LoadLibraryA'),
         'GETPROC': _iat_slot(buf, 'kernel32.dll', 'GetProcAddress'),
         'CONT': _off_to_rva(buf, create + 18)})
     _branch(out, create, rva, 18, op=b'\xe9')
-    _branch(out, kind, rva + 5, 7 if kind == 0x39ac else 6)
+    _branch(out, kind, rva + 5, len(kindbytes) // 2)
     return out
 
 
@@ -5612,7 +7389,7 @@ def apply_mixerless(buf, build):
     flags, then jumps back to that allocation. Nothing absolute, so no
     relocation entries change."""
     site = BUILDS[build]['sites']['mixer']
-    site_rva = 0x1000 + site - _rva_to_off(buf, 0x1000)
+    site_rva = _off_to_rva(buf, site)
     stub = bytes.fromhex('31c0') + bytes.fromhex('898684000000')      # xor eax,eax; mov [esi+0x84],eax
     out, rva = append_section(buf, stub + b'\xe9' + b'\0' * 4, chars=CODE_SECTION)
     start = _rva_to_off(out, rva)
@@ -5621,7 +7398,6 @@ def apply_mixerless(buf, build):
     return out
 
 
-MIX_STREAM = 51                                  # the second routine in mix.asm
 
 
 def apply_mix(buf, build):
@@ -5632,7 +7408,7 @@ def apply_mix(buf, build):
     sites = BUILDS[build]['sites']['mix']
     out, rva = append_section(buf, MIX_BLOB, chars=CODE_SECTION)
     _branch(out, sites[0], rva, 8)
-    _branch(out, sites[1], rva + MIX_STREAM, 6)
+    _branch(out, sites[1], rva + BLOB_LABELS['MIX_BLOB']['stream'], 6)
     return out
 
 
@@ -5654,8 +7430,8 @@ DEVICES_DEVICE = (0.008, 0.286, 0.309, 0.372)   # "DEVICE" on sheet 6, in the pa
 # and header band are the stock sprites themselves, found by their first
 # quad; text is the stock routine over its 14-px glyph sprites, which lack
 # a colon, so that is a piece. The hint bar is the frame's bar without
-# its lettering, with the page's own two lines on it, set from the
-# frame's lettering (HINT_GLYPHS). Colours are (alpha, red, green, blue)
+# its lettering, with the page's own two lines on it, set in the
+# frame's face (HINT_ART). Colours are (alpha, red, green, blue)
 # in 256ths, as the sprite call takes them.
 PAGE_PIECES = {'DEVICE': (6, 2, 73, 79, 95), 'SETTINGS': (6, 72, 50, 178, 72), 'COLON': (6, 143, 16, 151, 30)}
 PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'gsrow': (3, (0, 0, 123, 18)), 'band': (2, (-154, -13, 0, 13)),
@@ -5663,21 +7439,29 @@ PAGE_STOCK = {'group': (2, (0, 0, 183, 18)), 'gsrow': (3, (0, 0, 123, 18)), 'ban
 PAGE_BUTTON_X = (253.0, 386.0)          # DEFAULT and BACK, as the stock pages place them
 PAGE_BAR_QUADS, PAGE_BAR_Y, PAGE_STRIP_Y = 5, 451.0, -20.0
 # The rows, each an action the page binds a key and a pad input to; the
-# last is the player's stick deadzone, which left and right adjust.
+# last two are the player's stick deadzone and the pad's vibration
+# strength, sliders of OFF and 1 to 9 that left and right step: the
+# deadzone 5% a step, the strength 10% a step from 20%.
 PAGE_ACTIONS = (('STEER LEFT', 4), ('STEER RIGHT', 5), ('ACCEL', 0), ('BRAKE', 1), ('SHIFT UP', 6), ('SHIFT DOWN', 7),
-                ('HANDBRAKE', 8), ('VIEW', 9), ('DEADZONE', 0xff))
+                ('HANDBRAKE', 8), ('VIEW', 9), ('DEADZONE', 0xff), ('VIBRATION', 0xfd))
 # One player at a time: a selector row - the group plate with PLAYER 1 or
 # 2, left and right switching - the KEY and PAD headings, then the nine
 # rows, the stock's 18 px, the block centred.
 # the rows Graphic Settings' sprite - a 123-px label plate, a 30-px fade, a
 # 273-px value plate - at its x, spaced as it spaces them
-PAGE_SELECTOR_X, PAGE_SELECTOR_Y = 229.0, 112.0    # the 183-px group plate, centred
-PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP = 110.0, 156.0, 24.0
+PAGE_SELECTOR_X, PAGE_SELECTOR_Y = 229.0, 108.0    # the 183-px group plate, centred
+PAGE_ROW_X, PAGE_ROW_Y, PAGE_ROW_STEP = 110.0, 152.0, 24.0
 PAGE_ACTION_X, PAGE_VALUE_X, PAGE_PAD_X, PAGE_TEXT_DY = 118.0, 271.0, 405.0, 2.0
-PAGE_HEADER_Y = 136.0                   # the KEY and PAD headings above the columns
-PAGE_LABEL_VALUE = 18                    # the value string the selector's label lives in
+PAGE_HEADER_Y = 132.0                   # the KEY and PAD headings above the columns
+# A slider's ten steps across the value plate: OFF at the values' x, then
+# 1 to 9 a step apart to the plate's far margin, the unlit ones black as
+# the stock's volume sliders have them.
+PAGE_SLIDER_X = (271.0,) + tuple(311.0 + 26.0 * i for i in range(9))
+PAGE_SLIDER_COLOUR = (0x100, 0, 0, 0)
+DATA_SLIDERS = 12                       # in the data block: each slider's first entry in the draw list, a byte each
+PAGE_LABEL_VALUE = 16                    # the value string the selector's label lives in
 FLAGS_CENTRED = 2
-PAGE_HEADER_COLOUR = (0x100, 0xff, 0xd0, 0xa0)  # (alpha, red, green, blue) in 256ths: a warm off-white
+PAGE_HEADER_COLOUR = (0x100, 0x100, 0x100, 0x100)      # (alpha, red, green, blue) in 256ths: white
 # The page's data block after its strings, at these offsets: the rows'
 # action ids, the shipped bindings (key, pad input) a player-row at a
 # time, the value strings the page fills, then the key and pad names,
@@ -5702,6 +7486,34 @@ KEY_NAMES.update({0x3b + i: 'F%d' % (i + 1) for i in range(10)})
 KEY_NAMES.update({0x57: 'F11', 0x58: 'F12'})
 KEY_NAMES.update({0x47: 'NUM 7', 0x48: 'NUM 8', 0x49: 'NUM 9', 0x4b: 'NUM 4', 0x4c: 'NUM 5', 0x4d: 'NUM 6',
                   0x4f: 'NUM 1', 0x50: 'NUM 2', 0x51: 'NUM 3', 0x52: 'NUM 0'})
+
+CONTROL_SECTIONS = ('1P Controller', '1P Keyboard', '2P Controller', '2P Keyboard')
+
+
+def settings_text(tables=None, deadzones=None, network=('0', '0'), controls=True, display=None, vibrations=(70, 70)):
+    """SR2.CFG as the pad annex lays it out: the controls - the defaults,
+    or a (key, pad input or None) per action per player - then [Display]
+    Resolution when given and [Network] with its Staging and Log values,
+    None for no such section."""
+    deadzones = deadzones or (PAD_DEADZONE, PAD_DEADZONE)
+    defaults = [[(keys[a], PAD_DEFAULT[a]) for a in range(13)] for keys in (KEYS_1P, KEYS_2P)]
+    tables = [t or defaults[i] for i, t in enumerate(tables or (None, None))]
+    lines = ['; SEGA RALLY 2 settings']
+    for player, table in enumerate(tables if controls else ()):
+        for device in ('Controller', 'Keyboard'):
+            lines += ['', '[%dP %s]' % (player + 1, device)]
+            if device == 'Controller':
+                lines.append('Deadzone = %d' % (deadzones[player] // 100))
+                lines.append('Vibration = %d' % vibrations[player])
+            for action in TEXT_ORDER:
+                key, pad = table[action]
+                name = KEY_NAMES[key] if device == 'Keyboard' else ('-' if pad is None else PAD_NAMES[pad])
+                lines.append('%s = %s' % (ACTION_NAMES[action], name.replace(' ', '_')))
+    if display:
+        lines += ['', '[Display]', 'Resolution = %s' % display]
+    if network:
+        lines += ['', '[Network]', 'Staging = %s' % network[0], 'Log = %s' % network[1]]
+    return ''.join(line + '\n' for line in lines).encode('ascii')
 
 
 def bind_data():
@@ -5728,74 +7540,55 @@ HOLD_BAR, HOLD_BAR_IDLE, HOLD_BAR_BIND = 5, 6, 7             # rises with the hi
 Z_PLATE, Z_TEXT = 14.0, 10.0
 FLAGS_PROPORTIONAL = 4                  # the text routine: 4 proportional, +1 right-aligned, +2 centred
 
-# The hint bar's lettering is the stock's own, from sheet 4, where the
-# frame's messages keep six lines in their condensed face: one texel box
-# a letter, cut from clean instances there (x0, top, x1; the top a row
-# above the line's ascenders, so the box is 17 rows and every baseline
-# lands on the same row), laid in a row a texel apart, a word gap of 5.
-# The lines say what they can with the letters those six offer.
-HINT_GLYPHS = {'S': (104, 59, 112), 'H': (49, 59, 57), 'E': (175, 211, 182), 'C': (192, 211, 200),
-               'e': (70, 135, 77), 'l': (138, 135, 141), 'c': (31, 135, 37), 't': (14, 135, 18), 'a': (46, 135, 53),
-               'n': (54, 135, 61), 'i': (162, 135, 165), 'o': (19, 135, 26), 'd': (103, 135, 109), 'h': (38, 135, 45),
-               'k': (148, 173, 155), 'y': (163, 173, 170), 'p': (31, 173, 38), ',': (23, 173, 25),
-               'b': (132, 230, 138), 'u': (42, 230, 48), 'r': (156, 230, 160)}
-HINT_SPACING, HINT_SPACE, HINT_ROWS, HINT_MARGIN = 1, 5, 17, 2   # the margin: white texels each side, so the edges filter to white
-HINT_LINES = ('Select an action and hit the key to bind it', 'Hit the button to bind it, or hit ESC to keep it')
-HINT_STRIP_TOPS = (130, 150, 170, 190)  # the lines' two halves each on the appended sheet, from x 1
-HINT_SHEET = 4
-
-# The twenty-one letters the hint lines need, cut from sheet 4 of the
-# English OPTIONS.TXR at the boxes above: 565 texels, each glyph
-# (x1 - x0) by HINT_ROWS, the letters in sorted order, deflated. The
-# lettering travels with the patcher rather than being cut from the file
-# being patched because sheet 4 is localised - on a Japanese install
-# every one of the twenty-one is different artwork, and letters cut from
-# there come out as nonsense. Cutting from the English sheet gives these
-# same bytes, so an English install's OPTIONS.TXR is unchanged by this.
-HINT_LETTERING = zlib.decompress(bytes.fromhex(
-    '78dacd983f8eab3010c62928285270058eb057e00689948222558e90928e224514e5045c2147e00a505050440a47c811'
-    'b2fae97b23db6ff769c942a48725c763ecf1fcfd3c647c8e935bf4e7199f557adaaccf45ebbf2ddaa1d93d341e9a38d3'
-    'daf519ba4aa328c92f07666ef7a189a22a65ed6acf8af599b7acebeb24efebae345a6d3a0defdbddd18cba323c0f2943'
-    '799097199ebefe4e9f398dd3ed4972a838eb4a5a5f43394d7ea2ec9146c665685ee3129eee249bafa9f34657bab397a0'
-    '7d39e55d34c09bcbf0f7e9256cb07be0151b9f3692bd4a9923daabb42b99add2f199e4763e3953b4d28ac8bb1c929c28'
-    '64eff1c3f891251607ceafcab7d5de7260f7800ffc9c7eace94ace67ddf83c7e907d45cbbacb41ebc906e35fa5960dbe'
-    '3eef6de88b0c8c0c439016e9567be959b46004abd04072f5b55693b3cc26b9de91e3ecc7ca43a3de283cb0da6fafda27'
-    '3bc7193bb657e93c2fff8595ff1a0f0df829dfca9beaf18f6642cc7d6d4c7e181ff5e824bbcabecb358b8ddb5d3ea8d2'
-    'ed5576c7b671665657fe9ac7cc0be118b9fdf5e2834de2ccf1575cce45e8af3e217734e644df7eebb3c3a1dffa053ef2'
-    '0bde5064dbb9e15dba64131e68acf3a2e8b4199f4800aa284f0c25f44b8fdf841846d1743b3be4c14e6e1f58024ff661'
-    '49ddb08637caa979d1179efe1d65790b75da70af57a96a823893b6d228d476696a9ecf42b4fa7b667a3fbd42995e3f40'
-    'e1d7d346d4edaeea4a14984acda79a8b6808ab173c63379aeca47d420a77027bb757a374272e67d339fd5279e9c76992'
-    'fb714a7500ad98ba1cfedf389d83416082e105b150b43e96086f7fa391cf136f59f505e6992cef435b7786fb32511eec'
-    '1e3e066dafcb79139e20aeb0f9f8e19f273cfc09395fd34ddf4951f0509bf977dd94df57505fb2861cc847ec2b59a809'
-    '5e91801850a528845a2e26acbe53b5b3dc787d160e2aa2e991fdfdd16cdf0eaacff03572e0117efb1afb935d58f37627'
-    '3e407d7dddd84ecb3fa4e6f6d0ff02faf2972f84067e6ce82bddc76f8b5855fba6376f40c9afed13951e448f'
-))
+# The hint bar's two lines are in HINT_ART, from tools/prompts.py: set in
+# the face of the frame's own messages (sheet 4), each cut in two at a
+# word gap because a line is wider than a sheet, each half a strip of
+# HINT_ROWS rows with HINT_MARGIN white texels each side, so its edges
+# filter to white. The first line shows outside a bind, the second
+# during one. The lines are English or Japanese, by the language of
+# sheet 4, and both languages' strips sit at the same rows: a file holds
+# one language's, as the pad's lines for the page do on padoptions' sheet.
+HINT_ROWS, HINT_MARGIN = 17, 2
 
 
-def hint_lettering():
-    """{glyph box: its 565 texels, HINT_ROWS rows} from HINT_LETTERING."""
-    out, at = {}, 0
-    for c in sorted(set(''.join(HINT_LINES)) - {' '}):
-        glyph = HINT_GLYPHS[c]
-        n = (glyph[2] - glyph[0]) * HINT_ROWS * 2
-        out[glyph] = HINT_LETTERING[at:at + n]
-        at += n
-    return out
+def hint_art(variant=None):
+    """The hint lines' strips for a language: ((file, sheet, x, y, width,
+    height, the texels' bytes), ...), two a line; every language's when
+    variant is None."""
+    return tuple(blit[:6] + (zlib.decompress(base64.b64decode(blit[7])),) for blit in HINT_ART
+                 if variant is None or blit[6] in ('', variant))
 
 
-def hint_layout(line):
-    """The line's letters as (x, glyph) from x 0, its width, and how many
-    letters make its first half, cut at the space nearest the middle."""
-    placed, x, cut, best = [], 0, 0, None
-    for i, c in enumerate(line):
-        if c == ' ':
-            if best is None or abs(i - len(line) / 2) < best:
-                best, cut = abs(i - len(line) / 2), len(placed)
-            x += HINT_SPACE
-            continue
-        placed.append((x, HINT_GLYPHS[c]))
-        x += HINT_GLYPHS[c][2] - HINT_GLYPHS[c][0] + HINT_SPACING
-    return placed, x - HINT_SPACING, cut
+def options_variant():
+    """The language of OPTIONS.TXR's hint sheet, as patch_txr last read
+    it in this patch(); English when it has not."""
+    return PROMPT_VARIANT.get('devices', 'en')
+
+
+OPTIONS_STRIPS = 13                     # the sheet padoptions appends to OPTIONS.TXR
+DEVICES_PAD_TOPS = ((42, 62), (82, 102))    # the rows on it of the page's two lines for a pad, a row a half, in either language
+
+
+def devices_bar_strips(line, pad=False, variant=None):
+    """A hint line's two strips, (x, y, width, height) each: the
+    keyboard's from HINT_ART, or the pad's from padoptions' art, in the
+    language given or OPTIONS.TXR's."""
+    variant = variant or options_variant()
+    if pad:
+        return _strips(prompt_art('padoptions', variant), 'OPTIONS.TXR', OPTIONS_STRIPS, DEVICES_PAD_TOPS[line])
+    return [b[2:6] for b in hint_art(variant)[2 * line:2 * line + 2]]
+
+
+def devices_bar_rects(line, variant=None):
+    """A hint line's two quads about the bar's centre: each strip at its
+    place in the line, the line centred, as the page draws it."""
+    strips = devices_bar_strips(line, variant=variant)
+    width = sum(w for _x, _y, w, _h in strips) - 4 * HINT_MARGIN       # the line, the halves' margins apart
+    rects, x0 = [], 0
+    for _x, _y, w, h in strips:
+        rects.append(_f32(x0 - width // 2 - HINT_MARGIN, PAGE_STRIP_Y, x0 - width // 2 - HINT_MARGIN + w, PAGE_STRIP_Y + h))      # whole pixels: at half a pixel the filter blurs the lettering
+        x0 += w - 2 * HINT_MARGIN
+    return rects
 
 
 TXR = 'BINDATA\\MISC\\OPTIONS.TXR'
@@ -6012,16 +7805,13 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
     device, settings, colon = (piece(PAGE_PIECES[k]) for k in ('DEVICE', 'SETTINGS', 'COLON'))
     group_plate, row_plate = copied(stock['group'], 2), copied(stock['gsrow'], 3)
     bar = copied(stock['bar'], PAGE_BAR_QUADS)
-    strips, tops = [], iter(HINT_STRIP_TOPS)
-    for line in HINT_LINES:
-        placed, width, cut = hint_layout(line)
+    strips = []
+    for line in range(2):
         quads = []
-        for half in (placed[:cut], placed[cut:]):
-            top, x0 = next(tops), half[0][0]
-            w = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0 + 2 * HINT_MARGIN
-            quads.append((uv((TXR_ICON, 1, top, 1 + w, top + HINT_ROWS)),
-                          (x0 - width / 2 - HINT_MARGIN, PAGE_STRIP_Y, x0 - width / 2 - HINT_MARGIN + w, PAGE_STRIP_Y + HINT_ROWS),
-                          0xffffffff))
+        for (x, top, w, h), rect, (px, ptop, pw, ph) in zip(devices_bar_strips(line), devices_bar_rects(line), devices_bar_strips(line, pad=True)):
+            quads.append((uv((TXR_ICON, x, top, x + w, top + h)), rect, 0xffffffff))
+            uv((OPTIONS_STRIPS, px, ptop, px + pw, ptop + ph))       # the pad's line's entry right after the keyboard's, for padoptions
+        width = sum(w for _x, _y, w, _h in devices_bar_strips(line)) - 4 * HINT_MARGIN
         sprites.append((quads, float(width), float(HINT_ROWS)))
         strips.append(len(sprites) - 1)
     rows = 1 + len(PAGE_ACTIONS)            # the selector, then the actions; the button row is one more
@@ -6035,13 +7825,19 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
     add_text('KEY', PAGE_VALUE_X, PAGE_HEADER_Y, FLAGS_PROPORTIONAL, PAGE_HEADER_COLOUR)
     add_text('PAD', PAGE_PAD_X, PAGE_HEADER_Y, FLAGS_PROPORTIONAL, PAGE_HEADER_COLOUR)
     y = PAGE_ROW_Y
+    sliders = []                            # the draw list index of each slider's first entry
     for i, (action, code) in enumerate(PAGE_ACTIONS):
         r = 1 + i
         add_sprite(row_plate, PAGE_ROW_X, y, Z_PLATE, PLATE, hold(HOLD_ROW, r, r))
         add_text(action, PAGE_ACTION_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT)
+        if code >= 0xfd:                 # a slider: OFF and 1 to 9, the step set white by the page, the others black
+            sliders.append(len(draw))
+            for step, x in enumerate(PAGE_SLIDER_X):
+                add_text('OFF' if step == 0 else '%d' % step, x, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, PAGE_SLIDER_COLOUR)
+            y += PAGE_ROW_STEP
+            continue
         add_value(i * 2, PAGE_VALUE_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
-        if code != 0xff:
-            add_value(i * 2 + 1, PAGE_PAD_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
+        add_value(i * 2 + 1, PAGE_PAD_X, y + PAGE_TEXT_DY, FLAGS_PROPORTIONAL, TEXT, hold(HOLD_VALUE, r, r))
         y += PAGE_ROW_STEP
     for i, button in enumerate((stock['default'], back)):
         add_stock(button, PAGE_BUTTON_X[i], PAGE_BUTTON_Y, Z_PLATE, TEXT, hold(HOLD_BUTTON, rows, rows, i))
@@ -6067,6 +7863,7 @@ def devices_page(buf, build, va, quad_tail, cont, labelend):
     off_data = _align(size, 4)
     blob = bytearray(off_data + DATA_SIZE)
     blob[off_data:] = bind_data()
+    blob[off_data + DATA_SLIDERS:off_data + DATA_SLIDERS + len(sliders)] = bytes(sliders)
     relocs = []
     # code, its placeholders filled
     values = dict(opt, SELFRVA=va - base, PAGEHDR=va - base + off_hdr, DRAWLIST=va - base + off_draw,
@@ -6156,13 +7953,19 @@ def patch_txr(data):
     """OPTIONS.TXR with a thirteenth sheet, 256x256: the icon at its top
     left - the third icon's plate, its picture filled back in, with a
     steering wheel cut out the same way - and the page's hint lines
-    below, set letter by letter from the frame's own message lettering on
-    sheet 4, as the stock's message strips are (sheets 4 and 5 are format
-    0, 565). The gutter is clear white like the stock sheets', so the
-    edge texels filter to white, not to black. Returns the grown file."""
+    below, in strips as the stock's messages are on sheet 4, in that
+    sheet's language, which is recorded for the DLL's page. The gutter
+    is clear white like the stock sheets', so the edge texels filter to
+    white, not to black. Returns the grown file."""
     why = txr_check(data)
     if why:
         raise ValueError('%s: %s' % (TXR, why))
+    lines = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:4])
+    digest = hashlib.md5(data[lines:lines + 256 * 256 * 2]).hexdigest()
+    if digest not in (LINES_EN, LINES_JP):
+        raise ValueError('%s: sheet 4 is not one the patcher knows' % TXR)
+    variant = 'en' if digest == LINES_EN else 'jp'
+    PROMPT_VARIANT['devices'] = variant
     sheet = 0x1000 + sum(size * size * 2 for _f, size in TXR_ENTRIES[:10])
     plate = bytearray(126 * 126 * 2)
     for y in range(126):
@@ -6179,23 +7982,11 @@ def patch_txr(data):
     texture = bytearray(struct.pack('<H', 0x0fff) * (256 * 256))   # clear white, as the stock sheets' gutters
     for y in range(126):
         texture[((y + 1) * 256 + 1) * 2:((y + 1) * 256 + 127) * 2] = plate[y * 252:y * 252 + 252]
-    letters = hint_lettering()          # the frame's messages' lettering, carried, not cut
-    tops = iter(HINT_STRIP_TOPS)
-    for line in HINT_LINES:                 # the hint lines, letter by letter, each in two halves
-        placed, _width, cut = hint_layout(line)
-        for half in (placed[:cut], placed[cut:]):
-            top, x0 = next(tops), half[0][0]
-            width = half[-1][0] + half[-1][1][2] - half[-1][1][0] - x0
-            for y in range(HINT_ROWS):          # the strip opaque white, a margin each side, then the letters
-                for x in range(width + 2 * HINT_MARGIN):
-                    struct.pack_into('<H', texture, ((top + y) * 256 + 1 + x) * 2, 0xffff)
-            for x, glyph in half:
-                gx0, _gy0, gx1 = glyph
-                for y in range(HINT_ROWS):
-                    for gx in range(gx1 - gx0):
-                        v = struct.unpack_from('<H', letters[glyph], (y * (gx1 - gx0) + gx) * 2)[0]   # 565 to 4444, opaque
-                        texel = 0xf000 | (v >> 12) << 8 | (v >> 7 & 15) << 4 | (v >> 1 & 15)
-                        struct.pack_into('<H', texture, ((top + y) * 256 + 1 + HINT_MARGIN + x - x0 + gx) * 2, texel)
+    for _file, sheet, x, top, w, h, texels in hint_art(variant):      # the hint lines' strips
+        if sheet != TXR_ICON:
+            raise ValueError('%s: a hint strip for sheet %d' % (TXR, sheet))
+        for y in range(h):
+            texture[((top + y) * 256 + x) * 2:((top + y) * 256 + x + w) * 2] = texels[y * w * 2:(y + 1) * w * 2]
     out = bytearray(data)
     struct.pack_into('<I', out, 4, len(TXR_ENTRIES) + 1)
     struct.pack_into('<4I', out, 16 + 16 * len(TXR_ENTRIES), 8, 256, len(texture), 0)
@@ -6213,6 +8004,121 @@ LOBBY_LABEL_SIZE = (218, 32)
 LOBBY_STATES = ('OFF', 'ON', 'ON2')
 LOBBY_CLEAR = (54, 246)                 # the stock rows' span in the backdrop, cleared
 LOBBY_FILES = tuple('CONNECT_%s_%s.BMP' % (slot, state) for slot in LOBBY_LABELS for state in LOBBY_STATES)
+
+# The team list's SHOW TEAMS button becomes SEARCH: the three states of
+# showteam in BINDATA\connect\button, 105x19 24-bit, a 102x16 face with
+# a three-pixel bevel (ON2 the face three pixels down and right), the
+# letters on rows 1-14. The face is cleared and SEARCH laid over it from
+# the mask tools/prompts.py renders in Noto Sans Mono, the closest open
+# face to the buttons' own, in the stock lettering's colour.
+LOBBY_BUTTON_DIR = 'BINDATA\\connect\\button'
+LOBBY_BUTTON_STATES = ('off', 'on', 'on2')
+LOBBY_BUTTON_MD5 = {'showteam': ('eb63942470f1fd42f686179f1f1f1413', '0aa7e865dc9419c971e60af559dd628f', '3adbb7020b7b6e1fdf3622f517de34c8')}
+LOBBY_BUTTON_FILES = tuple('showteam_%s.BMP' % state for state in LOBBY_BUTTON_STATES)
+LOBBY_FACE = (102, 16)
+LOBBY_GLYPH_ROWS = (1, 14)
+# The team room's TAB button, tab_menu_on.BMP (TAB, then MENU on black)
+# and tab_menu_on2.BMP (TAB on black, then CHAT) in BINDATA\chat, 98x18
+# 24-bit, the same in every build. The tabmenu patch writes copies that
+# read SEL, TAB_MENU_SEL.BMP and TAB_MENU_SEL2.BMP, which asm/tabmenu.asm
+# loads beside them and shows while a pad is held.
+TABMENU_DIR = 'BINDATA\\chat'
+TABMENU_STOCK = ('tab_menu_on.BMP', 'tab_menu_on2.BMP', 'CHAT.BMP')
+TABMENU_STOCK_MD5 = ('8e560bd8ddbf7ee8032b42ca786de6ad', '260ac4847657828b34f9d6ac100febcc', '49662ce80eea0f71945e4481c64b8406')
+TABMENU_FILES = ('TAB_MENU_SEL.BMP', 'TAB_MENU_SEL2.BMP', 'TAB_MENU_BACK.BMP', 'TAB_MENU_BACK_SEL.BMP')
+TABMENU_BACK_BOX = (18, 454, 98, 18)    # where CHAT.BMP, the room's backdrop, has TAB MENU painted in
+# The IP entry popup, Ip_entry_US.bmp in BINDATA\connect\IP_ENTRY, a
+# 385x184 24-bit BMP: its two lines under the box said a blank entry
+# searches, which the LAN row does now. They are painted over and
+# LOBBY_POPUP_MASK, two lines on the address form and the port, drawn
+# in their place - an 8-bit mask of the popup's width over the rows
+# cleared, white text on black as the stock lettering, set in Liberation
+# Sans Narrow Bold fitted to the stock lines by overlap (17.5 px, 90%
+# wide, half a pixel of tracking).
+LOBBY_POPUP_DIR = 'BINDATA\\connect\\IP_ENTRY'
+LOBBY_POPUP_FILE = 'Ip_entry_US.bmp'
+LOBBY_POPUP_MD5 = '0cfc0058684ff07d8207d3467e7a0d4c'
+LOBBY_POPUP_SIZE = (385, 184)
+LOBBY_POPUP_CLEAR = (111, 178, 1, 379)  # the rows and columns inside the frame under the box
+LOBBY_POPUP_MASK = (
+    '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'
+    'M5nJTP979F+tApR8')
 MPDATA = 'MPDATA.DAT'
 
 
@@ -6231,6 +8137,140 @@ def bmp24(mask, size=LOBBY_LABEL_SIZE):
     head = b'BM' + struct.pack('<IHHI', 54 + len(rows), 0, 0, 54)
     info = struct.pack('<IiiHHIIiiII', 40, w, h, 1, 24, 0, len(rows), 2834, 2834, 0, 0)
     return head + info + bytes(rows)
+
+
+def lettered(data, mask, at, rows_cleared):
+    """A 24-bit BMP with a mask's lettering over its face: the face's
+    colour and the stock lettering's are read off the rows cleared, the
+    face being the colour most of them hold and the ink the one furthest
+    from it, and each masked pixel goes from face to ink by the mask's
+    level. mask is (width, height, texels), at (x, y)."""
+    rows = [bytearray(r) for r in bmp24_rows(data)]
+    x0, y0 = at
+    width, height, texels = mask
+    top, bottom, left, right = rows_cleared
+    seen = {}
+    for y in range(top, bottom + 1):
+        for x in range(left, right + 1):
+            px = bytes(rows[y][x * 3:x * 3 + 3])
+            seen[px] = seen.get(px, 0) + 1
+    face = max(seen, key=seen.get)
+    ink = max(seen, key=lambda px: sum(abs(a - b) for a, b in zip(px, face)))
+    for y in range(top, bottom + 1):
+        rows[y][left * 3:(right + 1) * 3] = face * (right + 1 - left)
+    for y in range(height):
+        for x in range(width):
+            level = texels[y * width + x] >> 12
+            if level:
+                rows[y0 + y][(x0 + x) * 3:(x0 + x) * 3 + 3] = bytes(f + (i - f) * level // 15 for f, i in zip(face, ink))
+    return bmp24_pack(rows, data)
+
+
+def lobby_buttons(stock):
+    """The three SEARCH button files from the stock showteam ones: the
+    face cleared and SEARCH laid over it from the mask tools/prompts.py
+    renders, on the OFF and ON files' rows, and three pixels down and
+    right on ON2 as its face is. {state: bytes}."""
+    (_f, _s, _x, _y, w, h, texels), = prompt_art('lobby')
+    texels = struct.unpack('<%dH' % (w * h), texels)
+    out = {}
+    for i, state in enumerate(LOBBY_BUTTON_STATES):
+        shift = 3 if state == 'on2' else 0
+        top, bottom = LOBBY_GLYPH_ROWS
+        out[state] = lettered(stock['showteam'][i], (w, h, texels), (shift, shift), (top + shift, bottom + shift, shift, LOBBY_FACE[0] - 1 + shift))
+    return out
+
+
+def bmp8_crop24(data, box):
+    """A 24-bit BMP of a box (x, y, width, height) of an 8-bit BMP."""
+    w, h = struct.unpack_from('<ii', data, 18)
+    off = struct.unpack_from('<I', data, 10)[0]
+    palette = [data[54 + i * 4:54 + i * 4 + 3] for i in range(256)]
+    stride = (w + 3) & ~3
+    x0, y0, cw, ch = box
+    mask = bytearray()
+    for y in range(y0, y0 + ch):
+        row = data[off + (h - 1 - y) * stride:off + (h - 1 - y) * stride + w]
+        mask += bytes(row[x0:x0 + cw])
+    out = bytearray(bmp24(bytes(cw * ch), (cw, ch)))
+    rows = [bytearray(r) for r in bmp24_rows(out)]
+    for y in range(ch):
+        rows[y][:] = b''.join(palette[v] for v in mask[y * cw:(y + 1) * cw])
+    return bmp24_pack(rows, bytes(out))
+
+
+def tabmenu_files(stock):
+    """The pad's four team room TAB files from the stock tab_menu_on,
+    _on2 and CHAT.BMP: the two buttons with TAB's letters cleared to the
+    box's colour and SEL laid over them from the mask tools/prompts.py
+    renders, in the letters' own colour; and the backdrop's TAB MENU box
+    cut out as it is and again with SEL. {name: bytes}."""
+    (_f, _s, x, y, w, h, texels), = prompt_art('tabmenu')
+    texels = struct.unpack('<%dH' % (w * h), texels)
+    back = bmp8_crop24(stock[2], TABMENU_BACK_BOX)
+    out = {}
+    for name, data in zip(TABMENU_FILES, (stock[0], stock[1], None, back)):
+        out[name] = back if data is None else lettered(data, (w, h, texels), (x, y), (y, y + h - 1, x, x + w - 1))
+    return out
+
+
+def tabmenu_art(dest, wanted, log):
+    """Write the pad's TAB button files from the stock ones, or take them
+    away."""
+    folder = os.path.join(dest, *TABMENU_DIR.split('\\'))
+    if not wanted:
+        for name in TABMENU_FILES:
+            path = os.path.join(folder, name)
+            if os.path.isfile(path):
+                os.remove(path)
+                log('patch: %s\\%s taken away' % (TABMENU_DIR, name))
+        return
+    stock = []
+    for name, digest in zip(TABMENU_STOCK, TABMENU_STOCK_MD5):
+        path = installed(dest, TABMENU_DIR + '\\' + name)
+        if not os.path.isfile(path) or md5(path) != digest:
+            log('patch: %s\\%s is not the file the patcher knows; the TAB button stays' % (TABMENU_DIR, name))
+            return
+        with open(path, 'rb') as fh:
+            stock.append(fh.read())
+    for name, out in tabmenu_files(stock).items():
+        write_whole(os.path.join(folder, name), out)
+    log('patch: %s\\%s written, tabmenu' % (TABMENU_DIR, ', '.join(TABMENU_FILES)))
+
+
+def lobby_popup(stock):
+    """Ip_entry_US.bmp with the lines under the box replaced."""
+    rows = [bytearray(r) for r in bmp24_rows(stock)]
+    top, bottom, left, right = LOBBY_POPUP_CLEAR
+    w = LOBBY_POPUP_SIZE[0]
+    mask = zlib.decompress(base64.b64decode(''.join(LOBBY_POPUP_MASK)))
+    for y in range(top, bottom + 1):
+        rows[y][left * 3:(right + 1) * 3] = bytes(3 * (right + 1 - left))
+        line = mask[(y - top) * w:(y - top + 1) * w]
+        for x in range(left, right + 1):
+            v = line[x]
+            if v:
+                rows[y][x * 3:x * 3 + 3] = bytes((v, v, v))
+    return bmp24_pack(rows, stock)
+
+
+def bmp24_rows(data):
+    """A 24-bit BMP's rows, top first, as bytes of BGR triples."""
+    w, h = struct.unpack_from('<ii', data, 18)
+    off = struct.unpack_from('<I', data, 10)[0]
+    stride = (w * 3 + 3) & ~3
+    return [data[off + (h - 1 - y) * stride:off + (h - 1 - y) * stride + w * 3] for y in range(h)]
+
+
+def bmp24_pack(rows, like):
+    """Rows back into a BMP with `like`'s header and padding."""
+    w, h = struct.unpack_from('<ii', like, 18)
+    off = struct.unpack_from('<I', like, 10)[0]
+    stride = (w * 3 + 3) & ~3
+    body = bytearray(like[off:])
+    for y in range(h):
+        body[(h - 1 - y) * stride:(h - 1 - y) * stride + w * 3] = rows[y]
+    return like[:off] + bytes(body)
 
 
 def lobby_backdrop(data):
@@ -6268,13 +8308,15 @@ def lobby_backdrop(data):
 def lobby_art(dest, wanted, log):
     """Write the lobby's art, or put the stock files back."""
     folder = os.path.join(dest, *LOBBY_DIR.split('\\'))
+    buttons = os.path.join(dest, *LOBBY_BUTTON_DIR.split('\\'))
     names = (LOBBY_BACKDROP,) + LOBBY_FILES
+    popup = lobby_popup_path(dest)
     if not wanted:
-        for name in names:
-            path = os.path.join(folder, name)
+        for where, name in [(folder, n) for n in names] + [(buttons, n) for n in LOBBY_BUTTON_FILES] + [popup]:
+            path = os.path.join(where, name)
             if os.path.isfile(path + '.bak'):
                 os.replace(path + '.bak', path)
-                log('patch: %s\\%s back to stock' % (LOBBY_DIR, name))
+                log('patch: %s back to stock' % name)
         return
     for name in names:
         path = os.path.join(folder, name)
@@ -6295,10 +8337,56 @@ def lobby_art(dest, wanted, log):
         path = os.path.join(folder, name)
         if not os.path.isfile(path + '.bak'):
             os.replace(path, path + '.bak')
-        with open(path, 'wb') as fh:
-            fh.write(out)
+        write_whole(path, out)
     log('patch: %s\\%s and the %d button files written, lobby' % (LOBBY_DIR, LOBBY_BACKDROP, len(LOBBY_FILES)))
+    # SEARCH in place of SHOW TEAMS, from the stock lettering when the
+    # stock files are the ones known; otherwise the button stays as it is
+    stock = {}
+    for name, digests in LOBBY_BUTTON_MD5.items():
+        stock[name] = []
+        for state, digest in zip(LOBBY_BUTTON_STATES, digests):
+            path = os.path.join(buttons, '%s_%s.BMP' % (name, state))
+            source = path + '.bak' if os.path.isfile(path + '.bak') else path
+            if not os.path.isfile(source) or md5(source) != digest:
+                log('patch: %s\\%s_%s.BMP is not the file the patcher knows; SHOW TEAMS stays' % (LOBBY_BUTTON_DIR, name, state))
+                stock = None
+                break
+            with open(source, 'rb') as fh:
+                stock[name].append(fh.read())
+        if stock is None:
+            break
+    if stock:
+        for state, out in lobby_buttons(stock).items():
+            path = os.path.join(buttons, 'showteam_%s.BMP' % state)
+            if not os.path.isfile(path + '.bak'):
+                os.replace(path, path + '.bak')
+            write_whole(path, out)
+        log('patch: %s\\showteam_*.BMP written as SEARCH' % LOBBY_BUTTON_DIR)
+    # the popup's lines under the box, from the stock file when it is the one known
+    path = os.path.join(*popup)
+    source = path + '.bak' if os.path.isfile(path + '.bak') else path
+    if not os.path.isfile(source) or md5(source) != LOBBY_POPUP_MD5:
+        log('patch: %s\\%s is not the file the patcher knows; its text stays' % (LOBBY_POPUP_DIR, LOBBY_POPUP_FILE))
+    else:
+        with open(source, 'rb') as fh:
+            data = fh.read()
+        if not os.path.isfile(path + '.bak'):
+            os.replace(path, path + '.bak')
+        write_whole(path, lobby_popup(data))
+        log('patch: %s\\%s written with the port lines' % (LOBBY_POPUP_DIR, LOBBY_POPUP_FILE))
     clamp_mpdata(dest, log)
+
+
+def lobby_popup_path(dest):
+    """(folder, name) of the IP entry popup's file: the installer's own
+    casing of the name where one is there, so a case-sensitive Wine
+    finds one file, not two."""
+    folder = os.path.join(dest, *LOBBY_POPUP_DIR.split('\\'))
+    if os.path.isdir(folder):
+        for name in os.listdir(folder):
+            if name.lower() == LOBBY_POPUP_FILE.lower():
+                return folder, name
+    return folder, LOBBY_POPUP_FILE
 
 
 def clamp_mpdata(dest, log):
@@ -6310,10 +8398,61 @@ def clamp_mpdata(dest, log):
     with open(path, 'rb') as fh:
         data = bytearray(fh.read())
     if data[:4] == b'MPFH' and len(data) >= 0x80 and data[6] > 2:
+        if not os.path.isfile(path + '.bak'):
+            write_whole(path + '.bak', bytes(data))
         data[6] = 0
-        with open(path, 'wb') as fh:
-            fh.write(data)
+        write_whole(path, bytes(data))
         log('patch: %s connection type reset' % MPDATA)
+
+
+def apply_dcmusic(buf, build):
+    """dcmusic.asm: nine calls of the sound bank become calls into the
+    blob - the ten-year ending's play (slot 9, track 11), a championship
+    replay's first race, its later races, the other modes' scene music,
+    and the course music's play, three fades and restart - which plays
+    tracks 15 to 18 in slot 14 when their files are there and leaves
+    through the routine called either way. The annex keeps what it found
+    and the path, so it is writable."""
+    row = BUILDS[build]
+    addr = row['addresses']
+    course = row['sites']['dccourse']
+    sites = ((row['sites']['dcending'], 0, addr['BGMPLAY']),) + tuple(
+        (site, 5 + 5 * i, addr['BGMPLAY']) for i, site in enumerate(row['sites']['dcreplay'])) + (
+        (course[0], 20, addr['BGMPLAY']),) + tuple((site, 25, addr['BGMFADE']) for site in course[1:4]) + (
+        (course[4], 30, addr['BGMRESTART']),)
+    for site, _entry, target in sites:
+        _check_call(buf, site, target, 'the sound bank')
+    out, rva = append_section(buf, exe_blob(DCMUSIC_BLOB, build))
+    for site, entry, _target in sites:
+        _branch(out, site, rva + entry)
+    return out
+
+
+def apply_dcoptions(buf, build):
+    """dcmusic.asm built for Options.dll: the BGM page's count of choices
+    (`mov ebx, 7`), its rows' call of the text routine and its preview's
+    call of the play, and the same three of the sound page's BGM TEST
+    (`mov dword [esi+0x68], 13`, its name's call of the text routine, its
+    play), become calls into the blob, which finds the image base from its
+    own RVA. The annex is writable for the path it builds."""
+    opt = BUILDS[build]['options']
+    init, name, preview, count, title, listen = BUILDS[build]['sites']['dcoptions']
+    for site in (name, title):
+        _check_call(buf, site, opt['TEXT'], 'the text routine')
+    for site in (preview, listen):
+        _check_call(buf, site, opt['PLAYSOUND'], 'the page bank\'s play')
+    base = _image_base(buf)
+    blob = bytes(DCOPTIONS_BLOB)
+    for key, magic in DCOPTIONS_MAGICS.items():
+        blob = blob.replace(struct.pack('<I', magic), struct.pack('<I', opt[key] - base))
+    out, rva = _self_section(buf, blob)
+    _branch(out, init, rva)
+    _branch(out, name, rva + 5)
+    _branch(out, preview, rva + 10)
+    _branch(out, count, rva + 15, 7)
+    _branch(out, title, rva + 20)
+    _branch(out, listen, rva + 25)
+    return out
 
 
 def _next_section_rva(buf):
@@ -6339,20 +8478,19 @@ def apply_voltrace(buf, build):
     blob = exe_blob(VOLTRACE_BLOB, build)
     out, rva = append_section(buf, blob + b'\0' * (4 * len(sites)), chars=CODE_SECTION)
     start = _rva_to_off(out, rva)
-    text_off = _rva_to_off(out, 0x1000)
     for i, (off, length) in enumerate(sites):
         slot_va = IMAGE_BASE + rva + len(blob) + 4 * i
-        struct.pack_into('<I', out, start + len(blob) + 4 * i, IMAGE_BASE + 0x1000 + off - text_off + length)
+        struct.pack_into('<I', out, start + len(blob) + 4 * i, IMAGE_BASE + _off_to_rva(out, off) + length)
         out[start:start + len(blob)] = bytes(out[start:start + len(blob)]).replace(
-            struct.pack('<I', 0xE7E7E7E1 + i), struct.pack('<I', slot_va))
+            struct.pack('<I', SITE_MAGICS[i]), struct.pack('<I', slot_va))
         _branch(out, off, rva + 5 * i, length, op=b'\xe9')
     return out
 
 
 def fullwin_stamp():
     """The offset in fullwin.asm's blob of the counter stamp its present
-    keeps, the dword after its QueryPerformanceCounter pointer."""
-    return FULLWIN_BLOB.index(b'QueryPerformanceCounter\0') + len(b'QueryPerformanceCounter\0') + 4
+    keeps."""
+    return BLOB_LABELS['FULLWIN_BLOB']['t_blt']
 
 
 FRAMETRACE_STAMP = PRESENT_SITE + 5     # plus the stamp's offset: from the present to the stamp, via the jump's rel32
@@ -6373,16 +8511,15 @@ def apply_frametrace(buf, build):
             raise ValueError('the frame gate does not read %s where the row says' % name)
     if buf[exit_site - 5] != 0xe8:
         raise ValueError('no call before the frame gate\'s exit')
-    text_off = _rva_to_off(buf, 0x1000)
-    counter = IMAGE_BASE + 0x1000 + exit_site - text_off + struct.unpack_from('<i', buf, exit_site - 4)[0]
+    counter = _call_target(buf, exit_site - 5)
     blob = exe_blob(FRAMETRACE_BLOB, build)
     out, rva = append_section(buf, blob + b'\0' * 8)
     start = _rva_to_off(out, rva)
     slots = IMAGE_BASE + rva + len(blob)
-    struct.pack_into('<II', out, start + len(blob), counter, IMAGE_BASE + 0x1000 + entry_site - text_off + 5)
-    out[start:start + len(blob)] = blob.replace(struct.pack('<I', 0xE7E7E7E1), struct.pack('<I', slots)) \
-        .replace(struct.pack('<I', 0xE7E7E7E2), struct.pack('<I', slots + 4)) \
-        .replace(struct.pack('<I', 0xE7E7E7E3), struct.pack('<I', FRAMETRACE_STAMP + fullwin_stamp()))
+    struct.pack_into('<II', out, start + len(blob), counter, IMAGE_BASE + _off_to_rva(out, entry_site) + 5)
+    out[start:start + len(blob)] = blob.replace(struct.pack('<I', SITE_MAGICS[0]), struct.pack('<I', slots)) \
+        .replace(struct.pack('<I', SITE_MAGICS[1]), struct.pack('<I', slots + 4)) \
+        .replace(struct.pack('<I', SITE_MAGICS[2]), struct.pack('<I', FRAMETRACE_STAMP + fullwin_stamp()))
     _branch(out, exit_site, rva, 5, op=b'\xe9')
     _branch(out, entry_site, rva + 5, 5, op=b'\xe9')
     return out
@@ -6500,8 +8637,11 @@ def apply_resolution(buf, build):
     for name, magic in RESOLUTION_MAGICS.items():
         blob = blob.replace(struct.pack('<I', magic), struct.pack('<I', values[name] - base))
     groups = resolution_groups()
-    # the groups, then the table
-    blob = blob[:-len(groups)] + groups + resolution_table(strings=True)
+    # the groups, then the table, where resolution.asm's labels say
+    at = BLOB_LABELS['RESOLUTION_BLOB']
+    if at['groups'] + len(groups) != at['table'] or at['table'] != len(blob):
+        raise ValueError('resolution.asm: the groups and the table are not where the patcher writes them')
+    blob = blob[:at['groups']] + groups + resolution_table(strings=True)
     out, rva = _self_section(buf, blob)
     _branch(out, RESOLUTION_INIT, rva, 14)
     _branch(out, RESOLUTION_DRAW, rva + 5, 8)
@@ -6564,18 +8704,380 @@ def apply_sortpad(buf, build):
     """sortpad.asm in ReplayGallery: the two instructions after the list's
     row update in its browse state become a call into the blob, which
     steps the sort mode on a press of the pad's LB or RB, then makes them.
+    Three in the state that shows the empty notice call its second entry.
     The exe's poll slot is the build's; the section is writable, the blob
     keeping what was down."""
-    blob = SORTPAD_BLOB.replace(struct.pack('<I', 0xDFDFDFDF), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
+    blob = SORTPAD_BLOB.replace(struct.pack('<I', SORTPAD_MAGICS['PADPOLL']), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
     out, rva = _self_section(buf, blob)
     _branch(out, SORTPAD_SITE, rva, 9)
+    _branch(out, SORTPAD_EMPTY_SITE, rva + 5, 6)
     return out
+
+
+def _export_slot(buf, name):
+    """The file offset of the export address table's entry for a name."""
+    pe = struct.unpack_from('<I', buf, 0x3c)[0]
+    exports = _rva_to_off(buf, struct.unpack_from('<I', buf, pe + 24 + 96)[0])
+    count = struct.unpack_from('<I', buf, exports + 24)[0]
+    functions, names, ordinals = (_rva_to_off(buf, rva) for rva in struct.unpack_from('<3I', buf, exports + 28))
+    for i in range(count):
+        at = _rva_to_off(buf, struct.unpack_from('<I', buf, names + 4 * i)[0])
+        if bytes(buf[at:at + len(name) + 1]) == name + b'\0':
+            return functions + 4 * struct.unpack_from('<H', buf, ordinals + 2 * i)[0]
+    raise ValueError('no export %s' % name.decode())
+
+
+def prompt_art(key, variant=None):
+    """A key's art for a language: ((file, sheet, x, y, width, height,
+    the texels' bytes), ...); every language's when variant is None."""
+    return tuple(blit[:6] + (zlib.decompress(base64.b64decode(blit[7])),) for blit in PROMPT_ART[key]
+                 if variant is None or blit[6] in ('', variant))
+
+
+def _uv_box(x, y, width, height, size=256):
+    """The UV box of a rectangle of a sheet, inset as the stock boxes are."""
+    return _f32(*((v + UV_INSET) / size for v in (x, y, x + width, y + height)))
+
+
+def _f32(*values):
+    return tuple(struct.unpack('<f', struct.pack('<f', v))[0] for v in values)
+
+
+def _data_section(buf):
+    """(VA, file offset, raw size) of .data."""
+    pe = struct.unpack_from('<I', buf, 0x3c)[0]
+    base = _image_base(buf)
+    table = pe + 24 + struct.unpack_from('<H', buf, pe + 20)[0]
+    for i in range(struct.unpack_from('<H', buf, pe + 6)[0]):
+        name, _vs, va, rs, ro = struct.unpack_from('<8sIIII', buf, table + i * 40)
+        if name.rstrip(b'\0') == b'.data':
+            return base + va, ro, rs
+    raise ValueError('no .data')
+
+
+def _sprite_quads(buf, texture, box, size=256):
+    """Every quad in .data over a UV entry (texture, box): (page VA,
+    quad RVA, entry index, rectangle), by scanning the sprites, 32 bytes
+    (page, quads, count, w, h, x, y, 0) with 52-byte quads."""
+    dva, dro, drs = _data_section(buf)
+    base = _image_base(buf)
+    inside = lambda va: dva <= va < dva + drs
+    out = []
+    for o in range(dro, dro + drs - 32, 4):
+        page, quads, count = struct.unpack_from('<III', buf, o)
+        if not (inside(page) and inside(quads) and 0 < count < 400):
+            continue
+        for q in range(count):
+            qo = dro + quads - dva + 52 * q
+            if qo + 52 > dro + drs:
+                break
+            uv = struct.unpack_from('<i', buf, qo)[0]
+            if not 0 <= uv < 400:
+                continue
+            eo = dro + page - dva + 20 * uv
+            if eo + 20 > dro + drs:
+                continue
+            tex, u0, v0, u1, v1 = struct.unpack_from('<i4f', buf, eo)
+            if tex == texture and all(abs(c * size - b) <= 0.3 for c, b in zip((u0, v0, u1, v1), box)):     # a page or two round a box's edge differently
+                out.append((page, quads + 52 * q - base, uv, struct.unpack_from('<4f', buf, qo + 4)))
+    return out
+
+
+def _page_count(buf, page):
+    """How many UV entries a page (a VA) has: the count beside the page's
+    VA in the record its DLL binds the page by, (entries, count). Init
+    maps each entry's sheet number to a texture handle through that
+    count, so an entry past it is never bound."""
+    dva, dro, drs = _data_section(buf)
+    found = set()
+    at = buf.find(struct.pack('<I', page), dro)
+    while 0 <= at < dro + drs:
+        count = struct.unpack_from('<I', buf, at + 4)[0]
+        if 0 < count <= 0x400 and at % 4 == 0:
+            found.add(count)
+        at = buf.find(struct.pack('<I', page), at + 4)
+    if len(found) != 1:
+        raise ValueError('page 0x%x: %d records give its entry count' % (page, len(found)))
+    return found.pop()
+
+
+def _spares(buf, page, n, taken):
+    """The first n UV entries of a page (a VA) with no texture that
+    `taken` does not hold yet, within the page's count, as (index, RVA,
+    the entry's bytes); taken grows."""
+    dva, dro, _drs = _data_section(buf)
+    base = _image_base(buf)
+    out = []
+    for i in range(_page_count(buf, page)):
+        eo = dro + page - dva + 20 * i
+        if struct.unpack_from('<i', buf, eo)[0] == -1 and (page, i) not in taken:
+            taken.add((page, i))
+            out.append((i, page + 20 * i - base, bytes(buf[eo:eo + 20])))
+            if len(out) == n:
+                return out
+    raise ValueError('page 0x%x has fewer than %d spare entries' % (page, n))
+
+
+def _halves_rects(stock, strips):
+    """Two halves' quads about the sprite's centre, for strips (width,
+    height) each with HINT_MARGIN of margin, as tall and as low as the
+    stock's."""
+    (wa, h), (wb, _h) = strips
+    width = wa + wb - 4 * HINT_MARGIN
+    y0, y1 = stock[0][1], stock[0][3]
+    left = -(width // 2)                # whole pixels, as the stock quads are: at half a pixel the filter blurs the lettering
+    return (_f32(left - HINT_MARGIN, y0, left - HINT_MARGIN + wa, y1), _f32(left + width + HINT_MARGIN - wb, y0, left + width + HINT_MARGIN, y1))
+
+
+def _bar(buf, texture, boxes, stock_rects, strips, sheet, taken):
+    """A bar line's switch: for every sprite drawing the two stock boxes
+    as two quads, the quads' entry indices and rectangles switched to
+    two spare entries of the page, which the fills make the strips'
+    boxes on the appended sheet. Returns (fields, fills)."""
+    fields, fills = [], []
+    left = _sprite_quads(buf, texture, boxes[0])
+    right = {(page, quad): (uv, rect) for page, quad, uv, rect in _sprite_quads(buf, texture, boxes[1])}
+    if not left:
+        raise ValueError('no sprite draws the bar at %s' % (boxes[0],))
+    whole = lambda rect: tuple(round(v) for v in rect)
+    for page, quad, uv, rect in left:
+        mate = next((quad + d for d in (-52, 52) if (page, quad + d) in right), None)       # the other half is the quad beside it
+        if mate is None or whole(rect) != whole(stock_rects[0]) or whole(right[page, mate][1]) != whole(stock_rects[1]):
+            raise ValueError('the bar\'s quads at 0x%x are not the pair expected' % quad)
+        halves = ((quad, uv, rect), (mate,) + right[page, mate])
+        rects = _halves_rects((rect, right[page, mate][1]), [(w, h) for _x, _y, w, h in strips])
+        for (q, u, r), (index, entry, was), (x, y, w, h), new in zip(halves, _spares(buf, page, 2, taken), strips, rects):
+            fields.append((q, '<i4f', (u,) + tuple(r), (index,) + new))
+            fills.append((entry, was, struct.pack('<i4f', sheet, *_uv_box(x, y, w, h))))
+    return fields, fills
+
+
+def _strips(art, file, sheet, tops):
+    """The art's strips on a file's sheet at the given rows: (x, y, w, h) each."""
+    out = []
+    for top in tops:
+        blit = next((b for b in art if b[0] == file and b[1] == sheet and b[3] == top), None)
+        if blit is None:
+            raise ValueError('no art for %s sheet %d at row %d' % (file, sheet, top))
+        out.append(blit[2:6])
+    return out
+
+
+def prompt_switches(buf, build, key, variant):
+    """What the stub switches for a key and what the patcher fills in for
+    good, from the DLL's own sprites: (fields, fills). A field is (RVA,
+    struct format, the keyboard's values, the pad's), a run of dwords;
+    the keyboard's are the stock file's unless a fill has changed them.
+    A fill is (RVA, the stock bytes, the new ones)."""
+    art = prompt_art(key, variant)
+    taken = set()
+    if key == 'padprompts':
+        fields = [(label + 20 * i + 4, '<4f', (PADPROMPTS_U[0], keys[0], PADPROMPTS_U[1], keys[1]), (PADPROMPTS_U[0], pad[0], PADPROMPTS_U[1], pad[1]))
+                  for label in PADPROMPTS_LABELS for i, (keys, pad) in enumerate(zip(PADPROMPTS_KEYS, PADPROMPTS_PAD))]
+        (_f, _s, _x, y, _w, h, _t), = [b for b in art if b[0] == 'Record.txr' and b[1] == 9]
+        quads = _sprite_quads(buf, 9, REPLAY_BOX)
+        if len(quads) != 6:
+            raise ValueError('%d sprites draw the replay prompt, not 6' % len(quads))
+        base = _image_base(buf)
+        down = (y - REPLAY_BOX[1] + 0.2) / 256.0            # the pad's box is the stock's, this far down the sheet
+        for page, _quad, uv, _rect in quads:
+            entry = page + 20 * uv - base
+            for at in (8, 16):
+                v = struct.unpack_from('<f', buf, _rva_to_off(buf, entry + at))[0]
+                fields.append((entry + at, '<f', (v,), _f32(v + down)))
+        tops = (2, 22) if variant == 'en' else (42, 62)
+        bar, fills = _bar(buf, 14, RECORD_BAR_BOXES, BAR_STOCK_RECTS_RECORD, _strips(art, 'Record.txr', 15, tops), 15, taken)
+        for i, (quad, fmt, stock, pad) in enumerate(bar):     # the keyboard's halves moved apart to meet, as the other screens' do
+            rect = _f32(*BAR_STOCK_RECTS[i % 2])
+            fills.append((quad + 4, struct.pack('<4f', *stock[1:]), struct.pack('<4f', *rect)))
+            bar[i] = (quad, fmt, stock[:1] + rect, pad)
+        return fields + bar, fills
+    if key == 'padgallery':
+        file = 'RG_10.txr'
+        fields, fills = [], []
+        for texture, boxes, tops in ((3, GALLERY_BACK_BOXES, (2, 20) if variant == 'en' else (38, 56)),
+                                     (8, GALLERY_POPUP_BOXES[0], (74, 92) if variant == 'en' else (110, 128)),
+                                     (8, GALLERY_POPUP_BOXES[1], (146, 164) if variant == 'en' else (182, 200))):
+            f, g = _bar(buf, texture, boxes, BAR_STOCK_RECTS, _strips(art, file, 9, tops), 9, taken)
+            fields += f
+            fills += g
+        base = _image_base(buf)
+        for box, at in zip(GALLERY_PLATES, GALLERY_PLATE_ART):          # the header, then MODE, CAR and DATE
+            x, y, w, h = next(b for b in art if b[0] == file and b[1] == GALLERY_PAD_SHEET and (b[2], b[3]) == at)[2:6]
+            for page, _quad, uv, _rect in _sprite_quads(buf, GALLERY_PLATE_SHEET, box, 128):
+                entry = page + 20 * uv - base          # each plate quad's own entry: its sheet and box switched in place
+                stock = struct.unpack_from('<4f', buf, _rva_to_off(buf, entry + 4))
+                fields.append((entry, 'handle', (GALLERY_PLATE_SHEET,), (GALLERY_PAD_SHEET,)))
+                fields.append((entry + 4, '<4f', stock, _uv_box(x, y, w, h)))
+        return fields, fills
+    if key == 'padoptions':
+        tops = (2, 22) if variant == 'en' else (122, 142)
+        fields, fills = _bar(buf, 4, OPTIONS_BAR_BOXES, BAR_STOCK_RECTS, _strips(art, 'OPTIONS.TXR', OPTIONS_STRIPS, tops), OPTIONS_STRIPS, taken)
+        for line in range(len(DEVICES_PAD_TOPS)):
+            strips = devices_bar_strips(line, pad=True, variant=variant)
+            stock = devices_bar_rects(line, variant)
+            found = [buf.find(struct.pack('<4f', *r)) for r in stock]
+            if any(f < 0 for f in found):
+                raise ValueError('Options.dll: the Device Settings page\'s bar quads not found; the devices patch goes first')
+            new = _halves_rects(stock, [(w, h) for _x, _y, w, h in strips])
+            for off, r, n in zip(found, stock, new):
+                uv = struct.unpack_from('<i', buf, off - 4)[0]
+                fields.append((_off_to_rva(buf, off - 4), '<i4f', (uv,) + tuple(r), (uv + 1,) + tuple(n)))
+        return fields, fills
+    if key == 'padattract':
+        (_f, _s, x, y, width, _h, _t), = art           # one quad, the lettering's middle where the stock's is
+        left = float(int(PADATTRACT_CENTRE - width / 2.0 + 0.5))
+        height = PADATTRACT_SPRITE[1][1]
+        box = _f32(*[v / 256.0 for v in (x + UV_INSET, y + PADATTRACT_BOX[0], x + width + UV_INSET, y + PADATTRACT_BOX[1])])
+        return ([(PADATTRACT_SPRITE[0] + 0xc, '<2f', PADATTRACT_SPRITE[1], (float(width), height)),
+                 (PADATTRACT_QUAD[0], '<i', (PADATTRACT_QUAD[1],), (PADATTRACT_SPARE[1],)),
+                 (PADATTRACT_QUAD[0] + 4, '<4f', PADATTRACT_QUAD[2], (left, 0.0, left + width, height))],
+                [(PADATTRACT_SPARE[0], struct.pack('<i4f', -1, 0, 0, 0, 0), struct.pack('<i4f', ATTRACT_ON, *box)),
+                 (PADATTRACT_RELEASE[0], PADATTRACT_RELEASE[1], b'\x90' * len(PADATTRACT_RELEASE[1]))])     # sheet 3 stays loaded for every telop type
+    (_f, _s, lx, ly, lw, height, _t), (_f2, _s2, rx, ry, rw, _h, _t2) = art      # padtitle: the art's two halves, side by side about the centre
+    top = PADTITLE_ROW - PADTITLE_SPRITE[1][1] / 2
+    half = (lw + rw) / 2.0
+    return ([(PADTITLE_SPRITE[0] + 0xc, '<2f', PADTITLE_SPRITE[1], (float(lw + rw), float(height))),
+             (PADTITLE_QUADS[0][0] + 4, '<4f', PADTITLE_QUADS[0][1], (-half, top, lw - half, top + height)),
+             (PADTITLE_QUADS[1][0] + 4, '<4f', PADTITLE_QUADS[1][1], (lw - half, top, half, top + height)),
+             (PADTITLE_UVS[0][0] + 4, '<4f', PADTITLE_UVS[0][1], _uv_box(lx, ly, lw, height)),
+             (PADTITLE_UVS[1][0] + 4, '<4f', PADTITLE_UVS[1][1], _uv_box(rx, ry, rw, height))], [])
+
+
+def _apply_prompts(buf, build, key, variant=None):
+    """padprompts.asm in a screen DLL, its table after the code: the Exec
+    export is pointed at the blob, which writes each of the key's fields
+    as the stock's value or the pad's every frame and goes on to the
+    export's own routine. The exe's poll slot is the build's. The art's
+    language is the one patch() read off the key's sheet files, English
+    when none has been read."""
+    name, export, routine, _sheets = PROMPTS[key]
+    if routine is None:
+        routine = BUILDS[build]['options']['EXEC']
+    variant = variant or PROMPT_VARIANT.get(key, 'en')
+    slot = _export_slot(buf, export)
+    if struct.unpack_from('<I', buf, slot)[0] != routine:
+        raise ValueError('%s: %s is not at 0x%x' % (name, export.decode(), routine))
+    fields, fills = prompt_switches(buf, build, key, variant)
+    out = bytearray(buf)
+    for rva, old, new in fills:
+        off = _rva_to_off(buf, rva)
+        if buf[off:off + len(old)] != old:
+            raise ValueError('%s: unexpected bytes at 0x%x' % (name, off))
+        out[off:off + len(new)] = new
+    rows = b''
+    for rva, fmt, stock, pad in fields:
+        off = _rva_to_off(buf, rva)
+        if fmt == 'handle':                 # an entry's sheet number: the stub copies the handle init wrote for the sheet
+            if struct.unpack_from('<i', buf, off)[0] != stock[0]:
+                raise ValueError('%s: entry at 0x%x is not on sheet %d' % (name, off, stock[0]))
+            rows += struct.pack('<3I', rva | PROMPT_INDIRECT, GALLERY_HANDLES + 4 * stock[0], GALLERY_HANDLES + 4 * pad[0])
+            continue
+        was, now = struct.pack(fmt, *stock), struct.pack(fmt, *pad)
+        if out[off:off + len(was)] != was:              # after the fills, which may have corrected a value
+            raise ValueError('%s: unexpected values at 0x%x' % (name, off))
+        for i in range(0, len(was), 4):
+            if was[i:i + 4] != now[i:i + 4]:
+                rows += struct.pack('<I', rva + i) + was[i:i + 4] + now[i:i + 4]
+    blob = PADPROMPTS_BLOB.replace(struct.pack('<I', PADPROMPTS_MAGICS['PADPOLL']), struct.pack('<I', BUILDS[build]['addresses']['PADPOLL']))
+    blob = blob.replace(struct.pack('<I', PADPROMPTS_MAGICS['EXEC']), struct.pack('<I', routine))
+    out, rva = _self_section(out, blob + rows + bytes(4))
+    struct.pack_into('<I', out, slot, rva)
+    return out
+
+
+for _key in PROMPTS:                    # apply_padprompts, apply_padtitle, ...: the patch table's names
+    globals()['apply_' + _key] = lambda buf, build, key=_key: _apply_prompts(buf, build, key)
+
+
+def txr_sheets(data):
+    """A .TXR's sheets: (format, width, file offset, bytes) each."""
+    if data[:4] != b'RTEX':
+        raise ValueError('not a TXR')
+    out, off = [], 0x1000
+    for i in range(struct.unpack_from('<I', data, 4)[0]):
+        fmt, width, nbytes, _ = struct.unpack_from('<4I', data, 16 + 16 * i)
+        out.append((fmt, width, off, nbytes))
+        off += nbytes
+    return out
+
+
+def prompt_txr(data, key, name):
+    """A key's sheet file with its art written on. Every stock sheet the
+    key touches must be the stock one, by its MD5, which also tells the
+    file's language; the art's own sheets are appended, 256x256 4444,
+    clear white like the stock gutters. A file with a sheet in a release's
+    language records the language in PROMPT_VARIANT, and a file without
+    one takes the key's. Returns the new file."""
+    spec = PROMPTS[key][3][name]
+    try:
+        sheets = txr_sheets(data)
+    except (ValueError, struct.error):
+        raise ValueError('%s is not the file the patcher knows' % name)
+    variant = ''
+    for index, known in spec.items():
+        if index >= len(sheets):
+            raise ValueError('%s has no sheet %d' % (name, index))
+        _fmt, _width, start, nbytes = sheets[index]
+        digest = hashlib.md5(data[start:start + nbytes]).hexdigest()
+        if isinstance(known, dict):
+            if digest not in known:
+                raise ValueError('%s: sheet %d is not one the patcher knows' % (name, index))
+            if variant and known[digest] != variant:
+                raise ValueError('%s: sheets of two languages' % name)
+            variant = known[digest]
+        elif digest != known:
+            raise ValueError('%s: sheet %d is not the stock one' % (name, index))
+    if variant:
+        if PROMPT_VARIANT.get(key, variant) != variant:
+            raise ValueError('%s: %s is not in the language of the key\'s other files' % (key, name))
+        PROMPT_VARIANT[key] = variant
+    out = bytearray(data)
+    for _file, index, x, y, w, h, texels in [b for b in prompt_art(key, variant or PROMPT_VARIANT.get(key, '')) if b[0] == name]:
+        sheets = txr_sheets(out)
+        if index == len(sheets):
+            struct.pack_into('<I', out, 4, index + 1)
+            struct.pack_into('<4I', out, 16 + 16 * index, 8, 256, 256 * 256 * 2, 0)
+            out += struct.pack('<H', 0x0fff) * (256 * 256)
+            sheets = txr_sheets(out)
+        if index > len(sheets):
+            raise ValueError('%s: the art is for sheet %d of %d' % (name, index, len(sheets)))
+        _fmt, width, start, nbytes = sheets[index]
+        if len(texels) != w * h * 2 or x + w > width or (y + h) * width * 2 > nbytes:
+            raise ValueError('%s: the art does not fit sheet %d' % (name, index))
+        for row in range(h):
+            at = start + ((y + row) * width + x) * 2
+            out[at:at + w * 2] = texels[row * w * 2:(row + 1) * w * 2]
+    return bytes(out)
+
+
+def installed(dest, name):
+    """The path of a game file by the installer's own casing of its last
+    part, where one is there, so a case-sensitive Wine finds one file,
+    not two."""
+    parts = name.split('\\')
+    folder = os.path.join(dest, *parts[:-1])
+    if os.path.isdir(folder):
+        for found in os.listdir(folder):
+            if found.lower() == parts[-1].lower():
+                return os.path.join(folder, found)
+    return os.path.join(folder, parts[-1])
+
+
+# The sheet files the patches write: key -> (file, what makes the new
+# contents of the stock ones). Each has a .bak beside it once written.
+TXR_WRITERS = {'devices': ((TXR, patch_txr),)}
+TXR_WRITERS.update((key, tuple((PROMPT_DIR + '\\' + name, lambda data, key=key, name=name: prompt_txr(data, key, name)) for name in PROMPTS[key][3]))
+                   for key in PROMPTS)
+TXR_FILES = tuple(dict.fromkeys(name for writers in TXR_WRITERS.values() for name, _writer in writers))
 
 
 def apply_fullwin(buf, _build=None):
     """fullwin.asm in MGameD3D: the windowed present jumps to its first
     thunk, the window sizing calls its second. The section is writable:
-    the present keeps its answer on the monitor's refresh rate in it."""
+    the present keeps the counter after its blit, the resolved
+    QueryPerformanceCounter and its GDI entry points in it, the sizing
+    whether it has placed the window."""
     if _drop_relocations(buf, FULLWIN_RELOCS) != len(FULLWIN_RELOCS):
         raise ValueError('relocation entries for the present not all found')
     out, rva = _self_section(buf, FULLWIN_BLOB)
@@ -6589,6 +9091,17 @@ def apply_fullwin(buf, _build=None):
 def md5(path):
     with open(path, 'rb') as fh:
         return hashlib.md5(fh.read()).hexdigest()
+
+
+def write_whole(path, data):
+    """data to path through a temporary beside it, so a crash leaves the
+    old file or the new one, never a truncated one."""
+    tmp = path + '.tmp'
+    with open(tmp, 'wb') as fh:
+        fh.write(data)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
 
 
 def check_build(dest):
@@ -6632,6 +9145,111 @@ def carry_display_block(dest, log):
         log('patch: the display block of SR2.CFG carried to SR2.DSP')
 
 
+SAVE_FILE = 'SR2_SAVE.DAT'              # the in-game options and the records; the install ships one, the same file on every disc
+SAVE_STOCK_MD5 = '541d80a175b0a2a332dc1bf121e4c693'
+SAVE_QUIET_MD5 = '839bb7665c65654ac7a11baeaa51331b'     # the shipped file with its sliders at 6
+SAVE_SLIDERS, SAVE_SUM = 0x7270, 0x730c  # the three volume sliders, dwords; the checksum dword, the sum of every byte before it
+
+
+def quiet_save(dest, level, log):
+    """The shipped SR2_SAVE.DAT's three volume sliders at level: 6 with
+    voldefault, as the defaults block then has them, 9 without. The game
+    loads the file's options over the block at every start, and the
+    shipped file holds 9s, so a first start sat at the top while DEFAULT
+    gave 6. Touched only while the file is the shipped one, or the
+    shipped one quietened, byte for byte: a save anyone has played on is
+    left alone. The checksum is redone. Returns whether it wrote."""
+    path = os.path.join(dest, SAVE_FILE)
+    if not os.path.isfile(path):
+        return False
+    with open(path, 'rb') as fh:
+        data = fh.read()
+    if hashlib.md5(data).hexdigest() != (SAVE_STOCK_MD5 if level == 6 else SAVE_QUIET_MD5):
+        return False
+    out = bytearray(data)
+    struct.pack_into('<3I', out, SAVE_SLIDERS, level, level, level)
+    struct.pack_into('<I', out, SAVE_SUM, sum(out[:SAVE_SUM]) & 0xffffffff)
+    write_whole(path, bytes(out))
+    log('%s: %s: the shipped save\'s volume sliders at %d' % ('patch' if level == 6 else 'restore', SAVE_FILE, level))
+    return True
+
+
+def write_settings(dest, keys, log):
+    """SR2.CFG with the sections the applied patches read, so each is there
+    to find before the game first runs: the controls for the gamepad
+    patch, [Display] for the resolution row, [Network] for netplay.
+    Written whole when there is none, or only the stock display block
+    (in SR2.DSP since carry_display_block); a section it lacks appended
+    to one with text, and the rest of the text left as it is."""
+    cfg = os.path.join(dest, 'SR2.CFG')
+    text = b''
+    if os.path.isfile(cfg):
+        with open(cfg, 'rb') as fh:
+            text = fh.read()
+    dropped = len(text) >= 100 and text.startswith(b'display')
+    if dropped:
+        if not os.path.isfile(os.path.join(dest, 'SR2.DSP')):
+            return                                  # the game still reads the block from here: left as it is
+        text = text[100:].lstrip(b'\r\n')
+    controls, display, network = 'xinput' in keys, 'resolution' in keys, 'netplay' in keys
+    whole = settings_text(controls=controls, display='640X480' if display else None,
+                          network=('0', '0') if network else None)
+    wanted = (CONTROL_SECTIONS if controls else ()) + (('Display',) if display else ()) + (('Network',) if network else ())
+    if not text.strip():
+        if wanted or dropped:
+            write_whole(cfg, whole)
+            log('patch: SR2.CFG written: %s' % (', '.join('[%s]' % n for n in wanted) or 'the display block dropped'))
+        return
+    blocks = whole.decode('ascii').split('\n\n')
+    missing = [name for name in wanted if ('[%s]' % name).encode('ascii') not in text]
+    if not missing and not dropped:
+        return
+    for name in missing:
+        block = next(b for b in blocks if b.startswith('[%s]' % name))
+        text = text.rstrip(b'\r\n') + b'\n\n' + block.encode('ascii')
+    if not text.startswith(b';'):
+        text = b'; SEGA RALLY 2 settings\n\n' + text.lstrip(b'\r\n')
+    write_whole(cfg, text)
+    log('patch: SR2.CFG completed: %s' % ', '.join(['[%s]' % n for n in missing] + (['the display block dropped'] if dropped else [])))
+
+
+def network_log_state(dest):
+    """Whether Log = 1 under [Network] in SR2.CFG; None without a file."""
+    cfg = os.path.join(dest, 'SR2.CFG')
+    if not os.path.isfile(cfg):
+        return None
+    with open(cfg, 'rb') as fh:
+        m = re.search(rb'(?m)^Log\s*=\s*(\S+)', fh.read())
+    return bool(m and m.group(1) == b'1')
+
+
+def network_log(dest, on, log):
+    """Log under [Network] in SR2.CFG 1 or 0: the netlog diagnostic, which
+    unlike the others sticks - netlog or the box ticked turns it on,
+    -netlog or the box unticked off, and a patch that names neither
+    leaves it. The section is written when the file lacks it; a file that
+    is not there is left that way when the log is off."""
+    cfg = os.path.join(dest, 'SR2.CFG')
+    text = b''
+    if os.path.isfile(cfg):
+        with open(cfg, 'rb') as fh:
+            text = fh.read()
+    value = b'1' if on else b'0'
+    if b'[Network]' not in text:
+        if not on:
+            return
+        block = settings_text(network=('0', '1'), controls=False)
+        new = text.rstrip(b'\r\n') + b'\n\n' + block.split(b'\n\n', 1)[1] if text.strip() else block
+    else:
+        new, n = re.subn(rb'(?m)^(Log\s*=\s*)\S*', rb'\g<1>' + value, text, count=1)
+        if not n:
+            new = re.sub(rb'(?m)^\[Network\][^\n]*\n', lambda m: m.group(0) + b'Log = ' + value + b'\n', text, count=1)
+    if new == text:
+        return
+    write_whole(cfg, new.lstrip(b'\r\n'))
+    log('patch: Log = %s in SR2.CFG, the network log %s' % (value.decode('ascii'), 'on' if on else 'off'))
+
+
 # --- dgVoodoo 2 -----------------------------------------------------------
 # Not ours and not bundled: fetched from its GitHub release at the user's
 # request rather than shipped. Windows' own Direct3D refuses a target over
@@ -6650,10 +9268,13 @@ DGVOODOO_FILES = (('ms/x86/ddraw.dll', 'MUSASHI\\ddraw.dll'),   # the archive me
 DGVOODOO_STAMP = 'MUSASHI\\dgVoodoo.version'                     # the release installed, and the mark of ours
 # The archive's own dgVoodoo.conf, its [DirectX] section changed once,
 # when the file is first written: the textures come up white or as noise
-# without the fast access, the watermark off, ALT+ENTER left to the game.
+# without the fast access, the watermark off, ALT+ENTER left to the game,
+# and each frame presented on the display's refresh (docs/NOTES.md, Frame
+# timing).
 DGVOODOO_SETTINGS = (('FastVideoMemoryAccess', 'true'),
                      ('dgVoodooWatermark', 'false'),
-                     ('DisableAltEnterToToggleScreenMode', 'false'))
+                     ('DisableAltEnterToToggleScreenMode', 'false'),
+                     ('ForceVerticalSync', 'true'))
 ADDONS = ('dgvoodoo',)
 
 
@@ -6691,6 +9312,81 @@ def hide_console():
         pass                            # not worth failing to start over
 
 
+def terminal_output():
+    """stdout to the terminal the Windows exe was started from.
+
+    The exe and pythonw are windowed programs, so started from a terminal
+    with no redirect they have no console and no stdout. The terminal's
+    shell is an ancestor - pythonw's parent is the launcher - so its
+    console is attached and opened as stdout. A redirect or a pipe is
+    left as it is. stderr stays the launcher's, for its message box."""
+    if sys.platform != 'win32' or sys.stdout is not None:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    class Entry(ctypes.Structure):      # PROCESSENTRY32W
+        _fields_ = [('dwSize', wintypes.DWORD), ('cntUsage', wintypes.DWORD), ('th32ProcessID', wintypes.DWORD),
+                    ('th32DefaultHeapID', ctypes.c_size_t), ('th32ModuleID', wintypes.DWORD),
+                    ('cntThreads', wintypes.DWORD), ('th32ParentProcessID', wintypes.DWORD),
+                    ('pcPriClassBase', wintypes.LONG), ('dwFlags', wintypes.DWORD), ('szExeFile', wintypes.WCHAR * 260)]
+    try:
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot = kernel32.CreateToolhelp32Snapshot(2, 0)      # TH32CS_SNAPPROCESS
+        parents, entry = {}, Entry()
+        entry.dwSize = ctypes.sizeof(Entry)
+        more = kernel32.Process32FirstW(wintypes.HANDLE(snapshot), ctypes.byref(entry))
+        while more:
+            parents[entry.th32ProcessID] = entry.th32ParentProcessID
+            more = kernel32.Process32NextW(wintypes.HANDLE(snapshot), ctypes.byref(entry))
+        kernel32.CloseHandle(wintypes.HANDLE(snapshot))
+        pid = os.getpid()
+        for _ in range(4):              # the launcher, the shell, and a wrapper or two
+            pid = parents.get(pid)
+            if not pid:
+                return
+            if kernel32.AttachConsole(pid):
+                break
+        else:
+            return
+        sys.stdout = open('CONOUT$', 'w')
+        print()                         # the shell's prompt is already on this line
+        import atexit
+        atexit.register(terminal_prompt)
+    except (AttributeError, OSError, ValueError):
+        pass                            # no output, as before
+
+
+def terminal_prompt():
+    """An Enter typed into the attached console at exit. The shell showed
+    its prompt before the output and is waiting at it, unseen; the empty
+    line makes it show the prompt again, under the output."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Key(ctypes.Structure):        # KEY_EVENT_RECORD
+        _fields_ = [('bKeyDown', wintypes.BOOL), ('wRepeatCount', wintypes.WORD), ('wVirtualKeyCode', wintypes.WORD),
+                    ('wVirtualScanCode', wintypes.WORD), ('UnicodeChar', wintypes.WCHAR),
+                    ('dwControlKeyState', wintypes.DWORD)]
+
+    class Record(ctypes.Structure):     # INPUT_RECORD, its union as the key event
+        _fields_ = [('EventType', wintypes.WORD), ('Event', Key)]
+    try:
+        sys.stdout.flush()
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateFileW.restype = wintypes.HANDLE
+        conin = kernel32.CreateFileW('CONIN$', 0xc0000000, 3, None, 3, 0, None)    # read and write, shared, OPEN_EXISTING
+        if conin in (None, wintypes.HANDLE(-1).value):
+            return
+        records = (Record * 2)(Record(1, Key(1, 1, 0x0d, 0x1c, '\r', 0)),          # KEY_EVENT: VK_RETURN down, then up
+                               Record(1, Key(0, 1, 0x0d, 0x1c, '\r', 0)))
+        kernel32.WriteConsoleInputW(wintypes.HANDLE(conin), records, 2, ctypes.byref(wintypes.DWORD()))
+        kernel32.CloseHandle(wintypes.HANDLE(conin))
+    except (AttributeError, OSError, ValueError):
+        pass
+
+
 def default_keys():
     return PATCH_KEYS + (ADDONS if windows_native() else ())
 
@@ -6707,7 +9403,7 @@ def _urlopen(req, timeout=30):
         try:
             import certifi
         except ImportError:
-            raise exc
+            raise exc from None
         context = ssl.create_default_context(cafile=certifi.where())
     return urllib.request.urlopen(req, timeout=timeout, context=context)
 
@@ -6751,7 +9447,12 @@ def configure_dgvoodoo(text):
         end = n
         if key in want:
             lines[n] = '%-36s= %s' % (key, want.pop(key))
-    if want and end is not None:
+    if want and end is None:                # no [DirectX] section: one at the end
+        if lines and lines[-1].strip():
+            lines.append('')
+        lines.append('[DirectX]')
+        end = len(lines) - 1
+    if want:
         lines[end + 1:end + 1] = ['%-36s= %s' % kv for kv in DGVOODOO_SETTINGS if kv[0] in want]
     return '\n'.join(lines)
 
@@ -6764,7 +9465,7 @@ def dgvoodoo_status(dest):
     for _member, name in DGVOODOO_FILES:
         if not os.path.isfile(os.path.join(dest, *name.split('\\'))):
             return None
-    with open(stamp) as fh:
+    with open(stamp, encoding='ascii', errors='replace') as fh:
         return fh.read().strip()
 
 
@@ -6807,6 +9508,8 @@ def install_dgvoodoo(dest, log=print, progress=None, fetched=UNFETCHED):
             out = os.path.join(dest, *name.split('\\'))
             if name.lower().endswith('.conf') and os.path.isfile(out):
                 continue                        # someone's settings
+            if zf.getinfo(names[found[0]]).file_size > DGVOODOO_MAX:
+                raise ValueError('dgvoodoo: %s unpacks to over %d MB' % (name, DGVOODOO_MAX >> 20))
             data = zf.read(names[found[0]])
             if name.lower().endswith('.conf'):
                 text = data.decode('utf-8', 'replace').replace('\r\n', '\n')
@@ -6814,7 +9517,7 @@ def install_dgvoodoo(dest, log=print, progress=None, fetched=UNFETCHED):
             with open(out, 'wb') as fh:
                 fh.write(data)
             log('dgvoodoo: %s written' % name)
-    with open(os.path.join(dest, *DGVOODOO_STAMP.split('\\')), 'w') as fh:
+    with open(os.path.join(dest, *DGVOODOO_STAMP.split('\\')), 'w', encoding='ascii') as fh:
         fh.write(tag + '\n')
     return tag
 
@@ -6849,7 +9552,8 @@ def patch(dest, log=print, keys=None):
         keys = default_keys()
     build = check_build(dest)
     table = patches(build)
-    log('patch: %s build' % build)
+    keys = [k for k in table if k in keys] + [k for k in keys if k not in table]   # the table's order, whatever the caller's
+    log('patch: %s build' % build_name(build))
     capped = windows_native() and 'dgvoodoo' not in keys
     select_resolutions('capped' if capped else 'full')
     if capped:
@@ -6857,24 +9561,35 @@ def patch(dest, log=print, keys=None):
     for key, needs in NEEDS:
         if key in keys and key in table and needs not in keys:
             raise ValueError('%s needs %s' % (key, needs))
+    for key in FIXED:
+        if key in table and key not in keys:
+            raise ValueError('%s is in every set' % key)
     if 'netplay' in keys and 'netplay' in table:
         netplay_dll()           # say so now, not half way through
     dgvoodoo = fetch_dgvoodoo(dest, log) if 'dgvoodoo' in keys else None
-    txr = None
-    txr_path = os.path.join(dest, *TXR.split('\\'))
-    if 'devices' in keys:
-        source = txr_path + '.bak' if os.path.isfile(txr_path + '.bak') else txr_path
-        with open(source, 'rb') as fh:
-            txr = fh.read()
-        why = txr_check(txr)
-        if why:
-            raise ValueError('%s: %s' % (TXR, why))
-    elif os.path.isfile(txr_path + '.bak'):
-        os.replace(txr_path + '.bak', txr_path)
-        log('patch: %s back to stock' % TXR)
+    sheets = []                 # the sheet files to write: (path, name, keys, contents), made before anything is written
+    PROMPT_VARIANT.clear()
+    for name in TXR_FILES:
+        wanted = [(key, writer) for key in keys if key in table and key in TXR_WRITERS for wname, writer in TXR_WRITERS[key] if wname == name]
+        path = installed(dest, name)
+        if not wanted:
+            if os.path.isfile(path + '.bak'):
+                os.replace(path + '.bak', path)
+                log('patch: %s back to stock' % name)
+            continue
+        with open(path + '.bak' if os.path.isfile(path + '.bak') else path, 'rb') as fh:
+            data = fh.read()
+        for _key, writer in wanted:
+            data = writer(data)
+        sheets.append((path, name, [key for key, _writer in wanted], data))
     if 'noregistry' in keys and 'noregistry' in table:
         carry_display_block(dest, log)
+    quiet_save(dest, 6 if 'voldefault' in keys and 'voldefault' in table else 9, log)
+    write_settings(dest, keys, log)
+    if 'netlog' in keys or '-netlog' in keys:
+        network_log(dest, 'netlog' in keys, log)
     lobby_art(dest, 'lobby' in keys, log)
+    tabmenu_art(dest, 'tabmenu' in keys and 'tabmenu' in table, log)
     for name in PATCHED:
         size, digest = BUILDS[build]['files'][name]
         wanted = [table[key] for key in keys if key in table and table[key][0] == name]
@@ -6893,8 +9608,7 @@ def patch(dest, log=print, keys=None):
         with open(source, 'rb') as fh:
             buf = bytearray(fh.read())
         if source == path:
-            with open(bak, 'wb') as fh:
-                fh.write(buf)
+            write_whole(bak, buf)
             log('patch: backup written to %s.bak' % name)
         for off, old, new in sites:
             if buf[off:off + len(old)] != old:
@@ -6903,16 +9617,14 @@ def patch(dest, log=print, keys=None):
                 buf[off:off + len(new)] = new
         for transform in transforms:
             buf = transform(buf, build)
-        with open(path, 'wb') as fh:
-            fh.write(buf)
+        write_whole(path, bytes(buf))
         log('patch: %s written, %s' % (name, ', '.join(k for k in keys if k in table and table[k][0] == name)))
-    if txr is not None:
-        if not os.path.isfile(txr_path + '.bak'):
-            os.replace(txr_path, txr_path + '.bak')
-            log('patch: backup written to %s.bak' % TXR)
-        with open(txr_path, 'wb') as fh:
-            fh.write(patch_txr(txr))
-        log('patch: %s written, devices' % TXR)
+    for path, name, wanted, data in sheets:
+        if not os.path.isfile(path + '.bak'):
+            os.replace(path, path + '.bak')
+            log('patch: backup written to %s.bak' % name)
+        write_whole(path, data)
+        log('patch: %s written, %s' % (name, ', '.join(wanted)))
     write_manifests(dest)
     log('patch: manifests written')
     if 'dgvoodoo' in keys:
@@ -6924,12 +9636,16 @@ def patch(dest, log=print, keys=None):
 def restore(dest, log=print):
     """The backups back in place, and dgVoodoo 2 out, config and all."""
     found = False
-    for name in PATCHED + (TXR,) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES):
-        path = os.path.join(dest, *name.split('\\'))
+    popup = lobby_popup_path(dest)
+    for name in PATCHED + TXR_FILES + (MPDATA,) + tuple(LOBBY_DIR + '\\' + f for f in (LOBBY_BACKDROP,) + LOBBY_FILES) \
+            + tuple(LOBBY_BUTTON_DIR + '\\' + f for f in LOBBY_BUTTON_FILES) + (LOBBY_POPUP_DIR + '\\' + popup[1],):
+        path = installed(dest, name)
         if os.path.isfile(path + '.bak'):
             os.replace(path + '.bak', path)
             log('restore: original %s back in place' % name)
             found = True
+    tabmenu_art(dest, False, log)
+    found = quiet_save(dest, 9, log) or found
     if remove_dgvoodoo(dest, log, everything=True):
         log('restore: dgVoodoo 2 taken out')
         found = True
@@ -6944,7 +9660,6 @@ def restore(dest, log=print):
 # asks for them by number, so a different layout is a different disc.
 SR2_AUDIO = tuple(range(2, 15))
 MUSIC_SUBDIR = 'music'
-WAV_HEADER = 44
 
 
 class Cancelled(Exception):
@@ -7149,7 +9864,7 @@ def probe_play_disc(cue):
     """The audio tracks of the play disc and what they rip to."""
     spans = list(audio_spans(parse_cue(cue)))
     return {'tracks': tuple(t['no'] for t, _s, _e in spans),
-            'bytes': sum((end - start) * RAW + WAV_HEADER
+            'bytes': sum((end - start) * RAW + WAV_HDR
                          for _t, start, end in spans)}
 
 
@@ -7172,7 +9887,7 @@ def in_background(work, done):
     def body():
         try:
             result = work()
-        except Exception as exc:                # any failure, one path
+        except BaseException as exc:            # any failure, one path; a SystemExit too, or the window waits for ever
             done(exc, None)
         else:
             done(None, result)
@@ -7599,11 +10314,11 @@ INSTALL_TIP = ('Install disc\tDisc 1, as a .cue with its .bin beside it, an '
                'Play disc\tDisc 2, as a .cue with its .bin files. The music '
                'is on this one, and an .iso will not do - it drops the '
                'audio tracks.\n'
-               'Manual\tWhich of the six languages the manual, the readme '
-               'and the menus are in. The game itself is the same either '
-               'way.\n'
-               'Room\tThe game takes about 800 MB in the folder above, and '
-               'the soundtrack another 550 MB.')
+               'Language\tThe language of the menus, the messages and the '
+               'readme; Japanese also brings the Japanese car narration. The '
+               'game itself is the same either way.\n'
+               'Room\tThe game takes about 550 MB in the folder above, and '
+               'the soundtrack about as much again.')
 
 INSTALL_PICK = 'Pick the install disc to start.'
 INSTALL_NEEDS_DEST = 'Choose a game folder above to install it into.'
@@ -7611,6 +10326,7 @@ INSTALL_BUSY = 'Copying\u2026'
 INSTALL_CANCELLED = 'Cancelled. The folder holds a part-written copy.'
 INSTALL_OK = 'Installed %d files to %s.'
 INSTALL_NO_PATH = 'There is nothing at that path.'
+INSTALL_READING = 'Reading the disc\u2026'
 # What a good disc looks like, in one line: which build, and how much of
 # your disk it is about to take.
 INSTALL_FOUND = '%s release. %d files, %d MB.'
@@ -7626,15 +10342,16 @@ NO_GAME = 'No game folder selected'
 # the card below is what fills it.
 NO_GAME_YET = 'Nothing installed there yet. Install it below.'
 GAME_TO_CREATE = 'That folder does not exist yet. Install game creates it.'
-GAME_READY = 'READY - %s release. %d patches selected. Press Apply patches.'
+GAME_READING = 'Reading the folder\u2026'
+GAME_READY = 'READY - %s release, %d patches. Press Apply patches.'
 GAME_PATCHED = 'Already patched - %s release. Apply patches writes it again.'
 GAME_HELP = ('Only an untouched Pentium III install is accepted - the build '
              'the original installer chose on any modern CPU. A modified or '
              'mixed copy is refused; install afresh from the disc.')
 
-ESSENTIAL_HINT = ('Always applied. Each fixes something that is broken on a '
-                  'modern system, and none of them has a trade-off.')
-EXTRA_HINT = 'Optional. Untick what you do not want.'
+ESSENTIAL_HINT = ('All applied. Each fixes something that is broken on a '
+                  'modern system or adds what it lacks, and none has a '
+                  'trade-off.')
 
 ADDONS_HINT = ('An extra file beside the game rather than an edit to it. '
                'Applied with the patches: tick it and press Apply patches.')
@@ -7650,8 +10367,9 @@ DGVOODOO_WINE = ('Wine and Proton have wined3d, which has no such limit, so '
                  'this is off and not needed there.')
 DGVOODOO_CAPPED = ('Without it the resolution list stops at 2048 a side.')
 
-DIAGNOSTICS_HINT = ('Off unless asked for. Each writes a log beside the game '
-                    'for a bug report; none of them changes how it plays.')
+DIAGNOSTICS_HINT = ('Off unless asked for, and off again on a plain Apply '
+                    '(the network log stays as set). Each logs something for '
+                    'a bug report; the name in brackets is what --patch takes.')
 
 MUSIC_HINT = ('Rips the play disc to music\\ beside the game, where the '
               'Music from files patch reads it. About 550 MB.')
@@ -7664,11 +10382,11 @@ MUSIC_NO_AUDIO = ('This image has no audio tracks - the music is not in it. '
 MUSIC_ODD_AUDIO = ('This image has %d audio tracks; the play disc has %d. '
                    'Ripping it will not give the right music.')
 
-# %d is the number of patches written. The count is the one thing anybody
-# can check against what they ticked, and it is what a bug report needs.
+# %d is the number of patches written, the build's own: what a bug
+# report needs.
 DONE = 'Done - %d patches written. Restore original puts the game back.'
-FAILED = 'Nothing was written and the game is untouched - see the log below.'
-RESTORED = 'Restored. The game is as it was installed.'
+FAILED = 'Failed - see the log below. Every file written has its .bak beside it; Apply starts from those.'
+RESTORED = 'Restored. The original files are back in place.'
 BUSY = 'Working\u2026'
 
 ABOUT_NOTE = ('Every patched file is backed up as a .bak beside it, and '
@@ -7914,14 +10632,16 @@ def run_tk():
 
         def __init__(self, root):
             self.root = root
-            self.vars, self.checks = {}, {}
             self.diagnostics = {}
             self._bodies = []
             self._openers = {}
             self._worker = None
             self._busy = None               # 'install', 'music', 'patch'
             self._cancel = False
-            self._disc_after = self._game_after = None
+            self._disc_after = self._play_after = self._game_after = None
+            self._disc_probe = self._game_probe = None
+            self._probes = queue.Queue()
+            self._probing = False
             self._status_text, self._status_font = NO_GAME, None
             # Widgets whose text is written once and never touched again;
             # the ones left blank after a resize, see _nudge.
@@ -7955,12 +10675,10 @@ def run_tk():
             # the same frame five times and it stacks.
             self._section(left, '1  GAME FOLDER', self._game_body)
             self._section(left, '2  INSTALL', self._install_body)
-            self._section(right, '3  ESSENTIAL PATCHES',
+            self._section(right, '3  PATCHES',
                           lambda p: self._feature_body(p, ESSENTIAL,
                                                        ESSENTIAL_HINT))
-            self._section(right, '4  EXTRA PATCHES',
-                          lambda p: self._feature_body(p, EXTRA, EXTRA_HINT))
-            self._section(band, '5  ADD-ONS', self._addons_body)
+            self._section(band, '4  ADD-ONS', self._addons_body)
             self._section(band, 'DIAGNOSTICS', self._diagnostics_body,
                           expanded=False)
             # Side by side at the foot, on the same split as the columns
@@ -8461,7 +11179,7 @@ def run_tk():
             # column 1 the row overflowed and the combobox was squeezed.
             self.lang_row.columnconfigure(2, weight=1)
             self._static_label(ttk.Label(
-                self.lang_row, text='Manual', style='Card.TLabel',
+                self.lang_row, text='Language', style='Card.TLabel',
                 font=self.small, width=12, anchor='w')).grid(
                     row=0, column=0, sticky='w', padx=(0, 8))
             self.lang_var = tk.StringVar(value=LANGUAGES[0])
@@ -8500,7 +11218,7 @@ def run_tk():
             self.disc_var.trace_add('write', lambda *_a: self._later(
                 '_disc_after', lambda: self._check_disc(self.disc_var.get())))
             self.play_var.trace_add('write', lambda *_a: self._later(
-                '_disc_after', lambda: self._check_play(self.play_var.get())))
+                '_play_after', lambda: self._check_play(self.play_var.get())))
 
         def _later(self, slot, call, delay=400):
             """Run call once the typing has stopped."""
@@ -8508,6 +11226,31 @@ def run_tk():
             if pending:
                 self.root.after_cancel(pending)
             setattr(self, slot, self.root.after(delay, call))
+
+        def _probe(self, slot, work, show):
+            """work() off the window's thread - reading a disc or hashing
+            the game - and show(error, result) back on it, unless another
+            probe of the same slot has started since."""
+            token = object()
+            setattr(self, slot, token)
+            in_background(work, lambda error, result: self._probes.put(
+                (slot, token, show, error, result)))
+            if not self._probing:
+                self._probing = True
+                self.root.after(80, self._poll_probes)
+
+        def _poll_probes(self):
+            try:
+                while True:
+                    slot, token, show, error, result = self._probes.get_nowait()
+                    if getattr(self, slot) is token:
+                        setattr(self, slot, None)
+                        show(error, result)
+            except queue.Empty:
+                pass
+            self._probing = bool(self._disc_probe or self._game_probe)
+            if self._probing:
+                self.root.after(80, self._poll_probes)
 
         def _pick_disc(self):
             path = filedialog.askopenfilename(
@@ -8532,6 +11275,7 @@ def run_tk():
             below light up or do not."""
             self.disc_ok = False
             self._disc_bytes = 0
+            self._disc_probe = None
             self.lang_row.grid_forget()
             source = (source or '').strip()
             if not source:
@@ -8539,12 +11283,18 @@ def run_tk():
             elif not os.path.exists(source):
                 self._disc_note(INSTALL_NO_PATH, PALETTE['bad'])
             else:
-                try:
-                    info = probe_install_disc(source)
-                except (DiscError, OSError, ValueError, struct.error) as exc:
-                    self._disc_note(str(exc), PALETTE['bad'])
-                else:
-                    self._describe_disc(info)
+                self._disc_note(INSTALL_READING, self.dim)
+                self._probe('_disc_probe', lambda: probe_install_disc(source),
+                            self._disc_read)
+            self._sync_buttons()
+
+        def _disc_read(self, error, info):
+            if error is None:
+                self._describe_disc(info)
+            else:
+                self._disc_note(str(error), PALETTE['bad'])
+                if not isinstance(error, (DiscError, OSError, ValueError, struct.error)):
+                    self._log('disc: %s: %s' % (type(error).__name__, error))
             self._sync_buttons()
 
         def _describe_disc(self, info):
@@ -8557,11 +11307,11 @@ def run_tk():
                 self.lang_row.grid(row=2, column=0, columnspan=3,
                                    sticky='ew', pady=(0, 6))
             if info['build']:
-                self._disc_note(INSTALL_FOUND % (info['build'], info['count'],
+                self._disc_note(INSTALL_FOUND % (build_name(info['build']), info['count'],
                                                  info['bytes'] >> 20),
                                 PALETTE['ok'])
                 self._log('disc: %s release, %d files, %d MB'
-                          % (info['build'], info['count'],
+                          % (build_name(info['build']), info['count'],
                              info['bytes'] >> 20))
             else:
                 # Copying is the same work whichever build is on the disc,
@@ -8659,7 +11409,7 @@ def run_tk():
             game = self.game_var.get().strip()
             return bool(game) and any(
                 os.path.isfile(os.path.join(game, *name.split('\\')) + '.bak')
-                for name in PATCHED)
+                for name in PATCHED + (TXR, MPDATA, LOBBY_DIR + '\\' + LOBBY_BACKDROP))
 
         # -- 1 GAME FOLDER
 
@@ -8690,47 +11440,57 @@ def run_tk():
             if path:
                 self.game_var.set(path)
 
-        def _check_game(self, path):
+        def _check_game(self, path, then=None):
             """Name the build, or say what the folder is instead.
 
             A folder with no game in it is not a refusal: it is where an
             install is about to go, and INSTALL below is what fills it.
             Only a folder that holds something the patcher cannot work on
-            is refused, and then the reason is the thing worth saying."""
+            is refused, and then the reason is the thing worth saying.
+            Naming the build hashes the game, so that part runs off the
+            window's thread; then() runs once it is known."""
             self.game_ok = False
             self.build = None
+            self._game_probe = None
             self.game_help.config(text='')
             if not path:
                 self._set_status(NO_GAME, None)
-                self._sync_buttons()
-                return
-            if not os.path.isdir(path):
+            elif not os.path.isdir(path):
                 self._set_status(GAME_TO_CREATE, None)
-                self._sync_buttons()
-                return
-            if not os.path.isfile(os.path.join(path, EXE)):
+            elif not os.path.isfile(os.path.join(path, EXE)):
                 self._set_status(NO_GAME_YET, None)
-                self._sync_buttons()
-                return
-            try:
-                self.build, patched = installed_build(path)
-            except (OSError, ValueError) as exc:
-                self._set_status('CANNOT PATCH - %s' % exc, False)
-                self.game_help.config(text=GAME_HELP, foreground=self.dim)
-                self._log('game: %s' % exc)
-                self._sync_buttons()
-                return
-            self.game_ok = True
-            if patched:
-                self._set_status(GAME_PATCHED % self.build, 'warn')
             else:
-                self._set_status(GAME_READY % (self.build, self._selected()),
-                                 True)
-            self._log('game: %s release in %s%s'
-                      % (self.build, path, ', patched' if patched else ''))
+                self._set_status(GAME_READING, None)
+                self._probe('_game_probe', lambda: installed_build(path),
+                            lambda error, found: self._game_read(path, error, found, then))
+                self._sync_buttons()
+                return
             self._sync_buttons()
+            if then:
+                then()
 
-        # -- 3, 4 PATCHES
+        def _game_read(self, path, error, found, then):
+            if error is not None:
+                self._set_status('CANNOT PATCH - %s' % error, False)
+                self.game_help.config(text=GAME_HELP, foreground=self.dim)
+                self._log('game: %s' % (error if isinstance(error, (OSError, ValueError))
+                                        else '%s: %s' % (type(error).__name__, error)))
+            else:
+                self.build, patched = found
+                self.game_ok = True
+                self.diagnostics['netlog'].set(bool(network_log_state(path)))
+                if patched:
+                    self._set_status(GAME_PATCHED % build_name(self.build), 'warn')
+                else:
+                    self._set_status(GAME_READY % (build_name(self.build), self._selected()),
+                                     True)
+                self._log('game: %s release in %s%s'
+                          % (build_name(self.build), path, ', patched' if patched else ''))
+            self._sync_buttons()
+            if then:
+                then()
+
+        # -- 3 PATCHES
 
         def _feature_body(self, parent, groups, hint):
             if hint:
@@ -8739,33 +11499,24 @@ def run_tk():
                 label, tip, _keys = BY_GROUP[group]
                 row = ttk.Frame(parent, style='Card.TFrame')
                 row.pack(fill='x', pady=self.px(2))
-                if group in ESSENTIAL:
-                    # A permanently ticked box that cannot be clicked reads
-                    # like something is broken. A plain line does not, and
-                    # the card's own heading says these are always applied.
-                    self._static_label(ttk.Label(
-                        row, text=label, style='Card.TLabel',
-                        padding=(2, 3))).pack(side='left')
-                else:
-                    var = tk.BooleanVar(value=True)
-                    self.vars[group] = var
-                    check = self._static_label(ttk.Checkbutton(
-                        row, text=label, variable=var,
-                        style='Card.TCheckbutton', command=self._retally))
-                    check.pack(side='left')
-                    self.checks[group] = check
+                # A permanently ticked box that cannot be clicked reads
+                # like something is broken. A plain line does not, and
+                # the card's own hint says they are all applied.
+                self._static_label(ttk.Label(
+                    row, text=label, style='Card.TLabel',
+                    padding=(2, 3))).pack(side='left')
                 Info(row, label, tip, self).btn.pack(side='right',
                                                      padx=(6, 2))
 
         def _selected(self):
-            """How many patches Apply would write right now."""
-            return len(group_keys(self._groups(), self._extras()))
-
-        def _groups(self):
-            return tuple(g for g in EXTRA if self.vars[g].get())
+            """How many patches Apply would write right now: the build's,
+            not the add-on or a diagnostic."""
+            return len([k for k in group_keys(self._extras()) if k in patches(self.build)])
 
         def _extras(self):
-            keys = tuple(k for k in DIAGNOSTIC if self.diagnostics[k].get())
+            keys = tuple(k for k in BYNAME if self.diagnostics[k].get())
+            if 'netlog' not in keys and self.game_ok:
+                keys += ('-netlog',)                # the box shows the file's setting: unticked is off
             if self.dgvoodoo.get():
                 keys += ADDONS
             return keys
@@ -8773,10 +11524,10 @@ def run_tk():
         def _retally(self, *_args):
             """Keep the count honest as boxes are ticked."""
             if self.game_ok:
-                self._set_status(GAME_READY % (self.build, self._selected()),
+                self._set_status(GAME_READY % (build_name(self.build), self._selected()),
                                  True)
 
-        # -- 5 ADD-ONS, DIAGNOSTICS
+        # -- 4 ADD-ONS, DIAGNOSTICS
 
         def _addons_body(self, parent):
             _hint(parent, ADDONS_HINT, self.dim, self.small, pady=(0, 6))
@@ -8810,15 +11561,15 @@ def run_tk():
 
         def _diagnostics_body(self, parent):
             _hint(parent, DIAGNOSTICS_HINT, self.dim, self.small, pady=(0, 6))
-            for key in DIAGNOSTIC:
+            for key in BYNAME:
                 label, tip = DIAGNOSTIC_INFO[key]
                 row = ttk.Frame(parent, style='Card.TFrame')
                 row.pack(fill='x', pady=self.px(2))
                 var = tk.BooleanVar(value=False)
                 self.diagnostics[key] = var
                 check = self._static_label(ttk.Checkbutton(
-                    row, text=label, variable=var, style='Card.TCheckbutton',
-                    command=self._retally))
+                    row, text='%s  (%s)' % (label, key), variable=var,
+                    style='Card.TCheckbutton', command=self._retally))
                 check.pack(side='left')
                 Info(row, label, tip, self).btn.pack(side='right',
                                                      padx=(6, 2))
@@ -9238,9 +11989,9 @@ def run_tk():
 
         def _apply(self):
             dest = self.game_var.get().strip()
-            keys = group_keys(self._groups(), self._extras())
-            self._written = len(keys)
-            self._log('patch: %d patches to %s' % (len(keys), dest))
+            keys = group_keys(self._extras())
+            self._written = self._selected()
+            self._log('patch: %d patches to %s' % (self._written, dest))
             self._start('patch', lambda log: patch(dest, log, keys), BUSY)
 
         def _restore(self):
@@ -9275,9 +12026,9 @@ def run_tk():
                 # Re-read the folder first, so the build and the backups
                 # are what the window says they are, then have the last
                 # word on the status line.
-                self._check_game(self.game_var.get().strip())
-                self._set_status(DONE % self._written if job == 'patch'
-                                 else RESTORED, True)
+                self._check_game(self.game_var.get().strip(),
+                                 then=lambda: self._set_status(
+                                     DONE % self._written if job == 'patch' else RESTORED, True))
             self._sync_buttons()
 
         def _failed(self, job, error):
@@ -9294,15 +12045,16 @@ def run_tk():
             self._log('%s: failed - %s' % (job, why))
 
         def _close(self):
-            """Stop a running copy or rip before the interpreter goes away.
+            """Stop a running copy or rip before the interpreter goes away,
+            and let a patch or restore finish.
 
-            Both write files, and a worker still running when the
-            interpreter is torn down leaves whichever one it was on half
-            written. Asking it to stop and waiting a moment is enough:
-            both check on the next chunk."""
+            The copy and the rip check for the stop on the next chunk, so
+            a moment is enough. A patch writes each file through a
+            temporary and takes a few seconds in all; it is waited for
+            rather than cut off."""
             self._cancel = True
             if self._worker is not None and self._worker.is_alive():
-                self._worker.join(1.5)
+                self._worker.join(1.5 if self._busy in ('install', 'music') else 30)
             self.root.destroy()
 
     dpi = win_dpi()
@@ -9348,23 +12100,21 @@ def selfcheck():
                         raise ValueError('%s and %s both write %s:0x%x' % (key, taken[(name, i)], name, i))
                     taken[(name, i)] = key
             sites += len(ss)
-        if MIX_BLOB[MIX_STREAM:MIX_STREAM + 3] != b'\x51\x8d\x83':    # `push ecx; lea eax, [ebx+...]` opens the stream routine
-            raise ValueError('mix.asm: the stream routine is not at +%d' % MIX_STREAM)
         for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB, TITLEROW_BLOB, TEXTCOLOR_BLOB, WIDE_BLOB, WIDE_US_BLOB,
                      VOLTRACE_BLOB, FRAMETRACE_BLOB, LOADHOLD_BLOB, HUDLAST_BLOB, PADMENU_BLOB, REPLAYPAD_BLOB, PAGEPAD_BLOB,
-                     DCMUSIC_BLOB):
+                     IPCHECK_BLOB, ENTRYCAP_BLOB, STATUS_BLOB, DCMUSIC_BLOB):
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
                     raise ValueError('%s: a placeholder left in a stub' % build)
     # The window and the README list features, not keys; a key in neither
     # or in both is a patch nobody is offered or is offered twice.
-    listed = [k for group in ESSENTIAL + EXTRA for k in BY_GROUP[group][2]]
+    listed = [k for group in ESSENTIAL for k in BY_GROUP[group][2]]
     if sorted(listed) != sorted(PATCH_KEYS):
         raise ValueError('FEATURES and the patch table disagree: %s'
                          % ', '.join(sorted(set(listed) ^ set(PATCH_KEYS))))
     if len(listed) != len(set(listed)):
         raise ValueError('a patch is in two feature rows')
-    if set(DIAGNOSTIC_INFO) != set(DIAGNOSTIC):
+    if set(DIAGNOSTIC_INFO) != set(BYNAME):
         raise ValueError('a diagnostic has no label')
     for table in RESOLUTION_TABLES.values():
         resolution_groups(table)
@@ -9376,24 +12126,34 @@ def selfcheck():
 
 
 # What a key needs: dropping the second drops the first with it.
-NEEDS = (('xinput', 'noregistry'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'), ('dcmusic', 'music'), ('dcoptions', 'dcmusic'),
+NEEDS = (('padoptions', 'devices'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'), ('dcmusic', 'music'), ('dcoptions', 'dcmusic'),
          ('widescreen2d', 'widescreen'), ('widescreen3d', 'widescreen'), ('resolution', 'widescreen'),
-         ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'))
-# The game's mode, not options: borderless full screen, framed with ALT+ENTER.
-FIXED = ('windowed', 'borderless')
+         ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'),
+         ('borderless', 'windowed'), ('altenter', 'windowed'))
+# In every set, and not to be left out: SR2.CFG is the patches' text file
+# only with it, the stock game writing its display block over the file.
+FIXED = ('noregistry',)
+# The game's mode, in every set unless left out by name: -borderless is
+# the DLL's own window, -windowed the exclusive mode.
+WINDOW = ('windowed', 'borderless')
 
 
 def parse_keys(words):
     """The patches --patch's key words name: every patch, or the ones
     listed, less any given with a leading minus; a diagnostic named is
-    added to either, the windowed mode to any list, and the dgvoodoo
+    added to either, noregistry and the windowed mode to any list - the
+    mode unless named with a minus, noregistry always - and the dgvoodoo
     add-on where it is the default unless named with a minus. Words may be
-    separated by commas or spaces (PowerShell hands a,b over as two)."""
-    keys = [k for w in words for k in w.split(',') if k]
+    separated by commas or spaces (PowerShell hands a,b over as two). A
+    list that names a patch without what it needs is refused by patch().
+    The word logs is every diagnostic and the network log; -netlog comes
+    through as itself, since the log is turned off only by name."""
+    keys = [('-' if k.startswith('-') else '') + k.lstrip('-') for w in words for k in w.split(',') if k]
+    keys = [k for key in keys for k in ([key[:1] * key.startswith('-') + k for k in LOGS] if key.lstrip('-') == 'logs' else (key,))]
     unknown = [k for k in keys if k.lstrip('-') not in PATCH_KEYS + BYNAME + ADDONS]
     if unknown:
-        raise ValueError('no patch named %s; the patches are %s, the diagnostics %s, the add-ons %s'
-                         % (unknown[0].lstrip('-'), ', '.join(PATCH_KEYS), ', '.join(DIAGNOSTIC), ', '.join(ADDONS)))
+        raise ValueError('no patch named %s; the patches are %s, the diagnostics %s (logs for all of them), the add-ons %s'
+                         % (unknown[0].lstrip('-'), ', '.join(PATCH_KEYS), ', '.join(BYNAME), ', '.join(ADDONS)))
     named = [k for k in keys if not k.startswith('-')]
     extra = BYNAME + ADDONS
     wanted = [k for k in named if k not in extra] or list(PATCH_KEYS)
@@ -9401,20 +12161,24 @@ def parse_keys(words):
     wanted += [k for k in ADDONS if k in default_keys() and k not in wanted]
     dropped = set(k[1:] for k in keys if k.startswith('-'))
     if dropped & set(FIXED):
-        raise ValueError('%s is the game\'s mode, not an option' % ' and '.join(sorted(dropped & set(FIXED))))
-    wanted = [k for k in PATCH_KEYS if k in wanted or k in FIXED] + [k for k in wanted if k in extra]
-    for key, needs in NEEDS:
-        if needs in dropped:
-            dropped.add(key)
-    return tuple(k for k in wanted if k not in dropped)
+        raise ValueError('%s cannot be left out: the other patches keep their settings in the file it frees' % ' and '.join(sorted(dropped & set(FIXED))))
+    wanted = [k for k in PATCH_KEYS if k in wanted or k in FIXED + WINDOW] + [k for k in wanted if k in extra]
+    off = ('-netlog',) if 'netlog' in dropped else ()      # named with a minus: the log off, not merely not on
+    for _ in range(len(NEEDS)):             # a dropped need drops what needs it, and so on
+        dropped |= set(key for key, needs in NEEDS if needs in dropped)
+    return tuple(k for k in wanted if k not in dropped) + off
 
 
 def main(argv):
     args = argv[1:]
     if not args:
         hide_console()
-        run_tk()
+        problem = run_tk()
+        if problem:
+            print(problem, file=sys.stderr)     # where the Windows launcher shows it from
+            return 1
         return 0
+    terminal_output()
     try:
         if args[0] == '--install' and 3 <= len(args) <= 4:
             install(*args[1:])
@@ -9429,11 +12193,17 @@ def main(argv):
             return selfcheck()
         elif args[0] == '--version':
             print('%s %s' % (NAME, VERSION))
+        elif args[0] in ('--help', '-h'):
+            print(__doc__.strip())
         else:
             print(__doc__.strip())
             return 2
-    except Exception as exc:
+    except (DiscError, ValueError, OSError) as exc:
         print('error: %s' % exc)
+        return 1
+    except Exception:
+        import traceback
+        traceback.print_exc()           # not one of the expected refusals: the whole of it, for a report
         return 1
     return 0
 

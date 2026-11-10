@@ -1,5 +1,5 @@
-; mix.inc - the volume curve, in one place. Included by mix.asm and, through
-; the table asm/build.py derives from it (curve.inc), by music.asm.
+; mix.inc - the volume curve, in one place. Included by mix.asm and
+; music.asm.
 ;
 ; The game maps a slider step to (step+1)/10 of the effects' dB range,
 ; -40..0 as shipped. Everything is in hundredths of a dB.

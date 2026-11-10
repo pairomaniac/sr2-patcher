@@ -10,7 +10,7 @@ with the stack as the original call would have left it.
 
 The DLL half: MGameD3D.dll patched in memory, mapped and relocated to
 another base, its restore routine called - it must call RestoreAllSurfaces
-on the IDirectDraw4 and store the result. Needs python3-unicorn; exits 0
+on the IDirectDraw4 and store the result. Needs python3-unicorn; exits 77
 with a note when it is missing.
 """
 import os
@@ -43,7 +43,7 @@ def main(argv):
         return 1
     row = patcher.BUILDS[build]
     gamed3d, resume = row['addresses']['GAMED3D'], row['addresses']['RESUME']
-    site = BASE + 0x1000 + row['sites']['activate'] - patcher._rva_to_off(image, 0x1000)
+    site = BASE + patcher._off_to_rva(image, row['sites']['activate'])
     image = patcher.apply_activate(image, build)
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
     uctest.map_image(mu, image, BASE)

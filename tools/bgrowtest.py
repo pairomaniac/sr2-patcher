@@ -15,7 +15,7 @@ and the rows after must touch nothing, with a bar each side: in
 Title.dll's build the picture's own sliver beyond the drawn edge, blurred
 across and stretched over it; in the exe's the picture's corner pixel. eax and edx must survive, and ebx
 too for the exe's, advanced by a row for Title.dll's. Needs
-python3-unicorn; exits 0 with a note when it is missing.
+python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 import sys
@@ -199,7 +199,7 @@ def run(bpp, title, dst_w, dst_h, pixels=None, src_w=None, src_h=None, surface=F
         mu.reg_write(UC_X86_REG_EAX, row_bytes)
         mu.reg_write(UC_X86_REG_EBX, SRC + row * row_bytes)
         mu.reg_write(UC_X86_REG_EDX, DST + row * pitch)
-        mu.emu_start(CODE, end)
+        mu.emu_start(CODE, end, timeout=2000000)
         regs = tuple(mu.reg_read(r) for r in (UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_EDX))
         want = (row_bytes, SRC + row * row_bytes + (row_bytes if title else 0), DST + row * pitch)
         if regs != want:

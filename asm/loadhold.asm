@@ -43,6 +43,7 @@ shown:  mov     [PICTURE], ecx
 .here:  pop     ebp
         sub     ebp, .here              ; ebp = this blob
         call    [GETTICK]
+        or      eax, 1                  ; never 0, which is "no note"; a millisecond is neither here nor there
         mov     [ebp + when], eax
         pop     ebp
         pop     edx

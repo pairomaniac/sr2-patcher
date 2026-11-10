@@ -17,11 +17,17 @@
 ; instructions; the compare after them sees the new mode and the list
 ; sorts as it does for an F key.
 ;
+; With no replay saved the list never reaches that state: it stays in the
+; one that shows the empty notice (0x1000285c), where the F keys still
+; move the sort box. The second entry is called from there, in place of
+; `push 0; mov edi, eax; mov edx, [ecx]` (0x1000286a), and steps the mode
+; the same way.
+;
 ; The DLL is relocated on every load: the image base is this blob's
 ; address less its RVA (MAGIC_SELFRVA, filled in by the patcher), the
 ; sort block's global at a fixed RVA from it. PADPOLL is an exe address,
 ; which does not move. esi = the list, edi = its row update's result.
-; Everything but ecx, edi and the flags, which the two instructions set,
+; Everything but what the site's own instructions set, and the flags,
 ; comes back as it was.
 
 bits 32
@@ -33,7 +39,22 @@ bits 32
 %define RB              0x300 + 9
 %define MODES           3
 
-entry:  pushad
+        jmp     near browse             ; +0
+        jmp     near empty              ; +5
+
+browse: call    step
+        mov     ecx, [esi + 0x50]       ; the site's two instructions
+        and     edi, 0xff
+        ret
+
+empty:  call    step
+        mov     edi, eax                ; the site's three: eax = the notice's result,
+        mov     edx, [ecx]              ; ecx = the sort block
+        pop     ecx                     ; the return address; the site loads ecx next
+        push    0
+        jmp     ecx
+
+step:   pushad
         call    .here
 .here:  pop     ebp
         sub     ebp, .here              ; ebp = this blob
@@ -71,8 +92,6 @@ entry:  pushad
         xor     ecx, ecx
 .store: mov     [edx + 4], ecx
 .done:  popad
-        mov     ecx, [esi + 0x50]       ; the site's two instructions
-        and     edi, 0xff
         ret
 
 %include "padpoll.inc"

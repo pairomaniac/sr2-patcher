@@ -1,5 +1,5 @@
 """What the Unicorn tests share: the patcher module, the Unicorn import
-that exits 0 when the package is missing (so tools/check.py can skip the
+that exits 77 when the package is missing (so tools/check.py can skip the
 check), the build a game file belongs to, and a PE image mapped into an
 emulator the way the loader maps it."""
 import hashlib
@@ -15,6 +15,16 @@ spec.loader.exec_module(patcher)
 
 
 SKIPPED = 77            # the exit code tools/check.py reads as a skip, not a pass
+
+
+def stock(game, name):
+    """The bytes of the game file `name` (as BUILDS spells it) from its
+    .bak when it has been patched, so a test runs on the original."""
+    path = os.path.join(game, *name.split('\\'))
+    if os.path.isfile(path + '.bak'):
+        path += '.bak'
+    with open(path, 'rb') as fh:
+        return bytearray(fh.read())
 
 
 def unicorn(name):
@@ -69,3 +79,34 @@ def map_image(mu, image, base):
                     mu.mem_write(a, struct.pack('<I', (v + delta) & 0xffffffff))
             off += bsize
     return annex
+
+
+# What padinput.asm's annex lays out, as the tests expect it: the
+# records for a player and the text it saves.
+def annex_records(player, table=None):
+    """The records the annex generates for a player from a table of
+    (key, pad input or None) per action - the defaults when none - in the
+    order it lays them out."""
+    if table is None:
+        keys = (patcher.KEYS_1P, patcher.KEYS_2P)[player]
+        table = [(keys[a], patcher.PAD_DEFAULT[a]) for a in range(13)]
+
+    def record(action, source):
+        delay, rate = (10, 3) if 2 <= action <= 5 else (0, 0)
+        return struct.pack('<13I', action, delay, rate, 0, 10000, source, 0, 0, 0, 0, 0, 0, 0)
+    out = []
+    for action, (key, pad) in enumerate(table):
+        out.append(record(action, key))
+        if pad is not None:
+            out.append(record(action, patcher.PAD_BASE + player * patcher.PAD_PLAYER + pad))
+    for action, key in zip(patcher.FIXED_ACTIONS, patcher.FIXED_KEYS[player]):
+        out.append(record(action, patcher.MENUKEY_BASE + key))
+    for action, pad in patcher.FIXED_PADS:
+        out.append(record(action, patcher.PAD_BASE + player * patcher.PAD_PLAYER + pad))
+    return out
+
+
+def annex_text(tables=None, deadzones=None, network=('0', '0')):
+    """The text the annex writes: the patcher's own layout of it; network
+    None for a file with no [Network] section."""
+    return patcher.settings_text(tables, deadzones, network)

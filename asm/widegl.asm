@@ -673,7 +673,7 @@ k480:       dd 0x43F00000               ; 480.0
 k34:        dd 0x3F400000               ; 0.75
 k43:        dd 0x3FAAAAAB               ; 4/3
 khalf:      dd 0x3F000000               ; 0.5
-kone:       dd 0x3F800000
+kone:       dd 0x3F800000               ; 1.0
 ktorad:     dd 0x38490FDB               ; pi / 65536
 kfromrad:   dd 0x46A2F983               ; 65536 / pi
         align 4

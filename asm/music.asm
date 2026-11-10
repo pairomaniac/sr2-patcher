@@ -247,8 +247,10 @@ putnum:
 ; ebx = base; the other registers kept. One caller at a time: the exe
 ; fades on one thread while another changes screen, and two requests
 ; at once left one of them unrun. A mutex rather than a critical
-; section, since MGAudio terminates its threads: an abandoned mutex
-; is handed on, an abandoned critical section is held for ever.
+; section: MGAudio has a TerminateThread for its own threads (reached
+; only once the thread has finished, as it stands), and an abandoned
+; mutex is handed on where an abandoned critical section is held for
+; ever.
 request:
         push    ecx
         push    edx
@@ -275,7 +277,7 @@ request:
         ret
 
 ; eax = TMSF (track, min, sec, frame), returns ecx = ms into the track,
-; eax = track.
+; eax = track; edx and esi scratch.
 tmsf_ms:
         mov     ecx, eax
         shr     ecx, 8
@@ -1202,6 +1204,10 @@ startup:
         push    0
         call    dword [ebx + D_CREATEEV]
         mov     [ebx + D_HDONE], eax
+        cmp     dword [ebx + D_HREQ], 0  ; both events before the thread, which waits on them at once
+        je      .nothread
+        test    eax, eax
+        jz      .nothread
         push    0
         push    0
         push    0
@@ -1212,10 +1218,9 @@ startup:
         call    dword [ebx + D_CREATETHR]
         test    eax, eax
         jz      .nothread
-        cmp     dword [ebx + D_HREQ], 0
-        je      .nothread
-        cmp     dword [ebx + D_HDONE], 0
-        jne     .done
+        push    eax                     ; the thread's handle is not needed: closed
+        call    dword [ebx + D_CLOSEH]
+        jmp     .done
 .nothread:
         mov     dword [ebx + D_NTRACKS], 0
 .done:

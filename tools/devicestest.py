@@ -10,7 +10,7 @@ poll answers a scripted pad and whose GetState hands out a key array.
 Drives refresh, a wait that binds a key (swapping with the row that had
 it), one that binds a pad input, the deadzone step and DEFAULT, and
 checks the records, the value strings and the Persist calls. Needs
-python3-unicorn; exits 0 with a note when it is missing.
+python3-unicorn; exits 77 with a note when it is missing.
 """
 import os
 import struct
@@ -53,29 +53,26 @@ def main(argv):
     mu.mem_map(STACK, 0x100000)
 
     # The page's code: the blob after the menu's data. Its routines by
-    # their offsets in the assembled blob, found from the source's labels
-    # through nasm's listing would be nicer; here from the bytes.
+    # their offsets in the assembled blob, from the source's labels
+    # through nasm's listing.
     blob = patcher.DEVICES_BLOB
     page = struct.unpack('<I', mu.mem_read(BASE + patcher._off_to_rva(image, patcher.BUILDS[build]['sites']['devices'][6] + 12), 4))[0] - len(blob)
     assert bytes(mu.mem_read(page, 16)) == blob[:16], 'the page blob not at %#x' % page
     size = struct.unpack_from('<I', image, struct.unpack_from('<I', image, 0x3c)[0] + 24 + 56)[0]
     section = bytes(mu.mem_read(BASE + sec, size - sec))
     data = BASE + sec + section.index(bytes(a for _n, a in patcher.PAGE_ACTIONS))
+    import shutil
     import subprocess
     import tempfile
+    if not shutil.which('nasm'):
+        print('devicestest: skipped, nasm not installed (the routines are found through its listing)')
+        sys.exit(uctest.SKIPPED)
+    sys.path.insert(0, os.path.join(HERE, '..', 'asm'))
+    from build import listing_labels
     with tempfile.NamedTemporaryFile(suffix='.lst') as lst:
         subprocess.check_call(['nasm', '-f', 'bin', '-l', lst.name, '-o', os.devnull, os.path.join(HERE, '..', 'asm', 'devices.asm')])
-        listing = open(lst.name).read()
-    labels, pending = {}, []
-    for line in listing.splitlines():
-        src = line[40:].strip()
-        word = src.split()[0] if src else ''
-        if word.endswith(':') and not word.startswith('.'):
-            pending.append(word[:-1])
-        if len(line) > 15 and line[7:15].strip() and all(c in '0123456789ABCDEF' for c in line[7:15]):
-            for name in pending:
-                labels[name] = int(line[7:15], 16)
-            pending = []
+        with open(lst.name) as fh:
+            labels = listing_labels(fh.read())
     for need in ('refresh', 'snapshot', 'waittick', 'defaults', 'bindkey', 'held', 'binding', 'row', 'snapkeys', 'shown'):
         assert need in labels, need
 
@@ -102,9 +99,10 @@ def main(argv):
     mu.mem_map(publish & ~0xfff, 0x1000)
     mu.mem_write(publish, struct.pack('<I', addr['Poll']))
     opt_row = patcher.BUILDS[build]['options']
-    mu.mem_write(BASE + opt_row['INPUT'] - 0x10000000, struct.pack('<I', HOLDER))
-    mu.mem_write(BASE + opt_row['SOUNDOBJ'] - 0x10000000, struct.pack('<I', SCRATCH))
-    mu.mem_write(BASE + opt_row['PLAYSOUND'] - 0x10000000, b'\xc2\x10\x00')     # a `ret 0x10` in place of the sound
+    optbase = patcher._image_base(image)          # the DLL's preferred base, the row's addresses' own
+    mu.mem_write(BASE + opt_row['INPUT'] - optbase, struct.pack('<I', HOLDER))
+    mu.mem_write(BASE + opt_row['SOUNDOBJ'] - optbase, struct.pack('<I', SCRATCH))
+    mu.mem_write(BASE + opt_row['PLAYSOUND'] - optbase, b'\xc2\x10\x00')     # a `ret 0x10` in place of the sound
 
     # the records: per config a ring of nodes, each node (next, prev, record)
     recs = {}
@@ -138,10 +136,10 @@ def main(argv):
         return out
 
     for player, cfg in enumerate((CFG0, CFG1)):
-        build_records(cfg, [(struct.unpack_from('<I', r, 0)[0], struct.unpack_from('<I', r, 0x14)[0]) for r in patcher.annex_records(player)])
+        build_records(cfg, [(struct.unpack_from('<I', r, 0)[0], struct.unpack_from('<I', r, 0x14)[0]) for r in uctest.annex_records(player)])
     mu.mem_write(KEYS, b'\0' * 256)
 
-    pad = {0x33f: 1000, 0x37f: 1000}   # source: value
+    pad = {0x33f: 1000, 0x37f: 1500, 0x33d: 70, 0x37d: 0}   # source: value; the deadzones and the vibration strengths
     log = {'persist': [], 'bits': 0}
 
     def cstr(p):
@@ -169,6 +167,9 @@ def main(argv):
         elif name == 'Bits':
             ret = log['bits']
         mu.reg_write(UC_X86_REG_EAX, ret)
+        if name != 'Bits':                                  # stdcall keeps neither
+            mu.reg_write(UC_X86_REG_ECX, 0xdeadbee0)
+            mu.reg_write(UC_X86_REG_EDX, 0xdeadbee4)
 
     mu.hook_add(UC_HOOK_CODE, stub, begin=STUBS, end=STUBS + 0x100)
 
@@ -197,6 +198,26 @@ def main(argv):
             call('refresh')
         return cstr(data + patcher.DATA_VALUES + (row * 2 + col) * 16)
 
+    def slider(player, which):
+        """The lit step of the shown player's deadzone (0) or vibration (1)
+        slider: the one entry of its ten in white, held by its row."""
+        if var('shown') != player:
+            var('shown', player)
+            call('refresh')
+        texts = [i for i in range(len(section) - 3) if section[i:i + 4] == b'OFF\0']
+        assert len(texts) == 2, texts
+        first = section.index(struct.pack('<II', 2, BASE + sec + texts[which]))
+        assert mu.mem_read(data + patcher.DATA_SLIDERS + which, 1)[0] * 40 == first - section.index(struct.pack('<II', 2, BASE + sec + texts[0])) + mu.mem_read(data + patcher.DATA_SLIDERS, 1)[0] * 40
+        lit = []
+        for step in range(10):
+            entry = struct.unpack('<10I', mu.mem_read(BASE + sec + first + step * 40, 40))
+            assert entry[6:9] in ((0, 0, 0), (0x100, 0x100, 0x100)), entry
+            row = 10 + which
+            assert entry[9] == (4 << 16 | row << 8 | row if entry[6] else 0), hex(entry[9])
+            lit += [step] * bool(entry[6])
+        assert len(lit) == 1, lit
+        return lit[0]
+
     def var(label, v=None):
         if v is None:
             return struct.unpack('<I', mu.mem_read(page + labels[label], 4))[0]
@@ -204,14 +225,14 @@ def main(argv):
 
     # 1. refresh: the values from the records, and the label
     call('refresh')
-    assert cstr(data + patcher.DATA_VALUES + 18 * 16) == 'PLAYER 1'
+    assert cstr(data + patcher.DATA_VALUES + patcher.PAGE_LABEL_VALUE * 16) == 'PLAYER 1'
     var('shown', 1)
     call('refresh')
-    assert cstr(data + patcher.DATA_VALUES + 18 * 16) == 'PLAYER 2'
+    assert cstr(data + patcher.DATA_VALUES + patcher.PAGE_LABEL_VALUE * 16) == 'PLAYER 2'
     assert (value(0, 0, 0), value(0, 0, 1)) == ('LEFT', 'LS LEFT'), (value(0, 0, 0), value(0, 0, 1))
     assert (value(0, 2, 0), value(0, 2, 1)) == ('X', 'RT')
     assert (value(1, 3, 0), value(1, 3, 1)) == ('S', 'LT')
-    assert (value(0, 8, 0), value(1, 8, 0)) == ('10', '10')
+    assert (slider(0, 0), slider(1, 0)) == (2, 3) and (slider(0, 1), slider(1, 1)) == (6, 0)    # 10% and 15%; 70% and OFF
     assert value(0, 6, 0) == 'SPACE' and value(1, 4, 1) == 'A'
 
     # 2. a wait on 1P's ACCEL (row 3): C, which BRAKE has, binds and swaps
@@ -274,6 +295,18 @@ def main(argv):
     call('waittick')
     assert var('binding') == 0
     mu.mem_write(KEYS + 1, b'\0')
+    # ESC held as the wait began does not, until released and pressed again
+    mu.mem_write(KEYS + 1, b'\x80')
+    call('snapshot')
+    var('binding', 1)
+    call('waittick')
+    assert var('binding') == 1
+    mu.mem_write(KEYS + 1, b'\0')
+    call('waittick')
+    mu.mem_write(KEYS + 1, b'\x80')
+    call('waittick')
+    assert var('binding') == 0
+    mu.mem_write(KEYS + 1, b'\0')
 
     # the menus' own records are not the rows': binding 1P STEER LEFT to F1 and its pad to LB leaves the arrow, the D-pad and the stick on action 4
     var('shown', 0)
@@ -294,13 +327,23 @@ def main(argv):
     assert src[4] == [0x3b, 0x300 + 8, 0x400 + 0xcb, 0x300 + patcher.PAD_LEFT + 0x20, 0x300 + patcher.PAD_LS_LEFT + 0x20], src[4]   # the bound pair, then the menus' own
     assert (value(0, 0, 0), value(0, 0, 1)) == ('F1', 'LB')
 
-    # 5. DEFAULT puts everything back and saves both with the deadzone
+    # 5. DEFAULT puts everything back and saves both with the deadzone and the vibration strength
     del log['persist'][:]
     call('defaults')
     assert sources(CFG0)[0][0] == 0x2d and sources(CFG0)[1][0] == 0x2e
     assert sources(CFG1)[9][1] == 0x340 + 15 and sources(CFG1)[6][1] == 0x340 + 12
-    assert log['persist'] == [(0, 'DZ1000', 1), (1, 'DZ1000', 1)], log['persist']
+    assert log['persist'] == [(0, 'DZ1000', 1), (0, 'VB0070', 1), (1, 'DZ1000', 1), (1, 'VB0070', 1)], log['persist']
     assert (value(0, 2, 0), value(1, 7, 1)) == ('X', 'Y')
+
+    # 6. no input object yet: the bindings find nothing and touch nothing
+    mu.mem_write(HOLDER + 8, struct.pack('<I', 0))
+    assert call('getinput') == 0 and call('getcfg') == 0 and call('keyarray') == 0
+    var('binding', 1)
+    mu.mem_write(KEYS + 0x3b, b'\x80')
+    call('waittick')
+    assert var('binding') == 1
+    mu.mem_write(KEYS + 0x3b, b'\0')
+    mu.mem_write(HOLDER + 8, struct.pack('<I', WRAPPER))
     print('devicestest: %s Options.dll OK' % build)
     return 0
 

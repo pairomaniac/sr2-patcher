@@ -105,10 +105,10 @@ bits 32
 %define TESTSTOCK   13                  ;   which is the stock tracks'
 %define SELECT      8                   ;   its car select's track, track 12
 %else
-%define PLAY        0xB3B3B3B3          ; placeholders, EXE_MAGICS: the sound bank's play
-%define FADE        0xB5B5B5B5          ; its fade
-%define RESTART     0xB6B6B6B6          ; its restart of a slot's CD track
-%define STATE       0xB4B4B4B4          ; RACEBLOCK: the pointer to the race block
+%define PLAY        0x9A9A9A9A          ; placeholders, EXE_MAGICS: the sound bank's play
+%define FADE        0x9C9C9C9C          ; its fade
+%define RESTART     0x9D9D9D9D          ; its restart of a slot's CD track
+%define STATE       0x9B9B9B9B          ; RACEBLOCK: the pointer to the race block
 %define LOADLIB     0xE3E3E3E3          ; LoadLibraryA's import slot
 %define GETPROC     0xE4E4E4E4          ; GetProcAddress's
 %define GETMODFN    0xF9F9F9F9          ; GetModuleFileNameA's

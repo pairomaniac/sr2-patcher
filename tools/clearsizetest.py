@@ -10,22 +10,19 @@ it was called from, and leave the arguments where the caller's own
 `add esp, 8` will take them off - the clear is cdecl. Anything else and
 the site's return address is not where the game left it.
 
-Nothing to do on the other two builds, which pass the height already.
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Nothing to do on the other three builds, which pass the height already:
+exits 77, a skip. Needs python3-unicorn; exits 77 with a note when it is
+missing.
 """
-import os
 import struct
 import sys
 
 from uctest import patcher
+import uctest
 
-try:
-    import pefile
-    from unicorn import Uc, UC_ARCH_X86, UC_MODE_32
-    from unicorn.x86_const import UC_X86_REG_ESP
-except ImportError:
-    print('clearsizetest: skipped, python3-unicorn or pefile not installed')
-    sys.exit(77)
+uctest.unicorn('clearsizetest')
+from unicorn import Uc, UC_ARCH_X86, UC_MODE_32
+from unicorn.x86_const import UC_X86_REG_ESP
 
 WIDTH, HEIGHT = 5120, 1440
 STACK = 0x900000
@@ -37,22 +34,19 @@ def main(argv):
         return 2
     build = patcher.check_build(argv[1])
     if 'clearsize' not in patcher.patches(build):
-        print('clearsize: nothing to do on the %s build' % build.lower())
-        return 0
-    with open(os.path.join(argv[1], patcher.EXE), 'rb') as fh:
-        buf = bytearray(fh.read())
+        print('clearsize is Australian only; nothing to run on the %s build' % build.lower())
+        return uctest.SKIPPED
+    buf = uctest.stock(argv[1], patcher.EXE)
     out = patcher.apply_clearsize(buf, build)
 
     row = patcher.BUILDS[build]['addresses']
     site = patcher.BUILDS[build]['sites']['clearsize']
-    pe = pefile.PE(data=bytes(out))
-    base = pe.OPTIONAL_HEADER.ImageBase
-    image = pe.get_memory_mapped_image()
-    resume = base + 0x1000 + site - patcher._rva_to_off(out, 0x1000) + patcher.CLEARSIZE_LEN - 7
+    base = patcher._image_base(out)
+    site_va = base + patcher._off_to_rva(out, site)
+    resume = site_va + patcher.CLEARSIZE_LEN - 7
 
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    mu.mem_map(base, (len(image) + 0xfff) & ~0xfff)
-    mu.mem_write(base, bytes(image))
+    uctest.map_image(mu, out, base)
     mu.mem_map(STACK, 0x10000)
     mu.mem_write(row['WIDTH'], struct.pack('<I', WIDTH))
     mu.mem_write(row['HEIGHT'], struct.pack('<I', HEIGHT))
@@ -60,7 +54,7 @@ def main(argv):
     esp = STACK + 0x8000
     mu.mem_write(esp, struct.pack('<I', 0xDEAD0000))
     mu.reg_write(UC_X86_REG_ESP, esp)
-    mu.emu_start(base + 0x1000 + site - patcher._rva_to_off(out, 0x1000), row['CLEAR'])
+    mu.emu_start(site_va, row['CLEAR'], timeout=2000000)
 
     sp = mu.reg_read(UC_X86_REG_ESP)
     ret, width, height = struct.unpack('<III', mu.mem_read(sp, 12))

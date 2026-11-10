@@ -8,7 +8,7 @@ sr2-patcher.py carries the assembled bytes because it ships as one file that
 runs from a fresh checkout with nothing installed. Never edit the hex by
 hand; this overwrites it. The placeholders the patcher fills at apply time
 are the *_MAGICS tables: a DLL stub must hold each of its own at least
-once (the two MGInput stubs exactly once), a self-locating stub its
+once (dinput8 and nogeneric exactly once), a self-locating stub its
 SELF_MAGIC once (replayfree twice), and an exe stub each EXE_MAGICS
 entry as many times as EXE_BLOB_MAGICS says.
 """
@@ -33,6 +33,9 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('WIDE2D_BLOB', 'wide2d.asm', ()), ('WIDEGL_BLOB', 'widegl.asm', ()), ('RESOLUTION_BLOB', 'resolution.asm', ()),
          ('LOADHOLD_BLOB', 'loadhold.asm', ()), ('HUDLAST_BLOB', 'hudlast.asm', ()), ('D3DINIT_BLOB', 'd3dinit.asm', ()),
          ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
+         ('PADPROMPTS_BLOB', 'padprompts.asm', ()), ('TABMENU_BLOB', 'tabmenu.asm', ()),
+         ('IPCHECK_BLOB', 'ipcheck.asm', ()), ('ENTRYCAP_BLOB', 'entrycap.asm', ()),
+         ('STATUS_BLOB', 'status.asm', ()), ('STARTING_BLOB', 'starting.asm', ()),
          ('DCMUSIC_BLOB', 'dcmusic.asm', ()), ('DCOPTIONS_BLOB', 'dcmusic.asm', ('-DOPTIONS',))]
 
 MAGICS = {
@@ -84,12 +87,31 @@ EXE_MAGICS = {
     'PADPREV': 0xB2B2B2B2,
     'MENUKEYS': 0xCFCFCFCF,
     'PADPOLL': 0xDFDFDFDF,
-    'BGMPLAY': 0xB3B3B3B3,
-    'RACEBLOCK': 0xB4B4B4B4,
-    'BGMFADE': 0xB5B5B5B5,
-    'BGMRESTART': 0xB6B6B6B6,
+    'IPEDIT': 0xB3B3B3B3,
+    'IPLEN': 0xB4B4B4B4,
+    'IPDENY': 0xB5B5B5B5,
+    'IPSLOT': 0xB6B6B6B6,
+    'TEAMSLOT': 0xB7B7B7B7,
+    'LINEBUF': 0xB8B8B8B8,
+    'NETOBJ': 0xB9B9B9B9,
+    'DRAW': 0xBABABABA,
+    'ROOMBG': 0xBBBBBBBB,
+    'ROOMSIZE': 0xBCBCBCBC,
+    'ROOMFONT': 0xBDBDBDBD,
+    'RACESETUP': 0xBFBFBFBF,
+    'ROOMLOAD': 0xA1A1A1A1,
+    'BMPFREE': 0xA3A3A3A3,
+    'CHATOBJS': 0xA5A5A5A5,
+    'TABOBJS': 0xA6A6A6A6,
+    'ROOMFLAG': 0xA7A7A7A7,
+    'POLLBASE': 0xA8A8A8A8,
+    'BGMPLAY': 0x9A9A9A9A,
+    'RACEBLOCK': 0x9B9B9B9B,
+    'BGMFADE': 0x9C9C9C9C,
+    'BGMRESTART': 0x9D9D9D9D,
 }
 EXE_BLOB_MAGICS = {
+    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY', 'BGMFADE', 'BGMRESTART') + ('RACEBLOCK',) * 2,
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
     'ALTENTER_BLOB': ('HANDLER', 'LOADLIB', 'GETPROC', 'HWND', 'WIDTH', 'HEIGHT'),
     'BGROW_BLOB': ('LOCKDESC', 'GAMED3D'),
@@ -101,10 +123,14 @@ EXE_BLOB_MAGICS = {
     'FRAMETRACE_BLOB': ('LOADLIB', 'GETPROC', 'RUNNING', 'PAUSED', 'DEBUGDLL', 'CATCHUP'),
     'LOADHOLD_BLOB': ('LOADPIC',) * 2 + ('GETTICK',) * 2 + ('LOADLIB', 'GETPROC'),
     'HUDLAST_BLOB': ('LATEFLAG', 'RUNNING') + ('HUDDRAW',) * 2 + ('TREEDRAW', 'FADEDRAW') + ('RENDERER',) * 3 + ('VPRECTS', 'SETVIEWPORT', 'HUDRESET'),
-    'PADMENU_BLOB': ('PADPOLL',) * 2 + ('MENUKEYS',) * 3 + ('PADLEVEL', 'PADEDGE', 'PADPREV'),
+    'PADMENU_BLOB': ('PADPOLL',) * 2 + ('MENUKEYS',) * 3 + ('PADLEVEL', 'PADEDGE') + ('PADPREV',) * 2,
     'REPLAYPAD_BLOB': ('PADPOLL',) * 2,
     'PAGEPAD_BLOB': ('PADPOLL',) * 2,
-    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY', 'BGMFADE', 'BGMRESTART') + ('RACEBLOCK',) * 2,
+    'TABMENU_BLOB': ('HWND', 'ROOMLOAD', 'BMPFREE', 'TABOBJS') + ('TABOBJS', 'CHATOBJS', 'ROOMFLAG', 'CHATOBJS') + ('ROOMLOAD', 'ROOMBG') + ('PADPOLL', 'TABOBJS', 'ROOMBG', 'POLLBASE', 'PADPOLL'),
+    'IPCHECK_BLOB': ('IPEDIT', 'IPLEN', 'IPDENY'),
+    'ENTRYCAP_BLOB': ('IPSLOT', 'TEAMSLOT', 'LINEBUF', 'IPLEN'),
+    'STATUS_BLOB': ('NETOBJ', 'DRAW'),
+    'STARTING_BLOB': ('LOADLIB', 'GETPROC') + ('ROOMBG',) * 4 + ('ROOMFONT',) + ('ROOMSIZE',) * 2 + ('GAMED3D',) * 3 + ('RACESETUP', 'ROOMLOAD'),
 }
 
 # devices.asm's placeholders: RVAs in Options.dll from the build's row,
@@ -152,6 +178,8 @@ PADINPUT_MAGICS = {
     'CARS': 0xE9E9E9E9,                 # an absolute exe address, not an offset
     'KBDPOLL': 0xECECECEC,
     'PUBLISH': 0xEDEDEDED,              # an absolute exe address
+    'GAME': 0xEEEEEEEE,                 # an absolute exe address
+    'CARHIT': 0xEFEFEFEF,               # an offset in a car object
 }
 
 # sortpad.asm's placeholder: the exe's slot for the annex's page poll,
@@ -160,15 +188,23 @@ SORTPAD_MAGICS = {
     'PADPOLL': 0xDFDFDFDF,
 }
 
-# dcmusic.asm's Options.dll build (-DOPTIONS): RVAs, the base added at run
-# time from the blob's own RVA (SELF_MAGIC).
-DCOPTIONS_MAGICS = {
-    'TEXT': 0xDBDBDBDB,
-    'PLAYSOUND': 0xD5D5D5D5,
-    'LOADLIB': 0xE3E3E3E3,
-    'GETPROC': 0xE4E4E4E4,
-    'GETMODFN': 0xE5E5E5E5,
+# padprompts.asm's placeholders: the same slot, and the RVA of the
+# routine the DLL's Exec export named, filled by the patcher.
+PADPROMPTS_MAGICS = {
+    'PADPOLL': 0xDFDFDFDF,
+    'EXEC': 0xE6E6E6E6,
 }
+
+# voltrace.asm's and frametrace.asm's placeholders: one per site, each
+# filled by the patcher with the address of a dword after the blob;
+# frametrace's third with the borderless present's stamp offset.
+SITE_MAGICS = (0xE7E7E7E1, 0xE7E7E7E2, 0xE7E7E7E3, 0xE7E7E7E4, 0xE7E7E7E5)
+SITE_BLOB_MAGICS = {'VOLTRACE_BLOB': 5, 'FRAMETRACE_BLOB': 3}
+
+# Labels whose offsets the patcher needs: mix.asm's second entry, the
+# borderless present's counter stamp, the resolution table's groups. Read
+# off nasm's listing and written out, never kept by hand.
+LABELS = {'MIX_BLOB': ('stream',), 'FULLWIN_BLOB': ('t_blt',), 'RESOLUTION_BLOB': ('groups', 'table')}
 
 # dinput8.asm's placeholders: offsets from the blob to MGInput.dll's IAT
 # slots and to the create site's continuation, filled by the patcher.
@@ -185,12 +221,23 @@ NOGENERIC_MAGICS = {
     'SKIP': 0xE7E7E7E7,
 }
 
-# An exe stub's source must not name an exe address: every one moves
-# between builds and belongs in the row. Comments may.
+# dcmusic.asm's Options.dll build (-DOPTIONS): RVAs, the base added at run
+# time from the blob's own RVA (SELF_MAGIC).
+DCOPTIONS_MAGICS = {
+    'TEXT': 0xDBDBDBDB,
+    'PLAYSOUND': 0xD5D5D5D5,
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'GETMODFN': 0xE5E5E5E5,
+}
+
+# No source or include may name an exe address: every one moves between
+# builds and belongs in the row. Comments may.
 EXE_ADDRESS = re.compile(r'^[^;]*\b0x[4-6][0-9a-fA-F]{5}\b', re.M)
 
-# fullwin.asm finds the image base from its own RVA, which the patcher
-# fills in over this.
+# A self-locating DLL stub (SELF_BLOBS below) finds the image base from
+# its own RVA, which the patcher fills in over this; the patcher calls
+# it FULLWIN_MAGIC after the first of them.
 SELF_MAGIC = 0xE7E7E7E7
 
 BEGIN = '# --- GENERATED by asm/build.py: BEGIN (do not edit) ---\n'
@@ -198,11 +245,37 @@ END = '# --- GENERATED by asm/build.py: END ---\n'
 
 
 def assemble(src, defines=()):
+    """The bytes, and every label's offset from nasm's listing."""
     with tempfile.TemporaryDirectory() as tmp:
-        out = os.path.join(tmp, 'blob.bin')
-        subprocess.check_call(['nasm', '-f', 'bin', '-i', HERE + os.sep, *defines, '-o', out, os.path.join(HERE, src)])
+        out, lst = os.path.join(tmp, 'blob.bin'), os.path.join(tmp, 'blob.lst')
+        subprocess.check_call(['nasm', '-f', 'bin', '-i', HERE + os.sep, *defines, '-l', lst, '-o', out, os.path.join(HERE, src)])
         with open(out, 'rb') as fh:
-            return fh.read()
+            raw = fh.read()
+        with open(lst) as fh:
+            listing = fh.read()
+    return raw, listing_labels(listing, len(raw))
+
+
+DIRECTIVES = ('align', 'bits', 'db', 'dw', 'dd', 'dq', 'times', 'section', 'segment', 'global', 'extern', 'org', 'default', 'cpu')
+
+
+def listing_labels(listing, end=None):
+    """Label -> offset from a nasm listing: a label takes the address of
+    the next line that has one, or the end for one after everything."""
+    labels, pending = {}, []
+    for line in listing.splitlines():
+        src = line[40:]
+        word = src.split()[0] if src.strip() else ''
+        if word and src[0] not in ' \t' and word[0] not in '%;.' and word.rstrip(':').lower() not in DIRECTIVES:
+            pending.append(word.rstrip(':'))            # a label: at the margin, with or without its colon
+        if len(line) > 15 and line[7:15].strip() and all(c in '0123456789ABCDEF' for c in line[7:15]):
+            for name in pending:
+                labels[name] = int(line[7:15], 16)
+            pending = []
+    for name in pending:
+        if end is not None:
+            labels[name] = end
+    return labels
 
 
 def hexblob(name, raw):
@@ -212,17 +285,47 @@ def hexblob(name, raw):
 
 
 # The DLL stubs' own placeholder tables, and whether each must occur
-# exactly once (the MGInput stubs) or at least once.
+# exactly once (dinput8, nogeneric) or at least once.
 DLL_MAGICS = {'MUSIC_BLOB': (MAGICS, False), 'DEVICES_BLOB': (DEVICES_MAGICS, False), 'PADINPUT_BLOB': (PADINPUT_MAGICS, False),
               'DINPUT8_BLOB': (DINPUT8_MAGICS, True), 'NOGENERIC_BLOB': (NOGENERIC_MAGICS, True), 'RESOLUTION_BLOB': (RESOLUTION_MAGICS, False),
-              'SORTPAD_BLOB': (SORTPAD_MAGICS, False), 'DCOPTIONS_BLOB': (DCOPTIONS_MAGICS, False)}
-SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'DCOPTIONS_BLOB': 5}
+              'SORTPAD_BLOB': (SORTPAD_MAGICS, False), 'PADPROMPTS_BLOB': (PADPROMPTS_MAGICS, False),
+              'DCOPTIONS_BLOB': (DCOPTIONS_MAGICS, False)}
+SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'PADPROMPTS_BLOB': 1, 'DCOPTIONS_BLOB': 5}
+
+
+def bordered(src, name, magic, raw, value):
+    """Every occurrence of a placeholder stands clear of its own byte on
+    both sides, so the patcher's replace lands on the four bytes meant.
+    `mov ebx, 0xBBBBBBBB` is five of them, and the first four would go."""
+    pattern = struct.pack('<I', value)
+    at = raw.find(pattern)
+    while at >= 0:
+        if (at and raw[at - 1] == pattern[0]) or raw[at + 4:at + 5] == pattern[:1]:
+            raise SystemExit('%s: %s at %#x in %s runs into its own byte; another register or an indirect load' % (src, magic, at, name))
+        at = raw.find(pattern, at + 4)
 
 
 def generated():
     out = [BEGIN]
+    offsets = {}
+    for src in sorted(f for f in os.listdir(HERE) if f.endswith(('.asm', '.inc'))):
+        with open(os.path.join(HERE, src)) as fh:
+            hit = EXE_ADDRESS.search(fh.read())
+        if hit:
+            raise SystemExit('%s: an exe address in the source (%s); put it in the row' % (src, hit.group(0).strip()))
     for name, src, defines in BLOBS:
-        raw = assemble(src, defines)
+        raw, labels = assemble(src, defines)
+        for magic in SITE_MAGICS[:SITE_BLOB_MAGICS.get(name, 0)]:
+            if raw.count(struct.pack('<I', magic)) != 1:
+                raise SystemExit('%s: site placeholder %08x should occur once in %s' % (src, magic, name))
+        for magic in SITE_MAGICS[SITE_BLOB_MAGICS.get(name, 0):]:
+            if struct.pack('<I', magic) in raw:
+                raise SystemExit('%s: site placeholder %08x does not belong in %s' % (src, magic, name))
+        if name in LABELS:
+            missing = [label for label in LABELS[name] if label not in labels]
+            if missing:
+                raise SystemExit('%s: no label %s' % (src, missing[0]))
+            offsets[name] = {label: labels[label] for label in LABELS[name]}
         if name in SELF_BLOBS and raw.count(struct.pack('<I', SELF_MAGIC)) != SELF_BLOBS[name]:
             raise SystemExit('%s: MAGIC_SELFRVA must occur %d time(s)' % (src, SELF_BLOBS[name]))
         if name in DLL_MAGICS:
@@ -231,16 +334,15 @@ def generated():
                 n = raw.count(struct.pack('<I', value))
                 if n == 0 or (once and n != 1):
                     raise SystemExit('%s: %s must occur %s in %s' % (src, magic, 'exactly once' if once else 'at least once', name))
+                bordered(src, name, magic, raw, value)
         else:
             for magic, value in EXE_MAGICS.items():
                 want = EXE_BLOB_MAGICS.get(name, ()).count(magic)
                 if raw.count(struct.pack('<I', value)) != want:
                     raise SystemExit('%s: %s should occur %d time(s) in %s' % (src, magic, want, name))
-            if name in EXE_BLOB_MAGICS:
-                with open(os.path.join(HERE, src)) as fh:
-                    hit = EXE_ADDRESS.search(fh.read())
-                if hit:
-                    raise SystemExit('%s: an exe address in the source (%s); put it in the row' % (src, hit.group(0).strip()))
+                bordered(src, name, magic, raw, value)
+        if name == 'RESOLUTION_BLOB' and offsets[name]['table'] != len(raw):
+            raise SystemExit('%s: the table must be the last thing in the blob' % src)
         out.append(hexblob(name, raw))
     out.append('MUSIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in MAGICS.items()))
     out.append('EXE_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in EXE_MAGICS.items()))
@@ -249,8 +351,13 @@ def generated():
     out.append('PADINPUT_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in PADINPUT_MAGICS.items()))
     out.append('RESOLUTION_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in RESOLUTION_MAGICS.items()))
     out.append('DINPUT8_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DINPUT8_MAGICS.items()))
-    out.append('DCOPTIONS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DCOPTIONS_MAGICS.items()))
     out.append('NOGENERIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in NOGENERIC_MAGICS.items()))
+    out.append('SORTPAD_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in SORTPAD_MAGICS.items()))
+    out.append('PADPROMPTS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in PADPROMPTS_MAGICS.items()))
+    out.append('DCOPTIONS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DCOPTIONS_MAGICS.items()))
+    out.append('SITE_MAGICS = (%s)\n' % ', '.join('0x%08X' % m for m in SITE_MAGICS))
+    out.append('BLOB_LABELS = {\n%s}\n' % ''.join("    '%s': {%s},\n" % (name, ', '.join("'%s': 0x%x" % kv for kv in offs.items()))
+                                                  for name, offs in offsets.items()))
     out.append(END)
     return ''.join(out)
 

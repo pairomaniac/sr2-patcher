@@ -20,13 +20,15 @@
 ; The registry helper's load and save, which the config's Persist calls
 ; with (this, slot "0"/"1", name, buf, count[, &got]), are replaced by
 ; the store below. A save whose name starts "DZ" takes the digits after
-; it as that player's stick deadzone, 0-10000; input 0x3f reads it back.
+; it as that player's stick deadzone, 0-9000; input 0x3f reads it back.
+; Input 0x3e reads as down while the side holds a pad and a pad, not the
+; keyboard, was the device last used.
 ;
 ; The entries sit at fixed offsets. Load, save and update are reached by
 ; a jmp from the site; update's displaced bytes, and the poll's, the
 ; patcher copies into the replay slots here, load and save being
-; replaced whole. The European and American build's device poll is
-; hooked the same way; the Australian build, an older one, has no such
+; replaced whole. The European, American and DigiCube/MediaKite builds'
+; device poll is hooked the same way; the Australian build, an older one, has no such
 ; method - its record update calls a static poll per device type - so
 ; there the keyboard poll's address in that dispatch is pointed at
 ; pollau instead. The Device Settings page polls the pad through
@@ -45,6 +47,27 @@ bits 32
 %define MAGIC_CARS      0xE9E9E9E9      ; the absolute address of the exe's car table
 %define MAGIC_KBDPOLL   0xECECECEC      ; offset to the Australian build's stock keyboard poll
 %define MAGIC_PUBLISH   0xEDEDEDED      ; the absolute address of the exe slot that takes pollpage's address
+%define MAGIC_GAME      0xEEEEEEEE      ; the absolute address of the exe's pointer to the current-race block
+%define MAGIC_CARHIT    0xEFEFEFEF      ; in a car, the frames since it last hit a car or an object; the wall's follow
+
+%define GAME_MODE       0x38            ; the race block: 5 split screen, 6 a network race
+%define GAME_FLAGS      0x44            ; bit 2 a replay
+%define NETSLOT         0x94c           ; from the car table, the dword that holds this machine's slot in a network race
+%define SLOTS           16
+%define CAR_AIR         0x270           ; a car: 1 while all four wheels are off the ground
+%define AIR_FRAMES      10              ; in the air for this long, the landing is felt
+%define HIT_FRAMES      36              ; a hit's pulse, in frames
+%define KICK_FRAMES     6               ; its first frames, the left motor doubled
+%define LAND_FRAMES     36              ; a landing's pulse
+%define FADE_FRAMES     20              ; its last frames, over which it fades out
+%define VIB_DEFAULT     70              ; the strength setting, a percentage of a motor's full 0xffff; 0 off
+%define VIB_MAX         100
+%define IN_VIBRATION    0x3d            ; the virtual input that reads the strength setting
+%define SHAKE_SIZE      16              ; a side's: its car, the two counts as last seen, its frames in the air
+%define SHAKE_CAR       0
+%define SHAKE_HIT       4
+%define SHAKE_WALL      8
+%define SHAKE_AIR       12
 
 %define CFG_STOCK       0               ; where the text starts in the file
 %define RECORD          0x34
@@ -68,6 +91,8 @@ bits 32
 %define STICK_MAX       32767
 %define KEY_DOWN        0x80            ; what the keyboard poll reports, value and range
 %define IN_DEADZONE     0x3f            ; the virtual input that reads the deadzone
+%define IN_HELD         0x3e            ; and the one that is down while the side holds a pad and a pad was the device last used
+%define PAD_USED        30              ; a trigger past this is the pad used
 %define MENU_ONLY       0x20            ; on a pad input: answered only outside a race
 %define MENUKEY_BASE    0x400           ; + a scancode: a key answered only outside a race
 
@@ -111,8 +136,9 @@ getbase:
 ; the config exports and rewrites the text. Lines it cannot read keep
 ; the defaults. An old file with the game's 100-byte block ahead of the
 ; text is read past it. A [Display] section belongs to the resolution
-; setting (wide.asm, resolution.asm): the writer copies its Resolution
-; line from the file as it stands, so it survives a save.
+; setting (wide.asm, resolution.asm) and a [Network] section to the
+; netplay DLL (Staging and Log, 0 or 1): the writer copies their lines
+; from the file as they stand, so they survive a save.
 
 %define T_KEYNAMES      0               ; 256 names, NAME bytes each, spaces as _
 %define T_PADNAMES      4096            ; 32 names
@@ -193,13 +219,20 @@ save:
         test    esi, esi
         jz      .named
         cmp     word [esi], 'DZ'
+        jne     .vib
+        add     esi, 2
+        call    number
+        cmp     eax, DEADZONE_MAX       ; as the parser clamps: a full deadzone leaves no range to scale by
+        jbe     .setdz
+        mov     eax, DEADZONE_MAX
+.setdz: mov     [ebx + tables - $$ + W_DZ + edi * 4], eax
+        jmp     .named
+.vib:   cmp     word [esi], 'VB'
         jne     .named
         add     esi, 2
         call    number
-        cmp     eax, FULL
-        jbe     .setdz
-        mov     eax, FULL
-.setdz: mov     [ebx + tables - $$ + W_DZ + edi * 4], eax
+        call    strength
+        mov     [ebx + vib - $$ + edi * 4], eax
 .named:
         ; the table's row for this player: every key and pad forgotten,
         ; then the first of each per action from the records
@@ -398,6 +431,8 @@ ensure_table:
         rep movsd
         mov     dword [ebx + tables - $$ + W_DZ], DEADZONE_DEFAULT
         mov     dword [ebx + tables - $$ + W_DZ + 4], DEADZONE_DEFAULT
+        mov     dword [ebx + vib - $$], VIB_DEFAULT
+        mov     dword [ebx + vib - $$ + 4], VIB_DEFAULT
         push    OPEN_EXISTING
         push    GENERIC_READ
         call    open_cfg
@@ -460,7 +495,25 @@ parse:                                  ; eax = where in W_TEXT to start
 .setting:
         cmp     dword [ebx + sect - $$], SECT_NONE
         je      .skip
-        cmp     ecx, 8
+        cmp     ecx, 9
+        jne     .dz
+        cmp     dword [esi], 'Vibr'
+        jne     .action
+        cmp     dword [esi + 4], 'atio'
+        jne     .action
+        cmp     byte [esi + 8], 'n'
+        jne     .action
+        cmp     dword [ebx + sect - $$], SECT_CONTROLLER
+        jne     .skip
+        mov     esi, edi
+        call    value
+        jz      .skip
+        call    number
+        call    strength
+        mov     edx, [ebx + sectplayer - $$]
+        mov     [ebx + vib - $$ + edx * 4], eax
+        jmp     .skip
+.dz:    cmp     ecx, 8
         jne     .action
         cmp     dword [esi], 'Dead'
         jne     .action
@@ -544,6 +597,13 @@ value:
         mov     esi, edi
         call    token
 .done:  ret
+
+; eax = a strength setting, a percentage: eax = it, at most VIB_MAX.
+strength:
+        cmp     eax, VIB_MAX
+        jbe     .ok
+        mov     eax, VIB_MAX
+.ok:    ret
 
 ; eax = a percentage: eax = it in 0..FULL, at most DEADZONE_MAX.
 percent:
@@ -669,6 +729,12 @@ write_text:
         call    putpercent
         mov     al, 10
         stosb
+        lea     esi, [ebx + vibration_name - $$]
+        call    puts
+        imul    eax, [ebx + vib - $$ + ebp * 4], 100
+        call    putpercent
+        mov     al, 10
+        stosb
 .actions:
         xor     edx, edx                ; the place in the order
 .action:
@@ -737,7 +803,19 @@ write_text:
         mov     al, 10
         stosb
 .nodisp:
-        lea     esi, [ebx + tables - $$ + W_TEXT]
+        push    edi                     ; the network section, when the file has one: its two keys as they are
+        lea     eax, [ebx + s_netsect - $$]
+        push    eax
+        call    hassect
+        pop     edi
+        je      .nonet
+        lea     esi, [ebx + netheader - $$]
+        call    puts
+        lea     esi, [ebx + s_netstaging - $$]
+        call    netline
+        lea     esi, [ebx + s_netlog - $$]
+        call    netline
+.nonet: lea     esi, [ebx + tables - $$ + W_TEXT]
         sub     edi, esi                ; the length
         push    OPEN_ALWAYS
         push    GENERIC_READ | GENERIC_WRITE
@@ -757,6 +835,50 @@ write_text:
         push    ebp
         call    [ebx + fn_closehandle - $$]
 .out:   popad
+        ret
+
+; [esp+4] = a section name: ZF clear when the file has that section -
+; GetPrivateProfileStringA with no key lists its keys, none in an empty
+; or absent one. eax, ecx, edx used.
+hassect:
+        lea     eax, [ebx + path - $$]
+        push    eax
+        push    8
+        lea     eax, [ebx + netvalue - $$]
+        push    eax
+        lea     eax, [ebx + s_empty - $$]
+        push    eax
+        push    0
+        push    dword [esp + 0x18]
+        call    [ebx + fn_getpps - $$]
+        cmp     byte [ebx + netvalue - $$], 0
+        ret     4
+
+; esi = a [Network] key: "key = value" and a newline appended at edi,
+; the value as the file has it, 0 without one.
+netline:
+        push    edi
+        push    esi
+        lea     eax, [ebx + path - $$]
+        push    eax
+        push    8
+        lea     eax, [ebx + netvalue - $$]
+        push    eax
+        lea     eax, [ebx + s_zero - $$]
+        push    eax
+        push    esi
+        lea     eax, [ebx + s_netsect - $$]
+        push    eax
+        call    [ebx + fn_getpps - $$]
+        pop     esi
+        pop     edi
+        call    puts
+        lea     esi, [ebx + s_equals - $$]
+        call    puts
+        lea     esi, [ebx + netvalue - $$]
+        call    puts
+        mov     al, 10
+        stosb
         ret
 
 ; esi = a string: appended at edi.
@@ -781,7 +903,14 @@ putpercent:
         mov     ecx, 10
         xor     edx, edx
         div     ecx
-        test    eax, eax
+        cmp     eax, 10
+        jb      .tens
+        mov     al, '1'                 ; 100
+        stosb
+        mov     al, '0'
+        stosb
+        jmp     .units
+.tens:  test    eax, eax
         jz      .units
         add     al, '0'
         stosb
@@ -792,19 +921,27 @@ putpercent:
         pop     ecx
         ret
 
-heading:        db '; SEGA RALLY 2 controls', 10, 0
+heading:        db '; SEGA RALLY 2 settings', 10, 0
 dispheader:     db 10, '[Display]', 10, 'Resolution = ', 0
 s_dispsect:     db 'Display', 0
 s_reskey:       db 'Resolution', 0
 s_empty:        db 0
 dispvalue:      times 32 db 0
+netheader:      db 10, '[Network]', 10, 0
+s_netsect:      db 'Network', 0
+s_netstaging:   db 'Staging', 0
+s_netlog:       db 'Log', 0
+s_zero:         db '0', 0
+s_equals:       db ' = ', 0
+netvalue:       times 8 db 0
 controller:     db 'Controller', 0
 keyboard:       db 'Keyboard', 0
 deadzone_name:  db 'Deadzone =', 0
+vibration_name: db 'Vibration =', 0
 equals:         db ' = ', 0
 
-; open_cfg(access, disposition): SR2.CFG beside the exe, positioned at the
-; tail. eax = the handle, or INVALID_HANDLE.
+; open_cfg(access, disposition): SR2.CFG beside the exe, positioned at
+; CFG_STOCK, where the text starts. eax = the handle, or INVALID_HANDLE.
 open_cfg:
         push    esi
         push    edi
@@ -864,7 +1001,10 @@ update:
         jnz     .pad
         mov     eax, [MAGIC_CARS]       ; the first car, if a race is set up; read once a frame
         mov     [ebx + inrace - $$], eax
+        call    keyused
 .pad:   call    refresh
+        call    padused
+        call    rumble
 .skip:  popad
 replay_update:                          ; the site's six displaced bytes, from the patcher
         times 6 db 0xc1
@@ -919,6 +1059,198 @@ refresh:
         mov     [edi + 4], eax
         mov     [edi + 8], eax
 .done:  ret
+
+; Once a frame: a key gone down or up makes the keyboard the device last
+; used. The keys are Windows' own (GetKeyboardState), which every screen
+; feeds, where the multiplayer screens leave DirectInput's array alone;
+; the first eight, the mouse's buttons, are left out. Their down bits are
+; summed and the sum compared with the last, so keys that stand as they
+; were change nothing.
+keyused:
+        call    resolve
+        mov     eax, [ebx + fn_keystate - $$]
+        test    eax, eax
+        jz      .out
+        sub     esp, 256
+        push    esp
+        call    eax
+        xor     edx, edx
+        test    eax, eax
+        jz      .sum
+        mov     ecx, 2
+.keys:  mov     edi, [esp + ecx * 4]
+        and     edi, 0x80808080
+        add     edx, edi
+        rol     edx, 3
+        inc     ecx
+        cmp     ecx, 64
+        jb      .keys
+.sum:   add     esp, 256
+        cmp     edx, [ebx + keysum - $$]
+        je      .out
+        mov     [ebx + keysum - $$], edx
+        mov     byte [ebx + lastdev - $$], 0
+.out:   ret
+
+; esi = player: a button, a trigger past PAD_USED or a stick past half
+; way on the side's pad makes the pad the device last used.
+padused:
+        imul    edi, esi, STATE_SIZE
+        lea     edi, [ebx + state - $$ + edi]
+        cmp     word [edi + 4], 0       ; wButtons
+        jne     .pad
+        cmp     byte [edi + 6], PAD_USED
+        ja      .pad
+        cmp     byte [edi + 7], PAD_USED
+        ja      .pad
+        mov     ecx, 4                  ; the four stick axes
+.axis:  movsx   eax, word [edi + 6 + ecx * 2]
+        cdq
+        xor     eax, edx
+        cmp     eax, 0x4000
+        ja      .pad
+        dec     ecx
+        jnz     .axis
+        ret
+.pad:   mov     byte [ebx + lastdev - $$], 1
+        ret
+
+; esi = player: the side's pad shaken when its car hits something or
+; lands. The game counts a car's frames since its last hit of a car or an
+; object, and since its last hit of a wall, and zeroes a count when the
+; hit is hard enough for the crash sound and the last was over 60 frames
+; back; a count that went down is that hit. The landing is the airborne
+; flag gone after AIR_FRAMES frames up. Nothing changes while the game is
+; paused, so nothing fires. The car is the side's slot of the car table:
+; in a network race this machine's slot, for side 0 alone; side 1's only
+; in split screen; none in a replay. A car first seen sets the counts and
+; fires nothing. The pulse is sent every frame and runs out by the
+; frame, in or out of a race.
+rumble:
+        movzx   eax, byte [ebx + padidx - $$ + esi]
+        test    eax, eax
+        jz      .out
+        cmp     dword [ebx + fn_setstate - $$], 0
+        je      .out
+        lea     ebp, [esi * 8]
+        lea     ebp, [ebx + ebp * 2 + shake - $$]       ; the side's SHAKE_SIZE bytes
+        xor     edi, edi                ; the car
+        mov     eax, [MAGIC_GAME]
+        test    eax, eax
+        jz      .car
+        test    byte [eax + GAME_FLAGS], 4
+        jnz     .car
+        mov     edx, [eax + GAME_MODE]
+        mov     ecx, esi
+        cmp     edx, 6
+        jne     .local
+        test    esi, esi
+        jnz     .car
+        mov     ecx, MAGIC_CARS
+        mov     ecx, [ecx + NETSLOT]
+        cmp     ecx, SLOTS
+        jae     .car
+        jmp     .slot
+.local: test    esi, esi
+        jz      .slot
+        cmp     edx, 5
+        jne     .car
+.slot:  mov     edi, [MAGIC_CARS + ecx * 4]
+.car:   xor     edx, edx                ; 1 for a pulse to start, its kind in ecx: 0 a hit, 1 a landing
+        cmp     edi, [ebp + SHAKE_CAR]
+        mov     [ebp + SHAKE_CAR], edi
+        je      .same
+        test    edi, edi
+        jz      .tick
+        mov     eax, [edi + MAGIC_CARHIT]
+        mov     [ebp + SHAKE_HIT], eax
+        lea     eax, [edi + 4]
+        mov     eax, [eax + MAGIC_CARHIT]
+        mov     [ebp + SHAKE_WALL], eax
+        mov     dword [ebp + SHAKE_AIR], 0
+        jmp     .tick
+.same:  test    edi, edi
+        jz      .tick
+        mov     eax, [edi + MAGIC_CARHIT]
+        cmp     eax, [ebp + SHAKE_HIT]
+        mov     [ebp + SHAKE_HIT], eax
+        jae     .wall
+        mov     edx, 1
+.wall:  lea     eax, [edi + 4]
+        mov     eax, [eax + MAGIC_CARHIT]
+        cmp     eax, [ebp + SHAKE_WALL]
+        mov     [ebp + SHAKE_WALL], eax
+        jae     .air
+        mov     edx, 1
+.air:   xor     ecx, ecx                ; a hit
+        cmp     dword [edi + CAR_AIR], 0
+        je      .down
+        cmp     dword [ebp + SHAKE_AIR], AIR_FRAMES
+        jae     .tick
+        inc     dword [ebp + SHAKE_AIR]
+        jmp     .tick
+.down:  cmp     dword [ebp + SHAKE_AIR], AIR_FRAMES
+        mov     dword [ebp + SHAKE_AIR], 0
+        jb      .tick
+        test    edx, edx
+        jnz     .tick                   ; a hit in the same frame is the stronger
+        mov     edx, 1
+        inc     ecx                     ; a landing
+.tick:  test    edx, edx
+        jz      .run
+        cmp     dword [ebx + vib - $$ + esi * 4], 0
+        je      .run                    ; the setting at 0: no rumble
+        mov     al, HIT_FRAMES
+        test    ecx, ecx
+        jz      .start
+        mov     al, LAND_FRAMES
+.start: mov     [ebx + shakeleft - $$ + esi], al
+        mov     [ebx + shakeleft - $$ + 2 + esi], cl
+.run:   movzx   ecx, byte [ebx + shakeleft - $$ + esi]
+        test    ecx, ecx
+        jz      .out
+        dec     ecx
+        mov     [ebx + shakeleft - $$ + esi], cl
+        jz      .set                    ; the pulse over: the motors off
+        imul    eax, [ebx + vib - $$ + esi * 4], 0xffff
+        xor     edx, edx
+        mov     edi, 100
+        div     edi                     ; the strength
+        cmp     byte [ebx + shakeleft - $$ + 2 + esi], 0
+        jne     .land
+        lea     edx, [eax + eax * 2]
+        shr     edx, 2                  ; a hit, level to its end: the left motor at three quarters,
+        cmp     ecx, HIT_FRAMES - KICK_FRAMES
+        jb      .hit
+        add     edx, edx                ; doubled over its first frames,
+        cmp     edx, 0xffff
+        jbe     .hit
+        mov     edx, 0xffff
+.hit:   mov     ecx, eax
+        shr     ecx, 1                  ; the right at a half
+        jmp     .both
+.land:  cmp     ecx, FADE_FRAMES        ; a landing, lighter, fading out
+        jbe     .fade
+        mov     ecx, FADE_FRAMES
+.fade:  imul    eax, ecx
+        xor     edx, edx
+        mov     edi, FADE_FRAMES
+        div     edi
+        lea     edx, [eax + eax * 2]
+        shr     edx, 3                  ; the left at three eighths, the right at a half
+        mov     ecx, eax
+        shr     ecx, 1
+.both:  shl     ecx, 16
+        or      ecx, edx
+.set:   push    ecx                     ; XINPUT_VIBRATION
+        mov     eax, esp
+        push    eax
+        movzx   eax, byte [ebx + padidx - $$ + esi]
+        dec     eax
+        push    eax
+        call    [ebx + fn_setstate - $$]
+        pop     ecx
+.out:   ret
 
 ; XInputGetState(ecx, the side's state); eax = its result, ecx kept.
 getstate:
@@ -1068,6 +1400,10 @@ answer:
         and     ecx, 0x3f               ; the input
         cmp     ecx, IN_DEADZONE
         je      .value
+        cmp     ecx, IN_HELD
+        je      .value
+        cmp     ecx, IN_VIBRATION
+        je      .value
         test    ecx, MENU_ONLY
         jz      .value
         and     ecx, ~MENU_ONLY
@@ -1087,12 +1423,18 @@ answer:
 ;   16, 17  LT, RT
 ;   18-21   left stick left, right, up, down
 ;   22-25   right stick likewise
+;   0x3e    down while the side holds a pad and a pad was the device last used
 ;   0x3f    the side's deadzone
+;   0x3d    the side's vibration strength, a percentage
 padvalue:
         imul    edi, esi, STATE_SIZE
         lea     edi, [ebx + state - $$ + edi]
         cmp     ecx, IN_DEADZONE
         je      .deadzone
+        cmp     ecx, IN_VIBRATION
+        je      .vibration
+        cmp     ecx, IN_HELD
+        je      .held
         cmp     ecx, 16
         jae     .analog
         movzx   eax, word [edi + 4]     ; wButtons
@@ -1157,6 +1499,17 @@ padvalue:
         mov     eax, [ebx + tables - $$ + W_DZ + esi * 4]
         mov     edx, FULL
         ret
+.vibration:
+        mov     eax, [ebx + vib - $$ + esi * 4]
+        mov     edx, VIB_MAX
+        ret
+.held:  xor     eax, eax
+        cmp     byte [ebx + padidx - $$ + esi], 0
+        je      .digital
+        cmp     byte [ebx + lastdev - $$], 0
+        je      .digital
+        mov     eax, KEY_DOWN
+        jmp     .digital
 .nothing:
         xor     eax, eax
         mov     edx, FULL
@@ -1164,8 +1517,9 @@ padvalue:
 
 ; ---- imports ---------------------------------------------------------
 
-; Once: kernel32's file routines by name, and XInputGetState from the
-; first of three DLLs present. Registers kept.
+; Once: kernel32's file routines by name, and XInputGetState and
+; XInputSetState from the first of three DLLs present, and user32's
+; GetKeyboardState. Registers kept.
 resolve:
         cmp     dword [ebx + resolved - $$], 0
         jne     .done
@@ -1191,21 +1545,38 @@ resolve:
         call    [ebx + MAGIC_LOADLIB]
         test    eax, eax
         jz      .nextdll
+        mov     edi, eax
         lea     ecx, [ebx + procname - $$]
         push    ecx
         push    eax
         call    [ebx + MAGIC_GETPROC]
         test    eax, eax
-        jnz     .found
+        jz      .nextdll
+        mov     [ebx + fn_xinput - $$], eax
+        lea     ecx, [ebx + setname - $$]
+        push    ecx
+        push    edi
+        call    [ebx + MAGIC_GETPROC]
+        mov     [ebx + fn_setstate - $$], eax
+        jmp     .user
 .nextdll:
         inc     ebp
         cmp     byte [ebp - 1], 0
         jne     .nextdll
         cmp     byte [ebp], 0
         jne     .dll
-        mov     eax, 1                  ; none: tried and failed
-.found: mov     [ebx + fn_xinput - $$], eax
-        popad
+        mov     dword [ebx + fn_xinput - $$], 1        ; none: tried and failed
+.user:  lea     eax, [ebx + user32 - $$]
+        push    eax
+        call    [ebx + MAGIC_LOADLIB]
+        test    eax, eax
+        jz      .out
+        lea     ecx, [ebx + keystatename - $$]
+        push    ecx
+        push    eax
+        call    [ebx + MAGIC_GETPROC]
+        mov     [ebx + fn_keystate - $$], eax
+.out:   popad
 .done:  ret
 
 kernel32:   db 'kernel32.dll', 0
@@ -1214,12 +1585,22 @@ names:      db 'CreateFileA', 0, 'ReadFile', 0, 'WriteFile', 0
             db 'GetPrivateProfileStringA', 0, 0
 xinputdlls: db 'xinput1_4.dll', 0, 'xinput1_3.dll', 0, 'xinput9_1_0.dll', 0, 0
 procname:   db 'XInputGetState', 0
+setname:    db 'XInputSetState', 0
+user32:     db 'user32.dll', 0
+keystatename: db 'GetKeyboardState', 0
 
 ; stick directions: the axis's offset in XINPUT_STATE, and 1 for its
 ; positive half
 dirtab:     db 8, 0, 8, 1, 10, 1, 10, 0, 12, 0, 12, 1, 14, 1, 14, 0
 
         align 4
+shake:      times 2 * SHAKE_SIZE db 0
+fn_setstate: dd 0                       ; XInputSetState; 0 when missing
+vib:        dd VIB_DEFAULT, VIB_DEFAULT ; each side's strength setting
+shakeleft:  db 0, 0, 0, 0               ; each side's pulse: the frames left, then each side's kind
+keysum:     dd 0                        ; the keys that were down when last looked at, summed
+fn_keystate: dd 0                       ; user32's GetKeyboardState; 0 when missing
+lastdev:    db 1, 0, 0, 0               ; 1 while the pad is the device last used
 resolved:   dd 0
 fn_createfile:  dd 0                    ; in the order of names
 fn_readfile:    dd 0

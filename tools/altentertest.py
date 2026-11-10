@@ -9,7 +9,7 @@ recording stubs. Any other message must reach the handler with the stack
 intact; ALT+ENTER must frame the window at the picture's size centred on
 its monitor, a repeat must do nothing, the next press must put it back
 over the monitor, and user32 must be loaded once. Needs python3-unicorn;
-exits 0 with a note when it is missing.
+exits 77 with a note when it is missing.
 """
 import struct
 import sys
@@ -87,7 +87,7 @@ class Machine:
         esp = STACK + 0x8000
         self.mu.mem_write(esp, struct.pack('<5I', RETURN, 0x1234, msg, wparam, lparam))
         self.mu.reg_write(UC_X86_REG_ESP, esp)
-        self.mu.emu_start(CODE, RETURN)
+        self.mu.emu_start(CODE, RETURN, timeout=2000000)
         if self.mu.reg_read(UC_X86_REG_ESP) != esp + 4:
             raise SystemExit('altentertest: stack wrong after message 0x%x' % msg)
         return self.mu.reg_read(UC_X86_REG_EAX), self.calls

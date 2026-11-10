@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define N 6
 static sr2_net *nets[N];
@@ -205,8 +206,42 @@ static void oversized(void)
     ok("an oversized reliable datagram is dropped; the link after it intact");
 }
 
-/* A host that answers a join by itself: the welcome carries `index`. */
-static int fake_host(int who, int index)
+/* Guest 1 sends the game's entry message (0x2a) naming index 3 in its
+ * second byte, then one naming its own: the host gets only the second. */
+static void forged_index(void)
+{
+    static const char bad[] = "\x2a\x03z", good[] = "\x2a\x01z", clock[] = "\x20\x00", past[] = "\x20\x09";
+    sr2_send(nets[1], 0, bad, sizeof bad, 1, now);
+    sr2_send(nets[1], 0, good, sizeof good, 1, now);
+    sr2_send(nets[1], 0, past, 2, 1, now);
+    sr2_send(nets[1], 0, clock, 2, 1, now);                /* the clock request: a 0 in its second byte from every guest */
+    run(300);
+    if (!got(0, 1, good) || !got(0, 1, "\x20") || !empty(0))
+        fail("a game message naming another index got through, or the clock request did not");
+    ok("an entry naming another index is dropped, one naming its own and the clock request delivered, an index past the table dropped");
+}
+
+/* A network opened DIRECT with text that is no address hosts at once -
+ * the game opens to host with whatever the box holds - and its search
+ * fails; the same with an address searches. */
+static void bad_address_hosts(void)
+{
+    sr2_session found[2];
+    sr2_net *n = sr2_create();
+    sr2_set_log(n, logline, (void *)"bad");
+    if (sr2_open(n, SR2_KIND_DIRECT, "no such host", now) != SR2_OK || sr2_host(n, "TEAM", 4, now) != SR2_OK)
+        fail("a DIRECT open with a bad address did not host");
+    if (sr2_enum(n, now, found, 2) != SR2_ERR)
+        fail("a search with a bad address did not fail");
+    if (sr2_open(n, SR2_KIND_DIRECT, "127.0.0.1", now) != SR2_OK || sr2_enum(n, now, found, 2) == SR2_ERR)
+        fail("a search with an address failed");
+    sr2_destroy(n);
+    ok("a DIRECT open keeps the text: a bad one hosts and fails the search, an address searches");
+}
+
+/* A host that answers a join by itself: the welcome carries `index`, and
+ * the wire version unless `old`, the shape a host from before it sends. */
+static int fake_host(int who, int index, int old)
 {
     sr2_session s;
     sock_t fs = socket(AF_INET, SOCK_DGRAM, 0);
@@ -224,6 +259,7 @@ static int fake_host(int who, int index)
     s.addr = htonl(INADDR_LOOPBACK);
     s.port = local_port(fs);
     s.max_players = 4;
+    s.version = SR2_PROTO;
     strcpy(s.name, "FAKE");
     r = sr2_join(nets[who], &s, now);
     for (t = 0; t < 700 && r == SR2_CONNECTING; t++) {
@@ -231,12 +267,15 @@ static int fake_host(int who, int index)
         socklen_t flen = sizeof from;
         int n = (int)recvfrom(fs, buf, sizeof buf, 0, (struct sockaddr *)&from, &flen);
         if (n >= 16 && buf[4] == 3 && !welcomed) {     /* T_JOIN: T_WELCOME, reliable seq 1 */
-            uint8_t w[16 + 7];
+            uint8_t w[16 + 8];
+            if (n != 16 + 29 || buf[16 + 24] != SR2_PROTO)
+                fail("the join's shape: guid, nonce, version, cookie");
             header(w, 4, 1, 0, index, 1);
             w[16] = index;
             w[17] = 0;
             memset(w + 18, 0, 5);                       /* nothing reserved, an empty roster */
-            sendto(fs, w, sizeof w, 0, (struct sockaddr *)&from, flen);
+            w[23] = SR2_PROTO;
+            sendto(fs, w, old ? 16 + 7 : 16 + 8, 0, (struct sockaddr *)&from, flen);
             welcomed = 1;
         }
         run(10);
@@ -246,6 +285,112 @@ static int fake_host(int who, int index)
     if (!welcomed)
         fail("the fake host never saw the join");
     return r;
+}
+
+/* Guest 1's socket sends the host an ack far past anything the host
+ * sent: it must not clear the window, or the next reliable messages
+ * from the host would be given up on under loss. */
+static void forged_ack(void)
+{
+    uint8_t pkt[16];
+    int k, seq_ok = 1;
+    char order[16];
+    spy_from = sr2_port(nets[1]);
+    spy_to = sr2_port(nets[0]);
+    sr2_send(nets[1], 0, "y", 2, 1, now);
+    run(300);
+    if (spy_sock == SOCK_INVALID || !got(0, 1, "y"))
+        fail("the watched link");
+    header(pkt, 12, 0, 1, 0xff, 0);                     /* T_ACK */
+    pkt[12] = 0xe8; pkt[13] = 0x03; pkt[14] = 0; pkt[15] = 0;   /* ack 1000 */
+    send_from(spy_sock, spy_to, pkt, sizeof pkt);
+    run(50);
+    drop_pct = 60;
+    for (k = 0; k < 10; k++) {
+        snprintf(order, sizeof order, "f%d", k);
+        sr2_send(nets[0], 1, order, (int)strlen(order) + 1, 1, now);
+    }
+    run(4000);
+    drop_pct = 0;
+    for (k = 0; k < 10 && seq_ok; k++) {
+        snprintf(order, sizeof order, "f%d", k);
+        seq_ok = got(1, 0, order);
+    }
+    if (!seq_ok)
+        fail("a forged ack cleared the host's window");
+    spy_from = 0;
+    ok("an ack past anything sent is ignored; the window resends under loss");
+}
+
+/* A guest's reliable broadcast reaches the host while its window to
+ * another guest is full: the host does not take it (nor acknowledge it,
+ * so it comes again) until that window has room, and nobody gets it
+ * before then; once the road is open every message arrives, in order. */
+static void forward_held(void)
+{
+    char order[16];
+    int k, seq_ok = 1;
+    drop_to = sr2_port(nets[3]);        /* nothing from the host reaches guest 3 */
+    for (k = 0; k < 64; k++) {          /* the host's window to 3 fills: WINDOW reliable messages unacknowledged */
+        snprintf(order, sizeof order, "w%d", k);
+        if (sr2_send(nets[0], 3, order, (int)strlen(order) + 1, 1, now) != SR2_OK)
+            fail("the host's window to guest 3 did not take 64 messages");
+    }
+    sr2_send(nets[1], -1, "b1", 3, 1, now);
+    run(600);
+    if (got(2, 1, "b1"))
+        fail("a reliable broadcast forwarded to guest 2 while it could not be to guest 3");
+    drop_to = 0;
+    run(1500);
+    for (k = 0; k < 64 && seq_ok; k++) {
+        snprintf(order, sizeof order, "w%d", k);
+        seq_ok = got(3, 0, order);
+    }
+    if (!seq_ok || !got(3, 1, "b1") || !got(2, 1, "b1") || !got(0, 1, "b1") || !empty(0) || !empty(2) || !empty(3))
+        fail("the held broadcast did not arrive once everywhere, after the window's messages");
+    ok("a reliable broadcast is held, unacknowledged, while a forward target's window is full");
+}
+
+/* A join from a socket that has never been challenged, with the right
+ * session but no cookie, and one with a made-up cookie: a challenge each
+ * time, no seat, no welcome, nothing but 20 bytes back. */
+static void uncookied(void)
+{
+    sock_t fs = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in sa, from;
+    socklen_t flen = sizeof from;
+    uint8_t pkt[16 + 29], in[256];
+    sr2_session s;
+    int n, max, cur, before, k, challenges = 0, others = 0;
+    memset(&sa, 0, sizeof sa);
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (fs < 0 || bind(fs, (struct sockaddr *)&sa, sizeof sa) != 0)
+        fail("uncookied socket");
+    fcntl(fs, F_SETFL, O_NONBLOCK);
+    sr2_session_info(nets[0], &s);
+    sr2_player_count(nets[0], &max, &before);
+    for (k = 0; k < 2; k++) {
+        memset(pkt, 0, sizeof pkt);
+        header(pkt, 3, 0, 0xff, 0xff, 0);               /* T_JOIN */
+        memcpy(pkt + 16, s.guid, 16);
+        memset(pkt + 32, 0x77, 8);
+        pkt[40] = SR2_PROTO;
+        pkt[41] = k * 0x5a; pkt[42] = k * 0x5a;         /* no cookie, then a wrong one */
+        send_from(fs, sr2_port(nets[0]), pkt, sizeof pkt);
+        run(200);
+        while ((n = (int)recvfrom(fs, in, sizeof in, 0, (struct sockaddr *)&from, &flen)) > 0) {
+            if (n == 16 + 4 && in[4] == 15)
+                challenges++;
+            else
+                others++;
+        }
+    }
+    close(fs);
+    sr2_player_count(nets[0], &max, &cur);
+    if (challenges != 2 || others || cur != before)
+        fail("a join without the cookie got more than a challenge");
+    ok("a join without the host's cookie gets a 20-byte challenge and no seat");
 }
 
 int main(void)
@@ -297,12 +442,31 @@ int main(void)
     ok("names and counts everywhere");
 
     oversized();
-    if (fake_host(5, 1) != SR2_OK || sr2_my_index(nets[5]) != 1)
+    forged_index();
+    bad_address_hosts();
+    forged_ack();
+    forward_held();
+    uncookied();
+    if (fake_host(5, 1, 0) != SR2_OK || sr2_my_index(nets[5]) != 1)
         fail("a welcome with seat 1");
     sr2_leave(nets[5], now);
-    if (fake_host(5, 200) == SR2_OK || sr2_my_index(nets[5]) >= 0)
+    if (fake_host(5, 200, 0) == SR2_OK || sr2_my_index(nets[5]) >= 0)
         fail("a welcome with seat 200 taken");
     ok("a welcome with a seat past the table is not taken; one in it is");
+    if (fake_host(5, 1, 1) != SR2_REFUSED || sr2_my_index(nets[5]) >= 0)
+        fail("an older host's welcome taken");
+    ok("a host from before the wire's version is refused, not joined");
+    {
+        sr2_session s;
+        memset(&s, 0, sizeof s);
+        s.addr = htonl(INADDR_LOOPBACK);
+        s.port = sr2_port(nets[0]);
+        s.max_players = 4;
+        s.version = 0;
+        if (sr2_join(nets[5], &s, now) != SR2_REFUSED)
+            fail("a listed session of another version joined");
+        ok("a listed session from before the wire's version is refused before a join goes out");
+    }
 
     /* a fifth: full */
     if (join(4, "") != SR2_REFUSED)
@@ -397,7 +561,7 @@ int main(void)
         fail("leave");
     ok("guest 2 leaves: DESTROYED 2 at the host and guest 1");
     alive[1] = 0;                       /* guest 1 stops polling */
-    run(8000);
+    run(47000);
     if (!expect_event(0, SR2_EV_DESTROYED, 1) || !expect_event(4, SR2_EV_DESTROYED, 1))
         fail("silence");
     ok("guest 1 goes silent: dropped after the timeout");
@@ -406,6 +570,33 @@ int main(void)
     if (!expect_event(1, SR2_EV_LOST, -1))
         fail("the dropped guest hears it");
     ok("and hears it is out when it comes back");
+
+    /* the directory's names are looked up off the caller's thread */
+    {
+        static const char *const rnames[] = {"127.0.0.1:1234", "localhost", "no-such-host.invalid"};
+        sock_resolver *rs = sock_resolve(rnames, 3, 47627);
+        sock_addr got[SOCK_RESOLVE_MAX];
+        sr2_session found[SR2_MAX_SESSIONS];
+        int c = -1, t;
+        for (t = 0; t < 3000 && (c = sock_resolved(rs, got, SOCK_RESOLVE_MAX)) < 0; t++)
+            usleep(10000);
+        if (c < 1 || c > 2 || got[0].addr != htonl(INADDR_LOOPBACK) || got[0].port != 1234)
+            fail(c < 0 ? "the resolver never finished" : "the resolver's addresses");
+        sock_resolve_drop(rs);
+        sr2_leave(nets[5], now);
+        if (sr2_open(nets[5], SR2_KIND_INTERNET, "", now) != SR2_OK)
+            fail("open internet with the names");
+        if (sr2_enum(nets[5], now, found, SR2_MAX_SESSIONS) != SR2_CONNECTING)
+            fail("a search while the names are looked up");
+        for (t = (int)time(NULL), c = SR2_CONNECTING; (int)time(NULL) - t < 30 && c == SR2_CONNECTING;) {
+            run(10);                    /* a resolver that is slow to fail a name gets real time, not ticks */
+            c = sr2_enum(nets[5], now, found, SR2_MAX_SESSIONS);
+        }
+        if (c != 0)
+            fail(c == SR2_CONNECTING ? "the search never ended after the lookup" : "the search after the lookup");
+        sr2_leave(nets[5], now);
+        ok("the directory's names are looked up on a thread of their own; the search waits for them");
+    }
 
     /* the directory: found through it, joined direct, then through the relay */
     if (getenv("SR2_DIR_PORT")) {
@@ -423,6 +614,25 @@ int main(void)
         if (sr2_host(nets[0], "TEAM", 4, now) != SR2_OK || sr2_player_create(nets[0], "Host", now) != 0)
             fail("host internet");
         run(1200);                      /* registered */
+        {
+            sr2_session s;
+            int t2;
+            memset(&s, 0, sizeof s);
+            memset(s.guid, 0x33, 16);
+            s.addr = htonl(INADDR_LOOPBACK);
+            s.port = 1;                 /* nobody */
+            s.max_players = 4;
+            s.version = SR2_PROTO;
+            strcpy(s.name, "GONE");
+            r = sr2_join(nets[3], &s, now);
+            for (t2 = 0; t2 < 100 && r == SR2_CONNECTING; t2++) {
+                run(10);
+                r = sr2_join_status(nets[3], now);
+            }
+            if (r != SR2_REFUSED)
+                fail("a session the directory does not have: not refused within a second");
+            ok("internet: a join to a session the directory does not have is refused by its N, not waited out");
+        }
         if (join(1, "internet: guest 1 finds the session at the directory and joins direct") != SR2_OK)
             fail("internet join");
         drop_to = sr2_port(nets[2]);
@@ -441,13 +651,33 @@ int main(void)
         drop_to = 0;
         for (k = 3; k < N; k++)
             alive[k] = 0;
+        {
+            sr2_session found[SR2_MAX_SESSIONS];
+            int c = sr2_enum(nets[4], now, found, SR2_MAX_SESSIONS), t2;
+            for (t2 = 0; t2 < 100 && c == SR2_CONNECTING; t2++) {
+                run(10);
+                c = sr2_enum(nets[4], now, found, SR2_MAX_SESSIONS);
+            }
+            if (c != 1 || found[0].version != SR2_PROTO)
+                fail("the list before the host leaves");
+            sr2_leave(nets[0], now);
+            alive[0] = 0;
+            run(3500);                  /* past the game's own TTL; the directory's would be 5 s */
+            c = sr2_enum(nets[4], now, found, SR2_MAX_SESSIONS);
+            if (c != 0)
+                fail("the session still listed after the host's X");
+            ok("internet: the host's leave takes its session off the list at once");
+            sr2_leave(nets[4], now);
+        }
     }
 
-    /* the host leaves */
-    drain_events(4); drain_events(1);
-    sr2_leave(nets[0], now);
-    alive[0] = 0;
-    run(100);
+    /* the host leaves (already gone, with the directory) */
+    if (alive[0]) {
+        drain_events(4); drain_events(1);
+        sr2_leave(nets[0], now);
+        alive[0] = 0;
+        run(100);
+    }
     i = dir_port ? 1 : 4;
     if (!expect_event(i, SR2_EV_LOST, -1) || sr2_poll(nets[i], now) != SR2_ERR)
         fail("host leaves");

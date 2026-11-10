@@ -9,7 +9,7 @@ for kernel32's profile routines, GetModuleFileNameA and the page's text
 routine. Drives the row's init (the stock choice, then a wide size in
 SR2.CFG), a draw of the row and the write-back on leaving, and checks the
 row, the count, the text drawn and the profile write. Needs
-python3-unicorn; exits 0 with a note when it is missing.
+python3-unicorn; exits 77 with a note when it is missing.
 """
 import os
 import struct
@@ -61,7 +61,7 @@ def main(argv):
             raise SystemExit('resolutiontest: the site at 0x%x changed under relocation' % site)
 
     row = patcher.BUILDS[build]
-    optbase = 0x10000000
+    optbase = patcher._image_base(image)          # the DLL's preferred base, the row's addresses' own
     names = ['LoadLibraryA', 'GetProcAddress', 'GetModuleFileNameA', 'GetPrivateProfileStringA',
              'WritePrivateProfileStringA', 'text', 'draw']
     argc = {'LoadLibraryA': 1, 'GetProcAddress': 2, 'GetModuleFileNameA': 3, 'GetPrivateProfileStringA': 6,
@@ -146,8 +146,9 @@ def main(argv):
     def page(off):
         return struct.unpack('<I', mu.mem_read(PAGE + off, 4))[0]
 
-    G16_9 = 2                                               # the 16:9 group, 1920x1080 its third
+    G16_9 = 2                                               # the 16:9 group
     N16_9 = patcher.RESOLUTION_GROUPS[G16_9][2]              # and its sizes
+    I1080 = patcher.RESOLUTIONS.index((1920, 1080)) - sum(n for _w, _h, n in patcher.RESOLUTION_GROUPS[:G16_9])
     # init: the stock choice 1 with no file: 4:3, its second; then a wide size in the file: its group and entry
     mu.mem_write(SETTINGS + 0x50, struct.pack('<I', 1))
     call(0, ebx=1, ecx=2)
@@ -155,7 +156,7 @@ def main(argv):
         raise SystemExit('resolutiontest: init from the stock choice gave %r' % ((page(0x30), page(0x34), page(0x70), page(0x74)),))
     state['answer'] = b'1920x1080'
     call(0, ebx=1, ecx=2)
-    if (page(0x30), page(0x34), page(0x70)) != (2, G16_9, N16_9):
+    if (page(0x30), page(0x34), page(0x70)) != (I1080, G16_9, N16_9):
         raise SystemExit('resolutiontest: init from the file gave %r' % ((page(0x30), page(0x34), page(0x70)),))
     state['answer'] = b'1234x567'
     call(0, ebx=1, ecx=2)
@@ -195,10 +196,10 @@ def main(argv):
         opt = patcher.BUILDS[build]['options']
         w = 0.0
         for ch in text.encode():
-            g = struct.unpack('<b', mu.mem_read(BASE + opt['CHARMAP'] - 0x10000000 + ch, 1))[0]
+            g = struct.unpack('<b', mu.mem_read(BASE + opt['CHARMAP'] - optbase + ch, 1))[0]
             if g < 0:
                 continue
-            glyph = struct.unpack('<I', mu.mem_read(BASE + opt['GLYPHS'] - 0x10000000 + g * 4, 4))[0]
+            glyph = struct.unpack('<I', mu.mem_read(BASE + opt['GLYPHS'] - optbase + g * 4, 4))[0]
             w += struct.unpack('<f', mu.mem_read(glyph + 0xc, 4))[0] if glyph else 10.0
         return w
     colon = 270.0 - 30.0 + width('21')
@@ -214,7 +215,7 @@ def main(argv):
         raise SystemExit('resolutiontest: the aspect row off the cursor drawn as %r %r' % (state['plate'], state['texts']))
     # leave: a wide row stores 0 and writes the group's size; a stock row stores itself
     mu.mem_write(PAGE + 0x34, struct.pack('<I', G16_9))
-    mu.mem_write(PAGE + 0x30, struct.pack('<I', 2))
+    mu.mem_write(PAGE + 0x30, struct.pack('<I', I1080))
     call(10)
     if struct.unpack('<I', mu.mem_read(SETTINGS + 0x50, 4))[0] != 0 or state['written'] != '1920x1080':
         raise SystemExit('resolutiontest: leaving with a wide size gave %r' % ((state['written'],)))

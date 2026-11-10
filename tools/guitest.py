@@ -21,7 +21,6 @@ run that tested no window at all should not look like one that did.
 No copy of the game is needed. What the window does to real files is
 selftest.py's and cabtest.py's.
 """
-import importlib.util
 import os
 import sys
 import tempfile
@@ -81,7 +80,7 @@ def contrast(a, b):
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
 
 FAILED = []
 
@@ -91,14 +90,6 @@ def check(label, condition, detail=''):
                          '' if condition else '   <- %s' % (detail,)))
     if not condition:
         FAILED.append(label)
-
-
-def load_patcher():
-    spec = importlib.util.spec_from_file_location(
-        'patcher', os.path.join(ROOT, 'sr2-patcher.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def build_window(patcher, tk):
@@ -131,22 +122,23 @@ def walk(widget, out=None):
 def text_of(widget):
     try:
         return str(widget.cget('text'))
-    except Exception:                                       # noqa: BLE001
+    except Exception:                                       # anything: the check is that the window survives it
         return ''
 
 
 def main():
     # The palette first: it needs no display, so it is checked even where
     # the rest of this skips.
-    patcher = load_patcher()
+    from uctest import patcher
     for a, b, what, want in PAIRS:
         got = contrast(patcher.PALETTE[a], patcher.PALETTE[b])
         check('%s reads (%s on %s)' % (what, a, b), got >= want,
               '%.2f:1, wants %.1f' % (got, want))
 
-    # A skip is a note locally and a failure in CI, where the runner is
-    # meant to have both and a green run that tested no window is wrong.
-    skip = 1 if os.environ.get('CI') == 'true' else 0
+    # A skip is reported as one locally (77, what tools/check.py reads as
+    # a skip) and is a failure in CI, where the runner is meant to have
+    # both and a green run that tested no window is wrong.
+    skip = 1 if os.environ.get('CI') == 'true' else 77
     try:
         import tkinter as tk
         from tkinter import ttk
@@ -161,6 +153,11 @@ def main():
         return 1 if FAILED else skip
 
     root = build_window(patcher, tk)
+    raised = []
+
+    def callback_failed(exc, val, tb):  # Tk swallows these and prints them; count them instead
+        raised.append('%s: %s' % (exc.__name__, val))
+    root.report_callback_exception = callback_failed
     root.overrideredirect(True)        # no window manager under xvfb
     root.geometry('+0+0')
     root.update()
@@ -173,9 +170,8 @@ def main():
             buttons.setdefault(text_of(w), []).append(w)
     heads = {text_of(w): w for w in everything
              if isinstance(w, ttk.Label)
-             and text_of(w) in ('GAME FOLDER', 'INSTALL', 'ESSENTIAL PATCHES',
-                                'EXTRA PATCHES', 'ADD-ONS', 'DIAGNOSTICS',
-                                'LOG', 'ABOUT')}
+             and text_of(w) in ('GAME FOLDER', 'INSTALL', 'PATCHES',
+                                'ADD-ONS', 'DIAGNOSTICS', 'LOG', 'ABOUT')}
 
     def pump(ms=0):
         root.update_idletasks()
@@ -196,7 +192,7 @@ def main():
 
     # ---- nothing to act on, nothing offered --------------------------
     check('every card the window needs is there',
-          len(heads) == 8, sorted(heads))
+          len(heads) == 7, sorted(heads))
     check('the folder is asked for once, not twice',
           len([w for w in everything
                if isinstance(w, ttk.Entry)
@@ -207,8 +203,7 @@ def main():
                   ('Install game', 'Rip soundtrack', 'Apply patches',
                    'Restore original')))
     check('the numbered cards start open and the rest closed',
-          all(is_open(n) for n in ('GAME FOLDER', 'INSTALL',
-                                   'ESSENTIAL PATCHES', 'EXTRA PATCHES',
+          all(is_open(n) for n in ('GAME FOLDER', 'INSTALL', 'PATCHES',
                                    'ADD-ONS'))
           and not any(is_open(n) for n in ('DIAGNOSTICS', 'LOG', 'ABOUT')))
 
@@ -258,6 +253,23 @@ def main():
           not enabled('Install game')
           and app.disc_note.cget('text') == patcher.INSTALL_NO_PATH,
           app.disc_note.cget('text'))
+    # a file that is not a disc is read off the window's thread, then refused
+    junk = os.path.join(tempfile.gettempdir(), 'sr2-guitest-junk.cue')
+    with open(junk, 'w') as fh:
+        fh.write('not a cue sheet\n')
+    app.disc_var.set(junk)
+    reading = False
+    for _ in range(100):
+        pump(20)
+        reading |= app.disc_note.cget('text') == patcher.INSTALL_READING
+        if app.disc_note.cget('text') not in (patcher.INSTALL_NO_PATH, patcher.INSTALL_READING):
+            break
+    check('a file that is not a disc is refused',
+          not enabled('Install game') and app.disc_note.cget('text') not in (
+              patcher.INSTALL_PICK, patcher.INSTALL_NO_PATH, patcher.INSTALL_READING),
+          app.disc_note.cget('text'))
+    check('and was read off the window\'s thread', reading)
+    os.remove(junk)
     app.disc_var.set('')
     pump(400)
 
@@ -277,14 +289,17 @@ def main():
     with open(os.path.join(empty, patcher.EXE), 'wb') as fh:
         fh.write(b'not the game')
     app.game_var.set(empty + os.sep)        # a write the trace will see
+    reading = False
     for _ in range(100):
         pump(20)
+        reading |= app._status_text == patcher.GAME_READING
         if app._status_text.startswith('CANNOT PATCH'):
             break
     check('a folder holding something else is refused',
           not enabled('Apply patches')
           and app._status_text.startswith('CANNOT PATCH'),
           app._status_text)
+    check('and was read off the window\'s thread', reading)
     check('and the refusal says what to do about it',
           bool(app.game_help.cget('text')))
     check('writing to the log opens the log',
@@ -293,25 +308,27 @@ def main():
     os.rmdir(empty)
 
     # ---- the boxes and the keys they stand for ------------------------
-    check('every extra patch starts ticked',
-          all(app.vars[group].get() for group in patcher.EXTRA))
     check('every diagnostic starts off',
           not any(var.get() for var in app.diagnostics.values()))
-    check('all ticked is every patch',
-          patcher.group_keys(app._groups(), ()) == patcher.PATCH_KEYS)
-    for group in patcher.EXTRA:
-        app.vars[group].set(False)
-    pump()
-    left = patcher.group_keys(app._groups(), ())
-    check('unticking every extra leaves the essential ones',
-          set(left) == set(k for g in patcher.ESSENTIAL
-                           for k in patcher.BY_GROUP[g][2]),
-          '%d keys' % len(left))
-    check('and drops nothing an essential patch needs',
-          all(need in left for key, need in patcher.NEEDS if key in left))
-    for group in patcher.EXTRA:
-        app.vars[group].set(True)
-    pump()
+    check('the window applies every patch',
+          patcher.group_keys(()) == patcher.PATCH_KEYS)
+    check('and a minus on the command line leaves one out with what needs it',
+          set(patcher.parse_keys(['-widescreen', '-xinput'])) == set(patcher.PATCH_KEYS)
+          - {'widescreen', 'widescreen2d', 'widescreen3d', 'resolution', 'xinput', 'devices', 'padoptions'})
+    check('-windowed is the exclusive mode: the window\'s three patches out, the rest in',
+          set(patcher.parse_keys(['-windowed'])) == set(patcher.PATCH_KEYS) - {'windowed', 'borderless', 'altenter'})
+    check('-borderless leaves the DLL\'s own window, with ALT+ENTER',
+          set(patcher.parse_keys(['-borderless'])) == set(patcher.PATCH_KEYS) - {'borderless'})
+    check('a list gets the window and noregistry, and loses the window by name',
+          patcher.parse_keys(['nodisc']) == ('nodisc', 'windowed', 'borderless', 'noregistry')
+          and patcher.parse_keys(['nodisc', '-windowed']) == ('nodisc', 'noregistry'),
+          ' '.join(patcher.parse_keys(['nodisc'])))
+    try:
+        patcher.parse_keys(['-noregistry'])
+        refused = False
+    except ValueError:
+        refused = True
+    check('and noregistry cannot be left out', refused)
 
     # ---- every description can be shown ------------------------------
     bubbles = []
@@ -323,7 +340,7 @@ def main():
             bubbles.append(widget)
     find(root)
     check('every patch and diagnostic has a description button',
-          len(bubbles) >= len(patcher.FEATURES) + len(patcher.DIAGNOSTIC),
+          len(bubbles) >= len(patcher.FEATURES) + len(patcher.BYNAME),
           '%d buttons' % len(bubbles))
     shown = 0
     for btn in bubbles:
@@ -337,15 +354,16 @@ def main():
     check('every description opens and closes', shown == len(bubbles))
     root.event_generate('<Escape>')
     pump()
+    check('no callback raised on the way', not raised, '; '.join(raised))
 
     # ---- the tables the window reads from ----------------------------
     check('every patch is in exactly one feature row',
           sorted(k for _g, _l, _t, keys in patcher.FEATURES for k in keys)
           == sorted(patcher.PATCH_KEYS))
     check('every feature row is displayed',
-          set(patcher.ESSENTIAL) | set(patcher.EXTRA) == set(patcher.BY_GROUP))
+          set(patcher.ESSENTIAL) == set(patcher.BY_GROUP))
     check('every diagnostic has a label',
-          set(patcher.DIAGNOSTIC_INFO) == set(patcher.DIAGNOSTIC))
+          set(patcher.DIAGNOSTIC_INFO) == set(patcher.BYNAME))
 
     root.destroy()
     if FAILED:

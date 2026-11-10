@@ -76,9 +76,9 @@
 ; With `trace` set (the d3dtrace diagnostic) every present reports
 ; "sr2 p", a frame's end, and every draw through the six
 ; draw entries reports itself on OutputDebugStringA and to
-; logs\d3dtrace.log beside the exe, the first 60000 -
+; logs\d3dtrace.log beside the exe, the first 400000 -
 ; at 2 (d3dtrace2d) only the 2D that is not a quad, the lists, strips
-; and fans, since the menus' quads fill the 60000 before a race starts:
+; and fans, since the menus' quads fill the 400000 in a couple of minutes:
 ; "sr2 d e fvf count ret x0 y0 z0 tex kind", e the entry (q, t, l, i, s,
 ; f), ret the draw's return address (the loaddll lines say whose), the
 ; first vertex in hex before any scaling, the texture selected and what
@@ -617,6 +617,8 @@ hookblt:
         push    ecx
         push    eax
         call    [ebp + IAT_GETPROC]
+        test    eax, eax
+        jz      .out                    ; no VirtualProtect: the entry stays as it is
         mov     edi, eax
         lea     eax, [ebx + bltold]
         push    eax
@@ -624,6 +626,8 @@ hookblt:
         push    4
         push    esi
         call    edi
+        test    eax, eax
+        jz      .out                    ; the entry not made writable: not written
         mov     eax, [esi]
         mov     [ebx + bltorig], eax
         lea     eax, [ebx + blt]
@@ -634,7 +638,7 @@ hookblt:
         push    4
         push    esi
         call    edi
-        pop     edi
+.out:   pop     edi
         pop     esi
 .done:  pop     ebp
         pop     ebx
@@ -897,16 +901,19 @@ unlock: mov     eax, [esi]
 ; through IDirectDraw4's CreateSurface ([DDRAW4], offscreen plain in
 ; video memory, the primary's format) the first time, or again after a
 ; mode change has given the game a new back buffer, the old one
-; released; zero, and ZF, when it cannot be made. ecx and edx used.
+; released; zero, and ZF, when it cannot be made, and not tried again
+; beside the same back buffer. ecx and edx used.
 offscreen:
         mov     eax, [edi]
-        test    eax, eax
-        jz      .make
         push    ecx
         mov     ecx, [ebp + BACKBUF]
         cmp     ecx, [edi + 4]
         pop     ecx
-        je      .have
+        jne     .fresh
+        test    eax, eax                ; the same back buffer: the surface, or the refusal
+        ret
+.fresh: test    eax, eax
+        jz      .make
         push    ecx                     ; a new back buffer: the old surface goes
         push    eax
         mov     ecx, [eax]
@@ -928,7 +935,7 @@ offscreen:
         mov     dword [ebx + bltdesc + 0x68], DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY   ; ddsCaps.dwCaps, past the 0x20-byte pixel format at 0x48
         mov     eax, [ebp + DDRAW4]
         test    eax, eax
-        jz      .none
+        jz      .later                  ; no IDirectDraw4 yet: tried again
         mov     ecx, [eax]
         push    0                       ; CreateSurface(this, &desc, &surface, NULL)
         push    edi
@@ -945,10 +952,10 @@ offscreen:
         mov     eax, [edi]
         test    eax, eax
         ret
-.none:  mov     dword [edi], 0
+.none:  mov     eax, [ebp + BACKBUF]    ; refused: remembered beside this back buffer
+        mov     [edi + 4], eax
+.later: mov     dword [edi], 0
         xor     eax, eax
-        ret
-.have:  test    eax, eax
         ret
 
 ; The lobby's 640x480 surface.
@@ -1158,7 +1165,7 @@ clip:
         sub     esi, 4
         sub     edi, 4
         ret
-.axis:  push    ecx                     ; the limits: [esp] the far, [esp+4] the near
+.axis:  push    ecx                     ; the limits: [esp+4] the far, [esp] the near
         push    eax
         mov     eax, [edi + 8]          ; the destination's span, and the source's
         sub     eax, [edi]
@@ -1851,6 +1858,7 @@ blthr:      dd 0                        ; what the last blit sent to it said
 bgblit:     dd 0                        ; the blit in hand is the background, the whole 640x480
 copymode:   dd 0                        ; 0 not yet known, 1 the background copied through Lock, 2 blitted
 cpydesc:    times 31 dd 0               ; a DDSURFACEDESC2 for the source of that copy
+            align 4, db 0
             db 'BGBLOCK', 0             ; the block bgrow finds by this, in the annex from 0x17000
 bgsurf:     dd 0                        ; the .bg pictures' surface, the back buffer it was made beside,
 bgfor:      dd 0                        ; a composite waiting to be stretched in, and its size
@@ -2513,6 +2521,7 @@ kthird:     dd 0x43860000               ; 268.0: the 640's left and right parts,
 k2third:    dd 0x43BA0000               ; 372.0   speed ends at 256 and the countdown starts at 291
 k2over9:    dd 0x3E638E39               ; 2/9: a 16:9 frame's edge past the 4:3 box's, as a share of the height
 hshift:     dd 0                        ; the HUD's move out to the 16:9 frame, in picture pixels
+            align 4, db 0
             db 'HUDFRAME'               ; the exe's walk entry finds the flag by this
 hud:        dd 0                        ; set by the exe when one of the race HUD's callbacks runs, cleared at the present
 huddrawlo:  dd 0                        ; and the bounds of the exe's own HUD draws, written with it: a draw

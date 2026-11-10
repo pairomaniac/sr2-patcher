@@ -75,7 +75,7 @@ toggle:
         mov     ebp, esp
         sub     esp, 0x40
         call    getbase
-        cmp     dword [ebx + funcs], 0
+        cmp     dword [ebx + f_getmonitorinfo], 0    ; the last resolved: all five are
         jne     .have
         lea     eax, [ebx + s_user32]
         push    eax
@@ -91,7 +91,7 @@ toggle:
         push    esi
         call    [IAT_GETPROC]
         test    eax, eax
-        jz      .done
+        jz      .done                   ; the last slot stays 0: resolved again next time
         mov     [ebx + funcs + edi * 4], eax
         inc     edi
         cmp     edi, NFUNCS

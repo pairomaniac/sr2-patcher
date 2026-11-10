@@ -8,7 +8,7 @@ new and free replaced by recording stubs at their RVAs. `alloc` must
 call new with the caller's size, hand its block back and keep the stack
 as a cdecl new does; `free` must free that block and no other, and leave
 the pointer pushed for the caller's `add esp, 4`. Needs python3-unicorn;
-exits 0 with a note when it is missing.
+exits 77 with a note when it is missing.
 """
 import struct
 import sys

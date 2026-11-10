@@ -8,7 +8,7 @@ every import the blob resolves, and drives it the way MGAudio does: open by
 type ID, set, status, play, position, seek, pause, resume, stop, close, plus
 the cases that must be forwarded or refused; then runs the worker on each
 operation and checks the waveOut and file calls it makes. Needs
-python3-unicorn; exits 0 with a note when it is missing so tools/check.py
+python3-unicorn; exits 77 with a note when it is missing so tools/check.py
 can skip it.
 """
 import os
@@ -248,6 +248,7 @@ def main(argv):
     assert log['opened'] == ['S:\\Sega Rally 2\\music\\trace'] + \
         ['S:\\Sega Rally 2\\music\\track%02d.wav' % n for n in range(2, 100)], log['opened'][:3]
     assert log['thread'] and log['events'] == 2, 'no worker thread or events'
+    assert ('CloseHandle', 0x600) in log['calls'], 'the thread handle was kept'
     # a second attach must not rebuild
     log['opened'] = []
     mu.mem_write(esp, struct.pack('<IIII', 0xDEAD0000, BASE, 1, 0))

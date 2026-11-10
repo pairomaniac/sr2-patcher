@@ -1,4 +1,4 @@
-# PyInstaller writes both of these next to the spec.
+# The workflow writes these: the compiled launcher, and the release.
 build/
 dist/
 
@@ -14,10 +14,7 @@ logs/
 # Game files used by the checks are not in the repository.
 game/
 data1.cab
-data1.head
 
-# The kit for working on the game, written by tools/kit.py: every build's
-# installed files minus BINDATA and music, and data1.head. Also the update
-# files that Sega released. Not the repository's to distribute.
-tools/sr2-kit.tar.gz
-tools/sr2-updates.tar.gz
+# Claude Code: instructions and settings kept local to this machine.
+CLAUDE.md
+.claude/

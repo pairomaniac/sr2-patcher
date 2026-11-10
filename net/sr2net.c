@@ -18,6 +18,18 @@
  * gone. Guests have one link, to the host; the host one per guest, and
  * forwards between them. The host owns the player list: it assigns the
  * indices and sends the roster on every change.
+ *
+ * A join names the session, an eight-byte nonce (the guest's identity
+ * across a change of address), the wire version and a cookie: the host
+ * answers a join without its cookie with T_CHALLENGE carrying it, so a
+ * forged source address never gets a seat or a reply worth reflecting.
+ * The welcome and the session record carry the version too, and each
+ * link keeps the one the other side gave; a peer from before the
+ * version, which sends none, is refused with a reason.
+ *
+ * The directory speaks "SR2E": op, a four-byte token the client made
+ * up, then the body; the server echoes the token in every answer and the
+ * client takes no answer without it.
  */
 #include "sr2net.h"
 #include "sock.h"
@@ -33,7 +45,7 @@
 #define EVENTS          64
 #define RESEND_MS       250
 #define PING_MS         500
-#define DEAD_MS         6000
+#define DEAD_MS         45000   /* silence that ends a link: a stage load, with the game not polling, can run past 12 s; the exe itself waits 15 s at setup and 30 s at the start line */
 #define QUERY_MS        400
 #define SESSION_TTL_MS  3000
 #define ENUM_WAIT_MS    3000
@@ -42,7 +54,10 @@
 #define PUNCH_MS        4000    /* direct tries before the relay */
 #define REGISTER_MS     1000    /* a host's refresh at the directory */
 #define MAX_SERVERS     4
-#define DMAGIC          "SR2D"
+#define DMAGIC          "SR2E"
+#define DHDR            9       /* magic, op, token */
+#define JOIN_LEN        29      /* guid, nonce, version, cookie */
+#define QUERY_RATE      25      /* T_QUERY answers a second, a host's ceiling */
 
 enum {
     T_QUERY = 1,        /* who is hosting? */
@@ -58,7 +73,8 @@ enum {
     T_PONG,
     T_ACK,              /* nothing but the ack field */
     T_GAME,             /* the game's message */
-    T_PUNCH             /* opens a NAT; ignored */
+    T_PUNCH,            /* opens a NAT; ignored */
+    T_CHALLENGE         /* host -> guest: the cookie a join from that address needs */
 };
 
 #define F_RELIABLE      1
@@ -84,8 +100,9 @@ typedef struct {
 typedef struct {
     int       used;
     route     rt;
-    uint32_t  nonce;                /* the join's, so a second route to one guest is one guest */
+    uint8_t   nonce[8];             /* the join's, so a second route to one guest is one guest */
     int       index;                /* the player at the other end, -1 until known */
+    int       version;              /* the wire version it gave */
     uint32_t  send_seq;             /* last reliable sequence sent */
     uint32_t  recv_seq;             /* last taken in order */
     rmsg      unacked[WINDOW];      /* by seq % WINDOW */
@@ -114,11 +131,20 @@ struct sr2_net {
     int       kind;
     sock_addr target;               /* direct: the host typed; lan: where the search goes */
     int       have_target;
+    char      target_text[64];      /* direct: the text typed, looked up at the first search; hosting does not need it */
+    int       bad_target;           /* direct: the text was not an address; the search fails */
+    sock_stun *stun;                /* direct: the public address, asked of a STUN server off the game's thread */
     sock_addr servers[MAX_SERVERS]; /* the directory, SR2_KIND_INTERNET */
     int       nservers;
+    sock_resolver *resolving;       /* the servers' names being looked up, off the game's thread */
+    uint32_t  dcookie[MAX_SERVERS]; /* what each server's challenge to a registration said, 0 before it */
     uint32_t  last_register;
     sock_addr relay;                /* the server the join went through */
-    uint32_t  join_nonce;
+    uint8_t   join_nonce[8];
+    uint32_t  join_cookie;          /* what the host's challenge said, 0 before it */
+    uint8_t   secret[16];           /* the host's: its cookies are made from it */
+    uint32_t  dtoken;               /* the directory token, made up at open */
+    uint32_t  query_tokens, query_last;     /* the T_QUERY answers' bucket */
     /* search */
     int       searching;
     uint32_t  search_start, last_query;
@@ -174,6 +200,39 @@ static uint32_t rnd(sr2_net *n)
     return n->rnd;
 }
 
+/* The cookie a join from `from` needs: SipHash-2-4 of the address under
+ * the host's secret, nothing kept per address. A keyed hash, so the
+ * cookie a challenge hands one address says nothing about another's;
+ * an invertible mix of the secret and the address would. */
+#define SIPROUND do { \
+    v0 += v1; v1 = v1 << 13 | v1 >> 51; v1 ^= v0; v0 = v0 << 32 | v0 >> 32; \
+    v2 += v3; v3 = v3 << 16 | v3 >> 48; v3 ^= v2; \
+    v0 += v3; v3 = v3 << 21 | v3 >> 43; v3 ^= v0; \
+    v2 += v1; v1 = v1 << 17 | v1 >> 47; v1 ^= v2; v2 = v2 << 32 | v2 >> 32; } while (0)
+
+static uint32_t cookie_for(const sr2_net *n, const sock_addr *from)
+{
+    uint64_t k0 = rd32(n->secret) | (uint64_t)rd32(n->secret + 4) << 32;
+    uint64_t k1 = rd32(n->secret + 8) | (uint64_t)rd32(n->secret + 12) << 32;
+    uint64_t v0 = k0 ^ 0x736f6d6570736575ull, v1 = k1 ^ 0x646f72616e646f6dull;
+    uint64_t v2 = k0 ^ 0x6c7967656e657261ull, v3 = k1 ^ 0x7465646279746573ull;
+    uint64_t m = from->addr | (uint64_t)from->port << 32 | (uint64_t)6 << 56;   /* the address's six bytes, their count in the top byte */
+    uint32_t h;
+    v3 ^= m; SIPROUND; SIPROUND; v0 ^= m;
+    v2 ^= 0xff; SIPROUND; SIPROUND; SIPROUND; SIPROUND;
+    h = (uint32_t)(v0 ^ v1 ^ v2 ^ v3);
+    return h ? h : 1;
+}
+
+/* A directory datagram's head: magic, op, the token. */
+static int dhead(const sr2_net *n, uint8_t *buf, char op)
+{
+    memcpy(buf, DMAGIC, 4);
+    buf[4] = op;
+    wr32(buf + 5, n->dtoken);
+    return DHDR;
+}
+
 static void copy_name(char *dst, const char *src)
 {
     size_t i = 0;
@@ -204,9 +263,30 @@ int sr2_pop_event(sr2_net *n, sr2_event *ev)
     return SR2_OK;
 }
 
+/* The game indexes a table by every message's second byte before it
+   dispatches on the first (0x438902), unchecked, so one past the player
+   table is dropped. Six types read that byte as the sender's index into
+   their own tables - the chat line 0x1b, the car state 0x23, the finish
+   0x24, the state 0x28, the entry 0x2a (0x44 bytes at that row), the
+   leave 0x2e - and one of those naming another index than it came by is
+   dropped too. The rest do not: the clock request 0x20 carries a 0 there
+   from every guest (0x438f64), so the check must not reach it. */
+static int names_sender(int type)
+{
+    return type == 0x1b || type == 0x23 || type == 0x24 || type == 0x28 || type == 0x2a || type == 0x2e;
+}
+
 static void queue_game(sr2_net *n, int from, const uint8_t *data, int len)
 {
     qmsg *m;
+    if (from < 0 || from >= SR2_MAX_PLAYERS) {
+        nlog(n, "a message from index %d dropped", from);
+        return;
+    }
+    if (len >= 2 && data[0] >= 0x1b && data[0] <= 0x31 && (data[1] >= SR2_MAX_PLAYERS || (names_sender(data[0]) && data[1] != from))) {
+        nlog(n, "a message %02x from %d naming index %d dropped", data[0], from, data[1]);
+        return;
+    }
     if (n->q_count == QUEUE || len > SR2_MAX_PAYLOAD) {
         nlog(n, "queue full: a message from %d dropped", from);
         return;
@@ -244,15 +324,15 @@ static int my_index_byte(const sr2_net *n) { return n->my_index < 0 ? NOBODY : n
 /* A datagram out along a route: as it is, or wrapped for the relay. */
 static void emit(sr2_net *n, const route *to, const void *data, int len)
 {
-    uint8_t wrap[5 + 16 + 6 + HDR + SR2_MAX_PAYLOAD];
+    uint8_t wrap[DHDR + 16 + 6 + HDR + SR2_MAX_PAYLOAD];
     int pos;
     if (!to->relayed) {
         sock_send(n->sock, &to->addr, data, len);
         return;
     }
-    memcpy(wrap, DMAGIC "R", 5);
-    memcpy(wrap + 5, n->guid, 16);
-    pos = 21;
+    dhead(n, wrap, 'R');
+    memcpy(wrap + DHDR, n->guid, 16);
+    pos = DHDR + 16;
     if (n->is_host) {                   /* the guest's token: its address as the server sees it */
         memcpy(wrap + pos, &to->addr.addr, 4);
         wrap[pos + 4] = to->addr.port >> 8;
@@ -293,7 +373,7 @@ static int send_reliable(sr2_net *n, peer *p, int type, int from, int dest, cons
 {
     rmsg *m;
     if (p->nunacked == WINDOW || len > SR2_MAX_PAYLOAD) {
-        nlog(n, "link %d: window full, a %d-byte message lost", p->index, len);
+        nlog(n, "link %d: window full, a %d-byte message not sent", p->index, len);
         return SR2_ERR;
     }
     p->send_seq++;
@@ -363,7 +443,7 @@ static int pack_record(const sr2_net *n, uint8_t *out)
     return 3 + SR2_NAME_LEN;
 }
 
-/* T_SESSION: max, players, closed, guid[16], name[64]. */
+/* T_SESSION: max, players, closed, guid[16], name[64], version. */
 static int pack_session(const sr2_net *n, uint8_t *out)
 {
     out[0] = n->max_players;
@@ -371,7 +451,8 @@ static int pack_session(const sr2_net *n, uint8_t *out)
     out[2] = !n->open || free_index(n) < 0;
     memcpy(out + 3, n->guid, 16);
     memcpy(out + 19, n->session_name, SR2_NAME_LEN);
-    return 19 + SR2_NAME_LEN;
+    out[19 + SR2_NAME_LEN] = SR2_PROTO;
+    return 20 + SR2_NAME_LEN;
 }
 
 /* The roster: count, then {index, host, name[64]} each. */
@@ -396,7 +477,10 @@ static int pack_roster(const sr2_net *n, uint8_t *out)
 static void take_roster(sr2_net *n, const uint8_t *data, int len)
 {
     player fresh[SR2_MAX_PLAYERS];
-    int i, c = data[0], pos = 1;
+    int i, c, pos = 1;
+    if (len < 1)
+        return;
+    c = data[0];
     memset(fresh, 0, sizeof fresh);
     for (i = 0; i < c && pos + 2 + SR2_NAME_LEN <= len; i++) {
         int idx = data[pos];
@@ -470,6 +554,8 @@ static void handle_message(sr2_net *n, peer *p, const uint8_t *pkt, int len, uin
 static void take_ack(peer *p, uint32_t ack)
 {
     int i;
+    if ((int32_t)(ack - p->send_seq) > 0)
+        return;                         /* nothing that high was sent: forged or garbage */
     for (i = 0; i < WINDOW && p->nunacked; i++) {
         rmsg *m = &p->unacked[i];
         if (m->len && (int32_t)(m->seq - ack) <= 0) {
@@ -479,6 +565,25 @@ static void take_ack(peer *p, uint32_t ack)
     }
 }
 
+/* A game message for this side needs a place in the queue, and one the
+ * host forwards a place in each target's window; a reliable one without
+ * is left unacknowledged, so the sender sends it again. */
+static int room_for(const sr2_net *n, const peer *from, const uint8_t *pkt)
+{
+    int dest = pkt[7], i;
+    if (pkt[4] != T_GAME)
+        return 1;
+    if ((!n->is_host || dest == NOBODY || dest == n->my_index) && n->q_count >= QUEUE)
+        return 0;
+    if (n->is_host)
+        for (i = 0; i < SR2_MAX_PLAYERS; i++) {
+            const peer *p = &n->peers[i];
+            if (p->used && p->index >= 0 && p != from && (dest == NOBODY || dest == i) && p->nunacked == WINDOW)
+                return 0;
+        }
+    return 1;
+}
+
 /* A reliable packet in: in order, held for later, or a duplicate. */
 static void take_reliable(sr2_net *n, peer *p, const uint8_t *pkt, int len, uint32_t now)
 {
@@ -486,18 +591,20 @@ static void take_reliable(sr2_net *n, peer *p, const uint8_t *pkt, int len, uint
     int32_t ahead = (int32_t)(seq - p->recv_seq);
     if (ahead <= 0) {
         /* seen already; the ack below says so again */
-    } else if (ahead == 1) {
+    } else if (ahead == 1 && room_for(n, p, pkt)) {
         p->recv_seq = seq;
         handle_message(n, p, pkt, len, now);
         for (;;) {
             rmsg *h = &p->held[(p->recv_seq + 1) % WINDOW];
-            if (!h->len || h->seq != p->recv_seq + 1)
-                break;
             int hlen = h->len;
+            if (!p->used || !hlen || h->seq != p->recv_seq + 1 || !room_for(n, p, h->data))
+                break;                  /* a leave handled above ends the link: nothing more from it */
             p->recv_seq++;
             h->len = 0;
             handle_message(n, p, h->data, hlen, now);
         }
+    } else if (ahead == 1) {
+        /* no room: not taken, not acknowledged; it comes again */
     } else if (ahead <= WINDOW) {
         rmsg *h = &p->held[seq % WINDOW];
         if (!h->len) {
@@ -514,19 +621,28 @@ static void take_reliable(sr2_net *n, peer *p, const uint8_t *pkt, int len, uint
 static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, int len, uint32_t now)
 {
     peer *p = peer_by_addr(n, &from->addr);
-    uint8_t buf[2 + SR2_MAX_PLAYERS + 1 + SR2_MAX_PLAYERS * (2 + SR2_NAME_LEN)];
+    uint8_t buf[2 + SR2_MAX_PLAYERS + 1 + SR2_MAX_PLAYERS * (2 + SR2_NAME_LEN) + 1];
     int idx, blen, i;
     uint8_t reason;
-    uint32_t nonce;
-    if (len < HDR + 20 || memcmp(pkt + HDR, n->guid, 16) != 0) {
+    const uint8_t *nonce;
+    uint32_t cookie, want;
+    if (len < HDR + 16 || memcmp(pkt + HDR, n->guid, 16) != 0) {
         reason = 1;                     /* not this session */
         send_raw(n, from, T_REFUSE, my_index_byte(n), NOBODY, 0, &reason, 1);
         return;
     }
-    nonce = rd32(pkt + HDR + 16);
-    if (!p)                             /* the same guest by another road: a NAT gave it another address */
+    if (len < HDR + JOIN_LEN || pkt[HDR + 24] < SR2_PROTO_MIN) {
+        reason = 4;                     /* from before the wire's version: a guest of 0.7.0 sends 20 bytes */
+        nlog(n, "a join from before the wire's version (%d) from %08x:%u refused",
+             len < HDR + JOIN_LEN ? 0 : pkt[HDR + 24], ntohl(from->addr.addr), from->addr.port);
+        send_raw(n, from, T_REFUSE, my_index_byte(n), NOBODY, 0, &reason, 1);
+        return;
+    }
+    nonce = pkt + HDR + 16;
+    cookie = rd32(pkt + HDR + 25);
+    if (!p)                             /* the same guest by another road: a NAT gave it another address, or a direct join reached a relayed one */
         for (i = 0; i < SR2_MAX_PLAYERS; i++)
-            if (n->peers[i].used && n->peers[i].nonce == nonce) {
+            if (n->peers[i].used && memcmp(n->peers[i].nonce, nonce, 8) == 0) {
                 p = &n->peers[i];
                 nlog(n, "player %d now %s", p->index, from->relayed ? "relayed" : "direct");
                 p->rt = *from;
@@ -538,6 +654,13 @@ static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, in
         if (from->relayed && !p->rt.relayed)
             p->rt = *from;              /* the guest gave up on the direct road */
     } else {
+        want = cookie_for(n, &from->addr);
+        if (cookie != want) {           /* a first join, or a forged address: the cookie, and nothing else */
+            uint8_t c[4];
+            wr32(c, want);
+            send_raw(n, from, T_CHALLENGE, my_index_byte(n), NOBODY, 0, c, 4);
+            return;
+        }
         if (!n->open) {
             reason = 2;
             send_raw(n, from, T_REFUSE, my_index_byte(n), NOBODY, 0, &reason, 1);
@@ -551,7 +674,8 @@ static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, in
         }
         p = &n->peers[idx];
         peer_reset(p, from, idx, now);
-        p->nonce = nonce;
+        memcpy(p->nonce, nonce, 8);
+        p->version = pkt[HDR + 24];
         memset(&n->players[idx], 0, sizeof(player));
         n->players[idx].used = 1;
         nlog(n, "player %d joined from %08x:%u%s", idx, ntohl(from->addr.addr), from->addr.port,
@@ -563,6 +687,7 @@ static void host_take_join(sr2_net *n, const route *from, const uint8_t *pkt, in
         buf[1] = n->my_index;
         memcpy(buf + 2, n->reserved, SR2_MAX_PLAYERS);
         blen = 2 + SR2_MAX_PLAYERS + pack_roster(n, buf + 2 + SR2_MAX_PLAYERS);
+        buf[blen++] = SR2_PROTO;
         send_reliable(n, p, T_WELCOME, my_index_byte(n), idx, buf, blen, now);
         host_send_roster(n, now);       /* the others (and the newcomer again, harmlessly) */
     } else {                            /* the welcome is on its way: send it again now */
@@ -592,7 +717,7 @@ static void handle_message(sr2_net *n, peer *p, const uint8_t *pkt, int len, uin
                         else
                             send_raw(n, &n->peers[i].rt, T_GAME, from, dest, n->peers[i].recv_seq, body, blen);
                     }
-            } else if (dest < SR2_MAX_PLAYERS && n->peers[dest].used && n->peers[dest].index >= 0) {
+            } else if (dest < SR2_MAX_PLAYERS && n->peers[dest].used && n->peers[dest].index >= 0 && &n->peers[dest] != p) {
                 if (pkt[5] & F_RELIABLE)
                     send_reliable(n, &n->peers[dest], T_GAME, from, dest, body, blen, now);
                 else
@@ -602,13 +727,31 @@ static void handle_message(sr2_net *n, peer *p, const uint8_t *pkt, int len, uin
             queue_game(n, pkt[6], body, blen);
         }
         break;
-    case T_WELCOME:
-        if (n->is_host || blen < 2 + SR2_MAX_PLAYERS + 1 || body[0] >= SR2_MAX_PLAYERS)
-            break;                      /* an index past the table is no seat */
+    case T_WELCOME: {
+        int rlen;
+        if (n->is_host || blen < 2 + SR2_MAX_PLAYERS + 1 || body[0] >= SR2_MAX_PLAYERS || body[1] >= SR2_MAX_PLAYERS)
+            break;                      /* an index past the table is no seat, the host's included */
+        rlen = 1 + body[2 + SR2_MAX_PLAYERS] * (2 + SR2_NAME_LEN);     /* the roster; the version after it */
+        if (blen < 2 + SR2_MAX_PLAYERS + rlen + 1 || body[2 + SR2_MAX_PLAYERS + rlen] < SR2_PROTO_MIN) {
+            if (n->joining) {
+                nlog(n, "the host is from before the wire's version (%d): refused",
+                     blen < 2 + SR2_MAX_PLAYERS + rlen + 1 ? 0 : body[2 + SR2_MAX_PLAYERS + rlen]);
+                n->join_refused = 1;
+            }
+            break;
+        }
+        p->version = body[2 + SR2_MAX_PLAYERS + rlen];
         n->my_index = body[0];
         p->index = body[1];
         memcpy(n->reserved, body + 2, SR2_MAX_PLAYERS);
-        take_roster(n, body + 2 + SR2_MAX_PLAYERS, blen - 2 - SR2_MAX_PLAYERS);
+        take_roster(n, body + 2 + SR2_MAX_PLAYERS, rlen);
+        break;
+    }
+    case T_CHALLENGE:
+        if (!n->is_host && n->joining && blen >= 4) {
+            n->join_cookie = rd32(body);
+            n->join_last = 0;           /* the join again, with it, on the next poll */
+        }
         break;
     case T_ROSTER:
         if (!n->is_host)
@@ -652,8 +795,17 @@ static void take_packet(sr2_net *n, const route *from, uint8_t *pkt, int len, ui
     /* outside a link: the search and the join */
     if (type == T_QUERY) {
         if (n->in_session && n->is_host && !n->lost) {
-            uint8_t buf[19 + SR2_NAME_LEN];
-            int blen = pack_session(n, buf);
+            uint8_t buf[20 + SR2_NAME_LEN];
+            int blen;
+            uint32_t earned = (now - n->query_last) * QUERY_RATE / 1000;
+            if (earned) {
+                n->query_tokens = n->query_tokens + earned > QUERY_RATE ? QUERY_RATE : n->query_tokens + earned;
+                n->query_last = now;
+            }
+            if (!n->query_tokens)
+                return;                 /* a search answered QUERY_RATE times a second at most: no reflector */
+            n->query_tokens--;
+            blen = pack_session(n, buf);
             send_raw(n, from, T_SESSION, my_index_byte(n), NOBODY, 0, buf, blen);
         }
         return;
@@ -671,6 +823,7 @@ static void take_packet(sr2_net *n, const route *from, uint8_t *pkt, int len, ui
             if (n->nfound == SR2_MAX_SESSIONS)
                 return;
             slot = n->nfound++;
+            nlog(n, "found '%.*s' at %08x:%u", SR2_NAME_LEN - 1, pkt + HDR + 19, ntohl(from->addr.addr), from->addr.port);
         }
         n->found[slot].max_players = pkt[HDR];
         n->found[slot].players = pkt[HDR + 1];
@@ -680,6 +833,9 @@ static void take_packet(sr2_net *n, const route *from, uint8_t *pkt, int len, ui
         n->found[slot].name[SR2_NAME_LEN - 1] = 0;
         n->found[slot].addr = from->addr.addr;
         n->found[slot].port = from->addr.port;
+        n->found[slot].version = len >= HDR + 20 + SR2_NAME_LEN ? pkt[HDR + 19 + SR2_NAME_LEN] : 0;
+        n->found_via[slot].addr = 0;
+        n->found_via[slot].port = 0;
         n->found_at[slot] = now;
         return;
     }
@@ -701,7 +857,8 @@ static void take_packet(sr2_net *n, const route *from, uint8_t *pkt, int len, ui
     take_ack(p, rd32(pkt + 12));
     if (type == T_REFUSE) {
         if (n->joining && len > HDR) {
-            nlog(n, "refused: reason %d", pkt[HDR]);
+            static const char *const why[] = {"?", "not that session", "closed", "full", "a patcher from before this one's wire"};
+            nlog(n, "refused by the host: %s", pkt[HDR] < 5 ? why[pkt[HDR]] : "?");
             n->join_refused = 1;
         }
         return;
@@ -712,13 +869,32 @@ static void take_packet(sr2_net *n, const route *from, uint8_t *pkt, int len, ui
         handle_message(n, p, pkt, len, now);
 }
 
-static int is_server(const sr2_net *n, const sock_addr *a)
+/* Which directory server an address is, or -1. */
+static int server_index(const sr2_net *n, const sock_addr *a)
 {
     int i;
     for (i = 0; i < n->nservers; i++)
         if (sock_addr_eq(&n->servers[i], a))
-            return 1;
-    return 0;
+            return i;
+    return -1;
+}
+
+/* The servers' names, once the lookup is done: the list, or none. */
+static void take_resolved(sr2_net *n, uint32_t now)
+{
+    int c = sock_resolved(n->resolving, n->servers, MAX_SERVERS);
+    if (c < 0)
+        return;
+    sock_resolve_drop(n->resolving);
+    n->resolving = NULL;
+    n->nservers = c;
+    if (c)
+        nlog(n, "directory: %d server%s", c, c == 1 ? "" : "s");
+    else
+        nlog(n, "directory: no server could be found");
+    if (n->searching)
+        n->search_start = now;      /* the wait for answers starts now */
+    n->last_register = now - REGISTER_MS;
 }
 
 static void punch(sr2_net *n, const sock_addr *to)
@@ -731,17 +907,17 @@ static void punch(sr2_net *n, const sock_addr *to)
         send_raw(n, &r, T_PUNCH, my_index_byte(n), NOBODY, 0, NULL, 0);
 }
 
-/* What the directory sends: the list, the other side's endpoint, a
- * relayed datagram. */
+/* What the directory sends: the list, the other side's endpoint, no
+ * such session, a relayed datagram. The token is checked by the caller. */
 static void take_server(sr2_net *n, const sock_addr *from, uint8_t *pkt, int len, uint32_t now)
 {
     route r;
     switch (pkt[4]) {
     case 'S': {
-        int i, c = len > 5 ? pkt[5] : 0, pos = 6;
+        int i, c = len > DHDR ? pkt[DHDR] : 0, pos = DHDR + 1;
         if (!n->searching)
             return;
-        for (i = 0; i < c && pos + 16 + 6 + 67 <= len; i++, pos += 16 + 6 + 67) {
+        for (i = 0; i < c && pos + 16 + 6 + 68 <= len; i++, pos += 16 + 6 + 68) {
             const uint8_t *e = pkt + pos;
             int k, slot = -1;
             for (k = 0; k < n->nfound; k++)
@@ -763,16 +939,33 @@ static void take_server(sr2_net *n, const sock_addr *from, uint8_t *pkt, int len
             n->found[slot].closed = e[24];
             memcpy(n->found[slot].name, e + 25, SR2_NAME_LEN);
             n->found[slot].name[SR2_NAME_LEN - 1] = 0;
+            n->found[slot].version = e[25 + SR2_NAME_LEN];
+            n->found_via[slot] = *from;
             n->found_at[slot] = now;
         }
         break;
     }
     case 'P':                           /* the host: open my NAT towards this guest */
-        if (len >= 11 && n->in_session && n->is_host) {
+        if (len >= DHDR + 6 && n->in_session && n->is_host) {
             sock_addr g;
-            memcpy(&g.addr, pkt + 5, 4);
-            g.port = pkt[9] << 8 | pkt[10];
+            memcpy(&g.addr, pkt + DHDR, 4);
+            g.port = pkt[DHDR + 4] << 8 | pkt[DHDR + 5];
             punch(n, &g);
+        }
+        break;
+    case 'N':                           /* the guest: the directory has no such session; stop asking */
+        if (n->joining && !n->peers[0].rt.relayed) {
+            nlog(n, "the directory has no such session");
+            n->join_refused = 1;
+        }
+        break;
+    case 'C':                           /* the host: the cookie this server wants on a registration */
+        if (len >= DHDR + 4 && n->in_session && n->is_host) {
+            int i = server_index(n, from);
+            if (i >= 0 && n->dcookie[i] != rd32(pkt + DHDR)) {
+                n->dcookie[i] = rd32(pkt + DHDR);
+                n->last_register = now - REGISTER_MS;   /* registered again at once, with it */
+            }
         }
         break;
     case 'D':
@@ -781,14 +974,14 @@ static void take_server(sr2_net *n, const sock_addr *from, uint8_t *pkt, int len
         r.relayed = 1;
         r.via = *from;
         if (n->is_host) {
-            if (len < 11)
+            if (len < DHDR + 6)
                 return;
-            memcpy(&r.addr.addr, pkt + 5, 4);
-            r.addr.port = pkt[9] << 8 | pkt[10];
-            take_packet(n, &r, pkt + 11, len - 11, now);
+            memcpy(&r.addr.addr, pkt + DHDR, 4);
+            r.addr.port = pkt[DHDR + 4] << 8 | pkt[DHDR + 5];
+            take_packet(n, &r, pkt + DHDR + 6, len - DHDR - 6, now);
         } else {
             r.addr = n->peers[0].rt.addr;
-            take_packet(n, &r, pkt + 5, len - 5, now);
+            take_packet(n, &r, pkt + DHDR, len - DHDR, now);
         }
         break;
     default:
@@ -798,12 +991,14 @@ static void take_server(sr2_net *n, const sock_addr *from, uint8_t *pkt, int len
 
 static void pump(sr2_net *n, uint32_t now)
 {
-    uint8_t pkt[5 + 6 + HDR + SR2_MAX_PAYLOAD + 64];
+    uint8_t pkt[DHDR + 6 + HDR + SR2_MAX_PAYLOAD + 64];
     route r;
     int len, guard = 256;
+    if (n->resolving)
+        take_resolved(n, now);
     while (guard-- && (len = sock_recv(n->sock, &r.addr, pkt, sizeof pkt)) >= 0) {
-        if (len >= 5 && memcmp(pkt, DMAGIC, 4) == 0) {
-            if (is_server(n, &r.addr))
+        if (len >= 4 && memcmp(pkt, DMAGIC, 4) == 0) {
+            if (len >= DHDR && rd32(pkt + 5) == n->dtoken && server_index(n, &r.addr) >= 0)
                 take_server(n, &r.addr, pkt, len, now);
             continue;
         }
@@ -812,19 +1007,37 @@ static void pump(sr2_net *n, uint32_t now)
     }
 }
 
-/* The host's entry at the directory, refreshed every second. */
+/* The host's entry at the directory, refreshed every second, with the
+ * cookie each server's challenge gave: a registration from a forged
+ * address never sees its challenge, so it is never listed. */
 static void register_session(sr2_net *n, uint32_t now)
 {
-    uint8_t buf[5 + 16 + 67];
-    int i;
+    uint8_t buf[DHDR + 16 + 68 + 4];
+    int i, len;
     if (n->kind != SR2_KIND_INTERNET || !n->is_host || n->lost || now - n->last_register < REGISTER_MS)
         return;
     n->last_register = now;
-    memcpy(buf, DMAGIC "H", 5);
-    memcpy(buf + 5, n->guid, 16);
-    pack_record(n, buf + 21);
+    dhead(n, buf, 'H');
+    memcpy(buf + DHDR, n->guid, 16);
+    len = DHDR + 16 + pack_record(n, buf + DHDR + 16);
+    buf[len++] = SR2_PROTO;
+    for (i = 0; i < n->nservers; i++) {
+        wr32(buf + len, n->dcookie[i]);
+        sock_send(n->sock, &n->servers[i], buf, len + 4);
+    }
+}
+
+/* The host's entry taken down when it leaves. */
+static void unregister_session(sr2_net *n)
+{
+    uint8_t buf[DHDR + 16];
+    int i;
+    if (n->kind != SR2_KIND_INTERNET || !n->is_host)
+        return;
+    dhead(n, buf, 'X');
+    memcpy(buf + DHDR, n->guid, 16);
     for (i = 0; i < n->nservers; i++)
-        sock_send(n->sock, &n->servers[i], buf, 5 + 16 + 3 + SR2_NAME_LEN);
+        sock_send(n->sock, &n->servers[i], buf, sizeof buf);
 }
 
 /* Resends, keep-alives, and the links that have died. */
@@ -875,6 +1088,7 @@ sr2_net *sr2_create(void)
     sock_startup();
     n->sock = SOCK_INVALID;
     n->my_index = -1;
+    sock_random((uint8_t *)&n->rnd, sizeof n->rnd);
     return n;
 }
 
@@ -884,7 +1098,10 @@ void sr2_destroy(sr2_net *n)
         return;
     if (n->sock != SOCK_INVALID)
         sock_close(n->sock);
+    sock_resolve_drop(n->resolving);
+    sock_stun_drop(n->stun);
     free(n);
+    sock_cleanup();
 }
 
 void sr2_set_log(sr2_net *n, void (*fn)(void *, const char *), void *ctx)
@@ -895,41 +1112,67 @@ void sr2_set_log(sr2_net *n, void (*fn)(void *, const char *), void *ctx)
 
 int sr2_open(sr2_net *n, int kind, const char *address, uint32_t now)
 {
+    uint32_t pub;
     if (n->sock != SOCK_INVALID)
         sock_close(n->sock);
     n->sock = sock_open(SR2_PORT, &n->port);
     if (n->sock == SOCK_INVALID)
         return SR2_ERR;
     n->kind = kind;
-    n->rnd ^= now ^ (n->port << 16);
+    n->rnd ^= now ^ ((uint32_t)n->port << 16);
+    sock_random((uint8_t *)&n->dtoken, sizeof n->dtoken);
+    sock_random(n->secret, sizeof n->secret);
     n->have_target = 0;
+    n->bad_target = 0;
+    n->target_text[0] = 0;
+    if (kind != SR2_KIND_DIRECT || sock_stun_result(n->stun, &pub) <= 0) {
+        sock_stun_drop(n->stun);        /* a public address already found is kept: every SEARCH opens anew */
+        n->stun = NULL;
+    }
     n->target.addr = htonl(INADDR_BROADCAST);
     n->target.port = SR2_PORT;
     n->nservers = 0;
-    if (kind == SR2_KIND_DIRECT && address && address[0]) {
-        if (sock_parse(address, SR2_PORT, &n->target) != 0) {
-            nlog(n, "open: %s is not an address", address);
-            return SR2_ERR;
+    sock_resolve_drop(n->resolving);
+    n->resolving = NULL;
+    memset(n->dcookie, 0, sizeof n->dcookie);
+    if (kind == SR2_KIND_DIRECT) {
+        /* the game opens the connection to host as well as to search, with
+           whatever the address box holds: the text is kept and looked up at
+           the first search, so hosting never waits on a resolver */
+        if (address && address[0] && strlen(address) < sizeof n->target_text) {
+            strcpy(n->target_text, address);
+            n->have_target = 1;
         }
-        n->have_target = 1;
+#ifndef SR2_TEST
+        if (!n->stun) {
+            static const char *const servers[] = SR2_STUN_SERVERS;
+            n->stun = sock_stun_start(servers);
+        }
+#endif
     }
     if (kind == SR2_KIND_INTERNET) {
+#ifdef SR2_TEST
+        static const char *const defaults[] = {"localhost", NULL};   /* no real lookups under test */
+#else
         static const char *const defaults[] = SR2_DIRECTORIES;
-        int i;
-        if (address && address[0]) {
-            if (sock_parse(address, SR2_PORT + 1, &n->servers[0]) == 0)
-                n->nservers = 1;
-        } else {
-            for (i = 0; defaults[i] && n->nservers < MAX_SERVERS; i++)
-                if (sock_parse(defaults[i], SR2_PORT + 1, &n->servers[n->nservers]) == 0)
-                    n->nservers++;
-        }
-        if (!n->nservers) {
-            nlog(n, "open: no directory server could be found");
+#endif
+        const char *const one[] = {address};
+        const char *const *names = address && address[0] ? one : defaults;   /* one server named, or the built-in list */
+        int c = 0;
+        while (names == defaults ? defaults[c] != NULL : c < 1)
+            c++;
+        /* the names are looked up off this thread: a resolver that is slow
+           or absent would otherwise hold the game for as long as it takes
+           to give up */
+        n->resolving = sock_resolve(names, c, SR2_PORT + 1);
+        if (!n->resolving) {
+            nlog(n, "open: the directory lookup could not be started");
             return SR2_ERR;
         }
     }
-    nlog(n, "open: kind %d, port %u, %s", kind, n->port, n->have_target ? address : "search");
+    nlog(n, "open: kind %d, port %u, %s", kind, n->port, n->have_target ? n->target_text : "search");
+    if (n->port != SR2_PORT)
+        nlog(n, "open: port %u was taken; a LAN search will not find this machine", SR2_PORT);
     return SR2_OK;
 }
 
@@ -946,26 +1189,44 @@ void sr2_set_search(sr2_net *n, uint32_t addr, uint16_t port)
 
 void sr2_set_directory(sr2_net *n, uint32_t addr, uint16_t port)
 {
+    sock_resolve_drop(n->resolving);
+    n->resolving = NULL;
     n->servers[0].addr = addr;
     n->servers[0].port = port;
     n->nservers = 1;
+    memset(n->dcookie, 0, sizeof n->dcookie);
 }
 
 int sr2_enum(sr2_net *n, uint32_t now, sr2_session *out, int max)
 {
     int i, c = 0;
-    if (n->sock == SOCK_INVALID)
+    if (n->sock == SOCK_INVALID || n->bad_target)
         return SR2_ERR;
+    if (n->target_text[0]) {            /* the address typed, looked up now */
+        if (sock_parse(n->target_text, SR2_PORT, &n->target) != 0) {
+            nlog(n, "search: %s is not an address", n->target_text);
+            n->bad_target = 1;
+            return SR2_ERR;
+        }
+        n->target_text[0] = 0;
+    }
     if (!n->searching) {
         n->searching = 1;
         n->search_start = now;
         n->last_query = now - QUERY_MS;
         n->nfound = 0;
+        if (n->kind == SR2_KIND_INTERNET)
+            nlog(n, "search: the directory");
+        else
+            nlog(n, "search: %08x:%u%s", ntohl(n->target.addr), n->target.port,
+                 n->target.addr == htonl(INADDR_BROADCAST) ? " (the LAN broadcast)" : "");
     }
     if (now - n->last_query >= QUERY_MS) {
         if (n->kind == SR2_KIND_INTERNET) {
+            uint8_t buf[DHDR];
+            dhead(n, buf, 'L');
             for (i = 0; i < n->nservers; i++)
-                sock_send(n->sock, &n->servers[i], DMAGIC "L", 5);
+                sock_send(n->sock, &n->servers[i], buf, sizeof buf);
         } else {
             route r;
             r.addr = n->target;
@@ -975,14 +1236,22 @@ int sr2_enum(sr2_net *n, uint32_t now, sr2_session *out, int max)
         n->last_query = now;
     }
     pump(n, now);
-    for (i = 0; i < n->nfound; i++) {
-        if (now - n->found_at[i] > SESSION_TTL_MS)
+    for (i = 0; i < n->nfound; i++) {       /* the ones not heard from lately go, so the table never fills with them */
+        if (now - n->found_at[i] > SESSION_TTL_MS) {
+            n->nfound--;
+            if (i < n->nfound) {
+                n->found[i] = n->found[n->nfound];
+                n->found_at[i] = n->found_at[n->nfound];
+                n->found_via[i] = n->found_via[n->nfound];
+            }
+            i--;
             continue;
+        }
         if (c < max)
             out[c] = n->found[i];
         c++;
     }
-    if (c == 0 && now - n->search_start < ENUM_WAIT_MS)
+    if (c == 0 && (n->resolving || now - n->search_start < ENUM_WAIT_MS))
         return SR2_CONNECTING;
     return c > max ? max : c;
 }
@@ -1015,22 +1284,28 @@ int sr2_host(sr2_net *n, const char *name, int max_players, uint32_t now)
     n->is_host = 1;
     n->max_players = max_players > 0 && max_players <= SR2_MAX_PLAYERS ? max_players : SR2_MAX_PLAYERS;
     copy_name(n->session_name, name);
+    sock_random(n->guid, 16);
     for (i = 0; i < 16; i += 4)
-        wr32(n->guid + i, rnd(n) ^ (now * 2654435761u));
+        wr32(n->guid + i, rd32(n->guid + i) ^ rnd(n) ^ (now * 2654435761u));
+    sock_random(n->secret, sizeof n->secret);
+    n->query_tokens = QUERY_RATE;
+    n->query_last = now;
     nlog(n, "hosting '%s' for %d", n->session_name, n->max_players);
     return SR2_OK;
 }
 
 static void send_join(sr2_net *n, uint32_t now)
 {
-    uint8_t buf[20 + 16 + 5];
+    uint8_t buf[DHDR + 16 + JOIN_LEN];
     memcpy(buf, n->guid, 16);
-    wr32(buf + 16, n->join_nonce);
-    send_raw(n, &n->peers[0].rt, T_JOIN, NOBODY, NOBODY, 0, buf, 20);
+    memcpy(buf + 16, n->join_nonce, 8);
+    buf[24] = SR2_PROTO;
+    wr32(buf + 25, n->join_cookie);
+    send_raw(n, &n->peers[0].rt, T_JOIN, NOBODY, NOBODY, 0, buf, JOIN_LEN);
     if (n->kind == SR2_KIND_INTERNET && !n->peers[0].rt.relayed) {
-        memcpy(buf, DMAGIC "J", 5);
-        memcpy(buf + 5, n->guid, 16);
-        sock_send(n->sock, &n->relay, buf, 21);
+        dhead(n, buf, 'J');
+        memcpy(buf + DHDR, n->guid, 16);
+        sock_send(n->sock, &n->relay, buf, DHDR + 16);
     }
     n->join_last = now;
 }
@@ -1041,22 +1316,27 @@ int sr2_join(sr2_net *n, const sr2_session *s, uint32_t now)
     int i;
     if (n->sock == SOCK_INVALID)
         return SR2_ERR;
+    if (s->version < SR2_PROTO_MIN) {
+        nlog(n, "'%s' is hosted from before the wire's version (%d): not joined", s->name, s->version);
+        return SR2_REFUSED;
+    }
     session_reset(n);
     host.addr.addr = s->addr;
     host.addr.port = s->port;
     host.relayed = 0;
     n->relay = n->servers[0];
     for (i = 0; i < n->nfound; i++)
-        if (memcmp(n->found[i].guid, s->guid, 16) == 0)
+        if (memcmp(n->found[i].guid, s->guid, 16) == 0 && n->found_via[i].port)
             n->relay = n->found_via[i];
-    n->join_nonce = rnd(n) ^ now;
+    sock_random(n->join_nonce, 8);
+    n->join_cookie = 0;
     n->in_session = 1;
     n->joining = 1;
     n->join_start = now;
     n->join_last = now;
     memcpy(n->guid, s->guid, 16);
     copy_name(n->session_name, s->name);
-    n->max_players = s->max_players;
+    n->max_players = s->max_players > SR2_MAX_PLAYERS ? SR2_MAX_PLAYERS : s->max_players;
     peer_reset(&n->peers[0], &host, -1, now);
     nlog(n, "joining '%s' at %08x:%u", s->name, ntohl(host.addr.addr), host.addr.port);
     send_join(n, now);
@@ -1106,6 +1386,7 @@ void sr2_leave(sr2_net *n, uint32_t now)
                 send_to(n, &n->peers[i], T_LEAVE, NOBODY, NULL, 0, now);
                 send_to(n, &n->peers[i], T_LEAVE, NOBODY, NULL, 0, now);
             }
+    unregister_session(n);
     nlog(n, "left");
     session_reset(n);
 }
@@ -1165,6 +1446,7 @@ int sr2_session_info(const sr2_net *n, sr2_session *out)
     out->max_players = n->max_players;
     out->players = count_players(n);
     out->closed = !n->open;
+    out->version = SR2_PROTO;
     copy_name(out->name, n->session_name);
     return SR2_OK;
 }
@@ -1222,17 +1504,26 @@ int sr2_send(sr2_net *n, int to, const void *data, int len, int reliable, uint32
     int i, dest = to < 0 ? NOBODY : to;
     if (!n->in_session || n->lost || n->my_index < 0 || len > SR2_MAX_PAYLOAD)
         return SR2_ERR;
+    if (reliable) {                     /* a full window: the acks may be waiting in the socket */
+        for (i = 0; i < SR2_MAX_PLAYERS; i++)
+            if (n->peers[i].used && n->peers[i].nunacked == WINDOW) {
+                pump(n, now);
+                break;
+            }
+    }
     if (n->is_host) {
+        int r = SR2_OK;
         for (i = 0; i < SR2_MAX_PLAYERS; i++) {
             peer *p = &n->peers[i];
             if (!p->used || p->index < 0 || (to >= 0 && p->index != to))
                 continue;
-            if (reliable)
-                send_reliable(n, p, T_GAME, n->my_index, dest, data, len, now);
-            else
+            if (reliable) {
+                if (send_reliable(n, p, T_GAME, n->my_index, dest, data, len, now) != SR2_OK)
+                    r = SR2_ERR;
+            } else
                 send_to(n, p, T_GAME, dest, data, len, now);
         }
-        return SR2_OK;
+        return r;
     }
     if (reliable)
         return send_reliable(n, &n->peers[0], T_GAME, n->my_index, dest, data, len, now);
@@ -1240,17 +1531,29 @@ int sr2_send(sr2_net *n, int to, const void *data, int len, int reliable, uint32
     return SR2_OK;
 }
 
+/* The team room's status line: "Local: a.b.c.d  Public: e.f.g.h", the
+   local addresses as the machine has them (up to two, for the room's
+   width), the public one as the STUN server saw it - "?" while it has not
+   answered - and the port when it is not the usual one. */
 const char *sr2_status(sr2_net *n)
 {
-    uint32_t addrs[3];
-    int i, c = sock_local(addrs, 3), pos = 0;
-    n->status[0] = 0;
-    for (i = 0; i < c; i++) {
+    uint32_t addrs[2], pub;
+    int i, c = sock_local(addrs, 2), pos = 0;
+    pos += snprintf(n->status, sizeof n->status, "Local: ");
+    for (i = 0; i < c && pos < (int)sizeof n->status; i++) {
         const uint8_t *b = (const uint8_t *)&addrs[i];
-        pos += snprintf(n->status + pos, sizeof n->status - pos, "%s%u.%u.%u.%u:%u",
-                        i ? " , " : "IP Address : ", b[0], b[1], b[2], b[3], n->port);
-        if (pos >= (int)sizeof n->status)
-            break;
+        pos += snprintf(n->status + pos, sizeof n->status - pos, "%s%u.%u.%u.%u", i ? ", " : "", b[0], b[1], b[2], b[3]);
     }
+    if (!c && pos < (int)sizeof n->status)
+        pos += snprintf(n->status + pos, sizeof n->status - pos, "?");
+    if (pos < (int)sizeof n->status) {
+        if (sock_stun_result(n->stun, &pub) > 0) {
+            const uint8_t *b = (const uint8_t *)&pub;
+            pos += snprintf(n->status + pos, sizeof n->status - pos, "  Public: %u.%u.%u.%u", b[0], b[1], b[2], b[3]);
+        } else
+            pos += snprintf(n->status + pos, sizeof n->status - pos, "  Public: ?");
+    }
+    if (n->port != SR2_PORT && pos < (int)sizeof n->status)
+        snprintf(n->status + pos, sizeof n->status - pos, "  Port: %u", n->port);
     return n->status;
 }

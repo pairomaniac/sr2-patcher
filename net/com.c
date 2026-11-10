@@ -7,8 +7,10 @@
  * the exe and its manifest are none the wiser. Slots the exe never calls
  * return E_NOTIMPL. Player ids are index + 1, so none is 0.
  *
- * A file named sr2-net.log beside the exe, created empty, turns logging
- * on: what the core did, one line each.
+ * Log = 1 under [Network] in SR2.CFG beside the exe turns logging on,
+ * to logs\sr2-net.log: what the core did, one line each. Staging = 1
+ * there sends INTERNET to the staging directory. The section is written
+ * with both at 0 when the file has none.
  */
 #include <winsock2.h>
 #include <windows.h>
@@ -47,19 +49,50 @@ static void log_line(void *ctx, const char *line)
     }
 }
 
+/* The path of a file beside the exe, or 0 when it does not fit. */
+static int beside_exe(const char *name, char *path, size_t size)
+{
+    DWORD n = GetModuleFileNameA(NULL, path, (DWORD)size);
+    if (n == 0 || n >= size)
+        return 0;
+    while (n && path[n - 1] != '\\')
+        n--;
+    if (n + strlen(name) + 1 > size)
+        return 0;
+    strcpy(path + n, name);
+    return 1;
+}
+
+/* A [Network] setting in SR2.CFG beside the exe: Log = 1 writes
+ * logs\sr2-net.log, Staging = 1 sends INTERNET to the staging directory. */
+static int network_setting(const char *key)
+{
+    char path[MAX_PATH];
+    if (!beside_exe("SR2.CFG", path, sizeof path))
+        return 0;
+    return GetPrivateProfileIntA("Network", key, 0, path) != 0;
+}
+
+/* The [Network] section with both keys at 0 when SR2.CFG has none, at
+ * the object's create - the game's start - so the two settings are in
+ * the file to find, and back after the file is deleted. */
+static void ensure_section(void)
+{
+    char path[MAX_PATH], keys[8];
+    if (!beside_exe("SR2.CFG", path, sizeof path)
+            || GetPrivateProfileStringA("Network", NULL, "", keys, sizeof keys, path))
+        return;
+    WritePrivateProfileStringA("Network", "Staging", "0", path);
+    WritePrivateProfileStringA("Network", "Log", "0", path);
+}
+
 static void log_open(void)
 {
     char path[MAX_PATH];
-    DWORD n;
-    if (g_log)
+    if (g_log || !network_setting("Log") || !beside_exe("logs", path, sizeof path))
         return;
-    n = GetModuleFileNameA(NULL, path, sizeof path);
-    if (n == 0 || n >= sizeof path)
-        return;
-    while (n && path[n - 1] != '\\')
-        n--;
-    strcpy(path + n, "sr2-net.log");
-    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES)
+    CreateDirectoryA(path, NULL);                   /* logs\, where the other diagnostics write */
+    if (beside_exe("logs\\sr2-net.log", path, sizeof path))
         g_log = fopen(path, "a");
 }
 
@@ -471,7 +504,13 @@ static HRESULT __stdcall Network_OpenConnection(network *n, const DWORD *spec)
         return E_FAIL;
     switch (spec[0]) {
     case 1: kind = SR2_KIND_DIRECT; address = (const char *)spec[1]; break;
-    case 2: kind = SR2_KIND_INTERNET; break;
+    case 2:
+        kind = SR2_KIND_INTERNET;
+        if (network_setting("Staging")) {
+            address = SR2_STAGING_DIRECTORY;
+            log_line(NULL, "directory: " SR2_STAGING_DIRECTORY ", Staging = 1 in SR2.CFG");
+        }
+        break;
     case 3: kind = SR2_KIND_LAN; break;
     default: return E_FAIL;
     }
@@ -595,6 +634,7 @@ static network *network_new(void)
         HeapFree(GetProcessHeap(), 0, n);
         return NULL;
     }
+    ensure_section();
     log_open();
     sr2_set_log(n->net, log_line, NULL);
     InterlockedIncrement(&g_objects);

@@ -134,9 +134,6 @@ bits 32
 %endif
         ret
 
-; The bars each side of the drawn picture, in the mean colour of the
-; picture's own edge columns: ebp = the frame, the picture drawn. Nothing
-; to do when it fills the width.
 ; The picture into the .bg surface MGameD3D's annex keeps, at source
 ; size: the picture in the middle, the side areas either side as their
 ; slivers - the same sliver each bar shows, at one source column to
@@ -166,12 +163,13 @@ compose:
         add     ecx, eax
         sub     ecx, 8
         lea     edx, [eax + ANNEX_RVA]
+        jmp     .test
 .scan:  cmp     dword [edx], 'BGBL'
         jne     .next
         cmp     dword [edx + 4], 'OCK'
         je      .found
 .next:  add     edx, 4
-        cmp     edx, ecx
+.test:  cmp     edx, ecx                ; the bound before the read: no annex, no scan
         jbe     .scan
         jmp     .no
 .found: add     edx, 8
@@ -205,6 +203,10 @@ compose:
         jbe     .sliverfits
         mov     eax, [ebp + 0]
 .sliverfits:
+        cmp     eax, SCRATCH            ; and never more than the scratch row holds
+        jbe     .sliverheld
+        mov     eax, SCRATCH
+.sliverheld:
         mov     [ebp + 0x130], eax
         mov     eax, [ebp + 0x1c]
         shl     eax, 16

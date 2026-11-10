@@ -10,7 +10,7 @@ a type-0x11 instance, the four kinds above the controllers and each kept
 type: the first six reach the loop's skip target with nothing pushed,
 the rest the continuation with ecx loaded and edx pushed, as the
 displaced instructions did. Needs
-python3-unicorn; exits 0 with a note when it is missing so
+python3-unicorn; exits 77 with a note when it is missing so
 tools/check.py can skip it.
 """
 import os

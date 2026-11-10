@@ -8,13 +8,13 @@ stubs, the four flags in a page of their own and the two slots after it
 filled as the patcher fills them, and entered as the frame gate would:
 its entry first, then its exit. The entry must take the counter through
 the routine given, leave ecx and edx alone and continue with eax as the
-displaced load. The first exit must make logs\ beside the exe, open frames.log in it, write
+displaced load. The first exit must make logs\\ beside the exe, open frames.log in it, write
 the header and its line; the next only its line, with the entry counter,
 the stamp found through the jump at the fake MGameD3D's present and the
 flags as bits; and leave as the gate did: three registers popped, the
 counter stored in the timer object, the stack back where it was. With
 user32 missing nothing is written and nothing is retried; without the
-jump (the borderless patch not in) the stamp is 0. Needs python3-unicorn; exits 0 with a note when it is missing.
+jump (the borderless patch not in) the stamp is 0. Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import struct
 import sys
@@ -31,8 +31,9 @@ BLOB, SLOTS, TIMER, STACK, FAKE, RETURN = 0x600000, 0x500000, 0x510000, 0x300000
 COUNTER, BACK = 0x40000100, 0xdead0100  # the game's counter routine; the gate's sixth byte
 DLL, DLL_BLOB = 0x10000000, 0x17000     # a fake MGameD3D.dll, where its borderless blob would be
 FLAGS = 0x520000                        # RUNNING, PAUSED, DEBUGDLL, CATCHUP, a dword each
-MAGICS = {0xE3E3E3E3: SLOTS, 0xE4E4E4E4: SLOTS + 4, 0xF3F3F3F3: FLAGS, 0xF4F4F4F4: FLAGS + 4,
-          0xF5F5F5F5: FLAGS + 8, 0xF6F6F6F6: FLAGS + 12}
+M = patcher.EXE_MAGICS
+MAGICS = {M['LOADLIB']: SLOTS, M['GETPROC']: SLOTS + 4, M['RUNNING']: FLAGS, M['PAUSED']: FLAGS + 4,
+          M['DEBUGDLL']: FLAGS + 8, M['CATCHUP']: FLAGS + 12}
 EXE = 'C:\\games\\sr2\\SEGA RALLY 2.exe'
 STUBS = {'LoadLibraryA': 4, 'GetProcAddress': 8, 'GetModuleFileNameA': 12, 'CreateDirectoryA': 8, 'CreateFileA': 28,
          'WriteFile': 20, 'wsprintfA': 0, 'GetModuleHandleA': 4}
@@ -53,9 +54,9 @@ class Machine:
         mu.mem_map(FAKE, 0x1000)
         mu.mem_map(FLAGS, 0x1000)
         after = BLOB + len(blob)        # the two dwords the patcher writes after the blob
-        blob = blob.replace(struct.pack('<I', 0xE7E7E7E1), struct.pack('<I', after)) \
-            .replace(struct.pack('<I', 0xE7E7E7E2), struct.pack('<I', after + 4)) \
-            .replace(struct.pack('<I', 0xE7E7E7E3), struct.pack('<I', patcher.FRAMETRACE_STAMP + patcher.fullwin_stamp()))
+        blob = blob.replace(struct.pack('<I', patcher.SITE_MAGICS[0]), struct.pack('<I', after)) \
+            .replace(struct.pack('<I', patcher.SITE_MAGICS[1]), struct.pack('<I', after + 4)) \
+            .replace(struct.pack('<I', patcher.SITE_MAGICS[2]), struct.pack('<I', patcher.FRAMETRACE_STAMP + patcher.fullwin_stamp()))
         mu.mem_write(BLOB, blob)
         # the present's first bytes: the borderless patch's jump to its blob, or the stock load
         mu.mem_map(DLL, 0x18000)
@@ -124,7 +125,7 @@ class Machine:
         mu.reg_write(UC_X86_REG_ESP, STACK + 0x8000)
         mu.reg_write(UC_X86_REG_ECX, TIMER)
         mu.reg_write(UC_X86_REG_EDX, 0xd2d2)
-        mu.emu_start(BLOB + 5, BACK)
+        mu.emu_start(BLOB + 5, BACK, timeout=2000000)
         if (mu.reg_read(UC_X86_REG_ECX), mu.reg_read(UC_X86_REG_EDX), mu.reg_read(UC_X86_REG_ESP)) != (TIMER, 0xd2d2, STACK + 0x8000):
             raise SystemExit('frametracetest: the entry clobbered registers or the stack')
         if mu.reg_read(UC_X86_REG_EAX) != flags[0]:
@@ -135,7 +136,7 @@ class Machine:
         mu.reg_write(UC_X86_REG_EAX, now)
         mu.reg_write(UC_X86_REG_EBX, steps)
         mu.reg_write(UC_X86_REG_ESI, TIMER)
-        mu.emu_start(BLOB, RETURN)
+        mu.emu_start(BLOB, RETURN, timeout=2000000)
         if mu.reg_read(UC_X86_REG_ESP) != esp + 16:
             raise SystemExit('frametracetest: the stack was left wrong')
         if (mu.reg_read(UC_X86_REG_EDI), mu.reg_read(UC_X86_REG_ESI), mu.reg_read(UC_X86_REG_EBX)) != (0xd1, 0x51, 0xb1):

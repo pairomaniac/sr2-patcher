@@ -34,6 +34,8 @@ def read(path):
         if len(head) != 4 or head[0] != 'budget' or head[2] != 'qpc':
             raise SystemExit('%s: not a frames.log' % path)
         budget, qpc = int(head[1]), int(head[3])
+        if budget <= 0:
+            raise SystemExit('%s: a budget of %d ticks' % (path, budget))
         frames, bad = [], 0
         for line in fh:
             try:
@@ -89,6 +91,8 @@ def main(argv):
         intervals.append((ms, s1, at, f1, span(t0, e1), blit))
         at += ms
     total = at
+    if not total:
+        raise SystemExit('no time passed between the frames logged')
     print('%d frames over %.1f s: %.2f fps, counter %s' % (
         len(frames), total / 1000, len(intervals) * 1000 / total, 'QueryPerformanceCounter' if qpc else 'timeGetTime'))
     print()

@@ -21,7 +21,7 @@ HUD flag set a draw in the left or right part of the 640 moves out to
 a 16:9 frame's edge, and the exe's walk entry sets that flag, and the
 bounds of the HUD's own draws beside it, around a
 HUD callback through a fake MGameD3D.
-Needs python3-unicorn; exits 0 with a note when it is missing.
+Needs python3-unicorn; exits 77 with a note when it is missing.
 """
 import math
 import struct
@@ -45,12 +45,24 @@ PIXELS = VERTS + 0x20000                     # a 640x480 16-bit surface's pixels
 ZF = 1 << 6
 
 
-def exe_stub():
-    """WIDE_BLOB placed with its table, the exe's globals and two kernel32
-    stubs around it; the profile answer is settable."""
-    blob = patcher.exe_blob(patcher.WIDE_BLOB, 'European') + patcher.resolution_table()
+def map_page(mu, addr):
+    """The page holding addr, unless it is mapped already."""
+    page = addr & ~0xfff
+    if not any(lo <= page <= hi for lo, hi, _p in mu.mem_regions()):
+        mu.mem_map(page, 0x1000)
+
+
+def exe_stub(build='European'):
+    """The build's wide blob placed with its table, the exe's globals and
+    two kernel32 stubs around it; the profile answer is settable."""
+    global ROW
+    ROW = patcher.BUILDS[build]
+    blob = patcher.exe_blob(patcher.WIDE_US_BLOB if build == 'American' else patcher.WIDE_BLOB, build) + patcher.resolution_table()
     mu = Uc(UC_ARCH_X86, UC_MODE_32)
-    for addr in (CODE, STUBS, VTABLE, RECTS, 0x4d5000, 0x495000, 0x50a000):
+    pages = {CODE, STUBS, VTABLE, RECTS}
+    pages |= set(v & ~0xfff for k, v in ROW['addresses'].items() if k in ('WIDTH', 'HEIGHT', 'MODE', 'HIRES'))
+    pages |= set(v & ~0xfff for v in ROW['slots'].values())
+    for addr in sorted(pages):
         mu.mem_map(addr, 0x1000)
     mu.mem_map(STACK, 0x10000)
     mu.mem_write(CODE, blob)
@@ -333,8 +345,8 @@ def test_gl():
         raise SystemExit('widetest: the trace said %r' % (lines,))
 
 
-def test_exe():
-    mu, call, state = exe_stub()
+def test_exe(build='European'):
+    mu, call, state = exe_stub(build)
     mode = ROW['addresses']['MODE']
     # the mode check: no file, no wide size, mode 0 equal to MODE 0
     call(0, 0, 0xCAFE0000, 0)                           # the pushed esi, the setter's return, the mode
@@ -358,6 +370,12 @@ def test_exe():
     call(5, eax=1)
     if size(mu) != (800, 600):
         raise SystemExit('widetest: mode 1 not 800x600: %r' % (size(mu),))
+    if build == 'American':                             # its third size, behind a flag of its own
+        mu.mem_write(ROW['addresses']['HIRES'], struct.pack('<I', 1))
+        call(5, eax=1)
+        if size(mu) != (1024, 768):
+            raise SystemExit('widetest: the American mode 1 with the flag not 1024x768: %r' % (size(mu),))
+        mu.mem_write(ROW['addresses']['HIRES'], struct.pack('<I', 0))
     for answer in (b'800x600', b'1234x999', b'', b'1920'):
         state['answer'] = answer
         mu.mem_write(mode, struct.pack('<I', 0))
@@ -367,7 +385,8 @@ def test_exe():
             raise SystemExit('widetest: %r taken as a wide size' % answer)
     # the screen change: the setter with the front end's mode once the file's size differs from the one in force
     settings, setter = ROW['addresses']['SETTINGS'], ROW['addresses']['SETTER']
-    mu.mem_map(setter & ~0xfff, 0x1000)
+    map_page(mu, setter)
+    map_page(mu, settings)
     mu.mem_write(setter, b'\xc3')
     mu.mem_write(settings, struct.pack('<I', RECTS + 0x100))
     mu.mem_write(RECTS + 0x150, struct.pack('<I', 1))
@@ -400,8 +419,8 @@ def test_exe():
     # was; the callback gets its element and every register comes back
     dll, gamed3d, resume = 0x700000, ROW['addresses']['GAMED3D'], ROW['addresses']['WALKRESUME']
     mu.mem_map(dll, 0x18000)
-    mu.mem_map(gamed3d & ~0xfff, 0x1000)
-    mu.mem_map(resume & ~0xfff, 0x1000)
+    map_page(mu, gamed3d)
+    map_page(mu, resume)
     mu.mem_write(dll, b'MZ')
     mu.mem_write(dll + 0x3c, struct.pack('<I', 0x80))
     mu.mem_write(dll + 0x80 + 0x50, struct.pack('<I', 0x18000))
@@ -416,8 +435,8 @@ def test_exe():
         esp = mu.reg_read(UC_X86_REG_ESP)
         seen.append((address, struct.unpack('<I', mu.mem_read(esp + 4, 4))[0], struct.unpack('<I', mu.mem_read(dll + 0x17108, 4))[0]))
     callbacks = (ROW['addresses']['HUDLO'], ROW['addresses']['HUDHI'], ROW['addresses']['HUDHI'] + 0x10)
-    for page in sorted(set(cb & ~0xfff for cb in callbacks)):
-        mu.mem_map(page, 0x1000)
+    for cb in callbacks:
+        map_page(mu, cb)
     for cb in callbacks:
         mu.mem_write(cb, b'\xc3')
         mu.hook_add(UC_HOOK_CODE, callback, begin=cb, end=cb + 1)
@@ -857,6 +876,7 @@ def test_2d():
     locks = []
     creates = []
     releases = []
+    refuse = [False]                                        # CreateSurface fails, VirtualProtect fails
 
     def stub(mu, address, size_, user):
         esp = mu.reg_read(UC_X86_REG_ESP)
@@ -884,6 +904,9 @@ def test_2d():
             at, size, prot, old = struct.unpack('<IIII', mu.mem_read(esp + 4, 16))
             protects.append((at, size, prot))
             mu.mem_write(old, struct.pack('<I', 0x20))
+            if refuse[0]:
+                mu.reg_write(UC_X86_REG_EAX, 0)
+                return
         elif address == STUBS + 0x40:
             this, rect, src, srect, flags, fx = struct.unpack('<IIIIII', mu.mem_read(esp + 4, 24))
             fill = flags & 0x400 and fx and struct.unpack('<I', mu.mem_read(fx + 0x50, 4))[0]
@@ -906,6 +929,9 @@ def test_2d():
             this, desc, out, outer = struct.unpack('<IIII', mu.mem_read(esp + 4, 16))
             size, flags_, height, width = struct.unpack('<IIII', mu.mem_read(desc, 16))
             creates.append((this, size, flags_, height, width, struct.unpack('<I', mu.mem_read(desc + 0x68, 4))[0]))
+            if refuse[0]:
+                mu.reg_write(UC_X86_REG_EAX, 0x80004005)
+                return
             mu.mem_write(out, struct.pack('<I', VERTS + 0x12700))
             mu.reg_write(UC_X86_REG_EAX, 0)
             return
@@ -1129,16 +1155,60 @@ def test_2d():
     blit(surface + 8, (126, 118, 524, 405), panel)
     if releases != [lobby] or creates != [(ddraw, 0x7c, 0x7, 480, 640, 0x4040)]:
         raise SystemExit('widetest: the lobby surface was not remade for a new back buffer: %r %r' % (releases, creates))
+    # a create refused: the blit passes as it came, and no create is tried again beside that back buffer -
+    # the .bg surface's at the present likewise - until the next one
+    refuse[0] = True
+    mu.mem_write(base + 0x12554, struct.pack('<I', surface + 16))
+    mu.mem_write(surface + 16, struct.pack('<I', ddvtable))
+    del creates[:]
+    del releases[:]
+    if blit(surface + 16, (126, 118, 524, 405), panel) != [(surface + 16, (126, 118, 524, 405), panel)]:
+        raise SystemExit('widetest: a lobby blit without a surface came out %r' % (blits,))
+    blit(surface + 16, (126, 118, 524, 405), panel)
+    present()
+    present()
+    refuse[0] = False
+    blit(surface + 16, (126, 118, 524, 405), panel)
+    present()
+    if releases != [lobby, lobby] or creates != [(ddraw, 0x7c, 0x7, 480, 640, 0x4040), (ddraw, 0x7c, 0x7, 600, 2176, 0x4040)]:
+        raise SystemExit('widetest: a refused create was tried again: %r %r' % (releases, creates))
+    mu.mem_write(base + 0x12554, struct.pack('<I', surface + 24))
+    mu.mem_write(surface + 24, struct.pack('<I', ddvtable))
+    if blit(surface + 24, (126, 118, 524, 405), panel) != [(lobby, (126, 118, 524, 405), panel)] or len(creates) != 3:
+        raise SystemExit('widetest: the lobby surface was not made beside the next back buffer: %r' % (creates,))
+    # the Blt hook: not put in when VirtualProtect is missing or refuses
+    bltorig = copymode - 304                                # bltorig .. bgblit, per the layout before copymode
+    mu.mem_write(base + 0x12554, struct.pack('<I', surface))
+    mu.mem_write(copymode - 16, struct.pack('<I', 0))       # lobbylive: nothing for the present to stretch
+    for missing in (True, False):
+        mu.mem_write(bltorig, struct.pack('<I', 0))
+        mu.mem_write(ddvtable + 0x14, struct.pack('<I', STUBS + 0x40))
+        del protects[:]
+        if missing:
+            procs[b'VirtualProtect'] = 0
+        else:
+            procs[b'VirtualProtect'] = STUBS + 0x30
+            refuse[0] = True
+        present()
+        refuse[0] = False
+        if (struct.unpack('<I', mu.mem_read(ddvtable + 0x14, 4))[0] != STUBS + 0x40 or struct.unpack('<I', mu.mem_read(bltorig, 4))[0]
+                or protects != ([] if missing else [(ddvtable + 0x14, 4, 0x40)])):
+            raise SystemExit('widetest: the Blt hook went in without VirtualProtect: %r' % (protects,))
+    del protects[:]
+    present()
+    if struct.unpack('<I', mu.mem_read(ddvtable + 0x14, 4))[0] != hooked or protects != [(ddvtable + 0x14, 4, 0x40), (ddvtable + 0x14, 4, 0x20)]:
+        raise SystemExit('widetest: the Blt hook did not go in after all: %r' % (protects,))
     mu.mem_write(base + 0x12554, struct.pack('<I', 0))
     if setvp((0, 0, 1920, 1080))[0] or setvp((0, 0, 640, 480), w=640, h=480)[0]:
         raise SystemExit('widetest: a device viewport scaled that should have passed')
 
 
 def main():
-    test_exe()
+    test_exe('European')
+    test_exe('American')
     test_gl()
     test_2d()
-    print('widetest: the size stubs, the viewport and perspective hooks and the 2D scaling OK')
+    print('widetest: the size stubs on both exe blobs, the viewport and perspective hooks and the 2D scaling OK')
     return 0
 
 

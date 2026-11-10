@@ -24,8 +24,9 @@
 ; are kept as pointers in the data. 0xE7E7E7E1 and 0xE7E7E7E2 are dwords
 ; after the blob the patcher fills with the counter routine's address and
 ; the gate's sixth byte; 0xE7E7E7E3 it replaces with the stamp's offset
-; from the present. kernel32's GetModuleFileNameA, CreateDirectoryA,
-; CreateFileA and WriteFile and user32's wsprintfA are resolved once. If anything fails
+; from the present. kernel32's GetModuleHandleA, GetModuleFileNameA,
+; CreateDirectoryA, CreateFileA and WriteFile and user32's wsprintfA are
+; resolved once. If anything fails
 ; the handle is -1 and nothing is logged.
 
 bits 32
@@ -36,6 +37,9 @@ bits 32
 %define PAUSED          0xF4F4F4F4
 %define DEBUGDLL        0xF5F5F5F5
 %define CATCHUP         0xF6F6F6F6
+%define SITE1           0xE7E7E7E1      ; the patcher's per-site placeholders (build.py's SITE_MAGICS)
+%define SITE2           0xE7E7E7E2
+%define SITE3           0xE7E7E7E3
 %define PRESENT         0x4d7b          ; MGameD3D's windowed present, RVA
 
 %define MAX_PATH        260
@@ -53,7 +57,7 @@ bits 32
 entry:
         push    ecx
         push    edx
-        call    dword [0xE7E7E7E1]      ; the game's own counter routine
+        call    dword [SITE1]      ; the game's own counter routine
         call    .here
 .here:  pop     edx
         sub     edx, .here
@@ -62,7 +66,7 @@ entry:
         mov     eax, [eax]              ; the displaced `mov eax, [RUNNING]`
         pop     edx
         pop     ecx
-        jmp     dword [0xE7E7E7E2]
+        jmp     dword [SITE2]
 
 ; Entered with eax = the counter, ebx = the steps, esi = the timer
 ; object, and ebx, esi, edi pushed by the gate. Leaves as the gate did.
@@ -188,7 +192,7 @@ open:
         cmp     byte [eax + PRESENT], 0xe9   ; the borderless present's jump into its blob
         jne     .nodll
         mov     ecx, [eax + PRESENT + 1]
-        lea     eax, [eax + ecx + 0xE7E7E7E3]  ; PRESENT + 5 + the stamp's offset in the blob
+        lea     eax, [eax + ecx + SITE3]  ; PRESENT + 5 + the stamp's offset in the blob
         mov     [ebp + p_dll], eax
 .nodll:
         lea     eax, [ebp + s_getmodfn]
