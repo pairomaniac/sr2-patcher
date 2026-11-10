@@ -79,7 +79,7 @@ BUILDS = {
                   'noregistry': (0xd07c0, 0x7e359), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
                   'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
-                  'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'bgrow': 0x14671, 'altenter': 0x260bc,
+                  'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73048, 'musicloop': 0x73629, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'tabmenu': (0x37053, 0x36eac, 0x3ed13, 0x35002, 0x35629), 'replaypad': 0x400ea, 'pagepad': (0x7e906, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5128a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
@@ -126,7 +126,7 @@ BUILDS = {
                   'devices': (0x33f8, 0x340f, 0x3214, 0x3267, 0x31c0, 0x9aa20, 0x2f0c, 0x3638),   # Options.dll
                   'noregistry': (0xd0bc0, 0x7e779), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),
                   'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0), 'nogeneric': 0x26d2,
-                  'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'bgrow': 0x14921, 'altenter': 0x2636c,
+                  'flag': 0x276a6, 'cardwarn': 0x26938, 'cdlevel': 0x73478, 'musicloop': 0x73a59, 'bgrow': 0x14921, 'altenter': 0x2636c,
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'tabmenu': (0x37383, 0x371dc, 0x3f043, 0x35332, 0x35959), 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'erasekey': 0xceb7c, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
                   'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x6600,
@@ -169,7 +169,7 @@ BUILDS = {
                   'devices': (0x5b68, 0x5b7f, 0x5984, 0x59d7, 0x5930, 0xa0b08, 0x567c, 0x5da8),   # Options.dll
                   'noregistry': (0x115fd4, 0xbd959), 'xinput': (0x7940, 0x7a20, 0x6940, 0x81a8), 'kbdpoll': 0x7e40,   # the older MGInput.dll: the keyboard poll's address in the update's dispatch, hooked instead of the device's poll
                   'dinput8': (0x2870, 0x8550, 0x39f9, '8b9660020000', 0x10678, 0x106b8), 'nogeneric': 0x2694,   # the older MGInput.dll: the type read is a six-byte load
-                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'cardwarn': 0x4b263, 'cdlevel': 0xb2668,
+                  'flag': 0x4c026, 'bgrow': 0x27e71, 'altenter': 0x4acc2, 'oscheck': 0x4b3b0, 'cardwarn': 0x4b263, 'cdlevel': 0xb2668, 'musicloop': 0xb2cbc,
                   'clearsize': 0x40b83,
                   'frametrace': (0x4c94e, 0x4c830), 'padmenu': 0x6d63f, 'tabmenu': (0x60a63, 0x608bc, 0x6d603, 0x5ea22, 0x5f049), 'replaypad': 0x6e99a, 'pagepad': (0xbdef8, '8b4424103bc5'), 'erasekey': 0x1140d4, 'loadhold': (0x349eb, 0x3107e), 'hudlast': (0x2de01, 0x4c119, 0x4a940),
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
@@ -225,7 +225,7 @@ BUILDS = {
                   'noregistry': (0xd07c0, 0x7e349), 'xinput': (0x8130, 0x8210, 0x7100, 0x56c0),   # the latter MGInput.dll
                   'dinput8': (0x2940, 0x8a30, 0x39ac, '80be6002000003', 0x10680, 0x106c0),   # MGInput.dll: the create and the thunk it calls, the type byte's first read and its bytes, the two interface ids
                   'nogeneric': 0x26d2,                                # MGInput.dll: the device loop's null-GUID branch
-                  'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'bgrow': 0x14671, 'altenter': 0x260bc,
+                  'flag': 0x273e6, 'cardwarn': 0x26678, 'cdlevel': 0x73038, 'musicloop': 0x73619, 'bgrow': 0x14671, 'altenter': 0x260bc,
                   'frametrace': (0x27d0b, 0x27bf0), 'padmenu': 0x3ed4f, 'tabmenu': (0x37053, 0x36eac, 0x3ed13, 0x35002, 0x35629), 'replaypad': 0x400ea, 'pagepad': (0x7e8f6, '8b44241085c0'), 'erasekey': 0xce89c, 'loadhold': (0x19bbb, 0x189be), 'hudlast': (0x17eb1, 0x274f2, 0x25d30),
                   'wide': (0x20dfe, 0x20e18, 0x5127a, 0x4e5),
                   'lobby': (0x3b130, 0x3b34f, 0x3b3bd, 0x3f4d6, 0x3e3d8, 0x43ef27, 0x43ee9d), 'ipcheck': 0x3bf4e, 'entries': (0x20310, 0x1f2f1, 0x1fc49), 'chatline': 0x344e4, 'paste': (0x1f7ba, 0x200d5), 'status': 0x3544b, 'starting': (0x367c8, 0x359bf), 'startpresent': (0x27c35,), 'startload': 0x63a0,
@@ -706,6 +706,7 @@ def patches(build):
         'mix': ('MUSASHI\\MGSound.dll', ((site['mix'][0], bytes.fromhex('8b4c240c8b542410'), None),
                                         (site['mix'][1], bytes.fromhex('03d68bf285f6'), None)), 'apply_mix'),
         'cdlevel': (EXE, ((site['cdlevel'], bytes.fromhex('6a00d80d'), bytes.fromhex('6a40d80d')),), None),
+        'musicloop': (EXE, ((site['musicloop'], bytes.fromhex('6a0052e8'), bytes.fromhex('6a0152e8')),), None),
         'voldefault': (EXE, ((site['voldefault'], struct.pack('<3I', 9, 9, 9), struct.pack('<3I', 6, 6, 6)),), None),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
@@ -932,8 +933,10 @@ FEATURES = (
     ('music', 'Music from files',
      'The soundtrack as files - music\\track02.wav onward beside the game -\n'
      'in place of the audio tracks on the play disc. Rip soundtrack above\n'
-     'writes them, about 550 MB, and the in-game slider drives them.',
-     ('music', 'cdlevel')),
+     'writes them, about 550 MB, and the in-game slider drives them. A\n'
+     'course\'s music loops through the race, where it stopped after one\n'
+     'play.',
+     ('music', 'cdlevel', 'musicloop')),
 
     ('gamepad', 'XInput gamepad support',
      'A modern pad wherever the game takes input: driving, the menus,\n'

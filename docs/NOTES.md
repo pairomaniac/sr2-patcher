@@ -70,6 +70,7 @@ lists. The key in parentheses is what `--patch` takes.
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` becomes `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` becomes `call hookaddr; nop`; the entry point is repointed at the setup thunk; the CD-volume methods' entries become `jmp setvolume` and `jmp getvolume` |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe`, `SR2_SAVE.DAT` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes; the save's `0x7270`, 12 bytes, and its checksum at `0x730c` | the defaults block's three sliders go from 9 to 6; so do the shipped save's, while the file is still the shipped one |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags `0x40` instead of 0 |
+| **Course music loops** (`musicloop`) | `SEGA RALLY 2.exe` | `0x73629` (`0x73a59` American, `0xb2cbc` Australian, `0x73619` DigiCube/MediaKite) | the bank's restart of a slot's CD track (`0x4741f0`) pushes loop 1 instead of 0 |
 
 **Controls**
 

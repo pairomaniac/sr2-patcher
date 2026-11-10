@@ -294,6 +294,7 @@ offsets are the VA minus the base unless a cell gives one.
 | nocardwarn | 1 | in the exe, 2 bytes at `0x427278` (file `0x26678`); American file `0x26938`, Australian `0x4b263` |
 | voldefault | 1 | in the exe, 12 bytes at `0x5a23a8` (file `0xd01a8`); American file `0xd05a8`, Australian `0x60c3a8` (file `0x1159a8`), DigiCube/MediaKite file `0xd01a8` |
 | cdlevel | 1 | in the exe, 1 byte of the 4 at `0x473c48` (file `0x73048`); American file `0x73478`, Australian `0xb2668`, DigiCube/MediaKite `0x73038` |
+| musicloop | 1 | in the exe, 1 byte of the 4 at `0x474219` (file `0x73629`); American file `0x73a59`, Australian `0xb2cbc`, DigiCube/MediaKite `0x73619` |
 | altab | 1 + section | in the exe, `0x426bf7` (file `0x25ff7`), and the annex |
 | zdetach | 4 | in `MGameD3D.dll`, `0x10002930`, `0x10002b31`, `0x10002d11` and `0x100037f4`; the file offsets are these minus the base |
 | restoreall | 1 | in `MGameD3D.dll`, `0x10007710`–`0x1000778c` (file `0x7710`): 44 bytes written over 124, with ten relocation entries dropped |

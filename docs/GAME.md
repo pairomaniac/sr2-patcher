@@ -554,13 +554,27 @@ the CD and `mixer*` for the CD's volume. It opens the device by type ID
 from milliseconds (`0x100032f0`), pauses, resumes, stops and closes. It
 polls `MCI_STATUS` for the position, the track count and each track's
 length (`0x10003220`–`0x100032df`). The `MCI_NOTIFY` flag it sets on a
-play goes nowhere: nothing in the game handles `MM_MCINOTIFY`. The
-position is polled against `GetTickCount` bookkeeping around
-`0x100023cf`, which is presumably how a course loops.
+play goes nowhere: nothing in the game handles `MM_MCINOTIFY`. A play
+notes its end, the `GetTickCount` at its start plus the track's length,
+and the update (`0x10002990`) plays a looping track again from the
+start once that time has passed (`0x10002b11`).
 
 At "Go!" the exe seeks the course track to 0:00 with a track number one
 below the one its play used, and sends no play after the seek. The hook
 takes a seek to the open track, or to the one below it, as a restart.
+
+A course's music is played twice as the race loads. The bank's restart
+of its slot (`0x4741f0`, called only from `0x42a4bf`) comes first and
+passes the CD object's play (`0x46df80`) loop 0. The race's play
+(`0x42badd`) follows with loop 1. MGAudio runs each play on a thread of
+its own, and drops a request while the last one's thread is still
+running (`0x10001c60`: `WaitForSingleObject` with no wait unless the
+flags have bit 31). The hook's open reads the whole file, so the second
+play is always dropped. The track plays without loop, and at its end
+the update (`0x10002a84`) stops it, so the race went silent after one
+play whatever the course's music. The `musicloop` patch has the
+restart pass loop 1 (`push 0` becomes `push 1` at `0x474219`), so the
+play that gets through loops. Traced live under cdb.
 
 The play disc's audio is tracks 2–14. In the Redump dump each track is
 in its own bin with a 150-sector pregap at `INDEX 00`. The ripper starts
