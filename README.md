@@ -269,7 +269,7 @@ the ripper writes (44.1 kHz, 16-bit stereo WAV):
 | `music\track15.wav` | a championship's replay, race 1 |
 | `music\track16.wav` | a championship's replay, race 3 |
 | `music\track17.wav` | a championship's replay, race 4 |
-| `music\track18.wav` | the ten-year championship's ending, in place of track 11 |
+| `music\track18.wav` | the ten-year championship's ending, in place of track 11; the DRIVER line stays up until the music is all but over, as on the Dreamcast |
 
 The four replays of a championship play tracks 15, 11, 16 and 17, as on
 the Dreamcast, in place of each course's music; any other replay plays

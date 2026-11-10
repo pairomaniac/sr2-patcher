@@ -616,7 +616,11 @@ seconds have passed since the note. [docs/NOTES.md](../docs/NOTES.md),
 Four entries in the exe's annex, each in place of a call of the sound
 bank's play. +0, the ten-year ending's: track 18 written into slot 14's
 record and slot 14 played when `music\track18.wav` is there, slot 9
-(track 11) played otherwise. +5 and +10, a championship replay's first
+(track 11) played otherwise; with track 18 it also notes, by
+`GetTickCount` and the file's size, when the music will have all but
+3 s left. +35, in place of the 8 bytes that load the ending's DRIVER
+line's step count and compare it with 780, holds the line past 780
+steps until that time. +5 and +10, a championship replay's first
 race and its later ones: by the race index, tracks 15, 11 (slot 9), 16
 and 17, a track without its file keeping the course's slot; +10 on race
 0 is a slot-7 branch the call is shared with, and plays as it did. +15,

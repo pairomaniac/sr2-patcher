@@ -68,7 +68,7 @@ lists. The key in parentheses is what `--patch` takes.
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads its min and max through asm/mix.asm's first routine; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load becomes `mov eax, 9`; in the DLL the load's relocation entry is dropped with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` becomes `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` becomes `call hookaddr; nop`; the entry point is repointed at the setup thunk; the CD-volume methods' entries become `jmp setvolume` and `jmp getvolume` |
-| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405` (American `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`), the annex | four `call 0x473d80`s (the sound bank's play) → `call` asm/dcmusic.asm: the ten-year ending's at `0x42ba57`, which plays track 18 in slot 14 when `music\track18.wav` is there; the replays' at `0x452fa3`, `0x41cc9a` and `0x453005`, which play tracks 15, 11, 16 and 17; and the course's music read as choices 7 to 10: the race's play `0x2aedd`, the fades `0x1b9b2`, `0x1e15b`, `0x29765` and the restart `0x298bf` (American `0x2b1bd`, `0x1bc62`, `0x1e40b`, `0x29a45`, `0x29b9f`; Australian `0x522a4`, `0x38f52`, `0x3b6eb`, `0x50b45`, `0x50c95`) |
+| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | the DRIVER line `0x15619` (8 bytes; American `0x158c9`, Australian `0x28e19`), `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405` (American `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`), the annex | four `call 0x473d80`s (the sound bank's play) → `call` asm/dcmusic.asm: the ten-year ending's at `0x42ba57`, which plays track 18 in slot 14 when `music\track18.wav` is there; the replays' at `0x452fa3`, `0x41cc9a` and `0x453005`, which play tracks 15, 11, 16 and 17; and the course's music read as choices 7 to 10: the race's play `0x2aedd`, the fades `0x1b9b2`, `0x1e15b`, `0x29765` and the restart `0x298bf` (American `0x2b1bd`, `0x1bc62`, `0x1e40b`, `0x29a45`, `0x29b9f`; Australian `0x522a4`, `0x38f52`, `0x3b6eb`, `0x50b45`, `0x50c95`) |
 | **Dreamcast music in OPTION** (`dcoptions`) | `Options.dll` | `0xbdc`, `0xaa7`, `0xeb6` (the same in the Australian), three BGM TEST sites, the annex | the BGM page's `mov ebx, 7` → `call`, the row name's text call and the preview's play → `call` asm/dcmusic.asm built with `-DOPTIONS`: 11 choices, choices 7 to 10 named and previewed; and BGM TEST's count `0x4293` (7 bytes), name `0x3f6e` and play `0x44b5` (Australian `0x9173`, `0x8e4e`, `0x9395`) → `call`: tracks 15 to 18 after its 13; needs `dcmusic` |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe`, `SR2_SAVE.DAT` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes; the save's `0x7270`, 12 bytes, and its checksum at `0x730c` | the defaults block's three sliders go from 9 to 6; so do the shipped save's, while the file is still the shipped one |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags `0x40` instead of 0 |
@@ -802,7 +802,25 @@ bit `0x20` of `+0x44` is set) plays slot 9, track 11, at `0x42ba57`.
 `dcmusic.asm` takes that call: it plays track 18 in slot 14 when
 `music\track18.wav` is beside the exe, and slot 9 otherwise. The four
 files from `track15.wav` on are looked for once, at the first call, with
-`GetFileAttributesA`.
+`GetFileAttributesExA`, which gives each one's size too.
+
+The ending is an object of its own (`0x415e10`, made at `0x415522` when
+the mode is not the arcade's), stepped at 60 Hz through eight states
+(the table at `0x4162ec`). State 3 rolls the credits over the last
+race's replay, so how long it lasts is the race's. State 6 is the
+DRIVER line, the player's name: its step count at `+0x14` runs to 780
+(`cmp eax, 0x30c` at `0x41621c`, 13 s); then state 7 fades the bank's
+slot 9 (`0x41624a`, which takes the CD whichever slot plays it) and
+the screen over 178 steps, and the ending is over. Track 11 is 170.8 s,
+the Dreamcast's ending track 179.8 s, and the screen went dark while it
+still played; the Dreamcast holds the DRIVER line longer. So with
+track 18 `dcmusic.asm` notes, when it plays it, `GetTickCount` plus the
+file's length (its size less the 44-byte header over 176.4 bytes a
+millisecond) less 3 s; its +35 takes the 8 bytes `mov eax, [ebx+0x14];
+cmp eax, 0x30c` at `0x416219` (file `0x15619`; American `0x158c9`,
+Australian `0x28e19`, DigiCube/MediaKite `0x15619`) and, past 780 steps,
+returns the flags of a compare the `jle` after it takes until that time
+has come. A replay longer than the music leaves the stock 780.
 
 A replay plays the race's own music, `slot = opt[map[course]] + 1` (the
 seven course choices at settings `+0x6c`, the map at `0x5b2374`), from

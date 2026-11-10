@@ -86,7 +86,7 @@ BUILDS = {
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
-                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcreplay': (0x523a3, 0x1c09a, 0x52405), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders
+                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcdriver': 0x15619, 'dcreplay': (0x523a3, 0x1c09a, 0x52405), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders
         # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
@@ -130,7 +130,7 @@ BUILDS = {
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'tabmenu': (0x37383, 0x371dc, 0x3f043, 0x35332, 0x35959), 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'erasekey': 0xceb7c, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
                   'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x6600,
-                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8, 'dcending': 0x2b137, 'dcreplay': (0x52723, 0x1c32a, 0x52785), 'dccourse': (0x2b1bd, 0x1bc62, 0x1e40b, 0x29a45, 0x29b9f), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},
+                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8, 'dcending': 0x2b137, 'dcdriver': 0x158c9, 'dcreplay': (0x52723, 0x1c32a, 0x52785), 'dccourse': (0x2b1bd, 0x1bc62, 0x1e40b, 0x29a45, 0x29b9f), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
@@ -175,7 +175,7 @@ BUILDS = {
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
                   'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df), 'startpresent': (0x4c877, 0x4c8ff), 'startload': 0xfdf0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
-                  'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8, 'dcending': 0x52227, 'dcreplay': (0x8cde3, 0x3960a, 0x8ce45), 'dccourse': (0x522a4, 0x38f52, 0x3b6eb, 0x50b45, 0x50c95), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x9173, 0x8e4e, 0x9395),
+                  'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8, 'dcending': 0x52227, 'dcdriver': 0x28e19, 'dcreplay': (0x8cde3, 0x3960a, 0x8ce45), 'dccourse': (0x522a4, 0x38f52, 0x3b6eb, 0x50b45, 0x50c95), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x9173, 0x8e4e, 0x9395),
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
@@ -232,7 +232,7 @@ BUILDS = {
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
-                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcreplay': (0x52393, 0x1c09a, 0x523f5), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders, in STATUSDA where the relink left it
+                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcdriver': 0x15619, 'dcreplay': (0x52393, 0x1c09a, 0x523f5), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders, in STATUSDA where the relink left it
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
@@ -322,7 +322,7 @@ RESTORE_RELOCS = 10
 #   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT; the shipped save's sliders too, while nothing has been saved to it
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
-#   dcmusic     the Dreamcast's extra tracks from music\track15.wav on: the replays' set (15, 11, 16, 17), the ten-year ending's track 18, the set as course choices 7 to 10; needs music
+#   dcmusic     the Dreamcast's extra tracks from music\track15.wav on: the replays' set (15, 11, 16, 17), the ten-year ending's track 18 with its DRIVER line held to the music's end, the set as course choices 7 to 10; needs music
 #   dcoptions   OPTION's BGM page offering choices 7 to 10, named and previewed, and BGM TEST playing tracks 15 to 18 after its 13 (Options.dll); needs dcmusic
 #   devices     a fourth Options item, Device Settings, placed for the controller page; also grows OPTIONS.TXR
 #   widescreen  the picture at the size SR2.CFG names, the 3D field widened (exe)
@@ -711,7 +711,8 @@ def patches(build):
         'voldefault': (EXE, ((site['voldefault'], struct.pack('<3I', 9, 9, 9), struct.pack('<3I', 6, 6, 6)),), None),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
-        'dcmusic': (EXE, tuple((s, b'\xe8', None) for s in (site['dcending'],) + site['dcreplay'] + site['dccourse']),
+        'dcmusic': (EXE, tuple((s, b'\xe8', None) for s in (site['dcending'],) + site['dcreplay'] + site['dccourse'])
+                    + ((site['dcdriver'], bytes.fromhex('8b43143d0c030000'), None),),
                     'apply_dcmusic'),
         'devices': ('Options.dll', devices_sites(site['devices'], row['addresses']['MENUTABLES']), 'apply_devices'),
         'widescreen': (EXE, wide_sites(site['wide'], row['addresses'], build == 'American'), 'apply_widescreen'),
@@ -956,7 +957,8 @@ FEATURES = (
      '\treplays one of the four at random. OPTION offers\n'
      '\tthe four as a course\'s music too.\n'
      'track18.wav\tThe ten-year championship\'s ending, in place of\n'
-     '\ttrack 11.\n'
+     '\ttrack 11, its DRIVER line held until the music is\n'
+     '\tall but over.\n'
      '\n'
      'OPTION\'s BGM TEST plays the ones there after its own.',
      ('dcmusic', 'dcoptions')),
@@ -4504,26 +4506,34 @@ STARTING_BLOB = bytes.fromhex(
     '415945525300'
 )
 DCMUSIC_BLOB = bytes.fromhex(
-    'e91e000000e928000000e927000000e937000000e9e1000000e9e3000000e9ea'
-    '000000e831010000ba12000000e9a600000031c0eb7ca19b9b9b9b8b406485c0'
-    '0f84ad00000083e003eb67a19b9b9b9b8b503883fa02741383fa03740e83fa05'
-    '740983fa060f8588000000f64044040f8485000000e8df000000a807747c5153'
-    '89c383e00183e306d1e309c383cb0231c989dad1ea83d10085d275f70f3131d2'
-    'f7f1b8ffffffff400fa3c373fa4a79f75b5989c2e8a0000000a807743d83fa01'
-    '750ac744240409000000eb27720583c20eeb05ba0f00000083ea0f0fa3d0731a'
-    '83c20e8b01899030020000c74424040e000000b89a9a9a9affe0e81a000000eb'
-    'f2e813000000b89c9c9c9cffe0e807000000b89d9d9d9dffe08b44240883e808'
-    '83f8037733515289c2e82b00000083fa01741a72014a0fa3d0731283c20e8b01'
-    '899030020000b80e000000eb05b809000000894424105a59c3555152e8000000'
-    '005d81ed6101000080bd2c020000007505e80a0000008b85300200005a595dc3'
-    '535657c6852c020000018d853402000050ff15e3e3e3e385c00f84890000008d'
-    '8d410200005150ff15e4e4e4e485c0747789c368f80000008dbd66020000576a'
-    '00ff15f9f9f9f985c0745d8d340739fe74564e803e5c75f64689f28d8d540200'
-    '008a018802414284c075f683c60bbf0f00000089f8d40a660530308826884601'
-    '8d856602000050ffd383f8ff7414a81075108d4ff1b801000000d3e009853002'
-    '00004783ff1276cb5f5e5bc300909090000000006b65726e656c33322e646c6c'
-    '0047657446696c654174747269627574657341006d757369635c747261636b31'
-    '352e776176000000000000000000000000000000000000000000000000000000'
+    'e923000000e9ce000000e9cd000000e9dd000000e987010000e989010000e990'
+    '010000e963000000e8d201000055e8000000005d81ed330000000fbae0030f92'
+    '8530030000733451ff15c2c2c2c289c18b850403000083e82c76196bc00a31d2'
+    '68e4060000f7342483c4042db80b0000760201c1898d2c030000595de87e0100'
+    '00ba12000000e9f30000008b43143d0c0300007e4255e8000000005d81ed9b00'
+    '000080bd300300000074195152ff15c2c2c2c25a592b852c0300007811c68530'
+    '030000005d8b43143d0c030000c35d8b43143dffffff7fc331c0eb7ca19b9b9b'
+    '9b8b406485c00f84ad00000083e003eb67a19b9b9b9b8b503883fa02741383fa'
+    '03740e83fa05740983fa060f8588000000f64044040f8485000000e8df000000'
+    'a807747c515389c383e00183e306d1e309c383cb0231c989dad1ea83d10085d2'
+    '75f70f3131d2f7f1b8ffffffff400fa3c373fa4a79f75b5989c2e8a0000000a8'
+    '07743d83fa01750ac744240409000000eb27720583c20eeb05ba0f00000083ea'
+    '0f0fa3d0731a83c20e8b01899030020000c74424040e000000b89a9a9a9affe0'
+    'e81a000000ebf2e813000000b89c9c9c9cffe0e807000000b89d9d9d9dffe08b'
+    '44240883e80883f8037733515289c2e82b00000083fa01741a72014a0fa3d073'
+    '1283c20e8b01899030020000b80e000000eb05b809000000894424105a59c355'
+    '5152e8000000005d81ed0702000080bdf0020000007505e80a0000008b85f402'
+    '00005a595dc3535657c685f0020000018d853103000050ff15e3e3e3e385c00f'
+    '84a70000008d8d3e0300005150ff15e4e4e4e485c00f849100000089c368f800'
+    '00008dbd65030000576a00ff15f9f9f9f985c074778d340739fe74704e803e5c'
+    '75f64689f28d8d530300008a018802414284c075f683c60bbf0f00000089f8d4'
+    '0a6605303088268846018d8508030000506a008d856503000050ffd385c07426'
+    'f6850803000010751d8b85280300008984bdbc0200008d4ff1b801000000d3e0'
+    '0985f40200004783ff1276b15f5e5bc300909090000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '00000000000000000000000000000000006b65726e656c33322e646c6c004765'
+    '7446696c6541747472696275746573457841006d757369635c747261636b3135'
+    '2e77617600000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -4531,33 +4541,36 @@ DCMUSIC_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '00000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000'
 )
 DCOPTIONS_BLOB = bytes.fromhex(
     'e9b6000000e9c7000000e9f7000000e90a000000e94b000000e97b0000005051'
     'e842010000b90d000000d1e883d10085c075f7894e685958c383e80d72235152'
     '89c2e82001000031c90fa3c873034a780a4183f90376f231c0eb038d410f5a59'
     'c331c0c38b463ce8cdffffff55e8000000005d81ed7200000085c0740f8b8485'
-    '5802000001e889442408eb6b837e3c087565b8ba020000ebeb8b442404e897ff'
+    'ac02000001e889442408eb6b837e3c087565b80e030000ebeb8b442404e897ff'
     'ffff85c0746548528b118982080200005ac74424040d000000eb5050e8a60000'
     '00bb07000000a8077405bb0b00000058c355e8000000005d81edd70000008b44'
-    'be1883e80783f803770d8b84855402000001e88944240889e82de7e7e7e705db'
+    'be1883e80783f803770d8b8485a802000001e88944240889e82de7e7e7e705db'
     'dbdbdb5dffe0e81c00000055e8000000005d81ed1101000089e82de7e7e7e705'
     'd5d5d5d55dffe08b44240883e80883f8037733515289c2e82b00000083fa0174'
     '1a72014a0fa3d0731283c20e8b01899008020000b80d000000eb05b80c000000'
-    '894424105a59c3555152e8000000005d81ed6f01000080bd4f020000007505e8'
-    '0a0000008b85500200005a595dc3535657c6854f020000018d85cd0200005089'
-    'e82de7e7e7e7ff90e3e3e3e385c00f84970000008d8dda020000515089e82de7'
-    'e7e7e7ff90e4e4e4e485c0747e89c368f80000008dbdff020000576a0089e82d'
-    'e7e7e7e7ff90e5e5e5e585c0745d8d340739fe74564e803e5c75f64689f28d8d'
-    'ed0200008a018802414284c075f683c60bbf0f00000089f8d40a660530308826'
-    '8846018d85ff02000050ffd383f8ff7414a81075108d4ff1b801000000d3e009'
-    '85500200004783ff1276cb5f5e5bc3000000000064020000700200007f020000'
-    '8c02000049474e4954494f4e273938004e494748542047524f4f56494e270045'
-    '535452414441204e4f5641004d204e2046203f00640200007f0200008c020000'
-    'a402000054494c4c20594f552053454520544845204441574e0049474e495449'
-    '4f4e2039382053454c454354006b65726e656c33322e646c6c0047657446696c'
-    '654174747269627574657341006d757369635c747261636b31352e7761760000'
+    '894424105a59c3555152e8000000005d81ed6f01000080bd6d020000007505e8'
+    '0a0000008b85700200005a595dc3535657c6856d020000018d85210300005089'
+    'e82de7e7e7e7ff90e3e3e3e385c00f84b50000008d8d2e030000515089e82de7'
+    'e7e7e7ff90e4e4e4e485c00f849800000089c368f80000008dbd55030000576a'
+    '0089e82de7e7e7e7ff90e5e5e5e585c074778d340739fe74704e803e5c75f646'
+    '89f28d8d430300008a018802414284c075f683c60bbf0f00000089f8d40a6605'
+    '303088268846018d8584020000506a008d855503000050ffd385c07426f68584'
+    '02000010751d8b85a40200008984bd380200008d4ff1b801000000d3e0098570'
+    '0200004783ff1276b15f5e5bc300909000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000b8020000c4020000d3020000e002000049474e4954494f4e'
+    '273938004e494748542047524f4f56494e270045535452414441204e4f564100'
+    '4d204e2046203f00b8020000d3020000e0020000f802000054494c4c20594f55'
+    '2053454520544845204441574e0049474e4954494f4e2039382053454c454354'
+    '006b65726e656c33322e646c6c0047657446696c654174747269627574657345'
+    '7841006d757369635c747261636b31352e776176000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
@@ -4566,7 +4579,7 @@ DCOPTIONS_BLOB = bytes.fromhex(
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
     '0000000000000000000000000000000000000000000000000000000000000000'
-    '000000000000000000000000000000'
+    '0000000000'
 )
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -8411,8 +8424,10 @@ def apply_dcmusic(buf, build):
     replay's first race, its later races, the other modes' scene music,
     and the course music's play, three fades and restart - which plays
     tracks 15 to 18 in slot 14 when their files are there and leaves
-    through the routine called either way. The annex keeps what it found
-    and the path, so it is writable."""
+    through the routine called either way; and the ten-year ending's
+    DRIVER line's count and compare (8 bytes), held while track 18 still
+    has more than its fade to play. The annex keeps what it found and the
+    path, so it is writable."""
     row = BUILDS[build]
     addr = row['addresses']
     course = row['sites']['dccourse']
@@ -8425,6 +8440,7 @@ def apply_dcmusic(buf, build):
     out, rva = append_section(buf, exe_blob(DCMUSIC_BLOB, build))
     for site, entry, _target in sites:
         _branch(out, site, rva + entry)
+    _branch(out, row['sites']['dcdriver'], rva + 35, 8)
     return out
 
 

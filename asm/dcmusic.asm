@@ -52,6 +52,11 @@
 ;   +20  the race's play of the course's music
 ;   +25  a fade of it (FADE)
 ;   +30  its restart (RESTART)
+;   +35  the ten-year ending's DRIVER line: in place of the load and
+;        compare of its step count with 780 (8 bytes), not a call; the
+;        line is held, while track 18 plays, until GetTickCount reaches
+;        the music's start plus its length less the 3 s the screen
+;        takes to fade (the length from the file's size)
 ;
 ; The race block ([STATE]): +0x38 the mode (1 arcade, 4 ten-year; 2, 3,
 ; 5 and 6 the single-race modes), +0x44 the state bits (4 a replay), +0x64
@@ -112,6 +117,12 @@ bits 32
 %define LOADLIB     0xE3E3E3E3          ; LoadLibraryA's import slot
 %define GETPROC     0xE4E4E4E4          ; GetProcAddress's
 %define GETMODFN    0xF9F9F9F9          ; GetModuleFileNameA's
+%define GETTICK     0xC2C2C2C2          ; GetTickCount's
+%define DRIVERCOUNT 0x14                ; the ten-year ending's step count in its DRIVER line
+%define DRIVERSTEPS 780                 ;   which it shows for 780 steps, 13 s at 60 Hz
+%define FADEMS      3000                ;   then fades the screen for 178 steps
+%define WAVHEAD     44                  ; a WAV's header, before the samples
+%define BYTESPER10MS 1764               ; 44.1 kHz, 16-bit stereo
 %define EXTRA       14                  ; the slot of the CD track no scene plays
 %define ELEVEN      9                   ; the slot of track 11
 %endif
@@ -128,6 +139,7 @@ bits 32
 %define RACE        0x64
 %define PATHLEN     272
 %define DIRECTORY   0x10                ; FILE_ATTRIBUTE_DIRECTORY
+%define SIZELOW     0x20                ; WIN32_FILE_ATTRIBUTE_DATA's nFileSizeLow
 %define DIGITS      11                  ; the track's digits in name, after music\track
 
 %if LAST > 99
@@ -285,12 +297,69 @@ tail:   push    ebp
         jmp     near course             ; +20, the race's play of the course's music
         jmp     near fade               ; +25, its fade
         jmp     near restart            ; +30, its restart
+        jmp     near driver             ; +35, the ten-year ending's DRIVER line, held
 
 ; The ending's track 11 (slot 9), or track 18 in slot 14 when its file
 ; is there. ecx, the slot and the return are the play's.
 ending: call    tracks
+        push    ebp
+        call    .here
+.here:  pop     ebp
+        sub     ebp, .here
+        bt      eax, ENDING - FIRST
+        setc    byte [ebp + holding]
+        jnc     .go
+        push    ecx
+        call    [GETTICK]               ; the music's start
+        mov     ecx, eax
+        mov     eax, [ebp + sizes + (ENDING - FIRST) * 4]
+        sub     eax, WAVHEAD
+        jbe     .now
+        imul    eax, eax, 10            ; bytes / 176.4 = ms
+        xor     edx, edx
+        push    BYTESPER10MS
+        div     dword [esp]
+        add     esp, 4
+        sub     eax, FADEMS             ; the screen's fade takes the last of it
+        jbe     .now
+        add     ecx, eax
+.now:   mov     [ebp + until], ecx
+        pop     ecx
+.go:    pop     ebp
+        call    tracks
         mov     edx, ENDING
         jmp     extra
+
+; In place of `mov eax, [obj+0x14]; cmp eax, 0x30c` in the ten-year
+; ending's DRIVER line (ebx the ending): the count runs to the stock 780
+; steps, and then, while track 18 plays, on until its music is all but
+; over. Returns the flags of a compare the `jle` after it reads; keeps
+; every register but eax.
+driver: mov     eax, [ebx + DRIVERCOUNT]
+        cmp     eax, DRIVERSTEPS
+        jle     .out                    ; the stock count still running
+        push    ebp
+        call    .here
+.here:  pop     ebp
+        sub     ebp, .here
+        cmp     byte [ebp + holding], 0
+        je      .stock
+        push    ecx
+        push    edx
+        call    [GETTICK]
+        pop     edx
+        pop     ecx
+        sub     eax, [ebp + until]
+        js      .hold                   ; not yet: wraps with GetTickCount
+        mov     byte [ebp + holding], 0
+.stock: pop     ebp
+        mov     eax, [ebx + DRIVERCOUNT]
+        cmp     eax, DRIVERSTEPS
+        ret
+.hold:  pop     ebp
+        mov     eax, [ebx + DRIVERCOUNT]
+        cmp     eax, 0x7fffffff         ; less: the jle holds the line
+.out:   ret
 
 first:  xor     eax, eax
         jmp     replay
@@ -454,7 +523,7 @@ look:   push    ebx
         IMPORT  GETPROC
         test    eax, eax
         jz      .out
-        mov     ebx, eax                ; GetFileAttributesA
+        mov     ebx, eax                ; GetFileAttributesExA
         push    PATHLEN - 24            ; room after it for the file's name
         lea     edi, [ebp + path]
         push    edi
@@ -484,13 +553,18 @@ look:   push    ebx
         add     ax, '00'
         mov     [esi], ah
         mov     [esi + 1], al
+        lea     eax, [ebp + attrs]
+        push    eax
+        push    0                       ; GetFileExInfoStandard
         lea     eax, [ebp + path]
         push    eax
         call    ebx
-        cmp     eax, -1
-        je      .next
-        test    al, DIRECTORY
+        test    eax, eax
+        jz      .next
+        test    byte [ebp + attrs], DIRECTORY
         jnz     .next
+        mov     eax, [ebp + attrs + SIZELOW]
+        mov     [ebp + sizes + edi * 4 - FIRST * 4], eax
         lea     ecx, [edi - FIRST]
         mov     eax, 1
         shl     eax, cl
@@ -506,6 +580,12 @@ look:   push    ebx
 looked:     db 0                        ; look has run
             align 4
 found:      dd 0                        ; bit n: track FIRST + n is there
+sizes:      times LAST - FIRST + 1 dd 0 ; each one's file size
+attrs:      times 9 dd 0                ; WIN32_FILE_ATTRIBUTE_DATA
+%ifndef OPTIONS
+until:      dd 0                        ; GetTickCount when the DRIVER line may end
+holding:    db 0                        ; track 18 plays the ten-year ending
+%endif
 %ifdef OPTIONS
 names:      dd  replay1, replay2, replay3, replay4  ; choices 7 to 10, from the blob
 ; The Dreamcast's titles for the four replay tracks, races 1 to 4.
@@ -518,6 +598,6 @@ dawn:       db  'TILL YOU SEE THE DAWN', 0      ; track 18, the ten-year ending'
 select:     db  'IGNITION 98 SELECT', 0         ; BGM TEST 9, track 12, the car select's
 %endif
 kernel32:   db 'kernel32.dll', 0
-getattr:    db 'GetFileAttributesA', 0
+getattr:    db 'GetFileAttributesExA', 0
 file:       db 'music\track15.wav', 0
 path:       times PATHLEN db 0

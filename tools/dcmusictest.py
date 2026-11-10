@@ -11,7 +11,11 @@ race block the build's pointer names.
 The ending (+0), slot 9: without music\\track18.wav the play gets slot 9
 and the bank is untouched; with it, slot 14 and slot 14's record holds
 17, the CD track less one. The files are looked for once and beside the
-exe, and a directory of the name is not a file.
+exe, and a directory of the name is not a file. The DRIVER line (+35):
+with track 18 it holds past 780 steps until the music's start plus its
+length, from the file's size, less 3 s, across GetTickCount's wrap, and
+then not again; without track 18, or with one shorter than the fade,
+the stock 780.
 
 A championship replay (+5 for race 1, +10 for the later ones): race 1
 plays track 15, race 2 slot 9 (track 11), races 3 and 4 tracks 16 and 17,
@@ -50,7 +54,7 @@ import uctest
 uctest.unicorn('dcmusictest')
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UC_HOOK_CODE
 from unicorn.x86_const import (UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX, UC_X86_REG_ESI,
-                               UC_X86_REG_EDI, UC_X86_REG_ESP, UC_X86_REG_EIP)
+                               UC_X86_REG_EDI, UC_X86_REG_ESP, UC_X86_REG_EIP, UC_X86_REG_EFLAGS)
 
 CODE, STUBS, STACK, BANK, RECORDS, BLOCK, PAGE = 0x900000, 0xa00000, 0xb00000, 0xc00000, 0xc10000, 0xc20000, 0xc30000
 RETURN = 0xd00000
@@ -59,7 +63,8 @@ MUSIC = 'C:\\Games\\SEGA RALLY 2\\music\\'
 EXTRA, RECORD, ENDING, ELEVEN = 14, 0x28, 18, 9
 OWN = 0xe                       # slot 14's record as the descriptor leaves it: track 15 less one
 COURSE = 3                      # a course's slot
-ENDING_AT, FIRST_AT, LATER_AT, SINGLE_AT, COURSE_AT, FADE_AT, RESTART_AT = 0, 5, 10, 15, 20, 25, 30
+ENDING_AT, FIRST_AT, LATER_AT, SINGLE_AT, COURSE_AT, FADE_AT, RESTART_AT, DRIVER_AT = 0, 5, 10, 15, 20, 25, 30, 35
+ENDOBJ = 0xc40000                # the ten-year ending, its DRIVER line's step count at +0x14
 REPLAYS = ('track15.wav', 'track16.wav', 'track17.wav')
 OPTIONS_RVA = 0x150000          # where the Options.dll blob is put, from the base
 SIGIL = 0xC0DE5EED              # a string pointer the stock rows would pass
@@ -72,7 +77,7 @@ class Machine:
     def __init__(self, blob, at, slots, targets, files, dirs):
         self.mu = mu = Uc(UC_ARCH_X86, UC_MODE_32)
         self.at, self.targets, self.files, self.dirs = at, targets, files, dirs
-        for addr in (STUBS, STACK, BANK, RECORDS, BLOCK, PAGE, RETURN):
+        for addr in (STUBS, STACK, BANK, RECORDS, BLOCK, PAGE, ENDOBJ, RETURN):
             mu.mem_map(addr, 0x10000)
         mu.mem_map(at & ~0xfff, (len(blob) + 0x1fff) & ~0xfff)
         for addr in list(targets) + list(slots):
@@ -82,18 +87,21 @@ class Machine:
                 pass
         mu.mem_write(at, blob)
         # LoadLibraryA at STUBS (ret 4), GetProcAddress at +0x10 (ret 8), GetModuleFileNameA at +0x20 (ret 0xc),
-        # GetFileAttributesA at +0x30 (ret 4); each routine left through is `ret 0x10` at its own address
-        for off, code in ((0, b'\xc2\x04\x00'), (0x10, b'\xc2\x08\x00'), (0x20, b'\xc2\x0c\x00'), (0x30, b'\xc2\x04\x00')):
+        # GetFileAttributesExA at +0x30 (ret 0xc), GetTickCount at +0x40; each routine left through is
+        # `ret 0x10` at its own address
+        for off, code in ((0, b'\xc2\x04\x00'), (0x10, b'\xc2\x08\x00'), (0x20, b'\xc2\x0c\x00'), (0x30, b'\xc2\x0c\x00'),
+                          (0x40, b'\xc3')):
             mu.mem_write(STUBS + off, code)
         for addr in targets:
             mu.mem_write(addr, b'\xc2\x10\x00')
-        for slot, stub in zip(slots, (STUBS, STUBS + 0x10, STUBS + 0x20)):
+        for slot, stub in zip(slots, (STUBS, STUBS + 0x10, STUBS + 0x20, STUBS + 0x40)):
             mu.mem_write(slot, struct.pack('<I', stub))
         mu.mem_write(BANK, struct.pack('<I', RECORDS))
-        self.state = {'asked': [], 'procs': [], 'calls': []}
+        self.state = {'asked': [], 'procs': [], 'calls': [], 'ticks': 0}
         self.tsc = 0
+        self.tick = 0
         self.rdtsc = None
-        mu.hook_add(UC_HOOK_CODE, self.stub, begin=STUBS, end=STUBS + 0x31)
+        mu.hook_add(UC_HOOK_CODE, self.stub, begin=STUBS, end=STUBS + 0x41)
         for addr in targets:
             mu.hook_add(UC_HOOK_CODE, self.stub, begin=addr, end=addr)
 
@@ -121,10 +129,22 @@ class Machine:
             mu.mem_write(buf, EXE.encode() + b'\0')
             mu.reg_write(UC_X86_REG_EAX, len(EXE))
         elif addr == STUBS + 0x30:
-            path = self.cstr(self.arg(1))
+            path, level, data = self.cstr(self.arg(1)), self.arg(2), self.arg(3)
+            if level != 0:
+                raise SystemExit('dcmusictest: GetFileAttributesExA level %d' % level)
             state['asked'].append(path)
             name = path[len(MUSIC):] if path.startswith(MUSIC) else None
-            mu.reg_write(UC_X86_REG_EAX, 0x20 if name in self.files else 0x10 if name in self.dirs else 0xffffffff)
+            there = name in self.files or name in self.dirs
+            if there:
+                size = self.files[name] if isinstance(self.files, dict) and name in self.files else 0x1000000
+                mu.mem_write(data, struct.pack('<I', 0x20 if name in self.files else 0x10) + b'\xee' * 0x1c
+                             + struct.pack('<I', size))
+            mu.reg_write(UC_X86_REG_EAX, 1 if there else 0)
+        elif addr == STUBS + 0x40:
+            state['ticks'] += 1
+            mu.reg_write(UC_X86_REG_EAX, self.tick)
+            mu.reg_write(UC_X86_REG_ECX, 0xdead0001)
+            mu.reg_write(UC_X86_REG_EDX, 0xdead0002)
         elif addr == self.rdtsc:
             mu.reg_write(UC_X86_REG_EAX, self.tsc)
             mu.reg_write(UC_X86_REG_EDX, 0x12345)
@@ -155,7 +175,7 @@ def exe_machine(build, files, dirs=(), mode=1, bits=0, race=0, tsc=0):
     addr = row['addresses']
     targets = {addr['BGMPLAY']: 'play', addr['BGMFADE']: 'fade', addr['BGMRESTART']: 'restart'}
     m = Machine(blob, CODE, (row['slots']['LoadLibraryA'], row['slots']['GetProcAddress'],
-                             row['slots']['GetModuleFileNameA']), targets, files, dirs)
+                             row['slots']['GetModuleFileNameA'], row['slots']['GetTickCount']), targets, files, dirs)
     m.extra = EXTRA
     mu = m.mu
     pointer = addr['RACEBLOCK']
@@ -192,6 +212,52 @@ def expect(build, what, state, want):
         raise SystemExit('dcmusictest: %s, %s: called %r, wanted %r' % (build, what, state['calls'], want))
 
 
+def driver_step(m, count, tick):
+    """The DRIVER line's compare at a step count and a time: whether the
+    `jle` after it holds the line, with every register but eax kept."""
+    mu = m.mu
+    m.tick = tick
+    mu.mem_write(ENDOBJ + 0x14, struct.pack('<I', count))
+    esp = STACK + 0x8000
+    mu.mem_write(esp, struct.pack('<I', RETURN))
+    regs = ((UC_X86_REG_EBX, ENDOBJ), (UC_X86_REG_ECX, 0x1111), (UC_X86_REG_EDX, 0x2222), (UC_X86_REG_ESI, 0x3333),
+            (UC_X86_REG_EDI, 0x4444))
+    mu.reg_write(UC_X86_REG_ESP, esp)
+    for reg, value in regs:
+        mu.reg_write(reg, value)
+    mu.emu_start(m.at + DRIVER_AT, RETURN)
+    if [mu.reg_read(r) for r, _ in regs] != [v for _, v in regs] or mu.reg_read(UC_X86_REG_ESP) != esp + 4:
+        raise SystemExit('dcmusictest: the DRIVER line lost a register')
+    if mu.reg_read(UC_X86_REG_EAX) != count:
+        raise SystemExit('dcmusictest: the DRIVER line returned eax %x for %x' % (mu.reg_read(UC_X86_REG_EAX), count))
+    flags = mu.reg_read(UC_X86_REG_EFLAGS)
+    zf, sf, of = flags >> 6 & 1, flags >> 7 & 1, flags >> 11 & 1
+    return bool(zf or sf != of)
+
+
+def driver(build):
+    # 179.8 s of track 18: held to 179.8 - 3 s after the music's start, then the stock compare
+    size = 44 + 1764 * 17980
+    m = exe_machine(build, {'track18.wav': size})
+    m.tick = 0xfffff000                       # the start, just before GetTickCount wraps
+    m.call(ENDING_AT, (ELEVEN, 1, 0, 0), what=build)
+    until = (0xfffff000 + 179800 - 3000) & 0xffffffff
+    cases = ((780, 0xfffff000 + 13000, True), (781, 0xfffff000 + 13000, True), (781, until - 1, True),
+             (100000, until - 1, True), (781, until, False), (781, until + 5, False))
+    for count, tick, held in cases:
+        if driver_step(m, count, tick & 0xffffffff) != held:
+            raise SystemExit('dcmusictest: %s, the DRIVER line at %d steps, %x: held %s' % (build, count, tick, not held))
+    # once let go, the stock compare even if the time came round again
+    if driver_step(m, 781, until - 1):
+        raise SystemExit('dcmusictest: %s, the DRIVER line held again' % build)
+    # without track 18 the stock 780 steps; a track shorter than the fade lets go at once
+    for files in ({}, {'track18.wav': 44 + 1764 * 200}):
+        m = exe_machine(build, files)
+        m.call(ENDING_AT, (ELEVEN, 1, 0, 0), what=build)
+        if not driver_step(m, 780, 50) or driver_step(m, 781, 0):
+            raise SystemExit('dcmusictest: %s, the DRIVER line with %r' % (build, files))
+
+
 def exe(build):
     names = ['track%02d.wav' % n for n in range(15, 19)]
     # the ending. No file: slot 9, the record as the descriptor left it; all four files looked for, once, beside the exe
@@ -199,7 +265,7 @@ def exe(build):
     expect(build, 'the ending without track18.wav', state, played(ELEVEN) * 2)
     if state['asked'] != [MUSIC + n for n in names]:
         raise SystemExit('dcmusictest: %s looked for %r' % (build, state['asked']))
-    if state['procs'] != [(0x7c800000, 'GetFileAttributesA')]:
+    if state['procs'] != [(0x7c800000, 'GetFileAttributesExA')]:
         raise SystemExit('dcmusictest: %s resolved %r' % (build, state['procs']))
     # the file: slot 14 with track 18 less one in its record
     state = run(build, ('track18.wav',), calls=2)
@@ -209,6 +275,7 @@ def exe(build):
     # the other extras there but not 18, or a directory named track18.wav: slot 9
     expect(build, 'the ending with 15 to 17', run(build, REPLAYS), played(ELEVEN))
     expect(build, 'the ending with a directory', run(build, (), ('track18.wav',)), played(ELEVEN))
+    driver(build)
 
     # a championship's replay, all three files there
     replay = dict(slot=COURSE, mode=1, bits=4 | 0x100)
@@ -373,7 +440,7 @@ def main():
     for build in patcher.BUILDS:
         exe(build)
     options()
-    print('dcmusictest: the ending plays track 18, the replays tracks 15, 11, 16 and 17, the course choices '
+    print('dcmusictest: the ending plays track 18 and holds its DRIVER line to it, the replays tracks 15, 11, 16 and 17, the course choices '
           '7 to 10 the same, OPTION names and previews them and BGM TEST plays 15 to 18, each when its file is there, '
           'in %d builds OK'
           % len(patcher.BUILDS))
