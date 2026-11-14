@@ -5,6 +5,9 @@
 ; track of the disc's:
 ;
 ;   the ten-year ending       track 18 in place of track 11
+;   the attract demo          track 19 in place of track 2 on its odd
+;                             runs, the first among them, as on the
+;                             Dreamcast
 ;   a championship's replay   race 1 track 15, race 2 track 11, race 3
 ;                             track 16, race 4 track 17, in place of the
 ;                             course's music
@@ -57,6 +60,10 @@
 ;        line is held, while track 18 plays, until GetTickCount reaches
 ;        the music's start plus its length less the 3 s the screen
 ;        takes to fade (the length from the file's size)
+;   +40  the attract loop's load of its demo index, 0 to 5 (6 bytes,
+;        not a call), noted
+;   +45  the attract demo's play of slot 0, track 2: track 19 instead
+;        on the odd runs, demo 0, 2 and 4, when its file is there
 ;
 ; The race block ([STATE]): +0x38 the mode (1 arcade, 4 ten-year; 2, 3,
 ; 5 and 6 the single-race modes), +0x44 the state bits (4 a replay), +0x64
@@ -80,7 +87,7 @@
 ;        as in the exe
 ;   +15  the sound page's init, in place of `mov dword [esi+0x68], 13`:
 ;        BGM TEST's count of tracks, 13 and one more for each of tracks
-;        15 to 18 there is a file for
+;        15 to 19 there is a file for
 ;   +20  BGM TEST's name draw, in place of the call of the text routine:
 ;        past the 13th, the extra track's name
 ;   +25  BGM TEST's play, in place of the call of the play: past the
@@ -119,6 +126,7 @@ bits 32
 %define GETMODFN    0xF9F9F9F9          ; GetModuleFileNameA's
 %define GETTICK     0xC2C2C2C2          ; GetTickCount's
 %define DRIVERCOUNT 0x14                ; the ten-year ending's step count in its DRIVER line
+%define DEMOINDEX   0x1c                ; the attract loop's demo, 0 to 5
 %define DRIVERSTEPS 780                 ;   which it shows for 780 steps, 13 s at 60 Hz
 %define FADEMS      3000                ;   then fades the screen for 178 steps
 %define WAVHEAD     44                  ; a WAV's header, before the samples
@@ -129,8 +137,9 @@ bits 32
 
 %define RECORD      0x28                ; a bank's record of a slot; +0 the CD track less one
 %define FIRST       15                  ; the extra tracks
-%define LAST        18
+%define LAST        19
 %define ENDING      18                  ; the ten-year ending's
+%define ATTRACT     19                  ; the attract demo's, its odd runs
 %define REPLAYS     7                   ; found's bits of tracks 15, 16 and 17
 %define CHOICE      8                   ; the slot of course choice 7, the first of the replay set's
 %define MODE        0x38                ; the race block's
@@ -298,6 +307,8 @@ tail:   push    ebp
         jmp     near fade               ; +25, its fade
         jmp     near restart            ; +30, its restart
         jmp     near driver             ; +35, the ten-year ending's DRIVER line, held
+        jmp     near demo               ; +40, the attract loop's demo index, noted
+        jmp     near attract            ; +45, the attract demo's play of slot 0
 
 ; The ending's track 11 (slot 9), or track 18 in slot 14 when its file
 ; is there. ecx, the slot and the return are the play's.
@@ -328,6 +339,36 @@ ending: call    tracks
 .go:    pop     ebp
         call    tracks
         mov     edx, ENDING
+        jmp     extra
+
+; In place of `mov edx, [esi+0x1c]; or ebx, -1` where the attract loop
+; (esi) passes the demo loader its demo, 0 to 5: the same, and the index
+; noted for the demo's music. Keeps every register but edx and ebx, as
+; the original does.
+demo:   mov     edx, [esi + DEMOINDEX]
+        push    ebp
+        call    .here
+.here:  pop     ebp
+        sub     ebp, .here
+        mov     [ebp + shown], edx
+        pop     ebp
+        or      ebx, -1
+        ret
+
+; The attract demo's play of slot 0 (track 2): on its odd runs - demo
+; index 0, 2 or 4, the first of them first, as the Dreamcast plays its
+; two - track 19 when its file is there.
+attract:
+        push    ebp
+        call    .here
+.here:  pop     ebp
+        sub     ebp, .here
+        mov     eax, [ebp + shown]
+        pop     ebp
+        test    al, 1
+        jnz     play
+        call    tracks
+        mov     edx, ATTRACT
         jmp     extra
 
 ; In place of `mov eax, [obj+0x14]; cmp eax, 0x30c` in the ten-year
@@ -585,6 +626,8 @@ attrs:      times 9 dd 0                ; WIN32_FILE_ATTRIBUTE_DATA
 %ifndef OPTIONS
 until:      dd 0                        ; GetTickCount when the DRIVER line may end
 holding:    db 0                        ; track 18 plays the ten-year ending
+            align 4
+shown:      dd 0                        ; the attract demo last loaded, 0 to 5
 %endif
 %ifdef OPTIONS
 names:      dd  replay1, replay2, replay3, replay4  ; choices 7 to 10, from the blob
@@ -593,8 +636,9 @@ replay1:    db  "IGNITION'98", 0                ; track 15
 replay2:    db  "NIGHT GROOVIN'", 0             ; track 11
 replay3:    db  'ESTRADA NOVA', 0               ; track 16
 replay4:    db  'M N F ?', 0                    ; track 17
-titles:     dd  replay1, replay3, replay4, dawn ; BGM TEST: tracks 15 to 18
+titles:     dd  replay1, replay3, replay4, dawn, vocal ; BGM TEST: tracks 15 to 19
 dawn:       db  'TILL YOU SEE THE DAWN', 0      ; track 18, the ten-year ending's
+vocal:      db  'GO GO! SEGA RALLY-VOCAL', 0    ; track 19, the attract demo's odd runs
 select:     db  'IGNITION 98 SELECT', 0         ; BGM TEST 9, track 12, the car select's
 %endif
 kernel32:   db 'kernel32.dll', 0

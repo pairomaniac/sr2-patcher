@@ -38,7 +38,7 @@ with one of tracks 15 to 17 there, else 7; a row's name for choices 7 to
 10 is the blob's own string, and the text routine gets the rest of its
 call as it was; the preview maps its slot as the exe's course music does,
 with slots 13 and 12. The sound page's BGM TEST: the count is 13 and one
-for each of tracks 15 to 18 there; past the 13th, the tracks there in
+for each of tracks 15 to 19 there; past the 13th, the tracks there in
 order, named by the blob and played in slot 13 with the track in its
 record; the stock 13 pass as they were.
 
@@ -64,6 +64,8 @@ EXTRA, RECORD, ENDING, ELEVEN = 14, 0x28, 18, 9
 OWN = 0xe                       # slot 14's record as the descriptor leaves it: track 15 less one
 COURSE = 3                      # a course's slot
 ENDING_AT, FIRST_AT, LATER_AT, SINGLE_AT, COURSE_AT, FADE_AT, RESTART_AT, DRIVER_AT = 0, 5, 10, 15, 20, 25, 30, 35
+DEMO_AT, ATTRACT_AT = 40, 45
+LOOP = 0xc50000                  # the attract loop, its demo index at +0x1c
 ENDOBJ = 0xc40000                # the ten-year ending, its DRIVER line's step count at +0x14
 REPLAYS = ('track15.wav', 'track16.wav', 'track17.wav')
 OPTIONS_RVA = 0x150000          # where the Options.dll blob is put, from the base
@@ -77,7 +79,7 @@ class Machine:
     def __init__(self, blob, at, slots, targets, files, dirs):
         self.mu = mu = Uc(UC_ARCH_X86, UC_MODE_32)
         self.at, self.targets, self.files, self.dirs = at, targets, files, dirs
-        for addr in (STUBS, STACK, BANK, RECORDS, BLOCK, PAGE, ENDOBJ, RETURN):
+        for addr in (STUBS, STACK, BANK, RECORDS, BLOCK, PAGE, ENDOBJ, LOOP, RETURN):
             mu.mem_map(addr, 0x10000)
         mu.mem_map(at & ~0xfff, (len(blob) + 0x1fff) & ~0xfff)
         for addr in list(targets) + list(slots):
@@ -235,6 +237,45 @@ def driver_step(m, count, tick):
     return bool(zf or sf != of)
 
 
+def demo_load(m, index):
+    """The attract loop's load of its demo index: edx the index, ebx -1,
+    the rest kept."""
+    mu = m.mu
+    mu.mem_write(LOOP + 0x1c, struct.pack('<I', index))
+    esp = STACK + 0x8000
+    mu.mem_write(esp, struct.pack('<I', RETURN))
+    regs = ((UC_X86_REG_ESI, LOOP), (UC_X86_REG_EDI, 0x4444), (UC_X86_REG_ECX, 0x1111), (UC_X86_REG_EAX, 0x5555))
+    mu.reg_write(UC_X86_REG_ESP, esp)
+    mu.reg_write(UC_X86_REG_EBX, 0)
+    for reg, value in regs:
+        mu.reg_write(reg, value)
+    mu.emu_start(m.at + DEMO_AT, RETURN)
+    if ([mu.reg_read(r) for r, _ in regs] != [v for _, v in regs] or mu.reg_read(UC_X86_REG_EDX) != index
+            or mu.reg_read(UC_X86_REG_EBX) != 0xffffffff or mu.reg_read(UC_X86_REG_ESP) != esp + 4):
+        raise SystemExit('dcmusictest: the demo index load of %d' % index)
+
+
+def attract(build):
+    # demo 0 to 5 then round again: the odd runs (demo 0, 2, 4) track 19 in slot 14, the even ones slot 0
+    m = exe_machine(build, ('track19.wav',))
+    for index in (0, 1, 2, 3, 4, 5, 0, 1):
+        m.state['calls'].clear()
+        demo_load(m, index)
+        m.call(ATTRACT_AT, (0, 0, 0, 0), what=build)
+        (via, ecx, frame, record), = m.state['calls']
+        want = (0, record) if index & 1 else (EXTRA, 18)      # slot 0 leaves slot 14's record as it was
+        if (via, ecx, frame, (frame[1], record)) != ('play', BANK, (RETURN, want[0], 0, 0, 0), want):
+            raise SystemExit('dcmusictest: %s, the attract demo %d: %r' % (build, index, m.state['calls']))
+    # without track19.wav slot 0; before any demo was loaded the index is 0, the first run
+    m = exe_machine(build, REPLAYS + ('track18.wav',))
+    demo_load(m, 0)
+    m.call(ATTRACT_AT, (0, 0, 0, 0), what=build)
+    expect(build, 'the attract demo without track19.wav', m.state, [('play', BANK, (RETURN, 0, 0, 0, 0), OWN)])
+    m = exe_machine(build, ('track19.wav',))
+    m.call(ATTRACT_AT, (0, 0, 0, 0), what=build)
+    expect(build, 'the attract demo before a load, demo 0', m.state, [('play', BANK, (RETURN, EXTRA, 0, 0, 0), 18)])
+
+
 def driver(build):
     # 179.8 s of track 18: held to 179.8 - 3 s after the music's start, then the stock compare
     size = 44 + 1764 * 17980
@@ -259,7 +300,7 @@ def driver(build):
 
 
 def exe(build):
-    names = ['track%02d.wav' % n for n in range(15, 19)]
+    names = ['track%02d.wav' % n for n in range(15, 20)]
     # the ending. No file: slot 9, the record as the descriptor left it; all four files looked for, once, beside the exe
     state = run(build, (), calls=2)
     expect(build, 'the ending without track18.wav', state, played(ELEVEN) * 2)
@@ -270,12 +311,13 @@ def exe(build):
     # the file: slot 14 with track 18 less one in its record
     state = run(build, ('track18.wav',), calls=2)
     expect(build, 'the ending with track18.wav', state, played(EXTRA, ENDING - 1) * 2)
-    if len(state['asked']) != 4:
+    if len(state['asked']) != 5:
         raise SystemExit('dcmusictest: %s looked %d times' % (build, len(state['asked'])))
     # the other extras there but not 18, or a directory named track18.wav: slot 9
     expect(build, 'the ending with 15 to 17', run(build, REPLAYS), played(ELEVEN))
     expect(build, 'the ending with a directory', run(build, (), ('track18.wav',)), played(ELEVEN))
     driver(build)
+    attract(build)
 
     # a championship's replay, all three files there
     replay = dict(slot=COURSE, mode=1, bits=4 | 0x100)
@@ -394,8 +436,9 @@ def options():
                                      % (build, slot, files, m.state['calls']))
 
         # BGM TEST: the count at [esi+0x68], 13 and the extra tracks there; every register kept
-        titles = {15: "IGNITION'98", 16: 'ESTRADA NOVA', 17: 'M N F ?', 18: 'TILL YOU SEE THE DAWN'}
-        sets = (('track15.wav', 'track16.wav', 'track17.wav', 'track18.wav'), ('track16.wav', 'track18.wav'),
+        titles = {15: "IGNITION'98", 16: 'ESTRADA NOVA', 17: 'M N F ?', 18: 'TILL YOU SEE THE DAWN',
+                  19: 'GO GO! SEGA RALLY-VOCAL'}
+        sets = (('track15.wav', 'track16.wav', 'track17.wav', 'track18.wav', 'track19.wav'), ('track16.wav', 'track19.wav'),
                 ('track17.wav',), ())
         for files in sets:
             m = machine(files)
@@ -441,7 +484,7 @@ def main():
         exe(build)
     options()
     print('dcmusictest: the ending plays track 18 and holds its DRIVER line to it, the replays tracks 15, 11, 16 and 17, the course choices '
-          '7 to 10 the same, OPTION names and previews them and BGM TEST plays 15 to 18, each when its file is there, '
+          '7 to 10 the same, OPTION names and previews them and BGM TEST plays 15 to 19, the attract demo\'s odd runs track 19, each when its file is there, '
           'in %d builds OK'
           % len(patcher.BUILDS))
 

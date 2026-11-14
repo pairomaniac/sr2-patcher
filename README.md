@@ -270,6 +270,7 @@ the ripper writes (44.1 kHz, 16-bit stereo WAV):
 | `music\track16.wav` | a championship's replay, race 3 |
 | `music\track17.wav` | a championship's replay, race 4 |
 | `music\track18.wav` | the ten-year championship's ending, in place of track 11; the DRIVER line stays up until the music is all but over, as on the Dreamcast |
+| `music\track19.wav` | the attract demo's first, third and fifth run, in place of track 2, which keeps the others (the Dreamcast's GO GO! SEGA RALLY, the vocal, in the Dreamcast's order) |
 
 The four replays of a championship play tracks 15, 11, 16 and 17, as on
 the Dreamcast, in place of each course's music; any other replay plays
@@ -288,9 +289,10 @@ row offers four choices past the seven it had:
 | M N F ? | 17 |
 
 The preview plays them, and a race on that course plays the one chosen.
-OPTION's BGM TEST lists tracks 15 to 18 after its own 13, each one there
-is a file for: IGNITION'98, ESTRADA NOVA, M N F ? and TILL YOU SEE THE
-DAWN, the ten-year ending's. Its own 9th, the car select's music, which
+OPTION's BGM TEST lists tracks 15 to 19 after its own 13, each one there
+is a file for: IGNITION'98, ESTRADA NOVA, M N F ?, TILL YOU SEE THE
+DAWN, the ten-year ending's, and GO GO! SEGA RALLY-VOCAL, the attract
+demo's. Its own 9th, the car select's music, which
 it names IGNITION'98 like the first replay, reads IGNITION 98 SELECT.
 
 A track that is not there is not missed: the game plays what it always
