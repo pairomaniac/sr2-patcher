@@ -68,6 +68,8 @@ lists. The key in parentheses is what `--patch` takes.
 | **The mix** (`mix`) | `MUSASHI\MGSound.dll` | `0x439f`, `0x6980`, the annex | the buffer's `SetRange` loads its min and max through asm/mix.asm's first routine; the streaming buffer's `SetVolume` finishes its mapping through the second routine |
 | **Effects at full** (`sfxlevel`, `sfxoptions`, Australian only) | `SEGA RALLY 2.exe`, `Options.dll` | exe `0xb26cb`, `0xb272e`, `0xb2782`; DLL `0xf92a`, `0xf98d`, `0xf9e1` | the setting's load becomes `mov eax, 9`; in the DLL the load's relocation entry is dropped with it |
 | **Music from files** (`music`) | `MUSASHI\MGAudio.dll` | the annex, 12 sites, the entry point, the CD-volume methods `0x1db0` and `0x1e40` (`0x1d90`, `0x1e20` Australian) | every `call [__imp__mciSendCommandA]` becomes `call hook; nop`; the `mov esi, [__imp__mciSendCommandA]` at `0x10003108` becomes `call hookaddr; nop`; the entry point is repointed at the setup thunk; the CD-volume methods' entries become `jmp setvolume` and `jmp getvolume` |
+| **Dreamcast music** (`dcmusic`) | `SEGA RALLY 2.exe` | the DRIVER line `0x15619` (8 bytes; American `0x158c9`, Australian `0x28e19`), the attract demo's index `0xa03` (6 bytes) and play `0x1cd5c` (American `0xc03`, `0x1cfec`; Australian `0x3173`, `0x3a2bc`), `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405` (American `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`), the annex | four `call 0x473d80`s (the sound bank's play) → `call` asm/dcmusic.asm: the ten-year ending's at `0x42ba57`, which plays track 18 in slot 14 when `music\track18.wav` is there; the replays' at `0x452fa3`, `0x41cc9a` and `0x453005`, which play tracks 15, 11, 16 and 17; and the course's music read as choices 7 to 10: the race's play `0x2aedd`, the fades `0x1b9b2`, `0x1e15b`, `0x29765` and the restart `0x298bf` (American `0x2b1bd`, `0x1bc62`, `0x1e40b`, `0x29a45`, `0x29b9f`; Australian `0x522a4`, `0x38f52`, `0x3b6eb`, `0x50b45`, `0x50c95`) |
+| **Dreamcast music in OPTION** (`dcoptions`) | `Options.dll` | `0xbdc`, `0xaa7`, `0xeb6` (the same in the Australian), three BGM TEST sites, the annex | the BGM page's `mov ebx, 7` → `call`, the row name's text call and the preview's play → `call` asm/dcmusic.asm built with `-DOPTIONS`: 11 choices, choices 7 to 10 named and previewed; and BGM TEST's count `0x4293` (7 bytes), name `0x3f6e` and play `0x44b5` (Australian `0x9173`, `0x8e4e`, `0x9395`) → `call`: tracks 15 to 19 after its 13; needs `dcmusic` |
 | **Quieter defaults** (`voldefault`) | `SEGA RALLY 2.exe`, `SR2_SAVE.DAT` | `0xd01a8` (`0xd05a8` American, `0x1159a8` Australian), 12 bytes; the save's `0x7270`, 12 bytes, and its checksum at `0x730c` | the defaults block's three sliders go from 9 to 6; so do the shipped save's, while the file is still the shipped one |
 | **CD level marked** (`cdlevel`) | `SEGA RALLY 2.exe` | `0x73048` (`0x73478` American, `0xb2668` Australian) | the menu's CD-level set at `0x473c48` pushes flags `0x40` instead of 0 |
 
@@ -778,6 +780,123 @@ what tells the menu's level call from the fade. The menu's CD-level set
 at `0x473c48` pushed flags 0, and now pushes `0x40`, a bit the DLL never
 read. The race's level and the mute already carry bit 31. The full
 account is in [asm/README.md](../asm/README.md), *music.asm*.
+
+### Dreamcast music
+
+The exe plays its music through a sound bank, the object at `[0x50b134]`:
+its play (`0x473d80`, thiscall: slot, loop, two more) takes a slot of the
+list at `0x5a2514` (file `0xd0314`; `0xd0714` American, `0x115b14`
+Australian), which names a descriptor of the 24-byte array at `0x5098c8`.
+A CD descriptor holds its track less one; the CD object hands that to
+MGAudio, which plays the track one above it. The bank copies each slot's
+descriptor into a record of its own, `0x28` bytes a slot from `[bank]`,
+when it is built. Slot 14's descriptor, id `0x0d`, is a CD track nothing
+plays - track 15, which the PC's disc does not have - and the extra
+tracks are played through it: their number less one written into slot
+14's record, slot 14 played. The bank's own bookkeeping then holds - the
+fades at `0x474040` take any CD slot as the CD - and the CD object
+(`0x46df90`) starts any track that is not the one already going.
+
+The ten-year ending (`0x42ba35`: the mode at `[[0x50b108]+0x38]` is 4 and
+bit `0x20` of `+0x44` is set) plays slot 9, track 11, at `0x42ba57`.
+`dcmusic.asm` takes that call: it plays track 18 in slot 14 when
+`music\track18.wav` is beside the exe, and slot 9 otherwise. The four
+files from `track15.wav` on are looked for once, at the first call, with
+`GetFileAttributesExA`, which gives each one's size too.
+
+The ending is an object of its own (`0x415e10`, made at `0x415522` when
+the mode is not the arcade's), stepped at 60 Hz through eight states
+(the table at `0x4162ec`). State 3 rolls the credits over the last
+race's replay, so how long it lasts is the race's. State 6 is the
+DRIVER line, the player's name: its step count at `+0x14` runs to 780
+(`cmp eax, 0x30c` at `0x41621c`, 13 s); then state 7 fades the bank's
+slot 9 (`0x41624a`, which takes the CD whichever slot plays it) and
+the screen over 178 steps, and the ending is over. Track 11 is 170.8 s,
+the Dreamcast's ending track 179.8 s, and the screen went dark while it
+still played; the Dreamcast holds the DRIVER line longer. So with
+track 18 `dcmusic.asm` notes, when it plays it, `GetTickCount` plus the
+file's length (its size less the 44-byte header over 176.4 bytes a
+millisecond) less 3 s; its +35 takes the 8 bytes `mov eax, [ebx+0x14];
+cmp eax, 0x30c` at `0x416219` (file `0x15619`; American `0x158c9`,
+Australian `0x28e19`, DigiCube/MediaKite `0x15619`) and, past 780 steps,
+returns the flags of a compare the `jle` after it takes until that time
+has come. A replay longer than the music leaves the stock 780.
+
+The attract demo runs six replays in turn, `DESSS1P0`, `ISLSS2P0`,
+`MNTSS2P0`, `INDSS1P0`, `SNWSS3P0` and `DESSS2P0` (`%s.rep`, the names
+at `0x4b0cbc`). The attract loop keeps the next one's index at its
+`+0x1c`, 0 to 5 and round again (`0x4016f3`), and passes it to the demo
+loader (`0x417990`) at `0x401603`. The demo itself plays slot 0, track
+2, from its constructor (`0x41d95c`, mode 0). The Dreamcast has a
+second attract track, GO GO! SEGA RALLY's vocal version, which the PC
+dropped. `dcmusic.asm` notes the index at `0x401603` (`mov edx,
+[esi+0x1c]; or ebx, -1`, 6 bytes; file `0xa03`, American `0xc03`,
+Australian `0x3173`, DigiCube/MediaKite `0xa03`) and, at the play (file
+`0x1cd5c`; American `0x1cfec`, Australian `0x3a2bc`, DigiCube/MediaKite
+`0x1cd5c`), plays track 19 in slot 14 for demos 0, 2 and 4 - the first
+run, then every other one, which is the Dreamcast's order - when
+`music\track19.wav` is there.
+
+A replay plays the race's own music, `slot = opt[map[course]] + 1` (the
+seven course choices at settings `+0x6c`, the map at `0x5b2374`), from
+three calls of the play:
+
+| Call | Scene |
+| --- | --- |
+| `0x452fa3` | a championship replay's first race: modes 1 and 4, race index `+0x64` 0, not year 10 |
+| `0x41cc9a` | its later races (`+0x44` bit `0x100`); shared with a `push 7` branch taken on race index 0 |
+| `0x453005` | the single-race modes' replays (2, 3, 5, 6); shared with the arcade ending's slot 8 and mode 10's scene |
+
+Each gate - mode 1 and the settings' `+0x18`, mode 4 and `+0x20`, and so
+on - is the race's own, and stays. `dcmusic.asm` takes the three calls:
+the first two play, by the race index modulo 4, track 15, slot 9 (track
+11), track 16 and track 17; the third, when the mode is a single-race one
+and `+0x44` bit 4 (a replay) is set, one of those four the files allow,
+picked by `rdtsc`. A track without its file keeps the course's slot, and
+without any of tracks 15 to 17 every replay does. American: `0x453123`,
+`0x41cd2a`, `0x453185`, the race block at `[0x50b208]`; Australian:
+`0x48d9e3`, `0x43a20a`, `0x48da45`, `[0x575ad8]`; MediaKite: `0x452f93`,
+`0x41cc9a`, `0x452ff5`.
+
+Tracks 15, 11, 16 and 17 are the arcade original's practice-mode music;
+neither the Dreamcast nor the PC lets a course have them, and OPTION
+offers them here as choices 7 to 10. The exe reads a course's choice in
+five places, each `opt[map[course]] + 1`: the race's play (`0x42badd`),
+three fades (`0x41c5b2`, `0x41ed5b`, `0x42a365`) and the restart that
+replays a slot's CD track from its record (`0x42a4bf`, the restart at
+`0x474200`). Choices 7 to 10 would be slots 8 to 11, which are other
+scenes', so `dcmusic.asm` maps each: track 11 to slot 9, a track whose
+file is there into slot 14's record and slot 14, a missing one to slot
+9. The fades and the restart see the same slot the play did.
+
+`Options.dll`'s BGM page (EU, US and MediaKite share the file) counts its
+choices with `mov ebx, 7` at `0x100017dc` and keeps a row's value at
+`[page + 0x18 + row*4]`. The name tables hold seven entries a row, so
+the row-name call at `0x100016a7` (`edi` the row, `esi` the page) is
+taken and given the blob's string for values 7 to 10. The preview at
+`0x10001ab6` plays the page's own bank, value + 1; its slot 13 is id
+`0x0d`, track 15, and its slot 12 track 11, so the page maps as the exe
+does. The Australian file has the three at the same offsets. The
+names are the Dreamcast's. The page's font has no apostrophe, so
+IGNITION'98 and NIGHT GROOVIN' draw without it, as the stock SLIPPIN'
+does.
+
+The sound page's BGM TEST is its row 6: the value at `[esi+0x3c]`, the
+count at `[esi+0x68]`, 13, set at `0x10004e93` (file `0x4293`). Its name
+is drawn at `0x10004b6e` (file `0x3f6e`) from a table copied at load to
+`0x100b8fe8` from `0x1009c984` - indexed by the value, so in the page's
+own order: 8 IGNITION'98 is track 12, 11 ROUTE 246 track 10, 12 NIGHT
+GROOVIN' track 11. A fourteenth entry, TILL YOU SEE THE DAWN, follows
+unused. The decide plays the page bank's slot = value at `0x100050b5`
+(file `0x44b5`). `dcmusic.asm` takes the three: the count is 13 and one
+for each of tracks 15 to 19 there, and past the 13th the tracks there in
+order are named by the blob and played in slot 13 with the track in its
+record. The value past 13 still reads the table, into the next row's,
+before the name is replaced. The 9th (value 8), the car select's, is
+named IGNITION 98 SELECT by the blob, after the Dreamcast's file for it,
+`MISC\IG98_SEL.WAV`, so it no longer shares the first replay's name. Australian: `0x10009d73`, `0x10009a4e`,
+`0x10009f95` (files `0x9173`, `0x8e4e`, `0x9395`). `tools/dcmusictest.py`
+runs every entry, the exe's and the DLL's, under Unicorn in every build.
 
 ## Controls
 

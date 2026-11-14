@@ -35,7 +35,8 @@ BLOBS = [('MUSIC_BLOB', 'music.asm', ()), ('ACTIVATE_BLOB', 'activate.asm', ()),
          ('PADMENU_BLOB', 'padmenu.asm', ()), ('REPLAYPAD_BLOB', 'replaypad.asm', ()), ('PAGEPAD_BLOB', 'pagepad.asm', ()), ('SORTPAD_BLOB', 'sortpad.asm', ()),
          ('PADPROMPTS_BLOB', 'padprompts.asm', ()), ('TABMENU_BLOB', 'tabmenu.asm', ()),
          ('IPCHECK_BLOB', 'ipcheck.asm', ()), ('ENTRYCAP_BLOB', 'entrycap.asm', ()),
-         ('STATUS_BLOB', 'status.asm', ()), ('STARTING_BLOB', 'starting.asm', ())]
+         ('STATUS_BLOB', 'status.asm', ()), ('STARTING_BLOB', 'starting.asm', ()),
+         ('DCMUSIC_BLOB', 'dcmusic.asm', ()), ('DCOPTIONS_BLOB', 'dcmusic.asm', ('-DOPTIONS',))]
 
 MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
@@ -104,8 +105,13 @@ EXE_MAGICS = {
     'TABOBJS': 0xA6A6A6A6,
     'ROOMFLAG': 0xA7A7A7A7,
     'POLLBASE': 0xA8A8A8A8,
+    'BGMPLAY': 0x9A9A9A9A,
+    'RACEBLOCK': 0x9B9B9B9B,
+    'BGMFADE': 0x9C9C9C9C,
+    'BGMRESTART': 0x9D9D9D9D,
 }
 EXE_BLOB_MAGICS = {
+    'DCMUSIC_BLOB': ('LOADLIB', 'GETPROC', 'GETMODFN', 'BGMPLAY', 'BGMFADE', 'BGMRESTART') + ('RACEBLOCK',) * 2 + ('GETTICK',) * 2,
     'ACTIVATE_BLOB': ('GAMED3D', 'RESUME'),
     'ALTENTER_BLOB': ('HANDLER', 'LOADLIB', 'GETPROC', 'HWND', 'WIDTH', 'HEIGHT'),
     'BGROW_BLOB': ('LOCKDESC', 'GAMED3D'),
@@ -215,6 +221,16 @@ NOGENERIC_MAGICS = {
     'SKIP': 0xE7E7E7E7,
 }
 
+# dcmusic.asm's Options.dll build (-DOPTIONS): RVAs, the base added at run
+# time from the blob's own RVA (SELF_MAGIC).
+DCOPTIONS_MAGICS = {
+    'TEXT': 0xDBDBDBDB,
+    'PLAYSOUND': 0xD5D5D5D5,
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'GETMODFN': 0xE5E5E5E5,
+}
+
 # No source or include may name an exe address: every one moves between
 # builds and belongs in the row. Comments may.
 EXE_ADDRESS = re.compile(r'^[^;]*\b0x[4-6][0-9a-fA-F]{5}\b', re.M)
@@ -272,8 +288,9 @@ def hexblob(name, raw):
 # exactly once (dinput8, nogeneric) or at least once.
 DLL_MAGICS = {'MUSIC_BLOB': (MAGICS, False), 'DEVICES_BLOB': (DEVICES_MAGICS, False), 'PADINPUT_BLOB': (PADINPUT_MAGICS, False),
               'DINPUT8_BLOB': (DINPUT8_MAGICS, True), 'NOGENERIC_BLOB': (NOGENERIC_MAGICS, True), 'RESOLUTION_BLOB': (RESOLUTION_MAGICS, False),
-              'SORTPAD_BLOB': (SORTPAD_MAGICS, False), 'PADPROMPTS_BLOB': (PADPROMPTS_MAGICS, False)}
-SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'PADPROMPTS_BLOB': 1}
+              'SORTPAD_BLOB': (SORTPAD_MAGICS, False), 'PADPROMPTS_BLOB': (PADPROMPTS_MAGICS, False),
+              'DCOPTIONS_BLOB': (DCOPTIONS_MAGICS, False)}
+SELF_BLOBS = {'FULLWIN_BLOB': 1, 'TEXRANGE_BLOB': 1, 'D3DINIT_BLOB': 1, 'WIDE2D_BLOB': 1, 'WIDEGL_BLOB': 1, 'RESOLUTION_BLOB': 1, 'REPLAYFREE_BLOB': 2, 'SORTPAD_BLOB': 1, 'PADPROMPTS_BLOB': 1, 'DCOPTIONS_BLOB': 5}
 
 
 def bordered(src, name, magic, raw, value):
@@ -337,6 +354,7 @@ def generated():
     out.append('NOGENERIC_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in NOGENERIC_MAGICS.items()))
     out.append('SORTPAD_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in SORTPAD_MAGICS.items()))
     out.append('PADPROMPTS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in PADPROMPTS_MAGICS.items()))
+    out.append('DCOPTIONS_MAGICS = {\n%s}\n' % ''.join("    '%s': 0x%08X,\n" % kv for kv in DCOPTIONS_MAGICS.items()))
     out.append('SITE_MAGICS = (%s)\n' % ', '.join('0x%08X' % m for m in SITE_MAGICS))
     out.append('BLOB_LABELS = {\n%s}\n' % ''.join("    '%s': {%s},\n" % (name, ', '.join("'%s': 0x%x" % kv for kv in offs.items()))
                                                   for name, offs in offsets.items()))

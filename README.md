@@ -151,6 +151,8 @@ the byte, is in [docs/NOTES.md](docs/NOTES.md).
   shape instead of 640x480 stretched. See [Widescreen](#widescreen).
 - **Music from files** - the soundtrack plays from the folder instead of
   the disc. See [Music](#music).
+- **Dreamcast music** - tracks the Dreamcast release has, from files you
+  add to the same folder. See [Music](#music).
 - **XInput gamepad support** - a modern pad works everywhere, the
   driving and menu controls rebindable in-game, with rumble on crashes
   and landings. See [Controls](#controls).
@@ -257,6 +259,46 @@ a stock install is silent without it in the drive. **Rip soundtrack**
 copies them into a `music` folder beside the game and the **Music from
 files** patch plays them from there. Any release's disc 2 will do: they
 all carry the same recording.
+
+The Dreamcast release has music this one dropped. With **Dreamcast
+music** the game plays such tracks from the same folder, in the format
+the ripper writes (44.1 kHz, 16-bit stereo WAV):
+
+| File | Plays |
+| --- | --- |
+| `music\track15.wav` | a championship's replay, race 1 |
+| `music\track16.wav` | a championship's replay, race 3 |
+| `music\track17.wav` | a championship's replay, race 4 |
+| `music\track18.wav` | the ten-year championship's ending, in place of track 11; the DRIVER line stays up until the music is all but over, as on the Dreamcast |
+| `music\track19.wav` | the attract demo's first, third and fifth run, in place of track 2, which keeps the others (the Dreamcast's GO GO! SEGA RALLY, the vocal, in the Dreamcast's order) |
+
+The four replays of a championship play tracks 15, 11, 16 and 17, as on
+the Dreamcast, in place of each course's music; any other replay plays
+one of those four at random.
+
+Tracks 15, 11, 16 and 17 are the music of the arcade original's practice
+mode. Neither the Dreamcast nor the PC lets a race have them; here
+OPTION's BGM page does. With any of tracks 15 to 17 there, each course's
+row offers four choices past the seven it had:
+
+| Choice | Track |
+| --- | --- |
+| IGNITION'98 | 15 |
+| NIGHT GROOVIN' | 11 |
+| ESTRADA NOVA | 16 |
+| M N F ? | 17 |
+
+The preview plays them, and a race on that course plays the one chosen.
+OPTION's BGM TEST lists tracks 15 to 19 after its own 13, each one there
+is a file for: IGNITION'98, ESTRADA NOVA, M N F ?, TILL YOU SEE THE
+DAWN, the ten-year ending's, and GO GO! SEGA RALLY-VOCAL, the attract
+demo's. Its own 9th, the car select's music, which
+it names IGNITION'98 like the first replay, reads IGNITION 98 SELECT.
+
+A track that is not there is not missed: the game plays what it always
+did. Without any of tracks 15 to 17 the replays keep the course's music
+and OPTION offers the seven choices it always did; a course set to a
+track whose file has gone plays track 11.
 
 ## Builds
 

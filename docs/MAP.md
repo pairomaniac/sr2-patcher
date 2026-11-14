@@ -57,14 +57,14 @@ the names each one starts with:
 | Install | `install_groups`, `write_manifests`, `install` |
 | Music patch | `append_section`, `_off_to_rva`, `_rva_to_off`, `_iat_slot`, `_drop_relocations`, `apply_music` |
 | Restore-all patch | `apply_restore` |
-| Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_bgrow`; `apply_clearsize`, `apply_loadhold`, `apply_padmenu`, `apply_tabmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter`, `apply_starting` |
+| Exe stubs | `_branch`, `exe_blob`, `_check_call`, `apply_activate`, `apply_textcolor`; `BGROW_LEN`, `apply_bgrow`; `apply_clearsize`, `apply_loadhold`, `apply_dcmusic`, `apply_padmenu`, `apply_tabmenu`, `apply_replaypad`, `apply_pagepad`, `apply_hudlast`, `apply_altenter`, `apply_starting` |
 | Gamepad | `apply_xinput` and the pad annex (`annex_tables` and the tables before it); `apply_dinput8`, `apply_nogeneric`, `_fill_relative` |
 | No-mixer patch | `apply_mixerless` |
 | Mix patch | `apply_mix` (its second entry from `BLOB_LABELS`), `apply_sfxoptions` |
 | Device Settings | `apply_devices`, `patch_txr` and the page's tables |
 | Connection rows | `lobby_sites`, `apply_entries`; `LOBBY_DIR`, `LOBBY_BACKDROP_MD5`, `lobby_mask`, `bmp24`, `lobby_backdrop`, `lobby_buttons`, `lobby_popup`, `lobby_art`, `clamp_mpdata` |
 | Diagnostics and the rest of the exe | `apply_voltrace`, `apply_frametrace`, `apply_titlebg`, `apply_widescreen`, `apply_gltrace`, `apply_d3dtrace`, `apply_d3dtrace2d` |
-| The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`; the pad's prompts (`_export_slot`, `prompt_art`, `_sprite_quads`, `_spares`, `_bar`, `prompt_switches`, `_apply_prompts`, the five `apply_pad*`, `txr_sheets`, `prompt_txr`, `installed`, `TXR_WRITERS`); `apply_fullwin` |
+| The DLLs' sections | `apply_widegl`, `apply_wide2d`, `apply_resolution`, `apply_dcoptions`; `_self_section`; `apply_netplay`, `apply_texrange`, `apply_d3dinit`, `apply_replayfree`, `apply_sortpad`; the pad's prompts (`_export_slot`, `prompt_art`, `_sprite_quads`, `_spares`, `_bar`, `prompt_switches`, `_apply_prompts`, the five `apply_pad*`, `txr_sheets`, `prompt_txr`, `installed`, `TXR_WRITERS`); `apply_fullwin` |
 | Patch | `md5`, `check_build`, `carry_display_block`, `write_settings`, `network_log`, `patch`, `restore` |
 | Window | `run_tk` and the classes under the `# Window` comment |
 | CLI | `selfcheck`, `NEEDS`, `parse_keys`, `main` |
@@ -322,6 +322,7 @@ offsets are the VA minus the base unless a cell gives one.
 | clearsize | 1 + section | in `SEGA RALLY 2.exe`, 12 bytes at `0x441783`, and the annex; Australian build only |
 | widescreen2d | 9 + section | in `MGameD3D.dll`, `0x10005120` and `0x100050d0` (6 bytes each), `0x10004fe0`, `0x10005170`, `0x10005030` and `0x10005080` (10 each), `0x10006040` (9), `0x10004d50` (8) and `0x1000411c` (13), with seven relocation entries dropped, and the annex |
 | resolution | 11 + section | in `Options.dll`, `0x10003415` (file `0x2815`, 14 bytes), `0x10003426` (file `0x2826`, 13, a jump over), `0x10003128` (file `0x2528`, 8), `0x10003701` (file `0x2b01`, 12), `0x1000365b` (file `0x2a5b`, 6), and the "7"s at `0x10003124`, `0x100034e4`, `0x10003533`, `0x1000357d`, `0x100035c4` and `0x100035f9` (a byte each), with three relocation entries dropped, and the annex. The sites are the same in the Australian DLL |
+| dcoptions | 6 + section | `Options.dll` `0x100017dc` (file `0xbdc`, 5 bytes), `0x100016a7` (file `0xaa7`, 5), `0x10001ab6` (file `0xeb6`, 5), the same in the Australian; BGM TEST's `0x10004e93` (file `0x4293`, 7), `0x10004b6e` (file `0x3f6e`, 5), `0x100050b5` (file `0x44b5`, 5), Australian `0x10009d73`, `0x10009a4e`, `0x10009f95` (files `0x9173`, `0x8e4e`, `0x9395`); the annex |
 | windowed | 1 | in the exe, `0x427fe6` (file `0x273e6`) |
 | bgrow | 1 + section | in the exe, `0x415271` (file `0x14671`, 20 bytes), and the annex |
 | depth32 | 1 | in `MGameD3D.dll`, 3 bytes at `0x10002550` (file `0x2550`) |
@@ -337,6 +338,7 @@ offsets are the VA minus the base unless a cell gives one.
 | win9x | 1 | in the Australian exe, `0x44bfb0` (file `0x4b3b0`) |
 | mixerless | 1 + section | in the Australian `MGAudio.dll`, `0x10002278` (file `0x2278`), and the annex |
 | music | 14 + entry + section | in `MGAudio.dll`, the calls and the load listed in section 6, the entry point, and the annex |
+| dcmusic | 12 + section | `SEGA RALLY 2.exe` `0x416219` (file `0x15619`, 8 bytes; American `0x158c9`, Australian `0x28e19`), `0x401603` (file `0xa03`, 6 bytes; American `0xc03`, Australian `0x3173`), `0x41d95c` (file `0x1cd5c`; American `0x1cfec`, Australian `0x3a2bc`), `0x42ba57`, `0x452fa3`, `0x41cc9a`, `0x453005`, `0x42badd`, `0x41c5b2`, `0x41ed5b`, `0x42a365`, `0x42a4bf` (files `0x2ae57`, `0x523a3`, `0x1c09a`, `0x52405`, `0x2aedd`, `0x1b9b2`, `0x1e15b`, `0x29765`, `0x298bf`, 5 bytes each; American files `0x2b137`, `0x52723`, `0x1c32a`, `0x52785`, `0x2b1bd`, `0x1bc62`, `0x1e40b`, `0x29a45`, `0x29b9f`; Australian `0x52227`, `0x8cde3`, `0x3960a`, `0x8ce45`, `0x522a4`, `0x38f52`, `0x3b6eb`, `0x50b45`, `0x50c95`; MediaKite as the European but `0x52393`, `0x523f5` for the second and fourth), the annex |
 | devices | 6 + section + TXR | in `Options.dll`, `0x10003ff8`, `0x1000400f`, `0x10003e14`, `0x10003e67`, `0x10003b0c` and `0x10004238` (files `0x33f8`, `0x340f`, `0x3214`, `0x3267`, `0x2f0c` and `0x3638`). The transform also writes the dispatch entry at `0x10003dcc` (file `0x31c0` + 12), reads the item tables at `0x1009c820` (file `0x9aa20`), writes nine `x` floats and the UV entries `0xe` and `0x11` in `.data`, and appends the annex with its relocation blocks. `BINDATA\\MISC\\OPTIONS.TXR` is grown by a 256x256 sheet |
 | noregistry | 2 | in the exe, `0x5a29c0` (file `0xd07c0`, the 7-byte name string) and `0x47ef59` (file `0x7e359`, 21 bytes); American files `0xd0bc0` and `0x7e779`, Australian `0x115fd4` and `0xbd959`, DigiCube/MediaKite `0xd07c0` and `0x7e349` |
 | xinput | 4 + section | in `MGInput.dll`, `0x10008130` and `0x10008210` (6 bytes each), `0x10007100` (6) and `0x100056c0` (9), with the file offsets the same minus the base, and the annex. In the Australian DLL the sites are `0x10007940`, `0x10007a20`, `0x10006940`, and the dword at `0x100081a8` |

@@ -86,7 +86,7 @@ BUILDS = {
                   'voltrace': ((0x6e6e0, 6), (0x6fa30, 9), (0x6d560, 5), (0x6e770, 9), (0x6e0e0, 6)),   # the European and DigiCube/MediaKite builds only: the diagnostic was never sited in the other two
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
-                  'voldefault': 0xd01a8},  # the defaults block's three sliders
+                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcdriver': 0x15619, 'dcattract': (0xa03, 0x1cd5c), 'dcreplay': (0x523a3, 0x1c09a, 0x52405), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders
         # `ff15` call [slot], `8b35` mov esi, [slot]; the slot is SetTextColor's.
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
@@ -98,7 +98,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
                     'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030, 'EXEC': 0x39c0},
-        'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+        'addresses': {'BGMPLAY': 0x473d80, 'RACEBLOCK': 0x50b108, 'BGMFADE': 0x474040, 'BGMRESTART': 0x474200, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e260, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
                       'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0, 'BMPFREE': 0x406f80, 'CHATOBJS': 0x4eae08, 'TABOBJS': 0x4eae18, 'ROOMFLAG': 0x4edcc0, 'POLLBASE': 0x50b120,
@@ -130,7 +130,7 @@ BUILDS = {
                   'frametrace': (0x27fcb, 0x27eb0), 'padmenu': 0x3f07f, 'tabmenu': (0x37383, 0x371dc, 0x3f043, 0x35332, 0x35959), 'replaypad': 0x4047a, 'pagepad': (0x7ed26, '8b44241085c0'), 'erasekey': 0xceb7c, 'loadhold': (0x19e6b, 0x18c6e), 'hudlast': (0x18161, 0x277b2, 0x25fe0),
                   'wide': (0x2108e, 0x210a8, 0x5160a, 0x6e5),
                   'lobby': (0x3b550, 0x3b76f, 0x3b7dd, 0x3f7f6, 0x3e708, 0x43f057, 0x43efcd), 'ipcheck': 0x3c36e, 'entries': (0x205a0, 0x1f581, 0x1fed9), 'chatline': 0x34814, 'paste': (0x1fa4a, 0x20365), 'status': 0x3577b, 'starting': (0x36af8, 0x35cef), 'startpresent': (0x27ef5,), 'startload': 0x6600,
-                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8},
+                  'volume': 0x1db0, 'getvolume': 0x1e40, 'mix': (0x439f, 0x6980), 'voldefault': 0xd05a8, 'dcending': 0x2b137, 'dcdriver': 0x158c9, 'dcattract': (0xc03, 0x1cfec), 'dcreplay': (0x52723, 0x1c32a, 0x52785), 'dccourse': (0x2b1bd, 0x1bc62, 0x1e40b, 0x29a45, 0x29b9f), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},
         'textcolor': ((0x20657, '8b35'), (0x207f6, '8b35'), (0x34b8f, 'ff15'), (0x34e5a, 'ff15'),
                       (0x3522c, 'ff15'), (0x35863, 'ff15'), (0x363f3, 'ff15'), (0x3aae0, 'ff15'),
                       (0x3d314, 'ff15'), (0x3ddc6, 'ff15')),
@@ -141,7 +141,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
                     'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030, 'EXEC': 0x39c0},
-        'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
+        'addresses': {'BGMPLAY': 0x473fb0, 'RACEBLOCK': 0x50b208, 'BGMFADE': 0x474270, 'BGMRESTART': 0x474430, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4d0074), 'PADLEVEL': 0x4ef8b4, 'PADEDGE': 0x4ef8d4, 'PADPREV': 0x4ef8c4, 'MENUKEYS': 0x4d5ef8, 'CARS': 0x4d65ac, 'HUDLO': 0x42ad40, 'HUDHI': 0x4300a0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e480, 'GAMED3D': 0x50b218, 'LOADPIC': 0x4d6a28, 'HANDLER': 0x41feb0, 'HWND': 0x5089ac,
                       'WIDTH': 0x4d5f0c, 'HEIGHT': 0x4d5f10, 'LOCKDESC': 0x4e6968, 'MODE': 0x4d5f44, 'HIRES': 0x4efa1c, 'SETTER': 0x421a80,
                       'SETTINGS': 0x50b0dc, 'OPTSETTINGS': 0x100b9320,
                       'RUNNING': 0x4d6b2c, 'PAUSED': 0x4d6b5c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6a20, 'LOBBYSURF': (0x4eaf90, 0x4eaed0), 'LISTOPEN': (0x4ede4c, 0x43d560, 0x4eddbc), 'IPEDIT': 0x4d3e0c, 'IPLEN': 0x4d463c, 'IPDENY': 0x43cdcc, 'IPSLOT': 0x4eaddc, 'TEAMSLOT': 0x4eae0c, 'LINEBUF': 0x4d3c0c, 'NETOBJ': 0x4eacfc, 'DRAW': 0x43624c, 'ROOMBG': 0x4eaed0, 'ROOMSIZE': 0x4eaf90, 'ROOMFONT': 0x4e85b4, 'RACESETUP': 0x438ef0, 'ROOMLOAD': 0x407000, 'BMPFREE': 0x406fe0, 'CHATOBJS': 0x4eaef8, 'TABOBJS': 0x4eaf08, 'ROOMFLAG': 0x4eddb0, 'POLLBASE': 0x50b220,
@@ -175,7 +175,7 @@ BUILDS = {
                   'wide': (0x40b1e, 0x40b38, 0x895c8, 0x4e5),
                   'lobby': (0x673a0, 0x675bf, 0x6762d, 0x6ddb6, 0x6a558, 0x46b0a7, 0x46b01d), 'ipcheck': 0x681be, 'entries': (0x40040, 0x3f021, 0x3f979), 'chatline': 0x5df14, 'paste': (0x3f4ea, 0x3fe05), 'status': 0x5ee6b, 'starting': (0x601e8, 0x5f3df), 'startpresent': (0x4c877, 0x4c8ff), 'startload': 0xfdf0,
                   'volume': 0x1d90, 'getvolume': 0x1e20, 'mixer': 0x2278,    # all in MGAudio.dll
-                  'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8,
+                  'mix': (0x439f, 0x6980), 'voldefault': 0x1159a8, 'dcending': 0x52227, 'dcdriver': 0x28e19, 'dcattract': (0x3173, 0x3a2bc), 'dcreplay': (0x8cde3, 0x3960a, 0x8ce45), 'dccourse': (0x522a4, 0x38f52, 0x3b6eb, 0x50b45, 0x50c95), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x9173, 0x8e4e, 0x9395),
                   'sfxlevel': (0xb26cb, 0xb272e, 0xb2782), 'sfxoptions': (0xf92a, 0xf98d, 0xf9e1)},
         'textcolor': ((0x400f7, '8b35'), (0x40296, '8b35'), (0x5e28f, 'ff15'), (0x5e55a, 'ff15'),
                       (0x5e91c, 'ff15'), (0x5ef53, 'ff15'), (0x5fae3, 'ff15'), (0x66930, 'ff15'),
@@ -187,7 +187,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100be46c, 'HANDLES': 0x100be470, 'TOPTABLE': 0x10006500,
                     'TEXT': 0x10012f70, 'GLYPHS': 0x100a1090, 'CHARMAP': 0x101052bc, 'EXEC': 0x6130,
                     'LOADLIB': 0x1001e010, 'GETPROC': 0x1001e048, 'GETMODFN': 0x1001e030},
-        'addresses': {'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
+        'addresses': {'BGMPLAY': 0x4b3410, 'RACEBLOCK': 0x575ad8, 'BGMFADE': 0x4b36d0, 'BGMRESTART': 0x4b3890, 'MENUTABLES': 0x100a2708, 'REGNAMES': (0x60c714, 0x5151cc), 'PADLEVEL': 0x55001c, 'PADEDGE': 0x55003c, 'PADPREV': 0x55002c, 'MENUKEYS': 0x52dc08, 'CARS': 0x52f9cc, 'HUDLO': 0x452030, 'HUDHI': 0x457390, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x60bff0, 'RESUME': 0x4ad790, 'GAMED3D': 0x575ae8, 'LOADPIC': 0x52fe48, 'HANDLER': 0x43fb50, 'HWND': 0x57327c,
                       'WIDTH': 0x52dc1c, 'HEIGHT': 0x52dc20, 'LOCKDESC': 0x53fd88, 'MODE': 0x52dc50, 'HIRES': 0, 'SETTER': 0x441710, 'CLEAR': 0x441180, 'SETTINGS': 0x5759ac, 'OPTSETTINGS': 0x100c19d8,
                       'RUNNING': 0x52ff4c, 'PAUSED': 0x52ff7c, 'DEBUGDLL': 0x60c660, 'CATCHUP': 0x52fe40, 'LOBBYSURF': (0x549fe8, 0x549f28), 'LISTOPEN': (0x54cea4, 0x4695b0, 0x54ce14), 'IPEDIT': 0x52bb1c, 'IPLEN': 0x52c34c, 'IPDENY': 0x468e1c, 'IPSLOT': 0x549e34, 'TEAMSLOT': 0x549e64, 'LINEBUF': 0x5245c4, 'NETOBJ': 0x549d54, 'DRAW': 0x45fb3c, 'ROOMBG': 0x549f28, 'ROOMSIZE': 0x549fe8, 'ROOMFONT': 0x545efc, 'RACESETUP': 0x464f40, 'ROOMLOAD': 0x4109f0, 'BMPFREE': 0x4109d0, 'CHATOBJS': 0x549f50, 'TABOBJS': 0x549f60, 'ROOMFLAG': 0x54ce08, 'POLLBASE': 0x575af0,
                       'RENDERER': 0x575ae0, 'SETVIEWPORT': 0x4ab580, 'VPRECTS': 0x4f3bb0, 'HUDDRAW': 0x451150, 'TREEDRAW': 0x4b0610, 'HUDRESET': 0x4ac420, 'LATEFLAG': 0, 'FADEDRAW': 0x4ab330},
@@ -232,7 +232,7 @@ BUILDS = {
                   'voltrace': ((0x6e6d0, 6), (0x6fa20, 9), (0x6d550, 5), (0x6e760, 9), (0x6e0d0, 6)),
                   'volume': 0x1db0, 'getvolume': 0x1e40,   # in MGAudio.dll: the CD-volume methods
                   'mix': (0x439f, 0x6980),  # in MGSound.dll: the buffer's SetRange, the stream's SetVolume
-                  'voldefault': 0xd01a8},  # the defaults block's three sliders, in STATUSDA where the relink left it
+                  'voldefault': 0xd01a8, 'dcending': 0x2ae57, 'dcdriver': 0x15619, 'dcattract': (0xa03, 0x1cd5c), 'dcreplay': (0x52393, 0x1c09a, 0x523f5), 'dccourse': (0x2aedd, 0x1b9b2, 0x1e15b, 0x29765, 0x298bf), 'dcoptions': (0xbdc, 0xaa7, 0xeb6, 0x4293, 0x3f6e, 0x44b5)},  # the defaults block's three sliders, in STATUSDA where the relink left it
         'textcolor': ((0x203c7, '8b35'), (0x20566, '8b35'), (0x3485f, 'ff15'), (0x34b2a, 'ff15'),
                       (0x34efc, 'ff15'), (0x35533, 'ff15'), (0x360c3, 'ff15'), (0x3a6c0, 'ff15'),
                       (0x3cef4, 'ff15'), (0x3da96, 'ff15')),
@@ -243,7 +243,7 @@ BUILDS = {
                     'SOUNDOBJ': 0x100b8bd8, 'HANDLES': 0x100b8bdc, 'TOPTABLE': 0x10003d90,
                     'TEXT': 0x1000df10, 'GLYPHS': 0x1009c080, 'CHARMAP': 0x100fcc04,
                     'LOADLIB': 0x10019010, 'GETPROC': 0x10019048, 'GETMODFN': 0x10019030, 'EXEC': 0x39c0},
-        'addresses': {'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
+        'addresses': {'BGMPLAY': 0x473d70, 'RACEBLOCK': 0x50b108, 'BGMFADE': 0x474030, 'BGMRESTART': 0x4741f0, 'MENUTABLES': 0x1009c820, 'REGNAMES': (0x5a2714, 0x4cff94), 'PADLEVEL': 0x4ef7c4, 'PADEDGE': 0x4ef7e4, 'PADPREV': 0x4ef7d4, 'MENUKEYS': 0x4d5e08, 'CARS': 0x4d64bc, 'HUDLO': 0x42ac60, 'HUDHI': 0x42ffc0, 'WALKRESUME': 0x4010eb, 'PADPOLL': 0x5a1ff0, 'RESUME': 0x46e250, 'GAMED3D': 0x50b118, 'LOADPIC': 0x4d6938, 'HANDLER': 0x41fe20, 'HWND': 0x5088ac,
                       'WIDTH': 0x4d5e1c, 'HEIGHT': 0x4d5e20, 'LOCKDESC': 0x4e6878, 'MODE': 0x4d5e54, 'HIRES': 0, 'SETTER': 0x4219f0,
                       'SETTINGS': 0x50afdc, 'OPTSETTINGS': 0x100b9320,
                       'RUNNING': 0x4d6a3c, 'PAUSED': 0x4d6a6c, 'DEBUGDLL': 0x5a2660, 'CATCHUP': 0x4d6930, 'LOBBYSURF': (0x4eaea0, 0x4eade0), 'LISTOPEN': (0x4edd5c, 0x43d340, 0x4edccc), 'IPEDIT': 0x4d3d1c, 'IPLEN': 0x4d454c, 'IPDENY': 0x43cbac, 'IPSLOT': 0x4eacec, 'TEAMSLOT': 0x4ead1c, 'LINEBUF': 0x4d3b1c, 'NETOBJ': 0x4eac0c, 'DRAW': 0x43611c, 'ROOMBG': 0x4eade0, 'ROOMSIZE': 0x4eaea0, 'ROOMFONT': 0x4e84c4, 'RACESETUP': 0x438dc0, 'ROOMLOAD': 0x406fa0, 'BMPFREE': 0x406f80, 'CHATOBJS': 0x4eae08, 'TABOBJS': 0x4eae18, 'ROOMFLAG': 0x4edcc0, 'POLLBASE': 0x50b120,
@@ -322,6 +322,8 @@ RESTORE_RELOCS = 10
 #   voldefault  the three volume sliders' defaults 6 rather than 9, for a first start and DEFAULT; the shipped save's sliders too, while nothing has been saved to it
 #   cdlevel     the menu's CD-level set flagged, so the music hook tells it from a fade; music needs it
 #   music       CD audio from music\trackNN.wav; the BGM slider sets its volume
+#   dcmusic     the Dreamcast's extra tracks from music\track15.wav on: the replays' set (15, 11, 16, 17), the ten-year ending's track 18 with its DRIVER line held to the music's end, the attract demo's odd runs track 19, the set as course choices 7 to 10; needs music
+#   dcoptions   OPTION's BGM page offering choices 7 to 10, named and previewed, and BGM TEST playing tracks 15 to 19 after its 13 (Options.dll); needs dcmusic
 #   devices     a fourth Options item, Device Settings, placed for the controller page; also grows OPTIONS.TXR
 #   widescreen  the picture at the size SR2.CFG names, the 3D field widened (exe)
 #   widescreen2d  the 2D scaled into the picture's 4:3 box, the race HUD to a 16:9 frame (MGameD3D)
@@ -709,6 +711,10 @@ def patches(build):
         'voldefault': (EXE, ((site['voldefault'], struct.pack('<3I', 9, 9, 9), struct.pack('<3I', 6, 6, 6)),), None),
         'music': ('MUSASHI\\MGAudio.dll', ((site['volume'], bytes.fromhex('53568b74240c'), None),
                                           (site['getvolume'], bytes.fromhex('53568b74240c'), None)), 'apply_music'),
+        'dcmusic': (EXE, tuple((s, b'\xe8', None) for s in (site['dcending'],) + site['dcreplay'] + site['dccourse'])
+                    + ((site['dcdriver'], bytes.fromhex('8b43143d0c030000'), None),
+                       (site['dcattract'][0], bytes.fromhex('8b561c83cbff'), None), (site['dcattract'][1], b'\xe8', None)),
+                    'apply_dcmusic'),
         'devices': ('Options.dll', devices_sites(site['devices'], row['addresses']['MENUTABLES']), 'apply_devices'),
         'widescreen': (EXE, wide_sites(site['wide'], row['addresses'], build == 'American'), 'apply_widescreen'),
         'widescreen2d': ('MUSASHI\\MGameD3D.dll', (
@@ -734,6 +740,12 @@ def patches(build):
         'd3dtrace2d': ('MUSASHI\\MGameD3D.dll', (), 'apply_d3dtrace2d'),
         'resolution': ('Options.dll', resolution_sites(row['addresses']['OPTSETTINGS']), 'apply_resolution'),
         'padoptions': ('Options.dll', (), 'apply_padoptions'),          # after devices, whose page's bar it switches
+        # after devices, which must place the first Options.dll annex
+        'dcoptions': ('Options.dll', ((site['dcoptions'][0], bytes.fromhex('bb07000000'), None),
+                                      (site['dcoptions'][1], b'\xe8', None), (site['dcoptions'][2], b'\xe8', None),
+                                      (site['dcoptions'][3], bytes.fromhex('c746680d000000'), None),
+                                      (site['dcoptions'][4], b'\xe8', None), (site['dcoptions'][5], b'\xe8', None)),
+                      'apply_dcoptions'),
         'lobby': (EXE, lobby_sites(site['lobby'], row['addresses']['LOBBYSURF'], row['addresses']['LISTOPEN'])
                  + ((site['ipcheck'], bytes.fromhex('3935') + struct.pack('<I', row['addresses']['IPLEN']), None),
                     (site['entries'][0], bytes.fromhex('8b4424048b4c2408'), None),
@@ -935,6 +947,25 @@ FEATURES = (
      'writes them, about 550 MB, and the in-game slider drives them.',
      ('music', 'cdlevel')),
 
+    ('dcmusic', 'Dreamcast music',
+     'The tracks the Dreamcast release has and this one dropped, from\n'
+     'music\\track15.wav on beside the game. Each plays only when its file\n'
+     'is there; without it the game plays what it always did. Needs Music\n'
+     'from files.\n'
+     '\n'
+     'track15.wav\tA championship\'s replay, race 1. Race 2 plays\n'
+     '\ttrack 11, races 3 and 4 tracks 16 and 17; other\n'
+     '\treplays one of the four at random. OPTION offers\n'
+     '\tthe four as a course\'s music too.\n'
+     'track18.wav\tThe ten-year championship\'s ending, in place of\n'
+     '\ttrack 11, its DRIVER line held until the music is\n'
+     '\tall but over.\n'
+     'track19.wav\tThe attract demo\'s first, third and fifth run,\n'
+     '\tin place of track 2.\n'
+     '\n'
+     'OPTION\'s BGM TEST plays the ones there after its own.',
+     ('dcmusic', 'dcoptions')),
+
     ('gamepad', 'XInput gamepad support',
      'A modern pad wherever the game takes input: driving, the menus,\n'
      'multiplayer and replays.\n'
@@ -974,7 +1005,7 @@ FEATURES = (
 # one out (parse_keys).
 ESSENTIAL = ('nodisc', 'start', 'crashes', 'altab', 'devicescan', 'window',
              'lettering', 'hud', 'sound', 'settings',
-             'widescreen', 'music', 'gamepad', 'internet', 'loading')
+             'widescreen', 'music', 'dcmusic', 'gamepad', 'internet', 'loading')
 
 BY_GROUP = {group: (label, tip, keys) for group, label, tip, keys in FEATURES}
 
@@ -4477,6 +4508,86 @@ STARTING_BLOB = bytes.fromhex(
     '544845205241434557414954494e4720464f5220544845204f5448455220504c'
     '415945525300'
 )
+DCMUSIC_BLOB = bytes.fromhex(
+    'e92d000000e91e010000e91d010000e92d010000e9d7010000e9d9010000e9e0'
+    '010000e9b3000000e968000000e97e000000e81802000055e8000000005d81ed'
+    '3d0000000fbae0030f928584030000733451ff15c2c2c2c289c18b8554030000'
+    '83e82c76196bc00a31d268e4060000f7342483c4042db80b0000760201c1898d'
+    '80030000595de8c4010000ba12000000e9390100008b561c55e8000000005d81'
+    'ed9e0000008995880300005d83cbffc355e8000000005d81edb60000008b8588'
+    '0300005da8010f851d010000e87e010000ba13000000e9f30000008b43143d0c'
+    '0300007e4255e8000000005d81edeb00000080bd840300000074195152ff15c2'
+    'c2c2c25a592b85800300007811c68584030000005d8b43143d0c030000c35d8b'
+    '43143dffffff7fc331c0eb7ca19b9b9b9b8b406485c00f84ad00000083e003eb'
+    '67a19b9b9b9b8b503883fa02741383fa03740e83fa05740983fa060f85880000'
+    '00f64044040f8485000000e8df000000a807747c515389c383e00183e306d1e3'
+    '09c383cb0231c989dad1ea83d10085d275f70f3131d2f7f1b8ffffffff400fa3'
+    'c373fa4a79f75b5989c2e8a0000000a807743d83fa01750ac744240409000000'
+    'eb27720583c20eeb05ba0f00000083ea0f0fa3d0731a83c20e8b018990300200'
+    '00c74424040e000000b89a9a9a9affe0e81a000000ebf2e813000000b89c9c9c'
+    '9cffe0e807000000b89d9d9d9dffe08b44240883e80883f8037733515289c2e8'
+    '2b00000083fa01741a72014a0fa3d0731283c20e8b01899030020000b80e0000'
+    '00eb05b809000000894424105a59c3555152e8000000005d81ed5702000080bd'
+    '40030000007505e80a0000008b85440300005a595dc3535657c6854003000001'
+    '8d858c03000050ff15e3e3e3e385c00f84a70000008d8d990300005150ff15e4'
+    'e4e4e485c00f849100000089c368f80000008dbdc0030000576a00ff15f9f9f9'
+    'f985c074778d340739fe74704e803e5c75f64689f28d8dae0300008a01880241'
+    '4284c075f683c60bbf0f00000089f8d40a6605303088268846018d855c030000'
+    '506a008d85c003000050ffd385c07426f6855c03000010751d8b857c03000089'
+    '84bd0c0300008d4ff1b801000000d3e00985440300004783ff1376b15f5e5bc3'
+    '0090909000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000909090000000006b65726e656c33322e646c6c0047657446696c65'
+    '41747472696275746573457841006d757369635c747261636b31352e77617600'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '00000000000000000000000000000000'
+)
+DCOPTIONS_BLOB = bytes.fromhex(
+    'e9b6000000e9c7000000e9f7000000e90a000000e94b000000e97b0000005051'
+    'e842010000b90d000000d1e883d10085c075f7894e685958c383e80d72235152'
+    '89c2e82001000031c90fa3c873034a780a4183f90476f231c0eb038d410f5a59'
+    'c331c0c38b463ce8cdffffff55e8000000005d81ed7200000085c0740f8b8485'
+    'b002000001e889442408eb6b837e3c087565b82e030000ebeb8b442404e897ff'
+    'ffff85c0746548528b118982080200005ac74424040d000000eb5050e8a60000'
+    '00bb07000000a8077405bb0b00000058c355e8000000005d81edd70000008b44'
+    'be1883e80783f803770d8b8485ac02000001e88944240889e82de7e7e7e705db'
+    'dbdbdb5dffe0e81c00000055e8000000005d81ed1101000089e82de7e7e7e705'
+    'd5d5d5d55dffe08b44240883e80883f8037733515289c2e82b00000083fa0174'
+    '1a72014a0fa3d0731283c20e8b01899008020000b80d000000eb05b80c000000'
+    '894424105a59c3555152e8000000005d81ed6f01000080bd6d020000007505e8'
+    '0a0000008b85700200005a595dc3535657c6856d020000018d85410300005089'
+    'e82de7e7e7e7ff90e3e3e3e385c00f84b50000008d8d4e030000515089e82de7'
+    'e7e7e7ff90e4e4e4e485c00f849800000089c368f80000008dbd75030000576a'
+    '0089e82de7e7e7e7ff90e5e5e5e585c074778d340739fe74704e803e5c75f646'
+    '89f28d8d630300008a018802414284c075f683c60bbf0f00000089f8d40a6605'
+    '303088268846018d8588020000506a008d857503000050ffd385c07426f68588'
+    '02000010751d8b85a80200008984bd380200008d4ff1b801000000d3e0098570'
+    '0200004783ff1376b15f5e5bc300909000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000bc020000c8020000d7020000e402000049474e49'
+    '54494f4e273938004e494748542047524f4f56494e270045535452414441204e'
+    '4f5641004d204e2046203f00bc020000d7020000e40200000003000016030000'
+    '54494c4c20594f552053454520544845204441574e00474f20474f2120534547'
+    '412052414c4c592d564f43414c0049474e4954494f4e2039382053454c454354'
+    '006b65726e656c33322e646c6c0047657446696c654174747269627574657345'
+    '7841006d757369635c747261636b31352e776176000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000000000000000000000000000000000000000000000000000000000'
+    '0000000000'
+)
 MUSIC_MAGICS = {
     'MAGIC_ORIGENTRY': 0xE1E1E1E1,
     'MAGIC_IATMCI': 0xE2E2E2E2,
@@ -4541,6 +4652,10 @@ EXE_MAGICS = {
     'TABOBJS': 0xA6A6A6A6,
     'ROOMFLAG': 0xA7A7A7A7,
     'POLLBASE': 0xA8A8A8A8,
+    'BGMPLAY': 0x9A9A9A9A,
+    'RACEBLOCK': 0x9B9B9B9B,
+    'BGMFADE': 0x9C9C9C9C,
+    'BGMRESTART': 0x9D9D9D9D,
 }
 FULLWIN_MAGIC = 0xE7E7E7E7
 DEVICES_MAGICS = {
@@ -4598,6 +4713,13 @@ SORTPAD_MAGICS = {
 PADPROMPTS_MAGICS = {
     'PADPOLL': 0xDFDFDFDF,
     'EXEC': 0xE6E6E6E6,
+}
+DCOPTIONS_MAGICS = {
+    'TEXT': 0xDBDBDBDB,
+    'PLAYSOUND': 0xD5D5D5D5,
+    'LOADLIB': 0xE3E3E3E3,
+    'GETPROC': 0xE4E4E4E4,
+    'GETMODFN': 0xE5E5E5E5,
 }
 SITE_MAGICS = (0xE7E7E7E1, 0xE7E7E7E2, 0xE7E7E7E3, 0xE7E7E7E4, 0xE7E7E7E5)
 BLOB_LABELS = {
@@ -8303,12 +8425,69 @@ def clamp_mpdata(dest, log):
         log('patch: %s connection type reset' % MPDATA)
 
 
+def apply_dcmusic(buf, build):
+    """dcmusic.asm: nine calls of the sound bank become calls into the
+    blob - the ten-year ending's play (slot 9, track 11), a championship
+    replay's first race, its later races, the other modes' scene music,
+    and the course music's play, three fades and restart - which plays
+    tracks 15 to 18 in slot 14 when their files are there and leaves
+    through the routine called either way; and the ten-year ending's
+    DRIVER line's count and compare (8 bytes), held while track 18 still
+    has more than its fade to play; and the attract loop's load of its
+    demo index (6 bytes) and the attract demo's play, track 19 on the
+    odd runs, the first among them. The annex keeps what it found and the path, so it is
+    writable."""
+    row = BUILDS[build]
+    addr = row['addresses']
+    course = row['sites']['dccourse']
+    sites = ((row['sites']['dcending'], 0, addr['BGMPLAY']),) + tuple(
+        (site, 5 + 5 * i, addr['BGMPLAY']) for i, site in enumerate(row['sites']['dcreplay'])) + (
+        (course[0], 20, addr['BGMPLAY']),) + tuple((site, 25, addr['BGMFADE']) for site in course[1:4]) + (
+        (course[4], 30, addr['BGMRESTART']),)
+    sites += ((row['sites']['dcattract'][1], 45, addr['BGMPLAY']),)
+    for site, _entry, target in sites:
+        _check_call(buf, site, target, 'the sound bank')
+    out, rva = append_section(buf, exe_blob(DCMUSIC_BLOB, build))
+    for site, entry, _target in sites:
+        _branch(out, site, rva + entry)
+    _branch(out, row['sites']['dcdriver'], rva + 35, 8)
+    _branch(out, row['sites']['dcattract'][0], rva + 40, 6)
+    return out
+
+
+def apply_dcoptions(buf, build):
+    """dcmusic.asm built for Options.dll: the BGM page's count of choices
+    (`mov ebx, 7`), its rows' call of the text routine and its preview's
+    call of the play, and the same three of the sound page's BGM TEST
+    (`mov dword [esi+0x68], 13`, its name's call of the text routine, its
+    play), become calls into the blob, which finds the image base from its
+    own RVA. The annex is writable for the path it builds."""
+    opt = BUILDS[build]['options']
+    init, name, preview, count, title, listen = BUILDS[build]['sites']['dcoptions']
+    for site in (name, title):
+        _check_call(buf, site, opt['TEXT'], 'the text routine')
+    for site in (preview, listen):
+        _check_call(buf, site, opt['PLAYSOUND'], 'the page bank\'s play')
+    base = _image_base(buf)
+    blob = bytes(DCOPTIONS_BLOB)
+    for key, magic in DCOPTIONS_MAGICS.items():
+        blob = blob.replace(struct.pack('<I', magic), struct.pack('<I', opt[key] - base))
+    out, rva = _self_section(buf, blob)
+    _branch(out, init, rva)
+    _branch(out, name, rva + 5)
+    _branch(out, preview, rva + 10)
+    _branch(out, count, rva + 15, 7)
+    _branch(out, title, rva + 20)
+    _branch(out, listen, rva + 25)
+    return out
+
+
 def _next_section_rva(buf):
     """Where append_section will put the next section, while the annex
     is not there yet: once it is, append_section grows it in place at
     its own RVA. apply_devices needs this before it appends, so devices
-    must come before resolution, the other Options.dll patch with an
-    annex, in patches() - and does."""
+    must come before resolution and dcoptions, the other Options.dll
+    patches with an annex, in patches() - and does."""
     pe_off = struct.unpack_from('<I', buf, 0x3c)[0]
     nsec = struct.unpack_from('<H', buf, pe_off + 6)[0]
     opt = pe_off + 24
@@ -9805,11 +9984,11 @@ NUDGE_MS = 60
 # the other bound, but not a useful one: it is reported as every
 # monitor together, so on a desktop with more than one it is not the
 # height of anything anybody is looking at. A count of lines is, since
-# lines are scaled by whatever the display is. 48 puts the heading of
+# lines are scaled by whatever the display is. 49 puts the heading of
 # the last numbered card on screen, which is as much as needs to be
 # showing - the rest is a scroll away. Neither bounds how far the
 # window can then be dragged: that is the screen and the content.
-LINE_CAP = 48
+LINE_CAP = 49
 
 # Column widths in characters of the hint font, not pixels, so they hold
 # at any display scaling. 60-90 characters is the readable range for a
@@ -11950,7 +12129,7 @@ def selfcheck():
             sites += len(ss)
         for blob in (ACTIVATE_BLOB, ALTENTER_BLOB, BGROW_BLOB, TITLEROW_BLOB, TEXTCOLOR_BLOB, WIDE_BLOB, WIDE_US_BLOB,
                      VOLTRACE_BLOB, FRAMETRACE_BLOB, LOADHOLD_BLOB, HUDLAST_BLOB, PADMENU_BLOB, REPLAYPAD_BLOB, PAGEPAD_BLOB,
-                     IPCHECK_BLOB, ENTRYCAP_BLOB, STATUS_BLOB):
+                     IPCHECK_BLOB, ENTRYCAP_BLOB, STATUS_BLOB, DCMUSIC_BLOB):
             for magic in EXE_MAGICS.values():
                 if struct.pack('<I', magic) in exe_blob(blob, build):
                     raise ValueError('%s: a placeholder left in a stub' % build)
@@ -11974,7 +12153,7 @@ def selfcheck():
 
 
 # What a key needs: dropping the second drops the first with it.
-NEEDS = (('padoptions', 'devices'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'),
+NEEDS = (('padoptions', 'devices'), ('nogeneric', 'dinput8'), ('lobby', 'netplay'), ('netplay', 'lobby'), ('starting', 'lobby'), ('devices', 'xinput'), ('music', 'cdlevel'), ('dcmusic', 'music'), ('dcoptions', 'dcmusic'),
          ('widescreen2d', 'widescreen'), ('widescreen3d', 'widescreen'), ('resolution', 'widescreen'),
          ('gltrace', 'widescreen3d'), ('d3dtrace', 'widescreen2d'), ('d3dtrace2d', 'widescreen2d'), ('netlog', 'netplay'),
          ('borderless', 'windowed'), ('altenter', 'windowed'))
